@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../providers/auth_provider.dart';
 
@@ -18,7 +19,7 @@ class AuthController extends AsyncNotifier<void> {
         ));
   }
 
-  Future<void> signUp({
+  Future<bool> signUp({
     required String email,
     required String password,
     required String fullName,
@@ -28,7 +29,7 @@ class AuthController extends AsyncNotifier<void> {
     required int yearLevel,
   }) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _repository.signUpWithEmail(
+    final result = await AsyncValue.guard(() => _repository.signUpWithEmail(
           email: email,
           password: password,
           data: {
@@ -40,6 +41,31 @@ class AuthController extends AsyncNotifier<void> {
             'role': 'student',
             'status': 'pending',
           },
+        ));
+    
+    state = result;
+    return !result.hasError;
+  }
+
+  Future<bool> verifyOTP({
+    required String email,
+    required String token,
+  }) async {
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() => _repository.verifyOTP(
+          email: email,
+          token: token,
+          type: OtpType.signup,
+        ));
+    state = result;
+    return !result.hasError;
+  }
+
+  Future<void> resendOTP(String email) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _repository.resendOTP(
+          email: email,
+          type: OtpType.signup,
         ));
   }
 

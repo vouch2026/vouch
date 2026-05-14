@@ -14,4 +14,9 @@ class RoutePaths {
   static const String activityCard = '/activity-card';
   static const String profile = '/profile';
   static const String settings = '/settings';
+  static const String emailVerification = '/email-verification';
+  static const String resetPassword = '/reset-password';
+  static const String changeEmail = '/change-email';
+  static const String changePassword = '/change-password';
+  static const String superAdminDashboard = '/super-admin';
 }

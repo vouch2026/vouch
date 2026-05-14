@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
+import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -369,7 +370,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 faculty: _selectedFaculty ?? '',
                                 program: _selectedProgram ?? '',
                                 yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
-                              );
+                              ).then((success) {
+                                if (success && mounted) {
+                                  context.goNamed(
+                                    RouteNames.emailVerification,
+                                    queryParameters: {'email': _emailController.text},
+                                  );
+                                }
+                              });
                         }
                       },
                 style: ElevatedButton.styleFrom(

@@ -4,6 +4,7 @@ import 'route_names.dart';
 import 'route_paths.dart';
 import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
+import '../features/auth/views/email_verification_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
 import '../features/organizations/views/organizations_page.dart';
 import '../features/auth/providers/auth_provider.dart';
@@ -18,7 +19,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = authState.value;
       final loggingIn = state.matchedLocation == RoutePaths.login ||
           state.matchedLocation == RoutePaths.register ||
-          state.matchedLocation == RoutePaths.forgotPassword;
+          state.matchedLocation == RoutePaths.forgotPassword ||
+          state.matchedLocation == RoutePaths.emailVerification;
 
       if (auth?.session == null) {
         return loggingIn ? null : RoutePaths.login;
@@ -40,6 +42,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.register,
         name: RouteNames.register,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.emailVerification,
+        name: RouteNames.emailVerification,
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return EmailVerificationPage(email: email);
+        },
       ),
       GoRoute(
         path: RoutePaths.dashboard,

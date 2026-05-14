@@ -15,7 +15,11 @@ class UserModel with _$UserModel {
     int? yearLevel,
     String? avatarUrl,
     @Default([]) List<String> organizationIds,
+    /// Role of the user. See [UserRole] for possible values.
+    /// Default roles include: super_admin, student, etc.
     @Default('student') String role,
+    /// Status of the account. See [UserStatus] for possible values.
+    /// Default statuses include: pending, approved, etc.
     @Default('pending') String status,
     DateTime? createdAt,
   }) = _UserModel;

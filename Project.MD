@@ -584,13 +584,13 @@ Includes:
 ---
 
 # PHASE 2
-Authentication & Backend Foundation
+Authentication & Backend Foundation [IN PROGRESS]
 
 Includes:
-- Supabase integration
-- auth flows
-- RBAC foundation
-- protected routing
+- Supabase integration [DONE]
+- auth flows (Login, Register) [DONE]
+- RBAC foundation (Roles, Profiles, Triggers) [DONE]
+- protected routing [IN PROGRESS]
 
 ---
 
