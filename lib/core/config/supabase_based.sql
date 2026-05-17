@@ -8,6 +8,8 @@ create table if not exists public.profiles (
   program text,
   year_level int,
   avatar_url text,
+  id_front_url text,
+  id_back_url text,
   role text default 'student' check (role in (
     'super_admin',
     'comselec_chairman',
@@ -58,7 +60,7 @@ declare
 begin
   select count(*) = 0 into is_first_user from public.profiles;
 
-  insert into public.profiles (id, full_name, school_id, faculty, program, year_level, role, status)
+  insert into public.profiles (id, full_name, school_id, faculty, program, year_level, id_front_url, id_back_url, role, status)
   values (
     new.id,
     new.raw_user_meta_data->>'full_name',
@@ -66,6 +68,8 @@ begin
     new.raw_user_meta_data->>'faculty',
     new.raw_user_meta_data->>'program',
     (new.raw_user_meta_data->>'year_level')::int,
+    new.raw_user_meta_data->>'id_front_url',
+    new.raw_user_meta_data->>'id_back_url',
     case when is_first_user then 'super_admin' else 'student' end,
     case when is_first_user then 'approved' else 'pending' end
   );

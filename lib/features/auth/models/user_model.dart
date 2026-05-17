@@ -14,6 +14,8 @@ class UserModel with _$UserModel {
     String? program,
     int? yearLevel,
     String? avatarUrl,
+    String? idFrontUrl,
+    String? idBackUrl,
     @Default([]) List<String> organizationIds,
     /// Role of the user. See [UserRole] for possible values.
     /// Default roles include: super_admin, student, etc.

@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../providers/auth_provider.dart';
+import '../../../core/providers/storage_provider.dart';
 
 class AuthController extends AsyncNotifier<void> {
   late final AuthRepository _repository;
@@ -27,21 +29,47 @@ class AuthController extends AsyncNotifier<void> {
     required String faculty,
     required String program,
     required int yearLevel,
+    File? idFront,
+    File? idBack,
   }) async {
     state = const AsyncLoading();
-    final result = await AsyncValue.guard(() => _repository.signUpWithEmail(
-          email: email,
-          password: password,
-          data: {
-            'full_name': fullName,
-            'school_id': schoolId,
-            'faculty': faculty,
-            'program': program,
-            'year_level': yearLevel,
-            'role': 'student',
-            'status': 'pending',
-          },
-        ));
+    
+    final result = await AsyncValue.guard(() async {
+      String? idFrontUrl;
+      String? idBackUrl;
+
+      if (idFront != null) {
+        idFrontUrl = await ref.read(storageServiceProvider).uploadIdImage(
+              identifier: email,
+              file: idFront,
+              isFront: true,
+            );
+      }
+
+      if (idBack != null) {
+        idBackUrl = await ref.read(storageServiceProvider).uploadIdImage(
+              identifier: email,
+              file: idBack,
+              isFront: false,
+            );
+      }
+
+      return await _repository.signUpWithEmail(
+        email: email,
+        password: password,
+        data: {
+          'full_name': fullName,
+          'school_id': schoolId,
+          'faculty': faculty,
+          'program': program,
+          'year_level': yearLevel,
+          'id_front_url': idFrontUrl,
+          'id_back_url': idBackUrl,
+          'role': 'student',
+          'status': 'pending',
+        },
+      );
+    });
     
     state = result;
     return !result.hasError;

@@ -16,6 +16,8 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
       program: json['program'] as String?,
       yearLevel: (json['yearLevel'] as num?)?.toInt(),
       avatarUrl: json['avatarUrl'] as String?,
+      idFrontUrl: json['idFrontUrl'] as String?,
+      idBackUrl: json['idBackUrl'] as String?,
       organizationIds:
           (json['organizationIds'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -38,6 +40,8 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
       'program': instance.program,
       'yearLevel': instance.yearLevel,
       'avatarUrl': instance.avatarUrl,
+      'idFrontUrl': instance.idFrontUrl,
+      'idBackUrl': instance.idBackUrl,
       'organizationIds': instance.organizationIds,
       'role': instance.role,
       'status': instance.status,

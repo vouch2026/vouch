@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -33,6 +35,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String? _selectedYearLevel;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  
+  XFile? _idFrontImage;
+  XFile? _idBackImage;
+  final ImagePicker _picker = ImagePicker();
 
   // Mock data (as in sample)
   final List<String> _faculties = ['Faculty of Engineering', 'Faculty of Arts', 'Faculty of Science'];
@@ -305,7 +311,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               icon: Icons.person_outline,
             ),
             const SizedBox(height: AppSpacing.md),
-            _buildLabel('School ID No.'),
+            _buildLabel('ID No.'),
             _buildTextField(
               controller: _schoolIdController,
               hintText: 'XXXX-XXXX',
@@ -313,6 +319,27 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 _SchoolIdFormatter(),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildLabel('ID Verification'),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildImagePicker(
+                    label: 'ID Front',
+                    image: _idFrontImage,
+                    onTap: () => _pickImage(true),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _buildImagePicker(
+                    label: 'ID Back',
+                    image: _idBackImage,
+                    onTap: () => _pickImage(false),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -362,6 +389,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             );
                             return;
                           }
+                          if (_idFrontImage == null || _idBackImage == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please upload both ID front and back pictures')),
+                            );
+                            return;
+                          }
                           ref.read(authControllerProvider.notifier).signUp(
                                 email: _emailController.text,
                                 password: _passwordController.text,
@@ -370,6 +403,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 faculty: _selectedFaculty ?? '',
                                 program: _selectedProgram ?? '',
                                 yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
+                                idFront: File(_idFrontImage!.path),
+                                idBack: File(_idBackImage!.path),
                               ).then((success) {
                                 if (success && mounted) {
                                   context.goNamed(
@@ -515,6 +550,57 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       ),
       style: AppTextStyles.bodyMedium,
       validator: (val) => val == null || val.isEmpty ? 'Field required' : null,
+    );
+  }
+
+  Future<void> _pickImage(bool isFront) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        if (isFront) {
+          _idFrontImage = image;
+        } else {
+          _idBackImage = image;
+        }
+      });
+    }
+  }
+
+  Widget _buildImagePicker({
+    required String label,
+    required XFile? image,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.15), width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+          color: AppColors.white,
+        ),
+        child: image != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(image.path),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                ),
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_a_photo_outlined, color: AppColors.primary),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }

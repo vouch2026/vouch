@@ -29,6 +29,8 @@ mixin _$UserModel {
   String? get program => throw _privateConstructorUsedError;
   int? get yearLevel => throw _privateConstructorUsedError;
   String? get avatarUrl => throw _privateConstructorUsedError;
+  String? get idFrontUrl => throw _privateConstructorUsedError;
+  String? get idBackUrl => throw _privateConstructorUsedError;
   List<String> get organizationIds => throw _privateConstructorUsedError;
 
   /// Role of the user. See [UserRole] for possible values.
@@ -64,6 +66,8 @@ abstract class $UserModelCopyWith<$Res> {
     String? program,
     int? yearLevel,
     String? avatarUrl,
+    String? idFrontUrl,
+    String? idBackUrl,
     List<String> organizationIds,
     String role,
     String status,
@@ -94,6 +98,8 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? program = freezed,
     Object? yearLevel = freezed,
     Object? avatarUrl = freezed,
+    Object? idFrontUrl = freezed,
+    Object? idBackUrl = freezed,
     Object? organizationIds = null,
     Object? role = null,
     Object? status = null,
@@ -132,6 +138,14 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
             avatarUrl: freezed == avatarUrl
                 ? _value.avatarUrl
                 : avatarUrl // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            idFrontUrl: freezed == idFrontUrl
+                ? _value.idFrontUrl
+                : idFrontUrl // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            idBackUrl: freezed == idBackUrl
+                ? _value.idBackUrl
+                : idBackUrl // ignore: cast_nullable_to_non_nullable
                       as String?,
             organizationIds: null == organizationIds
                 ? _value.organizationIds
@@ -173,6 +187,8 @@ abstract class _$$UserModelImplCopyWith<$Res>
     String? program,
     int? yearLevel,
     String? avatarUrl,
+    String? idFrontUrl,
+    String? idBackUrl,
     List<String> organizationIds,
     String role,
     String status,
@@ -202,6 +218,8 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? program = freezed,
     Object? yearLevel = freezed,
     Object? avatarUrl = freezed,
+    Object? idFrontUrl = freezed,
+    Object? idBackUrl = freezed,
     Object? organizationIds = null,
     Object? role = null,
     Object? status = null,
@@ -241,6 +259,14 @@ class __$$UserModelImplCopyWithImpl<$Res>
             ? _value.avatarUrl
             : avatarUrl // ignore: cast_nullable_to_non_nullable
                   as String?,
+        idFrontUrl: freezed == idFrontUrl
+            ? _value.idFrontUrl
+            : idFrontUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        idBackUrl: freezed == idBackUrl
+            ? _value.idBackUrl
+            : idBackUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
         organizationIds: null == organizationIds
             ? _value._organizationIds
             : organizationIds // ignore: cast_nullable_to_non_nullable
@@ -274,6 +300,8 @@ class _$UserModelImpl implements _UserModel {
     this.program,
     this.yearLevel,
     this.avatarUrl,
+    this.idFrontUrl,
+    this.idBackUrl,
     final List<String> organizationIds = const [],
     this.role = 'student',
     this.status = 'pending',
@@ -299,6 +327,10 @@ class _$UserModelImpl implements _UserModel {
   final int? yearLevel;
   @override
   final String? avatarUrl;
+  @override
+  final String? idFrontUrl;
+  @override
+  final String? idBackUrl;
   final List<String> _organizationIds;
   @override
   @JsonKey()
@@ -324,7 +356,7 @@ class _$UserModelImpl implements _UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, email: $email, fullName: $fullName, schoolId: $schoolId, faculty: $faculty, program: $program, yearLevel: $yearLevel, avatarUrl: $avatarUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt)';
+    return 'UserModel(id: $id, email: $email, fullName: $fullName, schoolId: $schoolId, faculty: $faculty, program: $program, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt)';
   }
 
   @override
@@ -344,6 +376,10 @@ class _$UserModelImpl implements _UserModel {
                 other.yearLevel == yearLevel) &&
             (identical(other.avatarUrl, avatarUrl) ||
                 other.avatarUrl == avatarUrl) &&
+            (identical(other.idFrontUrl, idFrontUrl) ||
+                other.idFrontUrl == idFrontUrl) &&
+            (identical(other.idBackUrl, idBackUrl) ||
+                other.idBackUrl == idBackUrl) &&
             const DeepCollectionEquality().equals(
               other._organizationIds,
               _organizationIds,
@@ -366,6 +402,8 @@ class _$UserModelImpl implements _UserModel {
     program,
     yearLevel,
     avatarUrl,
+    idFrontUrl,
+    idBackUrl,
     const DeepCollectionEquality().hash(_organizationIds),
     role,
     status,
@@ -396,6 +434,8 @@ abstract class _UserModel implements UserModel {
     final String? program,
     final int? yearLevel,
     final String? avatarUrl,
+    final String? idFrontUrl,
+    final String? idBackUrl,
     final List<String> organizationIds,
     final String role,
     final String status,
@@ -421,6 +461,10 @@ abstract class _UserModel implements UserModel {
   int? get yearLevel;
   @override
   String? get avatarUrl;
+  @override
+  String? get idFrontUrl;
+  @override
+  String? get idBackUrl;
   @override
   List<String> get organizationIds;
 
