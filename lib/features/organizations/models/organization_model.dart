@@ -14,6 +14,12 @@ class OrganizationModel with _$OrganizationModel {
     String? bannerUrl,
     @Default('active') String status,
     @Default('academic') String type,
+    String? facultyProgram,
+    String? adviserName,
+    String? campusId,
+    String? facultyId,
+    String? programId,
+    @Default(0) int memberCount,
     DateTime? createdAt,
   }) = _OrganizationModel;
 

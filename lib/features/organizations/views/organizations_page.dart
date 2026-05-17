@@ -1,43 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/organization_provider.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../widgets/quick_actions.dart';
+import '../widgets/analytics/kpi_cards.dart';
+import '../widgets/tables/organization_table.dart';
+import '../widgets/pending_requests_panel.dart';
+import '../widgets/analytics/organization_performance_charts.dart';
+import '../widgets/analytics/top_organizations_leaderboard.dart';
 
 class OrganizationsPage extends ConsumerWidget {
   const OrganizationsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final organizations = ref.watch(organizationsProvider);
-
     return DashboardLayout(
       title: 'Organizations',
-      child: organizations.when(
-        data: (orgs) => ListView.separated(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          itemCount: orgs.length,
-          separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-          itemBuilder: (context, index) {
-            final org = orgs[index];
-            return Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-                  child: org.logoUrl == null ? Text(org.code[0]) : null,
-                ),
-                title: Text(org.name, style: AppTextStyles.titleLarge),
-                subtitle: Text(org.code, style: AppTextStyles.bodySmall),
-                onTap: () {
-                  // TODO: Navigate to details
-                },
-              ),
-            );
-          },
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const QuickActions(),
+            const SizedBox(height: AppSpacing.xl),
+            
+            // Section 1 - KPI Analytics
+            Text('Organization KPI Analytics', style: AppTextStyles.titleLarge),
+            const SizedBox(height: AppSpacing.md),
+            const KpiCards(),
+            
+            const SizedBox(height: AppSpacing.xl),
+            
+            // Section 3 & 4 - Performance Analytics & Top Organizations
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 1000) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(
+                        flex: 2,
+                        child: OrganizationPerformanceCharts(),
+                      ),
+                      const SizedBox(width: AppSpacing.xl),
+                      const Expanded(
+                        flex: 1,
+                        child: TopOrganizationsLeaderboard(),
+                      ),
+                    ],
+                  );
+                }
+                return const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OrganizationPerformanceCharts(),
+                    const SizedBox(height: AppSpacing.xl),
+                    TopOrganizationsLeaderboard(),
+                  ],
+                );
+              },
+            ),
+            
+            const SizedBox(height: AppSpacing.xl),
+            
+            // Section 2 & 5 - Organization Table & Pending Requests
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 1000) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('All Organizations', style: AppTextStyles.titleLarge),
+                            const SizedBox(height: AppSpacing.md),
+                            const OrganizationTable(),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xl),
+                      const Expanded(
+                        flex: 1,
+                        child: PendingRequestsPanel(),
+                      ),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('All Organizations', style: AppTextStyles.titleLarge),
+                    const SizedBox(height: AppSpacing.md),
+                    const OrganizationTable(),
+                    const SizedBox(height: AppSpacing.xl),
+                    const PendingRequestsPanel(),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );
   }

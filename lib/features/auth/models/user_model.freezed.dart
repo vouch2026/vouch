@@ -30,7 +30,13 @@ mixin _$UserModel {
   int? get yearLevel => throw _privateConstructorUsedError;
   String? get avatarUrl => throw _privateConstructorUsedError;
   List<String> get organizationIds => throw _privateConstructorUsedError;
+
+  /// Role of the user. See [UserRole] for possible values.
+  /// Default roles include: super_admin, student, etc.
   String get role => throw _privateConstructorUsedError;
+
+  /// Status of the account. See [UserStatus] for possible values.
+  /// Default statuses include: pending, approved, etc.
   String get status => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
@@ -302,9 +308,14 @@ class _$UserModelImpl implements _UserModel {
     return EqualUnmodifiableListView(_organizationIds);
   }
 
+  /// Role of the user. See [UserRole] for possible values.
+  /// Default roles include: super_admin, student, etc.
   @override
   @JsonKey()
   final String role;
+
+  /// Status of the account. See [UserStatus] for possible values.
+  /// Default statuses include: pending, approved, etc.
   @override
   @JsonKey()
   final String status;
@@ -412,8 +423,14 @@ abstract class _UserModel implements UserModel {
   String? get avatarUrl;
   @override
   List<String> get organizationIds;
+
+  /// Role of the user. See [UserRole] for possible values.
+  /// Default roles include: super_admin, student, etc.
   @override
   String get role;
+
+  /// Status of the account. See [UserStatus] for possible values.
+  /// Default statuses include: pending, approved, etc.
   @override
   String get status;
   @override

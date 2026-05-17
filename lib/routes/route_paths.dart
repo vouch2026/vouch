@@ -6,6 +6,7 @@ class RoutePaths {
   static const String forgotPassword = '/forgot-password';
   static const String dashboard = '/';
   static const String organizations = '/organizations';
+  static const String organizationDetails = '/organizations/:id';
   static const String events = '/events';
   static const String attendance = '/attendance';
   static const String elections = '/elections';
@@ -19,4 +20,21 @@ class RoutePaths {
   static const String changeEmail = '/change-email';
   static const String changePassword = '/change-password';
   static const String superAdminDashboard = '/super-admin';
+  static const String campuses = '/campuses';
+  static const String campusDetails = '/campuses/:id';
+  static const String faculties = '/faculties';
+  static const String facultyDetails = '/faculties/:id';
+  static const String programs = '/programs';
+  static const String programDetails = '/programs/:id';
+  static const String students = '/users/students';
+  static const String instructors = '/users/instructors';
+  static const String officers = '/users/officers';
+  static const String userDetails = '/users/:id';
+  static const String comselecDashboard = '/comselec';
+  static const String comselecElections = '/comselec/elections';
+  static const String comselecCandidates = '/comselec/candidates';
+  static const String comselecVoters = '/comselec/voters';
+  static const String comselecResults = '/comselec/results';
+  static const String comselecAnalytics = '/comselec/analytics';
+  static const String comselecOfficials = '/comselec/officials';
 }

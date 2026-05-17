@@ -29,6 +29,12 @@ mixin _$OrganizationModel {
   String? get bannerUrl => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   String get type => throw _privateConstructorUsedError;
+  String? get facultyProgram => throw _privateConstructorUsedError;
+  String? get adviserName => throw _privateConstructorUsedError;
+  String? get campusId => throw _privateConstructorUsedError;
+  String? get facultyId => throw _privateConstructorUsedError;
+  String? get programId => throw _privateConstructorUsedError;
+  int get memberCount => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this OrganizationModel to a JSON map.
@@ -57,6 +63,12 @@ abstract class $OrganizationModelCopyWith<$Res> {
     String? bannerUrl,
     String status,
     String type,
+    String? facultyProgram,
+    String? adviserName,
+    String? campusId,
+    String? facultyId,
+    String? programId,
+    int memberCount,
     DateTime? createdAt,
   });
 }
@@ -84,6 +96,12 @@ class _$OrganizationModelCopyWithImpl<$Res, $Val extends OrganizationModel>
     Object? bannerUrl = freezed,
     Object? status = null,
     Object? type = null,
+    Object? facultyProgram = freezed,
+    Object? adviserName = freezed,
+    Object? campusId = freezed,
+    Object? facultyId = freezed,
+    Object? programId = freezed,
+    Object? memberCount = null,
     Object? createdAt = freezed,
   }) {
     return _then(
@@ -120,6 +138,30 @@ class _$OrganizationModelCopyWithImpl<$Res, $Val extends OrganizationModel>
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
                       as String,
+            facultyProgram: freezed == facultyProgram
+                ? _value.facultyProgram
+                : facultyProgram // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            adviserName: freezed == adviserName
+                ? _value.adviserName
+                : adviserName // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            campusId: freezed == campusId
+                ? _value.campusId
+                : campusId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            facultyId: freezed == facultyId
+                ? _value.facultyId
+                : facultyId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            programId: freezed == programId
+                ? _value.programId
+                : programId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            memberCount: null == memberCount
+                ? _value.memberCount
+                : memberCount // ignore: cast_nullable_to_non_nullable
+                      as int,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -148,6 +190,12 @@ abstract class _$$OrganizationModelImplCopyWith<$Res>
     String? bannerUrl,
     String status,
     String type,
+    String? facultyProgram,
+    String? adviserName,
+    String? campusId,
+    String? facultyId,
+    String? programId,
+    int memberCount,
     DateTime? createdAt,
   });
 }
@@ -174,6 +222,12 @@ class __$$OrganizationModelImplCopyWithImpl<$Res>
     Object? bannerUrl = freezed,
     Object? status = null,
     Object? type = null,
+    Object? facultyProgram = freezed,
+    Object? adviserName = freezed,
+    Object? campusId = freezed,
+    Object? facultyId = freezed,
+    Object? programId = freezed,
+    Object? memberCount = null,
     Object? createdAt = freezed,
   }) {
     return _then(
@@ -210,6 +264,30 @@ class __$$OrganizationModelImplCopyWithImpl<$Res>
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
                   as String,
+        facultyProgram: freezed == facultyProgram
+            ? _value.facultyProgram
+            : facultyProgram // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        adviserName: freezed == adviserName
+            ? _value.adviserName
+            : adviserName // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        campusId: freezed == campusId
+            ? _value.campusId
+            : campusId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        facultyId: freezed == facultyId
+            ? _value.facultyId
+            : facultyId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        programId: freezed == programId
+            ? _value.programId
+            : programId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        memberCount: null == memberCount
+            ? _value.memberCount
+            : memberCount // ignore: cast_nullable_to_non_nullable
+                  as int,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -231,6 +309,12 @@ class _$OrganizationModelImpl implements _OrganizationModel {
     this.bannerUrl,
     this.status = 'active',
     this.type = 'academic',
+    this.facultyProgram,
+    this.adviserName,
+    this.campusId,
+    this.facultyId,
+    this.programId,
+    this.memberCount = 0,
     this.createdAt,
   });
 
@@ -256,11 +340,24 @@ class _$OrganizationModelImpl implements _OrganizationModel {
   @JsonKey()
   final String type;
   @override
+  final String? facultyProgram;
+  @override
+  final String? adviserName;
+  @override
+  final String? campusId;
+  @override
+  final String? facultyId;
+  @override
+  final String? programId;
+  @override
+  @JsonKey()
+  final int memberCount;
+  @override
   final DateTime? createdAt;
 
   @override
   String toString() {
-    return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, createdAt: $createdAt)';
+    return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, createdAt: $createdAt)';
   }
 
   @override
@@ -278,6 +375,18 @@ class _$OrganizationModelImpl implements _OrganizationModel {
                 other.bannerUrl == bannerUrl) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.type, type) || other.type == type) &&
+            (identical(other.facultyProgram, facultyProgram) ||
+                other.facultyProgram == facultyProgram) &&
+            (identical(other.adviserName, adviserName) ||
+                other.adviserName == adviserName) &&
+            (identical(other.campusId, campusId) ||
+                other.campusId == campusId) &&
+            (identical(other.facultyId, facultyId) ||
+                other.facultyId == facultyId) &&
+            (identical(other.programId, programId) ||
+                other.programId == programId) &&
+            (identical(other.memberCount, memberCount) ||
+                other.memberCount == memberCount) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -294,6 +403,12 @@ class _$OrganizationModelImpl implements _OrganizationModel {
     bannerUrl,
     status,
     type,
+    facultyProgram,
+    adviserName,
+    campusId,
+    facultyId,
+    programId,
+    memberCount,
     createdAt,
   );
 
@@ -324,6 +439,12 @@ abstract class _OrganizationModel implements OrganizationModel {
     final String? bannerUrl,
     final String status,
     final String type,
+    final String? facultyProgram,
+    final String? adviserName,
+    final String? campusId,
+    final String? facultyId,
+    final String? programId,
+    final int memberCount,
     final DateTime? createdAt,
   }) = _$OrganizationModelImpl;
 
@@ -346,6 +467,18 @@ abstract class _OrganizationModel implements OrganizationModel {
   String get status;
   @override
   String get type;
+  @override
+  String? get facultyProgram;
+  @override
+  String? get adviserName;
+  @override
+  String? get campusId;
+  @override
+  String? get facultyId;
+  @override
+  String? get programId;
+  @override
+  int get memberCount;
   @override
   DateTime? get createdAt;
 

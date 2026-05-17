@@ -17,6 +17,12 @@ _$OrganizationModelImpl _$$OrganizationModelImplFromJson(
   bannerUrl: json['bannerUrl'] as String?,
   status: json['status'] as String? ?? 'active',
   type: json['type'] as String? ?? 'academic',
+  facultyProgram: json['facultyProgram'] as String?,
+  adviserName: json['adviserName'] as String?,
+  campusId: json['campusId'] as String?,
+  facultyId: json['facultyId'] as String?,
+  programId: json['programId'] as String?,
+  memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
   createdAt: json['createdAt'] == null
       ? null
       : DateTime.parse(json['createdAt'] as String),
@@ -33,5 +39,11 @@ Map<String, dynamic> _$$OrganizationModelImplToJson(
   'bannerUrl': instance.bannerUrl,
   'status': instance.status,
   'type': instance.type,
+  'facultyProgram': instance.facultyProgram,
+  'adviserName': instance.adviserName,
+  'campusId': instance.campusId,
+  'facultyId': instance.facultyId,
+  'programId': instance.programId,
+  'memberCount': instance.memberCount,
   'createdAt': instance.createdAt?.toIso8601String(),
 };
