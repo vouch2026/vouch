@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import 'profile_menu_content.dart';
 
 class ProfileDropdown extends ConsumerWidget {
@@ -15,14 +16,14 @@ class ProfileDropdown extends ConsumerWidget {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Profile Menu',
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      transitionDuration: const Duration(milliseconds: 250),
+      barrierColor: Colors.black.withValues(alpha: 0.35),
+      transitionDuration: const Duration(milliseconds: 350),
       pageBuilder: (context, animation, secondaryAnimation) {
         return Stack(
           children: [
             Positioned(
-              top: isMobile ? 0 : 64, // Just below the app bar
-              right: isMobile ? 0 : 16,
+              top: isMobile ? 0 : 80,
+              right: isMobile ? 0 : 20,
               child: Material(
                 color: Colors.transparent,
                 child: Container(
@@ -30,28 +31,58 @@ class ProfileDropdown extends ConsumerWidget {
                   height: isMobile ? size.height : null,
                   constraints: isMobile 
                       ? null 
-                      : BoxConstraints(maxHeight: size.height - 100),
+                      : BoxConstraints(maxHeight: size.height - 120),
                   decoration: BoxDecoration(
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(isMobile ? 0 : 24),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.1), width: 1.2),
                     boxShadow: isMobile ? null : [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ],
-                    border: isMobile ? null : Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.05),
-                      width: 1,
-                    ),
                   ),
-                  child: SafeArea(
-                    top: isMobile,
-                    bottom: isMobile,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: ProfileMenuContent(isModal: !isMobile),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(isMobile ? 0 : 24),
+                    child: Stack(
+                      children: [
+                        // Background Decorations (Matching Login/Signup)
+                        Positioned(
+                          top: -40,
+                          right: -40,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: -30,
+                          left: -30,
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.06),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        
+                        SafeArea(
+                          top: isMobile,
+                          bottom: isMobile,
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: ProfileMenuContent(isModal: !isMobile),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -61,12 +92,12 @@ class ProfileDropdown extends ConsumerWidget {
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
         return FadeTransition(
-          opacity: curve,
+          opacity: animation,
           child: SlideTransition(
             position: Tween<Offset>(
-              begin: isMobile ? const Offset(0, 0.1) : const Offset(0.05, 0),
+              begin: isMobile ? const Offset(0, 0.1) : const Offset(0.05, 0.02),
               end: Offset.zero,
             ).animate(curve),
             child: child,
@@ -85,25 +116,46 @@ class ProfileDropdown extends ConsumerWidget {
         final avatarUrl = profile?.avatarUrl;
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.only(right: AppSpacing.md),
           child: InkWell(
             onTap: () => _showProfileMenu(context),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(30),
             child: Container(
-              padding: const EdgeInsets.all(2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(30),
+                color: AppColors.accent.withValues(alpha: 0.15),
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.1),
-                  width: 2,
+                  width: 1,
                 ),
               ),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? NetworkImage(avatarUrl)
-                    : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Colors.grey.shade100,
+                      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                          ? NetworkImage(avatarUrl)
+                          : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.expand_more_rounded, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 2),
+                ],
               ),
             ),
           ),
