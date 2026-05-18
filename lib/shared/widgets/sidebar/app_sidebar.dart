@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../features/auth/providers/auth_provider.dart';
 
-class AppSidebar extends StatelessWidget {
+class AppSidebar extends ConsumerWidget {
   const AppSidebar({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
+
     return Drawer(
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
@@ -107,21 +112,23 @@ class AppSidebar extends StatelessWidget {
                       label: 'Events',
                       path: RoutePaths.events,
                     ),
-                    _SidebarItem(
-                      icon: Icons.how_to_reg_outlined,
-                      label: 'Attendance',
-                      path: RoutePaths.attendance,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.how_to_vote_outlined,
-                      label: 'Elections',
-                      path: RoutePaths.elections,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.payments_outlined,
-                      label: 'Finance',
-                      path: RoutePaths.finance,
-                    ),
+                    if (!isSuperAdmin) ...[
+                      _SidebarItem(
+                        icon: Icons.how_to_reg_outlined,
+                        label: 'Attendance',
+                        path: RoutePaths.attendance,
+                      ),
+                      _SidebarItem(
+                        icon: Icons.how_to_vote_outlined,
+                        label: 'Elections',
+                        path: RoutePaths.elections,
+                      ),
+                      _SidebarItem(
+                        icon: Icons.payments_outlined,
+                        label: 'Finance',
+                        path: RoutePaths.finance,
+                      ),
+                    ],
                   ],
                 ),
               ),
