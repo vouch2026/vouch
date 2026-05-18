@@ -60,6 +60,11 @@ class AppSidebar extends ConsumerWidget {
                       label: 'Organizations',
                       path: RoutePaths.organizations,
                     ),
+                    _SidebarItem(
+                      icon: Icons.event_outlined,
+                      label: 'Events',
+                      path: RoutePaths.events,
+                    ),
                     const _SidebarHeader(label: 'USER MANAGEMENT'),
                     _SidebarItem(
                       icon: Icons.people_outline_rounded,
@@ -106,11 +111,6 @@ class AppSidebar extends ConsumerWidget {
                       icon: Icons.badge_outlined,
                       label: 'Officials',
                       path: RoutePaths.comselecOfficials,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.event_outlined,
-                      label: 'Events',
-                      path: RoutePaths.events,
                     ),
                     if (!isSuperAdmin) ...[
                       _SidebarItem(
