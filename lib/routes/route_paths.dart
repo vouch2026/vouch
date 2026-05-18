@@ -20,6 +20,7 @@ class RoutePaths {
   static const String changeEmail = '/change-email';
   static const String changePassword = '/change-password';
   static const String superAdminDashboard = '/super-admin';
+  static const String academicStructure = '/academic-structure';
   static const String campuses = '/campuses';
   static const String campusDetails = '/campuses/:id';
   static const String faculties = '/faculties';

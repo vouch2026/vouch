@@ -19,6 +19,7 @@ class RouteNames {
   static const String changeEmail = 'change-email';
   static const String changePassword = 'change-password';
   static const String superAdminDashboard = 'super-admin-dashboard';
+  static const String academicStructure = 'academic-structure';
   static const String campuses = 'campuses';
   static const String campusDetails = 'campus-details';
   static const String faculties = 'faculties';

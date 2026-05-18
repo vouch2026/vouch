@@ -9,11 +9,12 @@ class FacultyModel with _$FacultyModel {
     required String id,
     required String name,
     required String code,
-    required String campusId,
-    String? deanId,
+    @JsonKey(name: 'campus_id') required String campusId,
+    @JsonKey(name: 'dean_id') String? deanId,
     String? deanName,
     @Default('active') String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _FacultyModel;
 
   factory FacultyModel.fromJson(Map<String, dynamic> json) => _$FacultyModelFromJson(json);

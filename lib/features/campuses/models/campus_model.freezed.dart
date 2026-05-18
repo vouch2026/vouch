@@ -25,9 +25,13 @@ mixin _$CampusModel {
   String get name => throw _privateConstructorUsedError;
   String get location => throw _privateConstructorUsedError;
   String? get description => throw _privateConstructorUsedError;
+  @JsonKey(name: 'logo_url')
   String? get logoUrl => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this CampusModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -51,9 +55,10 @@ abstract class $CampusModelCopyWith<$Res> {
     String name,
     String location,
     String? description,
-    String? logoUrl,
+    @JsonKey(name: 'logo_url') String? logoUrl,
     String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   });
 }
 
@@ -79,6 +84,7 @@ class _$CampusModelCopyWithImpl<$Res, $Val extends CampusModel>
     Object? logoUrl = freezed,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -110,6 +116,10 @@ class _$CampusModelCopyWithImpl<$Res, $Val extends CampusModel>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            updatedAt: freezed == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -130,9 +140,10 @@ abstract class _$$CampusModelImplCopyWith<$Res>
     String name,
     String location,
     String? description,
-    String? logoUrl,
+    @JsonKey(name: 'logo_url') String? logoUrl,
     String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   });
 }
 
@@ -157,6 +168,7 @@ class __$$CampusModelImplCopyWithImpl<$Res>
     Object? logoUrl = freezed,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _$CampusModelImpl(
@@ -188,6 +200,10 @@ class __$$CampusModelImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        updatedAt: freezed == updatedAt
+            ? _value.updatedAt
+            : updatedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -201,9 +217,10 @@ class _$CampusModelImpl implements _CampusModel {
     required this.name,
     required this.location,
     this.description,
-    this.logoUrl,
+    @JsonKey(name: 'logo_url') this.logoUrl,
     this.status = 'active',
-    this.createdAt,
+    @JsonKey(name: 'created_at') this.createdAt,
+    @JsonKey(name: 'updated_at') this.updatedAt,
   });
 
   factory _$CampusModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -218,16 +235,21 @@ class _$CampusModelImpl implements _CampusModel {
   @override
   final String? description;
   @override
+  @JsonKey(name: 'logo_url')
   final String? logoUrl;
   @override
   @JsonKey()
   final String status;
   @override
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
 
   @override
   String toString() {
-    return 'CampusModel(id: $id, name: $name, location: $location, description: $description, logoUrl: $logoUrl, status: $status, createdAt: $createdAt)';
+    return 'CampusModel(id: $id, name: $name, location: $location, description: $description, logoUrl: $logoUrl, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -244,7 +266,9 @@ class _$CampusModelImpl implements _CampusModel {
             (identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -258,6 +282,7 @@ class _$CampusModelImpl implements _CampusModel {
     logoUrl,
     status,
     createdAt,
+    updatedAt,
   );
 
   /// Create a copy of CampusModel
@@ -280,9 +305,10 @@ abstract class _CampusModel implements CampusModel {
     required final String name,
     required final String location,
     final String? description,
-    final String? logoUrl,
+    @JsonKey(name: 'logo_url') final String? logoUrl,
     final String status,
-    final DateTime? createdAt,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
+    @JsonKey(name: 'updated_at') final DateTime? updatedAt,
   }) = _$CampusModelImpl;
 
   factory _CampusModel.fromJson(Map<String, dynamic> json) =
@@ -297,11 +323,16 @@ abstract class _CampusModel implements CampusModel {
   @override
   String? get description;
   @override
+  @JsonKey(name: 'logo_url')
   String? get logoUrl;
   @override
   String get status;
   @override
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt;
 
   /// Create a copy of CampusModel
   /// with the given fields replaced by the non-null parameter values.

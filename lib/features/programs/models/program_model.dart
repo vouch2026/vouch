@@ -9,11 +9,12 @@ class ProgramModel with _$ProgramModel {
     required String id,
     required String name,
     required String code,
-    required String facultyId,
-    String? programHeadId,
+    @JsonKey(name: 'faculty_id') required String facultyId,
+    @JsonKey(name: 'program_head_id') String? programHeadId,
     String? programHeadName,
     @Default('active') String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _ProgramModel;
 
   factory ProgramModel.fromJson(Map<String, dynamic> json) => _$ProgramModelFromJson(json);

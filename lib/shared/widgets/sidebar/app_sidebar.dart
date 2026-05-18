@@ -41,19 +41,9 @@ class AppSidebar extends ConsumerWidget {
                     ),
                     const _SidebarHeader(label: 'CAMPUS MANAGEMENT'),
                     _SidebarItem(
-                      icon: Icons.business_rounded,
-                      label: 'Campuses',
-                      path: RoutePaths.campuses,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.account_balance_rounded,
-                      label: 'Faculties',
-                      path: RoutePaths.faculties,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.school_rounded,
-                      label: 'Programs',
-                      path: RoutePaths.programs,
+                      icon: Icons.account_tree_outlined,
+                      label: 'Academic Structure',
+                      path: RoutePaths.academicStructure,
                     ),
                     _SidebarItem(
                       icon: Icons.corporate_fare_outlined,

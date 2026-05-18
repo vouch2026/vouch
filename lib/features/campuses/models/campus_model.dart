@@ -10,9 +10,10 @@ class CampusModel with _$CampusModel {
     required String name,
     required String location,
     String? description,
-    String? logoUrl,
+    @JsonKey(name: 'logo_url') String? logoUrl,
     @Default('active') String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _CampusModel;
 
   factory CampusModel.fromJson(Map<String, dynamic> json) => _$CampusModelFromJson(json);

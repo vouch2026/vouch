@@ -12,11 +12,14 @@ _$CampusModelImpl _$$CampusModelImplFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       location: json['location'] as String,
       description: json['description'] as String?,
-      logoUrl: json['logoUrl'] as String?,
+      logoUrl: json['logo_url'] as String?,
       status: json['status'] as String? ?? 'active',
-      createdAt: json['createdAt'] == null
+      createdAt: json['created_at'] == null
           ? null
-          : DateTime.parse(json['createdAt'] as String),
+          : DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
+          ? null
+          : DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$$CampusModelImplToJson(_$CampusModelImpl instance) =>
@@ -25,7 +28,8 @@ Map<String, dynamic> _$$CampusModelImplToJson(_$CampusModelImpl instance) =>
       'name': instance.name,
       'location': instance.location,
       'description': instance.description,
-      'logoUrl': instance.logoUrl,
+      'logo_url': instance.logoUrl,
       'status': instance.status,
-      'createdAt': instance.createdAt?.toIso8601String(),
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
     };

@@ -24,11 +24,16 @@ mixin _$FacultyModel {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get code => throw _privateConstructorUsedError;
+  @JsonKey(name: 'campus_id')
   String get campusId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'dean_id')
   String? get deanId => throw _privateConstructorUsedError;
   String? get deanName => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this FacultyModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -51,11 +56,12 @@ abstract class $FacultyModelCopyWith<$Res> {
     String id,
     String name,
     String code,
-    String campusId,
-    String? deanId,
+    @JsonKey(name: 'campus_id') String campusId,
+    @JsonKey(name: 'dean_id') String? deanId,
     String? deanName,
     String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   });
 }
 
@@ -82,6 +88,7 @@ class _$FacultyModelCopyWithImpl<$Res, $Val extends FacultyModel>
     Object? deanName = freezed,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -117,6 +124,10 @@ class _$FacultyModelCopyWithImpl<$Res, $Val extends FacultyModel>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            updatedAt: freezed == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -136,11 +147,12 @@ abstract class _$$FacultyModelImplCopyWith<$Res>
     String id,
     String name,
     String code,
-    String campusId,
-    String? deanId,
+    @JsonKey(name: 'campus_id') String campusId,
+    @JsonKey(name: 'dean_id') String? deanId,
     String? deanName,
     String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   });
 }
 
@@ -166,6 +178,7 @@ class __$$FacultyModelImplCopyWithImpl<$Res>
     Object? deanName = freezed,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _$FacultyModelImpl(
@@ -201,6 +214,10 @@ class __$$FacultyModelImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        updatedAt: freezed == updatedAt
+            ? _value.updatedAt
+            : updatedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -213,11 +230,12 @@ class _$FacultyModelImpl implements _FacultyModel {
     required this.id,
     required this.name,
     required this.code,
-    required this.campusId,
-    this.deanId,
+    @JsonKey(name: 'campus_id') required this.campusId,
+    @JsonKey(name: 'dean_id') this.deanId,
     this.deanName,
     this.status = 'active',
-    this.createdAt,
+    @JsonKey(name: 'created_at') this.createdAt,
+    @JsonKey(name: 'updated_at') this.updatedAt,
   });
 
   factory _$FacultyModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -230,8 +248,10 @@ class _$FacultyModelImpl implements _FacultyModel {
   @override
   final String code;
   @override
+  @JsonKey(name: 'campus_id')
   final String campusId;
   @override
+  @JsonKey(name: 'dean_id')
   final String? deanId;
   @override
   final String? deanName;
@@ -239,11 +259,15 @@ class _$FacultyModelImpl implements _FacultyModel {
   @JsonKey()
   final String status;
   @override
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
 
   @override
   String toString() {
-    return 'FacultyModel(id: $id, name: $name, code: $code, campusId: $campusId, deanId: $deanId, deanName: $deanName, status: $status, createdAt: $createdAt)';
+    return 'FacultyModel(id: $id, name: $name, code: $code, campusId: $campusId, deanId: $deanId, deanName: $deanName, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -261,7 +285,9 @@ class _$FacultyModelImpl implements _FacultyModel {
                 other.deanName == deanName) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -276,6 +302,7 @@ class _$FacultyModelImpl implements _FacultyModel {
     deanName,
     status,
     createdAt,
+    updatedAt,
   );
 
   /// Create a copy of FacultyModel
@@ -297,11 +324,12 @@ abstract class _FacultyModel implements FacultyModel {
     required final String id,
     required final String name,
     required final String code,
-    required final String campusId,
-    final String? deanId,
+    @JsonKey(name: 'campus_id') required final String campusId,
+    @JsonKey(name: 'dean_id') final String? deanId,
     final String? deanName,
     final String status,
-    final DateTime? createdAt,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
+    @JsonKey(name: 'updated_at') final DateTime? updatedAt,
   }) = _$FacultyModelImpl;
 
   factory _FacultyModel.fromJson(Map<String, dynamic> json) =
@@ -314,15 +342,21 @@ abstract class _FacultyModel implements FacultyModel {
   @override
   String get code;
   @override
+  @JsonKey(name: 'campus_id')
   String get campusId;
   @override
+  @JsonKey(name: 'dean_id')
   String? get deanId;
   @override
   String? get deanName;
   @override
   String get status;
   @override
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt;
 
   /// Create a copy of FacultyModel
   /// with the given fields replaced by the non-null parameter values.

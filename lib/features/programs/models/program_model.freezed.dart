@@ -24,11 +24,16 @@ mixin _$ProgramModel {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get code => throw _privateConstructorUsedError;
+  @JsonKey(name: 'faculty_id')
   String get facultyId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'program_head_id')
   String? get programHeadId => throw _privateConstructorUsedError;
   String? get programHeadName => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this ProgramModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -51,11 +56,12 @@ abstract class $ProgramModelCopyWith<$Res> {
     String id,
     String name,
     String code,
-    String facultyId,
-    String? programHeadId,
+    @JsonKey(name: 'faculty_id') String facultyId,
+    @JsonKey(name: 'program_head_id') String? programHeadId,
     String? programHeadName,
     String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   });
 }
 
@@ -82,6 +88,7 @@ class _$ProgramModelCopyWithImpl<$Res, $Val extends ProgramModel>
     Object? programHeadName = freezed,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -117,6 +124,10 @@ class _$ProgramModelCopyWithImpl<$Res, $Val extends ProgramModel>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            updatedAt: freezed == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -136,11 +147,12 @@ abstract class _$$ProgramModelImplCopyWith<$Res>
     String id,
     String name,
     String code,
-    String facultyId,
-    String? programHeadId,
+    @JsonKey(name: 'faculty_id') String facultyId,
+    @JsonKey(name: 'program_head_id') String? programHeadId,
     String? programHeadName,
     String status,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   });
 }
 
@@ -166,6 +178,7 @@ class __$$ProgramModelImplCopyWithImpl<$Res>
     Object? programHeadName = freezed,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _$ProgramModelImpl(
@@ -201,6 +214,10 @@ class __$$ProgramModelImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        updatedAt: freezed == updatedAt
+            ? _value.updatedAt
+            : updatedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -213,11 +230,12 @@ class _$ProgramModelImpl implements _ProgramModel {
     required this.id,
     required this.name,
     required this.code,
-    required this.facultyId,
-    this.programHeadId,
+    @JsonKey(name: 'faculty_id') required this.facultyId,
+    @JsonKey(name: 'program_head_id') this.programHeadId,
     this.programHeadName,
     this.status = 'active',
-    this.createdAt,
+    @JsonKey(name: 'created_at') this.createdAt,
+    @JsonKey(name: 'updated_at') this.updatedAt,
   });
 
   factory _$ProgramModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -230,8 +248,10 @@ class _$ProgramModelImpl implements _ProgramModel {
   @override
   final String code;
   @override
+  @JsonKey(name: 'faculty_id')
   final String facultyId;
   @override
+  @JsonKey(name: 'program_head_id')
   final String? programHeadId;
   @override
   final String? programHeadName;
@@ -239,11 +259,15 @@ class _$ProgramModelImpl implements _ProgramModel {
   @JsonKey()
   final String status;
   @override
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
 
   @override
   String toString() {
-    return 'ProgramModel(id: $id, name: $name, code: $code, facultyId: $facultyId, programHeadId: $programHeadId, programHeadName: $programHeadName, status: $status, createdAt: $createdAt)';
+    return 'ProgramModel(id: $id, name: $name, code: $code, facultyId: $facultyId, programHeadId: $programHeadId, programHeadName: $programHeadName, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -262,7 +286,9 @@ class _$ProgramModelImpl implements _ProgramModel {
                 other.programHeadName == programHeadName) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -277,6 +303,7 @@ class _$ProgramModelImpl implements _ProgramModel {
     programHeadName,
     status,
     createdAt,
+    updatedAt,
   );
 
   /// Create a copy of ProgramModel
@@ -298,11 +325,12 @@ abstract class _ProgramModel implements ProgramModel {
     required final String id,
     required final String name,
     required final String code,
-    required final String facultyId,
-    final String? programHeadId,
+    @JsonKey(name: 'faculty_id') required final String facultyId,
+    @JsonKey(name: 'program_head_id') final String? programHeadId,
     final String? programHeadName,
     final String status,
-    final DateTime? createdAt,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
+    @JsonKey(name: 'updated_at') final DateTime? updatedAt,
   }) = _$ProgramModelImpl;
 
   factory _ProgramModel.fromJson(Map<String, dynamic> json) =
@@ -315,15 +343,21 @@ abstract class _ProgramModel implements ProgramModel {
   @override
   String get code;
   @override
+  @JsonKey(name: 'faculty_id')
   String get facultyId;
   @override
+  @JsonKey(name: 'program_head_id')
   String? get programHeadId;
   @override
   String? get programHeadName;
   @override
   String get status;
   @override
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt;
 
   /// Create a copy of ProgramModel
   /// with the given fields replaced by the non-null parameter values.

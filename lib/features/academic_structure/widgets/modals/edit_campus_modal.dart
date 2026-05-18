@@ -1,0 +1,167 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../campuses/models/campus_model.dart';
+import '../../../campuses/providers/campus_provider.dart';
+
+class EditCampusModal extends ConsumerStatefulWidget {
+  final CampusModel campus;
+  const EditCampusModal({super.key, required this.campus});
+
+  @override
+  ConsumerState<EditCampusModal> createState() => _EditCampusModalState();
+}
+
+class _EditCampusModalState extends ConsumerState<EditCampusModal> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _locationController;
+  late final TextEditingController _descriptionController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.campus.name);
+    _locationController = TextEditingController(text: widget.campus.location);
+    _descriptionController = TextEditingController(text: widget.campus.description);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _locationController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final updatedCampus = widget.campus.copyWith(
+        name: _nameController.text.trim(),
+        location: _locationController.text.trim(),
+        description: _descriptionController.text.trim(),
+      );
+
+      await ref.read(campusRepositoryProvider).updateCampus(updatedCampus);
+      ref.invalidate(campusesProvider);
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Campus updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating campus: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Container(
+        width: 500,
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Edit Campus',
+                    style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Campus Name',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. DORSU Main Campus',
+                ),
+                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Location',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Mati City, Davao Oriental',
+                ),
+                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Description (Optional)',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Brief description of the campus...',
+                ),
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+                    ),
+                    child: _isLoading 
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Update Campus'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

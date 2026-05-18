@@ -26,10 +26,12 @@ DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS permissions CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
 DROP TABLE IF EXISTS programs CASCADE;
 DROP TABLE IF EXISTS faculties CASCADE;
+DROP TABLE IF EXISTS campuses CASCADE;
 DROP TABLE IF EXISTS academic_terms CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
 -- 2. Drop all custom ENUM types
 DROP TYPE IF EXISTS sanction_status CASCADE;
@@ -97,18 +99,18 @@ CREATE TRIGGER ensure_single_active_term
 BEFORE INSERT OR UPDATE ON academic_terms
 FOR EACH ROW EXECUTE FUNCTION single_active_term();
 
-CREATE TABLE faculties (
+CREATE TABLE campuses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE
+    location VARCHAR(255) NOT NULL,
+    description TEXT,
+    logo_url VARCHAR(2048),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE programs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    faculty_id UUID NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE
-);
+CREATE TRIGGER update_campuses_updated_at BEFORE UPDATE ON campuses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -120,8 +122,6 @@ CREATE TABLE users (
     profile_photo_url VARCHAR(2048),
     id_front_url VARCHAR(2048), -- From legacy profiles
     id_back_url VARCHAR(2048),  -- From legacy profiles
-    faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
-    program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
     year INT,
     account_status VARCHAR(20) DEFAULT 'active', -- Maps to 'status' in legacy profiles
     organization_ids TEXT[] DEFAULT '{}',        -- From legacy profiles
@@ -130,6 +130,52 @@ CREATE TABLE users (
 );
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE faculties (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campus_id UUID NOT NULL REFERENCES campuses(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    dean_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_faculties_updated_at BEFORE UPDATE ON faculties FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE programs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    faculty_id UUID NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    program_head_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Add faculty_id and program_id back to users as they reference faculties and programs
+ALTER TABLE users ADD COLUMN faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN program_id UUID REFERENCES programs(id) ON DELETE SET NULL;
+
+CREATE TABLE organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    logo_url VARCHAR(2048),
+    banner_url VARCHAR(2048),
+    status VARCHAR(20) DEFAULT 'active',
+    type VARCHAR(50) DEFAULT 'academic',
+    campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+    faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
+    program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ==========================================
 -- 3. ROLE-BASED ACCESS CONTROL (RBAC)
@@ -196,6 +242,45 @@ ON permissions FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Role permissions are viewable by authenticated users"
 ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
+
+-- ------------------------------------------------------------
+-- HELPER FUNCTION FOR RBAC
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.roles r ON ur.role_id = r.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND r.name = 'Super Admin'
+    AND ur.is_active = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ------------------------------------------------------------
+-- RLS for Academic Structure
+-- ------------------------------------------------------------
+ALTER TABLE campuses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
+
+-- Select policies (Viewable by everyone)
+CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
+CREATE POLICY "Faculties are viewable by everyone" ON faculties FOR SELECT USING (true);
+CREATE POLICY "Programs are viewable by everyone" ON programs FOR SELECT USING (true);
+CREATE POLICY "Organizations are viewable by everyone" ON organizations FOR SELECT USING (true);
+CREATE POLICY "Academic terms are viewable by everyone" ON academic_terms FOR SELECT USING (true);
+
+-- Manage policies (Super Admin only)
+CREATE POLICY "Super admins can manage campuses" ON campuses FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage faculties" ON faculties FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage programs" ON programs FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage organizations" ON organizations FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
 -- ------------------------------------------------------------
 
 -- ==========================================
@@ -367,17 +452,21 @@ CREATE INDEX idx_clearance_signatures_request_id ON activity_card_clearance_sign
 -- 7. INITIAL DATA SEEDING
 -- ==========================================
 
--- 1. INSERT FACULTIES
-INSERT INTO faculties (name, code) VALUES
-('Faculty of Nursing and Allied Health Sciences', 'FNAHS'),
-('Faculty of Agriculture and Life Sciences', 'FALS'),
-('Faculty of Business and Management', 'FBM'),
-('Faculty of Computing, Engineering and Technology', 'FaCET'),
-('Faculty of Teacher Education', 'FTED'),
-('Faculty of Humanities, Social Sciences, and Communication', 'FHuSoCom'),
-('Faculty of Criminal Justice Education', 'FCJE');
+-- 1. INSERT CAMPUSES
+INSERT INTO campuses (name, location) VALUES
+('DORSU Main Campus', 'Mati City, Davao Oriental');
 
--- 2. INSERT PROGRAMS
+-- 2. INSERT FACULTIES
+INSERT INTO faculties (campus_id, name, code) VALUES
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Nursing and Allied Health Sciences', 'FNAHS'),
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Agriculture and Life Sciences', 'FALS'),
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Business and Management', 'FBM'),
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Computing, Engineering and Technology', 'FaCET'),
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Teacher Education', 'FTED'),
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Humanities, Social Sciences, and Communication', 'FHuSoCom'),
+((SELECT id FROM campuses WHERE name = 'DORSU Main Campus'), 'Faculty of Criminal Justice Education', 'FCJE');
+
+-- 3. INSERT PROGRAMS
 INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FNAHS'), 'Bachelor of Science in Nursing', 'BSN'),
 ((SELECT id FROM faculties WHERE code = 'FALS'), 'Bachelor of Science in Agribusiness Management', 'BSAM'),
@@ -404,7 +493,7 @@ INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FHuSoCom'), 'Bachelor of Arts in Political Science', 'ABPolSci'),
 ((SELECT id FROM faculties WHERE code = 'FHuSoCom'), 'Bachelor of Science in Psychology', 'BSPsych');
 
--- 3. INSERT ROLES
+-- 4. INSERT ROLES
 INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100),
 ('Faculty Dean', 80),
@@ -421,7 +510,7 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 ('Program Council Member', 10),
 ('Students', 5);
 
--- 4. INSERT PERMISSIONS
+-- 5. INSERT PERMISSIONS
 INSERT INTO permissions (action) VALUES
 ('manage_academic_terms'), ('manage_faculties'), ('manage_programs'),
 ('assign_roles'), ('revoke_roles'), ('create_event'), ('edit_event'),
@@ -434,7 +523,7 @@ INSERT INTO permissions (action) VALUES
 ('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
 ('view_faculty_analytics');
 
--- 5. MAP PERMISSIONS TO ROLES
+-- 6. MAP PERMISSIONS TO ROLES
 -- Super Admin
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -449,7 +538,7 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Students' AND p.action IN ('request_clearance');
 
--- 6. UTILITY RPC FOR ROLES
+-- 7. UTILITY RPC FOR ROLES
 CREATE OR REPLACE FUNCTION get_my_role()
 RETURNS TABLE (
     role_name VARCHAR, 

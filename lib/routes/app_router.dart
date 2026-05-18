@@ -25,6 +25,7 @@ import '../features/voters/views/voters_page.dart';
 import '../features/elections/views/election_results_page.dart';
 import '../features/elections/views/election_analytics_page.dart';
 import '../features/elections/views/comselec_officials_page.dart';
+import '../features/academic_structure/views/academic_structure_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -73,6 +74,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.dashboard,
         name: RouteNames.dashboard,
         builder: (context, state) => const DashboardPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.academicStructure,
+        name: RouteNames.academicStructure,
+        builder: (context, state) => const AcademicStructurePage(),
       ),
       GoRoute(
         path: RoutePaths.organizations,
