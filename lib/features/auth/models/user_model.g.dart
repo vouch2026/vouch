@@ -8,38 +8,44 @@ part of 'user_model.dart';
 
 _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
     _$UserModelImpl(
-      id: json['id'] as String,
+      id: json['auth_id'] as String,
       email: json['email'] as String,
-      fullName: json['fullName'] as String?,
-      schoolId: json['schoolId'] as String?,
-      faculty: json['faculty'] as String?,
-      program: json['program'] as String?,
-      yearLevel: (json['yearLevel'] as num?)?.toInt(),
-      avatarUrl: json['avatarUrl'] as String?,
+      firstName: json['first_name'] as String?,
+      lastName: json['last_name'] as String?,
+      schoolId: json['student_id_number'] as String?,
+      faculty: json['faculty_id'] as String?,
+      program: json['program_id'] as String?,
+      yearLevel: (json['year'] as num?)?.toInt(),
+      avatarUrl: json['profile_photo_url'] as String?,
+      idFrontUrl: json['id_front_url'] as String?,
+      idBackUrl: json['id_back_url'] as String?,
       organizationIds:
-          (json['organizationIds'] as List<dynamic>?)
+          (json['organization_ids'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
       role: json['role'] as String? ?? 'student',
-      status: json['status'] as String? ?? 'pending',
-      createdAt: json['createdAt'] == null
+      status: json['account_status'] as String? ?? 'active',
+      createdAt: json['created_at'] == null
           ? null
-          : DateTime.parse(json['createdAt'] as String),
+          : DateTime.parse(json['created_at'] as String),
     );
 
 Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
     <String, dynamic>{
-      'id': instance.id,
+      'auth_id': instance.id,
       'email': instance.email,
-      'fullName': instance.fullName,
-      'schoolId': instance.schoolId,
-      'faculty': instance.faculty,
-      'program': instance.program,
-      'yearLevel': instance.yearLevel,
-      'avatarUrl': instance.avatarUrl,
-      'organizationIds': instance.organizationIds,
+      'first_name': instance.firstName,
+      'last_name': instance.lastName,
+      'student_id_number': instance.schoolId,
+      'faculty_id': instance.faculty,
+      'program_id': instance.program,
+      'year': instance.yearLevel,
+      'profile_photo_url': instance.avatarUrl,
+      'id_front_url': instance.idFrontUrl,
+      'id_back_url': instance.idBackUrl,
+      'organization_ids': instance.organizationIds,
       'role': instance.role,
-      'status': instance.status,
-      'createdAt': instance.createdAt?.toIso8601String(),
+      'account_status': instance.status,
+      'created_at': instance.createdAt?.toIso8601String(),
     };
