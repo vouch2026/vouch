@@ -108,7 +108,7 @@ class ProfileMenuContent extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Text(
-                        profile?.role?.toUpperCase() ?? 'STUDENT',
+                        profile?.roleDisplay.toUpperCase() ?? 'STUDENT',
                         style: AppTextStyles.labelSmall.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 
@@ -59,13 +60,78 @@ class AuthRepository {
   }
 
   Future<UserModel?> getUserProfile(String userId) async {
-    final response = await _client
-        .from('profiles')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
-    
-    if (response == null) return null;
-    return UserModel.fromJson(response);
+    try {
+      final response = await _client
+          .from('users')
+          .select('*, user_roles:user_roles!user_roles_user_id_fkey(roles(name, hierarchy_level))')
+          .eq('auth_id', userId)
+          .maybeSingle();
+      
+      if (response == null) return null;
+
+      final userData = Map<String, dynamic>.from(response);
+      
+      // Handle role extraction from the joined tables
+      final userRoles = userData['user_roles'] as List?;
+      String role = 'student';
+      if (userRoles != null && userRoles.isNotEmpty) {
+        try {
+          // Sort by hierarchy level descending to get the highest role
+          final sortedRoles = List.from(userRoles);
+          sortedRoles.sort((a, b) {
+            final rolesA = a['roles'] as Map?;
+            final rolesB = b['roles'] as Map?;
+            if (rolesA == null || rolesB == null) return 0;
+            final levelA = (rolesA['hierarchy_level'] as num?)?.toInt() ?? 0;
+            final levelB = (rolesB['hierarchy_level'] as num?)?.toInt() ?? 0;
+            return levelB.compareTo(levelA);
+          });
+          
+          final topRole = sortedRoles.first['roles'] as Map?;
+          if (topRole != null) {
+            role = _mapRoleToAppFormat(topRole['name'] as String);
+          }
+        } catch (e) {
+          debugPrint('Error sorting roles: $e');
+        }
+      }
+      
+      userData['role'] = role;
+      return UserModel.fromJson(userData);
+    } catch (e) {
+      debugPrint('Error in getUserProfile: $e');
+      rethrow;
+    }
+  }
+
+  String _mapRoleToAppFormat(String dbRole) {
+    final role = dbRole.trim().toLowerCase();
+    switch (role) {
+      case 'super admin':
+        return 'super_admin';
+      case 'students':
+      case 'student':
+        return 'student';
+      case 'comselec chair':
+      case 'comselec chairman':
+        return 'comselec_chairman';
+      case 'comselec officer':
+      case 'comselec commissioner':
+        return 'comselec_commissioner';
+      case 'faculty governor':
+      case 'program governor':
+      case 'governor':
+        return 'governor';
+      case 'faculty treasurer':
+      case 'program treasurer':
+      case 'treasurer':
+        return 'treasurer';
+      case 'faculty secretary':
+      case 'program secretary':
+      case 'secretary':
+        return 'secretary';
+      default:
+        return role.replaceAll(' ', '_');
+    }
   }
 }

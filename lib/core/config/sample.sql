@@ -1,19 +1,17 @@
 -- ==========================================
--- VOUCH CORE SCHEMA (v2 Final - Fully Optimized)
+-- VOUCH CORE SCHEMA (Optimized)
 -- ==========================================
 -- ==========================================
 -- VOUCH TEARDOWN SCRIPT
 -- ==========================================
 
 -- 1. Drop all tables (CASCADE handles foreign key dependencies)
+-- Drop old Supabase auth triggers that look for public.profiles
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
--- Drop legacy profiles table if it exists
-DROP TABLE IF EXISTS public.profiles CASCADE;
-
-DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
-DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
+DROP TABLE IF EXISTS activityCard_clearance_signatures CASCADE;
+DROP TABLE IF EXISTS activityCard_clearance_requests CASCADE;
 DROP TABLE IF EXISTS student_sanction_records CASCADE;
 DROP TABLE IF EXISTS student_payments CASCADE;
 DROP TABLE IF EXISTS payment_receiver CASCADE;
@@ -30,6 +28,8 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS programs CASCADE;
 DROP TABLE IF EXISTS faculties CASCADE;
 DROP TABLE IF EXISTS academic_terms CASCADE;
+DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
+DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 
 -- 2. Drop all custom ENUM types
 DROP TYPE IF EXISTS sanction_status CASCADE;
@@ -43,6 +43,10 @@ DROP TYPE IF EXISTS semester_type CASCADE;
 -- 3. Drop custom utility functions
 DROP FUNCTION IF EXISTS single_active_term() CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
+
+-- ==========================================
+-- VOUCH CORE SCHEMA (v2 Final - Fully Optimized)
+-- ==========================================
 
 -- ==========================================
 -- 0. UTILITY FUNCTIONS
@@ -112,19 +116,16 @@ CREATE TABLE programs (
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth_id UUID UNIQUE, -- References auth.users in Supabase
+    auth_id UUID UNIQUE, -- Optimized for BaaS (e.g., references auth.users in Supabase)
     student_id_number VARCHAR(50) UNIQUE NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     profile_photo_url VARCHAR(2048),
-    id_front_url VARCHAR(2048), -- From legacy profiles
-    id_back_url VARCHAR(2048),  -- From legacy profiles
     faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
     program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
     year INT,
-    account_status VARCHAR(20) DEFAULT 'active', -- Maps to 'status' in legacy profiles
-    organization_ids TEXT[] DEFAULT '{}',        -- From legacy profiles
+    account_status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -175,27 +176,16 @@ CREATE POLICY "Users can update their own profile"
 ON users FOR UPDATE 
 USING (auth.uid() = auth_id);
 
-CREATE POLICY "Public profiles are viewable by everyone" 
+CREATE POLICY "Super Admins can view all profiles" 
 ON users FOR SELECT 
-USING (true);
-
--- Enable RLS for roles and user_roles
-ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Roles are viewable by authenticated users"
-ON roles FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "User roles are viewable by authenticated users"
-ON user_roles FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Permissions are viewable by authenticated users"
-ON permissions FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Role permissions are viewable by authenticated users"
-ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
+USING (
+  EXISTS (
+    SELECT 1 FROM user_roles ur
+    JOIN roles r ON ur.role_id = r.id
+    WHERE ur.user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
+    AND r.name = 'Super Admin'
+  )
+);
 -- ------------------------------------------------------------
 
 -- ==========================================
@@ -329,7 +319,7 @@ CREATE TRIGGER update_sanctions_updated_at BEFORE UPDATE ON student_sanction_rec
 CREATE INDEX idx_student_sanctions_student_id ON student_sanction_records(student_id);
 
 -- ==========================================
--- 6. THE CLEARANCE WORKFLOW
+-- 6. THE CLEARANCE WORKFLOW (snake_case fixed)
 -- ==========================================
 
 CREATE TABLE activity_card_clearance_requests (
@@ -363,8 +353,11 @@ CREATE TABLE activity_card_clearance_signatures (
 
 CREATE INDEX idx_clearance_signatures_request_id ON activity_card_clearance_signatures(clearance_request_id);
 
+
 -- ==========================================
--- 7. INITIAL DATA SEEDING
+-- ==========================================
+-- INITIAL DATA SEEDING
+-- ==========================================
 -- ==========================================
 
 -- 1. INSERT FACULTIES
@@ -378,18 +371,31 @@ INSERT INTO faculties (name, code) VALUES
 ('Faculty of Criminal Justice Education', 'FCJE');
 
 -- 2. INSERT PROGRAMS
+-- FNAHS Programs
 INSERT INTO programs (faculty_id, name, code) VALUES
-((SELECT id FROM faculties WHERE code = 'FNAHS'), 'Bachelor of Science in Nursing', 'BSN'),
+((SELECT id FROM faculties WHERE code = 'FNAHS'), 'Bachelor of Science in Nursing', 'BSN');
+
+-- FALS Programs
+INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FALS'), 'Bachelor of Science in Agribusiness Management', 'BSAM'),
 ((SELECT id FROM faculties WHERE code = 'FALS'), 'Bachelor of Agricultural Technology', 'BAT'),
 ((SELECT id FROM faculties WHERE code = 'FALS'), 'Bachelor of Science in Biology', 'BSBio'),
-((SELECT id FROM faculties WHERE code = 'FALS'), 'Bachelor of Science in Environmental Science', 'BSES'),
+((SELECT id FROM faculties WHERE code = 'FALS'), 'Bachelor of Science in Environmental Science', 'BSES');
+
+-- FBM Programs
+INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FBM'), 'Bachelor of Science in Business Administration', 'BSBA'),
-((SELECT id FROM faculties WHERE code = 'FBM'), 'Bachelor of Science in Hospitality Management', 'BSHM'),
+((SELECT id FROM faculties WHERE code = 'FBM'), 'Bachelor of Science in Hospitality Management', 'BSHM');
+
+-- FaCET Programs
+INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FaCET'), 'Bachelor of Science in Civil Engineering', 'BSCE'),
 ((SELECT id FROM faculties WHERE code = 'FaCET'), 'Bachelor of Industrial Technology Management', 'BITM'),
 ((SELECT id FROM faculties WHERE code = 'FaCET'), 'Bachelor of Science in Information Technology', 'BSIT'),
-((SELECT id FROM faculties WHERE code = 'FaCET'), 'Bachelor of Science in Mathematics with Research Statistics', 'BSMath'),
+((SELECT id FROM faculties WHERE code = 'FaCET'), 'Bachelor of Science in Mathematics with Research Statistics', 'BSMath');
+
+-- FTED Programs
+INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Elementary Education', 'BEEd'),
 ((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Early Childhood Education', 'BECEd'),
 ((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Secondary Education major in Biological Sciences', 'BSEd-Bio'),
@@ -398,13 +404,19 @@ INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Secondary Education major in Mathematics', 'BSEd-Math'),
 ((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Secondary Education major in Science', 'BSEd-Sci'),
 ((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Physical Education major in School Physical Education', 'BPEd'),
-((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Special Needs Education', 'BSNEd'),
-((SELECT id FROM faculties WHERE code = 'FCJE'), 'Bachelor of Science in Criminology', 'BSCrim'),
+((SELECT id FROM faculties WHERE code = 'FTED'), 'Bachelor of Special Needs Education', 'BSNEd');
+
+-- FCJE Programs
+INSERT INTO programs (faculty_id, name, code) VALUES
+((SELECT id FROM faculties WHERE code = 'FCJE'), 'Bachelor of Science in Criminology', 'BSCrim');
+
+-- FHuSoCom Programs
+INSERT INTO programs (faculty_id, name, code) VALUES
 ((SELECT id FROM faculties WHERE code = 'FHuSoCom'), 'Bachelor of Development Communication', 'BDevCom'),
 ((SELECT id FROM faculties WHERE code = 'FHuSoCom'), 'Bachelor of Arts in Political Science', 'ABPolSci'),
 ((SELECT id FROM faculties WHERE code = 'FHuSoCom'), 'Bachelor of Science in Psychology', 'BSPsych');
 
--- 3. INSERT ROLES
+-- 3. INSERT ROLES (Including Comselec)
 INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100),
 ('Faculty Dean', 80),
@@ -421,20 +433,41 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 ('Program Council Member', 10),
 ('Students', 5);
 
--- 4. INSERT PERMISSIONS
+-- 4. INSERT PERMISSIONS (ACTIONS)
 INSERT INTO permissions (action) VALUES
-('manage_academic_terms'), ('manage_faculties'), ('manage_programs'),
-('assign_roles'), ('revoke_roles'), ('create_event'), ('edit_event'),
-('delete_event'), ('scan_event_attendance'), ('override_attendance'),
-('create_fee'), ('edit_fee'), ('delete_fee'), ('manage_payment_receivers'),
-('verify_payment'), ('reject_payment'), ('request_clearance'),
-('sign_faculty_clearance'), ('sign_program_clearance'), ('sign_comselec_clearance'), 
-('reject_clearance'), ('view_clearance_dashboard'), ('create_sanction_rules'),
-('edit_sanction_rules'), ('delete_sanction_rules'), ('receive_sanction_items'),
-('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
+('manage_academic_terms'),
+('manage_faculties'),
+('manage_programs'),
+('assign_roles'),
+('revoke_roles'),
+('create_event'),
+('edit_event'),
+('delete_event'),
+('scan_event_attendance'),
+('override_attendance'),
+('create_fee'),
+('edit_fee'),
+('delete_fee'),
+('manage_payment_receivers'),
+('verify_payment'),
+('reject_payment'),
+('request_clearance'),
+('sign_faculty_clearance'),
+('sign_program_clearance'),
+('sign_comselec_clearance'), 
+('reject_clearance'),
+('view_clearance_dashboard'),
+('create_sanction_rules'),
+('edit_sanction_rules'),
+('delete_sanction_rules'),
+('receive_sanction_items'),
+('manage_elections'),        
+('view_election_analytics'), 
+('view_program_analytics'),
 ('view_faculty_analytics');
 
 -- 5. MAP PERMISSIONS TO ROLES
+
 -- Super Admin
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -444,12 +477,113 @@ WHERE r.name = 'Super Admin' AND p.action IN (
     'manage_elections'
 );
 
--- (Simplified mapping for other roles, similar to sample.sql)
+-- Faculty Dean
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'Students' AND p.action IN ('request_clearance');
+WHERE r.name = 'Faculty Dean' AND p.action IN (
+    'assign_roles', 'revoke_roles', 'override_attendance',
+    'sign_faculty_clearance', 'reject_clearance', 'view_clearance_dashboard',
+    'view_faculty_analytics', 'view_program_analytics'
+);
 
--- 6. UTILITY RPC FOR ROLES
+-- Program Head
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Program Head' AND p.action IN (
+    'assign_roles', 'revoke_roles', 'sign_program_clearance', 
+    'reject_clearance', 'view_clearance_dashboard', 'view_program_analytics'
+);
+
+-- Comselec Chair
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Comselec Chair' AND p.action IN (
+    'create_event', 'edit_event', 'delete_event', 'manage_elections', 
+    'view_election_analytics', 'sign_comselec_clearance', 'reject_clearance', 
+    'view_clearance_dashboard'
+);
+
+-- Comselec Officer
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Comselec Officer' AND p.action IN (
+    'scan_event_attendance', 'sign_comselec_clearance'
+);
+
+-- Faculty Governor
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Faculty Governor' AND p.action IN (
+    'assign_roles', 'revoke_roles', 'create_event', 'edit_event', 'delete_event', 
+    'scan_event_attendance', 'sign_faculty_clearance', 'reject_clearance', 
+    'view_clearance_dashboard', 'view_faculty_analytics'
+);
+
+-- Program Governor
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Program Governor' AND p.action IN (
+    'assign_roles', 'revoke_roles', 'create_event', 'edit_event', 'delete_event', 
+    'scan_event_attendance', 'sign_program_clearance', 'reject_clearance', 
+    'view_clearance_dashboard', 'view_program_analytics'
+);
+
+-- Faculty Treasurer
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Faculty Treasurer' AND p.action IN (
+    'create_fee', 'edit_fee', 'delete_fee', 'manage_payment_receivers',
+    'verify_payment', 'reject_payment', 'sign_faculty_clearance',
+    'reject_clearance', 'view_clearance_dashboard'
+);
+
+-- Program Treasurer
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Program Treasurer' AND p.action IN (
+    'create_fee', 'edit_fee', 'delete_fee', 'manage_payment_receivers',
+    'verify_payment', 'reject_payment', 'sign_program_clearance',
+    'reject_clearance', 'view_clearance_dashboard'
+);
+
+-- Faculty Secretary
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Faculty Secretary' AND p.action IN (
+    'create_event', 'edit_event', 'scan_event_attendance',
+    'sign_faculty_clearance', 'reject_clearance', 'view_clearance_dashboard'
+);
+
+-- Program Secretary
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Program Secretary' AND p.action IN (
+    'create_event', 'edit_event', 'scan_event_attendance',
+    'sign_program_clearance', 'reject_clearance', 'view_clearance_dashboard'
+);
+
+-- Faculty Council Member
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Faculty Council Member' AND p.action IN (
+    'scan_event_attendance'
+);
+
+-- Program Council Member
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Program Council Member' AND p.action IN (
+    'scan_event_attendance'
+);
+
+-- Students
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Students' AND p.action IN (
+    'request_clearance'
+);
+
+
 CREATE OR REPLACE FUNCTION get_my_role()
 RETURNS TABLE (
     role_name VARCHAR, 
@@ -480,10 +614,10 @@ BEGIN
   GROUP BY r.id, r.name, r.hierarchy_level, ur.scope_type;
 END;
 $$;
-
 -- ==============================================================================
--- 8. SECURITY & AUTH TRIGGERS
+-- 7. SECURITY & DEFAULT SEED DATA
 -- ==============================================================================
+-- Create the new function pointing to public.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
@@ -491,70 +625,127 @@ BEGIN
   VALUES (
     new.id, 
     new.email, 
-    COALESCE(new.raw_user_meta_data->>'full_name', ''),
+    '', -- Provide defaults or extract from raw_user_meta_data
     '', 
-    COALESCE(new.raw_user_meta_data->>'school_id', 'PENDING-' || substr(new.id::text, 1, 8))
+    'PENDING-' || substr(new.id::text, 1, 8) -- Dummy ID until they set it
   );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Attach it to auth.users
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- ==============================================================================
--- 9. SUPER ADMIN SEED
--- ==============================================================================
+  
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- ------------------------------------------------------------------------------
+-- SUPER ADMIN SEED
+-- ------------------------------------------------------------------------------
+
 -- 1. Insert into Supabase Auth (auth.users)
+-- This will trigger handle_new_user() which inserts into public.users
 INSERT INTO auth.users (
-    instance_id, id, aud, role, email, encrypted_password, 
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, 
-    created_at, updated_at, confirmation_token, recovery_token, 
-    email_change_token_new, is_super_admin
+    instance_id, 
+    id, 
+    aud, 
+    role, 
+    email, 
+    encrypted_password, 
+    email_confirmed_at, 
+    raw_app_meta_data, 
+    raw_user_meta_data, 
+    created_at, 
+    updated_at,
+    confirmation_token,
+    recovery_token,
+    email_change_token_new,
+    is_super_admin
 ) VALUES (
     '00000000-0000-0000-0000-000000000000',
     'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
-    'authenticated', 'authenticated', 'vouch.app.admin@gmail.com',
+    'authenticated',
+    'authenticated',
+    'vouch.app.admin@gmail.com',
     crypt('Admin-2026', gen_salt('bf')),
-    current_timestamp, '{"provider":"email","providers":["email"]}',
-    '{"full_name":"Vouch Admin"}', current_timestamp, current_timestamp,
-    '', '', '', false
-) ON CONFLICT (id) DO NOTHING;
+    current_timestamp,
+    '{"provider":"email","providers":["email"]}',
+    '{"full_name":"Vouch Admin"}',
+    current_timestamp,
+    current_timestamp,
+    '',
+    '',
+    '',
+    false
+)
+ON CONFLICT (id) DO NOTHING;
 
--- 2. Insert into Supabase Auth Identities
+-- 2. Insert into Supabase Auth Identities (Required for login)
 INSERT INTO auth.identities (
-    id, provider_id, user_id, identity_data, provider, 
-    last_sign_in_at, created_at, updated_at
+    id,
+    provider_id,
+    user_id,
+    identity_data,
+    provider,
+    last_sign_in_at,
+    created_at,
+    updated_at
 ) VALUES (
     'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
+    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', -- For the 'email' provider, provider_id is the user's UUID
     'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
     format('{"sub":"%s","email":"%s"}','cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c','vouch.app.admin@gmail.com')::jsonb,
-    'email', current_timestamp, current_timestamp, current_timestamp
-) ON CONFLICT (id) DO NOTHING;
+    'email',
+    current_timestamp,
+    current_timestamp,
+    current_timestamp
+)
+ON CONFLICT (id) DO NOTHING;
+-- If ON CONFLICT (id) DO NOTHING fails, change to ON CONFLICT (provider, provider_id) DO NOTHING;
 
--- 3. Upsert into public.users
+
+-- 3. Upsert the profile into the public.users table 
+-- Using ON CONFLICT (auth_id) DO UPDATE to ensure we overwrite the dummy data from the trigger
 INSERT INTO public.users (
-    auth_id, student_id_number, first_name, last_name, email, account_status
+    auth_id, 
+    student_id_number, 
+    first_name, 
+    last_name, 
+    email, 
+    account_status
 ) VALUES (
     'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
-    'SA-2026-001', 'Vouch', 'Admin', 'vouch.app.admin@gmail.com', 'active'
-) ON CONFLICT (auth_id) DO UPDATE SET
+    'SA-2026-001', 
+    'Vouch', 
+    'Admin', 
+    'vouch.app.admin@gmail.com', 
+    'active'
+)
+ON CONFLICT (auth_id) DO UPDATE SET
     student_id_number = EXCLUDED.student_id_number,
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name,
     account_status = EXCLUDED.account_status;
 
--- 4. Assign the 'Super Admin' role
-INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id) 
-SELECT u.id, r.id, 'Institutional', '00000000-0000-0000-0000-000000000000'
-FROM public.users u CROSS JOIN public.roles r
+
+-- 4. Assign the 'Super Admin' role to this new user safely
+INSERT INTO public.user_roles (
+    user_id, 
+    role_id, 
+    scope_type, 
+    scope_id
+) 
+SELECT 
+    u.id, 
+    r.id, 
+    'Institutional', 
+    '00000000-0000-0000-0000-000000000000'
+FROM public.users u
+CROSS JOIN public.roles r
 WHERE u.email = 'vouch.app.admin@gmail.com' AND r.name = 'Super Admin'
 AND NOT EXISTS (
-    SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
+    SELECT 1 FROM public.user_roles ur 
+    WHERE ur.user_id = u.id AND ur.role_id = r.id
 );
-
-UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
