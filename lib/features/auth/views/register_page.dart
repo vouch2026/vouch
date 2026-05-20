@@ -11,6 +11,10 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
+import '../../faculties/providers/faculty_provider.dart';
+import '../../programs/providers/program_provider.dart';
+import '../../faculties/models/faculty_model.dart';
+import '../../programs/models/program_model.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -23,15 +27,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   
   // Controllers
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _schoolIdController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   // State
-  String? _selectedFaculty;
-  String? _selectedProgram;
+  String? _selectedFacultyId;
+  String? _selectedProgramId;
   String? _selectedYearLevel;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
@@ -40,17 +45,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   XFile? _idBackImage;
   final ImagePicker _picker = ImagePicker();
 
-  // Mock data (as in sample)
-  final List<String> _faculties = ['Faculty of Engineering', 'Faculty of Arts', 'Faculty of Science'];
-  final Map<String, List<String>> _programs = {
-    'Faculty of Engineering': ['BS Civil Engineering', 'BS Electrical Engineering'],
-    'Faculty of Arts': ['BA Communication', 'BA Literature'],
-    'Faculty of Science': ['BS Biology', 'BS Chemistry'],
-  };
-
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _schoolIdController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -226,7 +224,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Widget _buildRegisterFormCard(BuildContext context, {required bool isDesktop}) {
     final authState = ref.watch(authControllerProvider);
-    final availablePrograms = _selectedFaculty == null ? <String>[] : (_programs[_selectedFaculty] ?? []);
+    final facultiesAsync = ref.watch(facultiesProvider);
+    final programsAsync = _selectedFacultyId != null 
+        ? ref.watch(programsByFacultyProvider(_selectedFacultyId!))
+        : const AsyncValue<List<ProgramModel>>.data([]);
 
     return Container(
       decoration: BoxDecoration(
@@ -278,37 +279,88 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               ),
             const SizedBox(height: AppSpacing.xl),
             _buildLabel('Faculty'),
-            _buildDropdown(
-              hint: 'Select Faculty',
-              value: _selectedFaculty,
-              items: _faculties,
-              onChanged: (val) => setState(() {
-                _selectedFaculty = val;
-                _selectedProgram = null;
-              }),
+            facultiesAsync.when(
+              data: (faculties) => _buildDropdown<String>(
+                hint: 'Select Faculty',
+                value: _selectedFacultyId,
+                items: faculties.map((f) => DropdownMenuItem(
+                  value: f.id,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Text(f.name),
+                  ),
+                )).toList(),
+                onChanged: (val) => setState(() {
+                  _selectedFacultyId = val;
+                  _selectedProgramId = null;
+                }),
+              ),
+              loading: () => _buildDropdownPlaceholder('Loading faculties...'),
+              error: (e, _) => _buildDropdownPlaceholder('Error loading faculties'),
             ),
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Program'),
-            _buildDropdown(
-              hint: _selectedFaculty == null ? 'Select Faculty first' : 'Select Program',
-              value: _selectedProgram,
-              items: availablePrograms,
-              onChanged: availablePrograms.isEmpty ? null : (val) => setState(() => _selectedProgram = val),
+            programsAsync.when(
+              data: (programs) => _buildDropdown<String>(
+                hint: _selectedFacultyId == null ? 'Select Faculty first' : 'Select Program',
+                value: _selectedProgramId,
+                items: programs.map((p) => DropdownMenuItem(
+                  value: p.id,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Text(p.name),
+                  ),
+                )).toList(),
+                onChanged: _selectedFacultyId == null ? null : (val) => setState(() => _selectedProgramId = val),
+              ),
+              loading: () => _buildDropdownPlaceholder('Loading programs...'),
+              error: (e, _) => _buildDropdownPlaceholder('Error loading programs'),
             ),
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Year Level'),
-            _buildDropdown(
+            _buildDropdown<String>(
               hint: 'Select Year Level',
               value: _selectedYearLevel,
-              items: const ['1', '2', '3', '4', '5'],
+              items: const ['1', '2', '3', '4', '5'].map((y) => DropdownMenuItem(
+                value: y,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Text(y),
+                ),
+              )).toList(),
               onChanged: (val) => setState(() => _selectedYearLevel = val),
             ),
             const SizedBox(height: AppSpacing.md),
-            _buildLabel('Full Name'),
-            _buildTextField(
-              controller: _nameController,
-              hintText: 'Enter Full Name',
-              icon: Icons.person_outline,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('First Name'),
+                      _buildTextField(
+                        controller: _firstNameController,
+                        hintText: 'First Name',
+                        icon: Icons.person_outline,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Last Name'),
+                      _buildTextField(
+                        controller: _lastNameController,
+                        hintText: 'Last Name',
+                        icon: Icons.person_outline,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.md),
             _buildLabel('ID No.'),
@@ -395,13 +447,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             );
                             return;
                           }
+                          if (_selectedFacultyId == null || _selectedProgramId == null || _selectedYearLevel == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please select faculty, program, and year level')),
+                            );
+                            return;
+                          }
+
                           ref.read(authControllerProvider.notifier).signUp(
                                 email: _emailController.text,
                                 password: _passwordController.text,
-                                fullName: _nameController.text,
+                                firstName: _firstNameController.text,
+                                lastName: _lastNameController.text,
                                 schoolId: _schoolIdController.text,
-                                faculty: _selectedFaculty ?? '',
-                                program: _selectedProgram ?? '',
+                                facultyId: _selectedFacultyId ?? '',
+                                programId: _selectedProgramId ?? '',
                                 yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
                                 idFront: File(_idFrontImage!.path),
                                 idBack: File(_idBackImage!.path),
@@ -483,11 +543,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
-  Widget _buildDropdown({
+  Widget _buildDropdownPlaceholder(String hint) {
+    return _buildDropdown<String>(
+      hint: hint,
+      value: null,
+      items: [],
+      onChanged: null,
+    );
+  }
+
+  Widget _buildDropdown<T>({
     required String hint,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?>? onChanged,
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?>? onChanged,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -496,7 +565,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         color: AppColors.white,
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
+        child: DropdownButton<T>(
           hint: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Text(
@@ -506,7 +575,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
           value: value,
           style: AppTextStyles.bodySmall,
-          items: items.map((item) => DropdownMenuItem(value: item, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Text(item)))).toList(),
+          items: items,
           onChanged: onChanged,
           isExpanded: true,
           icon: const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.expand_more_rounded, color: AppColors.primary)),

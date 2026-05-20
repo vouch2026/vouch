@@ -8,6 +8,7 @@ class RoutePaths {
   static const String organizations = '/organizations';
   static const String organizationDetails = '/organizations/:id';
   static const String events = '/events';
+  static const String fees = '/fees';
   static const String attendance = '/attendance';
   static const String elections = '/elections';
   static const String finance = '/finance';

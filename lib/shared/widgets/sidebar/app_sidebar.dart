@@ -55,6 +55,11 @@ class AppSidebar extends ConsumerWidget {
                       label: 'Events',
                       path: RoutePaths.events,
                     ),
+                    _SidebarItem(
+                      icon: Icons.payments_outlined,
+                      label: 'Fees',
+                      path: RoutePaths.fees,
+                    ),
                     const _SidebarHeader(label: 'USER MANAGEMENT'),
                     _SidebarItem(
                       icon: Icons.people_outline_rounded,

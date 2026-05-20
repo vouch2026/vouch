@@ -575,16 +575,53 @@ $$;
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+    new_user_id UUID;
+    student_role_id UUID;
 BEGIN
-INSERT INTO public.users (auth_id, email, first_name, last_name, student_id_number)
-VALUES (
-new.id, 
-new.email, 
-COALESCE(new.raw_user_meta_data->>'full_name', ''),
-'', 
-COALESCE(new.raw_user_meta_data->>'school_id', 'PENDING-' || substr(new.id::text, 1, 8))
-);
-RETURN new;
+    -- 1. Insert into public.users
+    INSERT INTO public.users (
+        auth_id, 
+        email, 
+        first_name, 
+        last_name, 
+        student_id_number, 
+        faculty_id, 
+        program_id, 
+        year,
+        id_front_url,
+        id_back_url,
+        account_status
+    )
+    VALUES (
+        new.id, 
+        new.email, 
+        COALESCE(new.raw_user_meta_data->>'first_name', ''),
+        COALESCE(new.raw_user_meta_data->>'last_name', ''), 
+        COALESCE(new.raw_user_meta_data->>'school_id', 'PENDING-' || substr(new.id::text, 1, 8)),
+        (new.raw_user_meta_data->>'faculty_id')::uuid,
+        (new.raw_user_meta_data->>'program_id')::uuid,
+        (new.raw_user_meta_data->>'year_level')::int,
+        new.raw_user_meta_data->>'id_front_url',
+        new.raw_user_meta_data->>'id_back_url',
+        COALESCE(new.raw_user_meta_data->>'status', 'active')
+    )
+    RETURNING id INTO new_user_id;
+
+    -- 2. Assign default 'Students' role
+    SELECT id INTO student_role_id FROM public.roles WHERE name = 'Students';
+    
+    IF student_role_id IS NOT NULL THEN
+        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id)
+        VALUES (
+            new_user_id, 
+            student_role_id, 
+            'Program', 
+            (new.raw_user_meta_data->>'program_id')::uuid
+        );
+    END IF;
+
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as p;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class StorageService {
   final SupabaseClient _client;
@@ -15,13 +16,14 @@ class StorageService {
     final extension = p.extension(file.path);
     final fileName = '${isFront ? 'front' : 'back'}_${identifier}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'verification_ids/$fileName';
+    final bucket = dotenv.get('SUPABASE_ID_BUCKET', fallback: 'ids');
 
-    await _client.storage.from('ids').upload(
+    await _client.storage.from(bucket).upload(
           path,
           file,
           fileOptions: const FileOptions(upsert: true),
         );
 
-    return _client.storage.from('ids').getPublicUrl(path);
+    return _client.storage.from(bucket).getPublicUrl(path);
   }
 }
