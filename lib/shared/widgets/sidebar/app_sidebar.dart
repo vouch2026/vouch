@@ -130,9 +130,22 @@ class AppSidebar extends ConsumerWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.lg, top: AppSpacing.sm),
-                child: Text(
-                  '© ${DateTime.now().year} Vouch. All rights reserved.',
-                  style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '© ${DateTime.now().year} Vouch. All rights reserved.',
+                      style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Version 1.0.0+1',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.grey.shade400,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
