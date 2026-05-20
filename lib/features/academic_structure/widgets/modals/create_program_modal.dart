@@ -39,8 +39,7 @@ class _CreateProgramModalState extends ConsumerState<CreateProgramModal> {
         facultyId: _selectedFaculty!,
       );
 
-      await ref.read(programRepositoryProvider).createProgram(program);
-      ref.invalidate(programsProvider);
+      await ref.read(programsProvider.notifier).addProgram(program);
       
       if (mounted) {
         Navigator.pop(context);

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_spacing.dart';
-import 'modals/create_campus_modal.dart';
-import '../../faculties/widgets/modals/create_faculty_modal.dart';
-import '../../programs/widgets/modals/create_program_modal.dart';
+import '../../academic_structure/widgets/modals/create_campus_modal.dart';
+import '../../academic_structure/widgets/modals/create_faculty_modal.dart';
+import '../../academic_structure/widgets/modals/create_program_modal.dart';
 
 class CampusQuickActions extends StatelessWidget {
   const CampusQuickActions({super.key});

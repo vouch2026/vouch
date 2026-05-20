@@ -48,8 +48,7 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
         facultyId: _selectedFaculty!,
       );
 
-      await ref.read(programRepositoryProvider).updateProgram(updatedProgram);
-      ref.invalidate(programsProvider);
+      await ref.read(programsProvider.notifier).updateProgram(updatedProgram);
       
       if (mounted) {
         Navigator.pop(context);

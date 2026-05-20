@@ -29,8 +29,9 @@ class FacultyRepository {
   Future<FacultyModel> createFaculty(FacultyModel faculty) async {
     final data = faculty.toJson();
     data.remove('id');
-    data.remove('createdAt');
-    data.remove('updatedAt');
+    data.remove('created_at');
+    data.remove('updated_at');
+    data.remove('status');
     data.remove('deanName');
 
     final response = await _client
@@ -52,8 +53,9 @@ class FacultyRepository {
 
   Future<FacultyModel> updateFaculty(FacultyModel faculty) async {
     final data = faculty.toJson();
-    data.remove('createdAt');
-    data.remove('updatedAt');
+    data.remove('created_at');
+    data.remove('updated_at');
+    data.remove('status');
     data.remove('deanName');
 
     final response = await _client

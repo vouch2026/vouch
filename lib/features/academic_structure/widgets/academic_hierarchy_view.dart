@@ -9,6 +9,9 @@ import '../../programs/providers/program_provider.dart';
 import '../../campuses/models/campus_model.dart';
 import '../../faculties/models/faculty_model.dart';
 import '../../programs/models/program_model.dart';
+import './modals/edit_campus_modal.dart';
+import './modals/edit_faculty_modal.dart';
+import './modals/edit_program_modal.dart';
 
 class AcademicHierarchyView extends ConsumerStatefulWidget {
   const AcademicHierarchyView({super.key});
@@ -109,6 +112,44 @@ class _CampusNode extends ConsumerWidget {
     required this.onTap,
   });
 
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Campus?'),
+        content: Text('Are you sure you want to delete ${campus.name}? This will also delete all associated faculties and programs.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(campusesProvider.notifier).deleteCampus(campus.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Campus deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting campus: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final facultiesAsync = ref.watch(facultiesByCampusProvider(campus.id));
@@ -123,25 +164,45 @@ class _CampusNode extends ConsumerWidget {
               onTap: onTap,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
+                vertical: AppSpacing.md, // Increased padding
               ),
               leading: Container(
-                width: 48,
-                height: 48,
+                width: 56, // Increased size
+                height: 56, // Increased size
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16), // More rounded
                 ),
-                child: const Icon(Icons.business_rounded, color: AppColors.primary),
+                child: const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
               ),
               title: Text(
                 campus.name,
-                style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.titleMedium.copyWith( // Larger font
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
               ),
-              subtitle: Text(campus.location, style: AppTextStyles.labelMedium),
+              subtitle: Text(
+                campus.location, 
+                style: AppTextStyles.labelMedium.copyWith(color: AppColors.textGrey),
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => EditCampusModal(campus: campus),
+                    ),
+                    icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
+                    tooltip: 'Edit Campus',
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmDelete(context, ref),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
+                    tooltip: 'Delete Campus',
+                  ),
+                  const SizedBox(width: 8),
                   facultiesAsync.when(
                     data: (faculties) {
                        return Row(
@@ -154,6 +215,7 @@ class _CampusNode extends ConsumerWidget {
                           Icon(
                             isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                             color: AppColors.textGrey,
+                            size: 28,
                           ),
                         ],
                       );
@@ -166,7 +228,7 @@ class _CampusNode extends ConsumerWidget {
             ),
             if (isExpanded)
               Padding(
-                padding: EdgeInsets.only(left: isMobile ? 32 : 64, right: AppSpacing.lg),
+                padding: EdgeInsets.only(left: isMobile ? 32 : 64, right: AppSpacing.lg, bottom: AppSpacing.md),
                 child: facultiesAsync.when(
                   data: (faculties) => Column(
                     children: faculties.map((f) => _FacultyNode(faculty: f)).toList(),
@@ -194,6 +256,44 @@ class _FacultyNode extends ConsumerStatefulWidget {
 class _FacultyNodeState extends ConsumerState<_FacultyNode> {
   bool _isExpanded = false;
 
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Faculty?'),
+        content: Text('Are you sure you want to delete ${widget.faculty.name}? This will also delete all associated programs.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(facultiesProvider.notifier).deleteFaculty(widget.faculty.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Faculty deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting faculty: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final programsAsync = ref.watch(programsByFacultyProvider(widget.faculty.id));
@@ -203,29 +303,60 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
         final isMobile = constraints.maxWidth < 500;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          margin: const EdgeInsets.only(bottom: AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.05)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
               ListTile(
                 onTap: () => setState(() => _isExpanded = !_isExpanded),
-                dense: true,
-                leading: const Icon(Icons.account_balance_rounded, color: AppColors.accent, size: 20),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.account_balance_rounded, color: AppColors.accent, size: 20),
+                ),
                 title: Text(
                   '${widget.faculty.name} (${widget.faculty.code})',
                   style: AppTextStyles.titleSmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
                   ),
                 ),
                 subtitle: Text('Dean: ${widget.faculty.deanName ?? "Unassigned"}', style: AppTextStyles.labelSmall),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    IconButton(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (context) => EditFacultyModal(faculty: widget.faculty),
+                      ),
+                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _confirmDelete,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
                     programsAsync.when(
                       data: (programs) {
                         return Row(
@@ -237,7 +368,7 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
                             ],
                             Icon(
                               _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                              size: 18,
+                              size: 20,
                               color: AppColors.textGrey,
                             ),
                           ],
@@ -251,10 +382,14 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
               ),
               if (_isExpanded)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(40, 0, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: programsAsync.when(
                     data: (programs) => Column(
-                      children: programs.map((p) => _ProgramNode(program: p)).toList(),
+                      children: [
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        ...programs.map((p) => _ProgramNode(program: p)).toList(),
+                      ],
                     ),
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e, s) => Text('Error: $e'),
@@ -268,20 +403,58 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
   }
 }
 
-class _ProgramNode extends StatelessWidget {
+class _ProgramNode extends ConsumerWidget {
   final ProgramModel program;
 
   const _ProgramNode({required this.program});
 
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Program?'),
+        content: Text('Are you sure you want to delete ${program.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(programsProvider.notifier).deleteProgram(program.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Program deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting program: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Container(
-            width: 6,
-            height: 6,
+            width: 8,
+            height: 8,
             decoration: const BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
@@ -293,16 +466,30 @@ class _ProgramNode extends StatelessWidget {
               program.name,
               style: AppTextStyles.labelMedium.copyWith(
                 color: AppColors.textDark,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.bold, // Bolder
+                fontSize: 14,
               ),
             ),
           ),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.edit_outlined, size: 14),
+            onPressed: () => showDialog(
+              context: context,
+              builder: (context) => EditProgramModal(program: program),
+            ),
+            icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
             visualDensity: VisualDensity.compact,
+            tooltip: 'Edit Program',
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            onPressed: () => _confirmDelete(context, ref),
+            icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Delete Program',
           ),
         ],
       ),

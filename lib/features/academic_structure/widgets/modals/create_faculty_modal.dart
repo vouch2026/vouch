@@ -40,8 +40,7 @@ class _CreateFacultyModalState extends ConsumerState<CreateFacultyModal> {
         campusId: _selectedCampus!,
       );
 
-      await ref.read(facultyRepositoryProvider).createFaculty(faculty);
-      ref.invalidate(facultiesProvider);
+      await ref.read(facultiesProvider.notifier).addFaculty(faculty);
       
       if (mounted) {
         Navigator.pop(context);

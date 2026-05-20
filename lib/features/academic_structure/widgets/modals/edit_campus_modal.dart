@@ -48,8 +48,7 @@ class _EditCampusModalState extends ConsumerState<EditCampusModal> {
         description: _descriptionController.text.trim(),
       );
 
-      await ref.read(campusRepositoryProvider).updateCampus(updatedCampus);
-      ref.invalidate(campusesProvider);
+      await ref.read(campusesProvider.notifier).updateCampus(updatedCampus);
       
       if (mounted) {
         Navigator.pop(context);

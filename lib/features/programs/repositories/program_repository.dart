@@ -29,8 +29,9 @@ class ProgramRepository {
   Future<ProgramModel> createProgram(ProgramModel program) async {
     final data = program.toJson();
     data.remove('id');
-    data.remove('createdAt');
-    data.remove('updatedAt');
+    data.remove('created_at');
+    data.remove('updated_at');
+    data.remove('status');
     data.remove('programHeadName');
 
     final response = await _client
@@ -52,8 +53,9 @@ class ProgramRepository {
 
   Future<ProgramModel> updateProgram(ProgramModel program) async {
     final data = program.toJson();
-    data.remove('createdAt');
-    data.remove('updatedAt');
+    data.remove('created_at');
+    data.remove('updated_at');
+    data.remove('status');
     data.remove('programHeadName');
 
     final response = await _client

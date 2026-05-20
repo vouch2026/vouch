@@ -6,7 +6,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_colors.dart';
 import '../widgets/academic_kpi_section.dart';
 import '../widgets/academic_hierarchy_view.dart';
-import '../widgets/academic_structure_table.dart';
 import '../widgets/modals/create_campus_modal.dart';
 import '../widgets/modals/create_faculty_modal.dart';
 import '../widgets/modals/create_program_modal.dart';
@@ -28,8 +27,6 @@ class AcademicStructurePage extends ConsumerWidget {
             const AcademicKpiSection(),
             const SizedBox(height: AppSpacing.xl),
             const AcademicHierarchyView(),
-            const SizedBox(height: AppSpacing.xl),
-            const AcademicStructureTable(),
           ],
         ),
       ),

@@ -48,8 +48,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
         campusId: _selectedCampus!,
       );
 
-      await ref.read(facultyRepositoryProvider).updateFaculty(updatedFaculty);
-      ref.invalidate(facultiesProvider);
+      await ref.read(facultiesProvider.notifier).updateFaculty(updatedFaculty);
       
       if (mounted) {
         Navigator.pop(context);

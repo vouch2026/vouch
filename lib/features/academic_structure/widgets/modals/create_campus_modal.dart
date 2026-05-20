@@ -40,8 +40,7 @@ class _CreateCampusModalState extends ConsumerState<CreateCampusModal> {
         description: _descriptionController.text.trim(),
       );
 
-      await ref.read(campusRepositoryProvider).createCampus(campus);
-      ref.invalidate(campusesProvider);
+      await ref.read(campusesProvider.notifier).addCampus(campus);
       
       if (mounted) {
         Navigator.pop(context);

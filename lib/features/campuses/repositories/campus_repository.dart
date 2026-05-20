@@ -16,8 +16,8 @@ class CampusRepository {
   Future<CampusModel> createCampus(CampusModel campus) async {
     final data = campus.toJson();
     data.remove('id');
-    data.remove('createdAt');
-    data.remove('updatedAt');
+    data.remove('created_at');
+    data.remove('updated_at');
 
     final response = await _client
         .from('campuses')
@@ -30,8 +30,8 @@ class CampusRepository {
 
   Future<CampusModel> updateCampus(CampusModel campus) async {
     final data = campus.toJson();
-    data.remove('createdAt');
-    data.remove('updatedAt');
+    data.remove('created_at');
+    data.remove('updated_at');
 
     final response = await _client
         .from('campuses')

@@ -359,14 +359,11 @@ class _AcademicStructureTableState extends ConsumerState<AcademicStructureTable>
 
     try {
       if (choice == 'campus') {
-        await ref.read(campusRepositoryProvider).deleteCampus(item.campusId);
-        ref.invalidate(campusesProvider);
+        await ref.read(campusesProvider.notifier).deleteCampus(item.campusId);
       } else if (choice == 'faculty') {
-        await ref.read(facultyRepositoryProvider).deleteFaculty(item.facultyId);
-        ref.invalidate(facultiesProvider);
+        await ref.read(facultiesProvider.notifier).deleteFaculty(item.facultyId);
       } else if (choice == 'program') {
-        await ref.read(programRepositoryProvider).deleteProgram(item.programId);
-        ref.invalidate(programsProvider);
+        await ref.read(programsProvider.notifier).deleteProgram(item.programId);
       }
       
       if (mounted) {

@@ -53,8 +53,8 @@ DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
+NEW.updated_at = CURRENT_TIMESTAMP;
+RETURN NEW;
 END;
 $$ language 'plpgsql';
 
@@ -62,10 +62,10 @@ $$ language 'plpgsql';
 CREATE OR REPLACE FUNCTION single_active_term()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.is_active = TRUE THEN
-        UPDATE academic_terms SET is_active = FALSE WHERE id <> NEW.id;
-    END IF;
-    RETURN NEW;
+IF NEW.is_active = TRUE THEN
+    UPDATE academic_terms SET is_active = FALSE WHERE id <> NEW.id;
+END IF;
+RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -86,13 +86,13 @@ CREATE TYPE sanction_status AS ENUM ('Pending Item', 'Item Received');
 -- ==========================================
 
 CREATE TABLE academic_terms (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    academic_year VARCHAR(20) NOT NULL, 
-    semester semester_type NOT NULL,
-    is_active BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(academic_year, semester)
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+academic_year VARCHAR(20) NOT NULL, 
+semester semester_type NOT NULL,
+is_active BOOLEAN DEFAULT false,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+UNIQUE(academic_year, semester)
 );
 
 CREATE TRIGGER ensure_single_active_term
@@ -100,57 +100,57 @@ BEFORE INSERT OR UPDATE ON academic_terms
 FOR EACH ROW EXECUTE FUNCTION single_active_term();
 
 CREATE TABLE campuses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    location VARCHAR(255) NOT NULL,
-    description TEXT,
-    logo_url VARCHAR(2048),
-    status VARCHAR(20) DEFAULT 'active',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(255) NOT NULL,
+location VARCHAR(255) NOT NULL,
+description TEXT,
+logo_url VARCHAR(2048),
+status VARCHAR(20) DEFAULT 'active',
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_campuses_updated_at BEFORE UPDATE ON campuses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth_id UUID UNIQUE, -- References auth.users in Supabase
-    student_id_number VARCHAR(50) UNIQUE NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    profile_photo_url VARCHAR(2048),
-    id_front_url VARCHAR(2048), -- From legacy profiles
-    id_back_url VARCHAR(2048),  -- From legacy profiles
-    year INT,
-    account_status VARCHAR(20) DEFAULT 'active', -- Maps to 'status' in legacy profiles
-    organization_ids TEXT[] DEFAULT '{}',        -- From legacy profiles
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+auth_id UUID UNIQUE, -- References auth.users in Supabase
+student_id_number VARCHAR(50) UNIQUE NOT NULL,
+first_name VARCHAR(100) NOT NULL,
+last_name VARCHAR(100) NOT NULL,
+email VARCHAR(255) UNIQUE NOT NULL,
+profile_photo_url VARCHAR(2048),
+id_front_url VARCHAR(2048), -- From legacy profiles
+id_back_url VARCHAR(2048),  -- From legacy profiles
+year INT,
+account_status VARCHAR(20) DEFAULT 'active', -- Maps to 'status' in legacy profiles
+organization_ids TEXT[] DEFAULT '{}',        -- From legacy profiles
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE faculties (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    campus_id UUID NOT NULL REFERENCES campuses(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    dean_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+campus_id UUID NOT NULL REFERENCES campuses(id) ON DELETE CASCADE,
+name VARCHAR(255) NOT NULL,
+code VARCHAR(50) NOT NULL UNIQUE,
+dean_id UUID REFERENCES users(id) ON DELETE SET NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_faculties_updated_at BEFORE UPDATE ON faculties FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE programs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    faculty_id UUID NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    program_head_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+faculty_id UUID NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
+name VARCHAR(255) NOT NULL,
+code VARCHAR(50) NOT NULL UNIQUE,
+program_head_id UUID REFERENCES users(id) ON DELETE SET NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -160,19 +160,19 @@ ALTER TABLE users ADD COLUMN faculty_id UUID REFERENCES faculties(id) ON DELETE 
 ALTER TABLE users ADD COLUMN program_id UUID REFERENCES programs(id) ON DELETE SET NULL;
 
 CREATE TABLE organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    logo_url VARCHAR(2048),
-    banner_url VARCHAR(2048),
-    status VARCHAR(20) DEFAULT 'active',
-    type VARCHAR(50) DEFAULT 'academic',
-    campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
-    faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
-    program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(255) NOT NULL,
+code VARCHAR(50) NOT NULL UNIQUE,
+description TEXT,
+logo_url VARCHAR(2048),
+banner_url VARCHAR(2048),
+status VARCHAR(20) DEFAULT 'active',
+type VARCHAR(50) DEFAULT 'academic',
+campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
+program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -182,31 +182,31 @@ CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FO
 -- ==========================================
 
 CREATE TABLE roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL UNIQUE,
-    hierarchy_level INT NOT NULL
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(100) NOT NULL UNIQUE,
+hierarchy_level INT NOT NULL
 );
 
 CREATE TABLE permissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    action VARCHAR(100) NOT NULL UNIQUE
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+action VARCHAR(100) NOT NULL UNIQUE
 );
 
 CREATE TABLE role_permissions (
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-    PRIMARY KEY (role_id, permission_id)
+role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE TABLE user_roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    scope_type scope_type NOT NULL,
-    scope_id UUID NOT NULL, 
-    assigned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT true
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL, 
+assigned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+is_active BOOLEAN DEFAULT true
 );
 
 -- ------------------------------------------------------------
@@ -249,13 +249,13 @@ ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.roles r ON ur.role_id = r.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND r.name = 'Super Admin'
-    AND ur.is_active = true
-  );
+RETURN EXISTS (
+SELECT 1 FROM public.user_roles ur
+JOIN public.roles r ON ur.role_id = r.id
+WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+AND r.name = 'Super Admin'
+AND ur.is_active = true
+);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -288,64 +288,64 @@ CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL
 -- ==========================================
 
 CREATE TABLE fees (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    amount DECIMAL(10, 2) NOT NULL,
-    scope_type scope_type NOT NULL,
-    scope_id UUID NOT NULL,
-    is_mandatory BOOLEAN DEFAULT true,
-    due_date DATE NOT NULL,
-    academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT, 
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(255) NOT NULL,
+description TEXT,
+amount DECIMAL(10, 2) NOT NULL,
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL,
+is_mandatory BOOLEAN DEFAULT true,
+due_date DATE NOT NULL,
+academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT, 
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_fees_updated_at BEFORE UPDATE ON fees FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    event_date DATE NOT NULL,
-    short_description VARCHAR(255),
-    full_description TEXT,
-    image_url VARCHAR(2048),
-    location VARCHAR(255) NOT NULL,
-    time_in_start TIME NOT NULL,
-    time_in_end TIME NOT NULL,
-    time_out_start TIME NOT NULL,
-    time_out_end TIME NOT NULL,
-    scope_type scope_type NOT NULL,
-    scope_id UUID NOT NULL, 
-    is_mandatory BOOLEAN DEFAULT true,
-    academic_term_id UUID REFERENCES academic_terms(id) ON DELETE RESTRICT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(255) NOT NULL,
+event_date DATE NOT NULL,
+short_description VARCHAR(255),
+full_description TEXT,
+image_url VARCHAR(2048),
+location VARCHAR(255) NOT NULL,
+time_in_start TIME NOT NULL,
+time_in_end TIME NOT NULL,
+time_out_start TIME NOT NULL,
+time_out_end TIME NOT NULL,
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL, 
+is_mandatory BOOLEAN DEFAULT true,
+academic_term_id UUID REFERENCES academic_terms(id) ON DELETE RESTRICT,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE event_ratings (
-    id SERIAL PRIMARY KEY,
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    rating INT CHECK (rating >= 1 AND rating <= 5),
-    comment TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(event_id, user_id)
+id SERIAL PRIMARY KEY,
+event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+rating INT CHECK (rating >= 1 AND rating <= 5),
+comment TEXT,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+UNIQUE(event_id, user_id)
 );
 
 CREATE TABLE sanction_rules (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    scope_type scope_type NOT NULL,
-    scope_id UUID NOT NULL,
-    academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
-    absence_count INT NOT NULL, 
-    item_description VARCHAR(255) NOT NULL, 
-    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE(scope_id, academic_term_id, absence_count) 
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL,
+academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
+absence_count INT NOT NULL, 
+item_description VARCHAR(255) NOT NULL, 
+created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+UNIQUE(scope_id, academic_term_id, absence_count) 
 );
 
 -- ==========================================
@@ -353,16 +353,16 @@ CREATE TABLE sanction_rules (
 -- ==========================================
 
 CREATE TABLE student_attendance (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    actual_time_in TIMESTAMP WITH TIME ZONE,
-    actual_time_out TIMESTAMP WITH TIME ZONE,
-    status attendance_status DEFAULT 'Pending',
-    scanned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    override_reason VARCHAR(255),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(student_id, event_id)
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+actual_time_in TIMESTAMP WITH TIME ZONE,
+actual_time_out TIMESTAMP WITH TIME ZONE,
+status attendance_status DEFAULT 'Pending',
+scanned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+override_reason VARCHAR(255),
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+UNIQUE(student_id, event_id)
 );
 
 CREATE TRIGGER update_attendance_updated_at BEFORE UPDATE ON student_attendance FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -370,26 +370,26 @@ CREATE INDEX idx_student_attendance_student_id ON student_attendance(student_id)
 CREATE INDEX idx_student_attendance_event_id ON student_attendance(event_id);
 
 CREATE TABLE payment_receiver (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    bank_type VARCHAR(100) NOT NULL,
-    account_name VARCHAR(255) NOT NULL,
-    account_number VARCHAR(100) NOT NULL,
-    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+bank_type VARCHAR(100) NOT NULL,
+account_name VARCHAR(255) NOT NULL,
+account_number VARCHAR(100) NOT NULL,
+created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE student_payments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    fee_id UUID NOT NULL REFERENCES fees(id) ON DELETE CASCADE,
-    reference_number VARCHAR(50) NOT NULL,
-    proof_photo_url VARCHAR(2048),
-    payment_receiver_id UUID REFERENCES payment_receiver(id) ON DELETE SET NULL,
-    rejection_note TEXT,
-    status payment_status DEFAULT 'Pending',
-    amount_paid DECIMAL(10, 2) NOT NULL,
-    paid_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+fee_id UUID NOT NULL REFERENCES fees(id) ON DELETE CASCADE,
+reference_number VARCHAR(50) NOT NULL,
+proof_photo_url VARCHAR(2048),
+payment_receiver_id UUID REFERENCES payment_receiver(id) ON DELETE SET NULL,
+rejection_note TEXT,
+status payment_status DEFAULT 'Pending',
+amount_paid DECIMAL(10, 2) NOT NULL,
+paid_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON student_payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -397,17 +397,17 @@ CREATE INDEX idx_student_payments_student_id ON student_payments(student_id);
 CREATE INDEX idx_student_payments_fee_id ON student_payments(fee_id);
 
 CREATE TABLE student_sanction_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    scope_type scope_type NOT NULL,
-    scope_id UUID NOT NULL,
-    academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
-    total_absences INT NOT NULL,
-    required_item VARCHAR(255) NOT NULL, 
-    status sanction_status DEFAULT 'Pending Item',
-    received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, 
-    received_at TIMESTAMP WITH TIME ZONE,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL,
+academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
+total_absences INT NOT NULL,
+required_item VARCHAR(255) NOT NULL, 
+status sanction_status DEFAULT 'Pending Item',
+received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, 
+received_at TIMESTAMP WITH TIME ZONE,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_sanctions_updated_at BEFORE UPDATE ON student_sanction_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -418,15 +418,15 @@ CREATE INDEX idx_student_sanctions_student_id ON student_sanction_records(studen
 -- ==========================================
 
 CREATE TABLE activity_card_clearance_requests (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    scope_type scope_type NOT NULL,
-    scope_id UUID NOT NULL,
-    academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT, 
-    status clearance_status DEFAULT 'Pending',
-    requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP WITH TIME ZONE
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL,
+academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT, 
+status clearance_status DEFAULT 'Pending',
+requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+completed_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TRIGGER update_clearance_requests_updated_at 
@@ -436,14 +436,14 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE INDEX idx_clearance_requests_student_id ON activity_card_clearance_requests(student_id);
 
 CREATE TABLE activity_card_clearance_signatures (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    clearance_request_id UUID NOT NULL REFERENCES activity_card_clearance_requests(id) ON DELETE CASCADE,
-    required_role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    required_scope_id UUID NOT NULL, 
-    status signature_status DEFAULT 'Pending',
-    signed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    signed_at TIMESTAMP WITH TIME ZONE,
-    remarks VARCHAR(255)
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+clearance_request_id UUID NOT NULL REFERENCES activity_card_clearance_requests(id) ON DELETE CASCADE,
+required_role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+required_scope_id UUID NOT NULL, 
+status signature_status DEFAULT 'Pending',
+signed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+signed_at TIMESTAMP WITH TIME ZONE,
+remarks VARCHAR(255)
 );
 
 CREATE INDEX idx_clearance_signatures_request_id ON activity_card_clearance_signatures(clearance_request_id);
@@ -528,9 +528,9 @@ INSERT INTO permissions (action) VALUES
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Super Admin' AND p.action IN (
-    'manage_academic_terms', 'manage_faculties', 'manage_programs',
-    'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics',
-    'manage_elections'
+'manage_academic_terms', 'manage_faculties', 'manage_programs',
+'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics',
+'manage_elections'
 );
 
 -- (Simplified mapping for other roles, similar to sample.sql)
@@ -541,32 +541,32 @@ WHERE r.name = 'Students' AND p.action IN ('request_clearance');
 -- 7. UTILITY RPC FOR ROLES
 CREATE OR REPLACE FUNCTION get_my_role()
 RETURNS TABLE (
-    role_name VARCHAR, 
-    hierarchy_level INT, 
-    scope_type VARCHAR,
-    permissions JSONB
+role_name VARCHAR, 
+hierarchy_level INT, 
+scope_type VARCHAR,
+permissions JSONB
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  RETURN QUERY
-  SELECT 
-    r.name, 
-    r.hierarchy_level, 
-    ur.scope_type::VARCHAR,
-    COALESCE(
-      jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), 
-      '[]'::jsonb
-    ) AS permissions
-  FROM user_roles ur
-  JOIN roles r ON ur.role_id = r.id
-  JOIN users u ON ur.user_id = u.id
-  LEFT JOIN role_permissions rp ON r.id = rp.role_id
-  LEFT JOIN permissions p ON rp.permission_id = p.id
-  WHERE u.auth_id = auth.uid() 
-  AND ur.is_active = true
-  GROUP BY r.id, r.name, r.hierarchy_level, ur.scope_type;
+RETURN QUERY
+SELECT 
+r.name, 
+r.hierarchy_level, 
+ur.scope_type::VARCHAR,
+COALESCE(
+    jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), 
+    '[]'::jsonb
+) AS permissions
+FROM user_roles ur
+JOIN roles r ON ur.role_id = r.id
+JOIN users u ON ur.user_id = u.id
+LEFT JOIN role_permissions rp ON r.id = rp.role_id
+LEFT JOIN permissions p ON rp.permission_id = p.id
+WHERE u.auth_id = auth.uid() 
+AND ur.is_active = true
+GROUP BY r.id, r.name, r.hierarchy_level, ur.scope_type;
 END;
 $$;
 
@@ -576,21 +576,21 @@ $$;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.users (auth_id, email, first_name, last_name, student_id_number)
-  VALUES (
-    new.id, 
-    new.email, 
-    COALESCE(new.raw_user_meta_data->>'full_name', ''),
-    '', 
-    COALESCE(new.raw_user_meta_data->>'school_id', 'PENDING-' || substr(new.id::text, 1, 8))
-  );
-  RETURN new;
+INSERT INTO public.users (auth_id, email, first_name, last_name, student_id_number)
+VALUES (
+new.id, 
+new.email, 
+COALESCE(new.raw_user_meta_data->>'full_name', ''),
+'', 
+COALESCE(new.raw_user_meta_data->>'school_id', 'PENDING-' || substr(new.id::text, 1, 8))
+);
+RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- ==============================================================================
 -- 9. SUPER ADMIN SEED
@@ -599,43 +599,43 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Insert into Supabase Auth (auth.users)
 INSERT INTO auth.users (
-    instance_id, id, aud, role, email, encrypted_password, 
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, 
-    created_at, updated_at, confirmation_token, recovery_token, 
-    email_change_token_new, is_super_admin
+instance_id, id, aud, role, email, encrypted_password, 
+email_confirmed_at, raw_app_meta_data, raw_user_meta_data, 
+created_at, updated_at, confirmation_token, recovery_token, 
+email_change_token_new, is_super_admin
 ) VALUES (
-    '00000000-0000-0000-0000-000000000000',
-    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
-    'authenticated', 'authenticated', 'vouch.app.admin@gmail.com',
-    crypt('Admin-2026', gen_salt('bf')),
-    current_timestamp, '{"provider":"email","providers":["email"]}',
-    '{"full_name":"Vouch Admin"}', current_timestamp, current_timestamp,
-    '', '', '', false
+'00000000-0000-0000-0000-000000000000',
+'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
+'authenticated', 'authenticated', 'vouch.app.admin@gmail.com',
+crypt('Admin-2026', gen_salt('bf')),
+current_timestamp, '{"provider":"email","providers":["email"]}',
+'{"full_name":"Vouch Admin"}', current_timestamp, current_timestamp,
+'', '', '', false
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 2. Insert into Supabase Auth Identities
 INSERT INTO auth.identities (
-    id, provider_id, user_id, identity_data, provider, 
-    last_sign_in_at, created_at, updated_at
+id, provider_id, user_id, identity_data, provider, 
+last_sign_in_at, created_at, updated_at
 ) VALUES (
-    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-    format('{"sub":"%s","email":"%s"}','cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c','vouch.app.admin@gmail.com')::jsonb,
-    'email', current_timestamp, current_timestamp, current_timestamp
+'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
+'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
+'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
+format('{"sub":"%s","email":"%s"}','cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c','vouch.app.admin@gmail.com')::jsonb,
+'email', current_timestamp, current_timestamp, current_timestamp
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 3. Upsert into public.users
 INSERT INTO public.users (
-    auth_id, student_id_number, first_name, last_name, email, account_status
+auth_id, student_id_number, first_name, last_name, email, account_status
 ) VALUES (
-    'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
-    'SA-2026-001', 'Vouch', 'Admin', 'vouch.app.admin@gmail.com', 'active'
+'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
+'SA-2026-001', 'Vouch', 'Admin', 'vouch.app.admin@gmail.com', 'active'
 ) ON CONFLICT (auth_id) DO UPDATE SET
-    student_id_number = EXCLUDED.student_id_number,
-    first_name = EXCLUDED.first_name,
-    last_name = EXCLUDED.last_name,
-    account_status = EXCLUDED.account_status;
+student_id_number = EXCLUDED.student_id_number,
+first_name = EXCLUDED.first_name,
+last_name = EXCLUDED.last_name,
+account_status = EXCLUDED.account_status;
 
 -- 4. Assign the 'Super Admin' role
 INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id) 
@@ -643,7 +643,7 @@ SELECT u.id, r.id, 'Institutional', '00000000-0000-0000-0000-000000000000'
 FROM public.users u CROSS JOIN public.roles r
 WHERE u.email = 'vouch.app.admin@gmail.com' AND r.name = 'Super Admin'
 AND NOT EXISTS (
-    SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
+SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
 );
 
 UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
