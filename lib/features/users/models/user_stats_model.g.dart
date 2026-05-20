@@ -8,6 +8,7 @@ part of 'user_stats_model.dart';
 
 _$UserStatsModelImpl _$$UserStatsModelImplFromJson(Map<String, dynamic> json) =>
     _$UserStatsModelImpl(
+      totalUsers: (json['totalUsers'] as num?)?.toInt() ?? 0,
       totalStudents: (json['totalStudents'] as num?)?.toInt() ?? 0,
       activeStudents: (json['activeStudents'] as num?)?.toInt() ?? 0,
       pendingStudents: (json['pendingStudents'] as num?)?.toInt() ?? 0,
@@ -28,6 +29,7 @@ _$UserStatsModelImpl _$$UserStatsModelImplFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$$UserStatsModelImplToJson(
   _$UserStatsModelImpl instance,
 ) => <String, dynamic>{
+  'totalUsers': instance.totalUsers,
   'totalStudents': instance.totalStudents,
   'activeStudents': instance.activeStudents,
   'pendingStudents': instance.pendingStudents,

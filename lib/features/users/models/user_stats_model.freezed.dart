@@ -21,6 +21,7 @@ UserStatsModel _$UserStatsModelFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$UserStatsModel {
+  int get totalUsers => throw _privateConstructorUsedError;
   int get totalStudents => throw _privateConstructorUsedError;
   int get activeStudents => throw _privateConstructorUsedError;
   int get pendingStudents => throw _privateConstructorUsedError;
@@ -54,6 +55,7 @@ abstract class $UserStatsModelCopyWith<$Res> {
   ) = _$UserStatsModelCopyWithImpl<$Res, UserStatsModel>;
   @useResult
   $Res call({
+    int totalUsers,
     int totalStudents,
     int activeStudents,
     int pendingStudents,
@@ -86,6 +88,7 @@ class _$UserStatsModelCopyWithImpl<$Res, $Val extends UserStatsModel>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? totalUsers = null,
     Object? totalStudents = null,
     Object? activeStudents = null,
     Object? pendingStudents = null,
@@ -103,6 +106,10 @@ class _$UserStatsModelCopyWithImpl<$Res, $Val extends UserStatsModel>
   }) {
     return _then(
       _value.copyWith(
+            totalUsers: null == totalUsers
+                ? _value.totalUsers
+                : totalUsers // ignore: cast_nullable_to_non_nullable
+                      as int,
             totalStudents: null == totalStudents
                 ? _value.totalStudents
                 : totalStudents // ignore: cast_nullable_to_non_nullable
@@ -175,6 +182,7 @@ abstract class _$$UserStatsModelImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
+    int totalUsers,
     int totalStudents,
     int activeStudents,
     int pendingStudents,
@@ -206,6 +214,7 @@ class __$$UserStatsModelImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? totalUsers = null,
     Object? totalStudents = null,
     Object? activeStudents = null,
     Object? pendingStudents = null,
@@ -223,6 +232,10 @@ class __$$UserStatsModelImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$UserStatsModelImpl(
+        totalUsers: null == totalUsers
+            ? _value.totalUsers
+            : totalUsers // ignore: cast_nullable_to_non_nullable
+                  as int,
         totalStudents: null == totalStudents
             ? _value.totalStudents
             : totalStudents // ignore: cast_nullable_to_non_nullable
@@ -288,6 +301,7 @@ class __$$UserStatsModelImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$UserStatsModelImpl extends _UserStatsModel {
   const _$UserStatsModelImpl({
+    this.totalUsers = 0,
     this.totalStudents = 0,
     this.activeStudents = 0,
     this.pendingStudents = 0,
@@ -307,6 +321,9 @@ class _$UserStatsModelImpl extends _UserStatsModel {
   factory _$UserStatsModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserStatsModelImplFromJson(json);
 
+  @override
+  @JsonKey()
+  final int totalUsers;
   @override
   @JsonKey()
   final int totalStudents;
@@ -352,7 +369,7 @@ class _$UserStatsModelImpl extends _UserStatsModel {
 
   @override
   String toString() {
-    return 'UserStatsModel(totalStudents: $totalStudents, activeStudents: $activeStudents, pendingStudents: $pendingStudents, suspendedStudents: $suspendedStudents, totalInstructors: $totalInstructors, activeInstructors: $activeInstructors, deansCount: $deansCount, programHeadsCount: $programHeadsCount, totalOfficers: $totalOfficers, orgMembershipsCount: $orgMembershipsCount, activeGovernanceAccounts: $activeGovernanceAccounts, studentTrend: $studentTrend, instructorTrend: $instructorTrend, governanceTrend: $governanceTrend)';
+    return 'UserStatsModel(totalUsers: $totalUsers, totalStudents: $totalStudents, activeStudents: $activeStudents, pendingStudents: $pendingStudents, suspendedStudents: $suspendedStudents, totalInstructors: $totalInstructors, activeInstructors: $activeInstructors, deansCount: $deansCount, programHeadsCount: $programHeadsCount, totalOfficers: $totalOfficers, orgMembershipsCount: $orgMembershipsCount, activeGovernanceAccounts: $activeGovernanceAccounts, studentTrend: $studentTrend, instructorTrend: $instructorTrend, governanceTrend: $governanceTrend)';
   }
 
   @override
@@ -360,6 +377,8 @@ class _$UserStatsModelImpl extends _UserStatsModel {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$UserStatsModelImpl &&
+            (identical(other.totalUsers, totalUsers) ||
+                other.totalUsers == totalUsers) &&
             (identical(other.totalStudents, totalStudents) ||
                 other.totalStudents == totalStudents) &&
             (identical(other.activeStudents, activeStudents) ||
@@ -397,6 +416,7 @@ class _$UserStatsModelImpl extends _UserStatsModel {
   @override
   int get hashCode => Object.hash(
     runtimeType,
+    totalUsers,
     totalStudents,
     activeStudents,
     pendingStudents,
@@ -432,6 +452,7 @@ class _$UserStatsModelImpl extends _UserStatsModel {
 
 abstract class _UserStatsModel extends UserStatsModel {
   const factory _UserStatsModel({
+    final int totalUsers,
     final int totalStudents,
     final int activeStudents,
     final int pendingStudents,
@@ -452,6 +473,8 @@ abstract class _UserStatsModel extends UserStatsModel {
   factory _UserStatsModel.fromJson(Map<String, dynamic> json) =
       _$UserStatsModelImpl.fromJson;
 
+  @override
+  int get totalUsers;
   @override
   int get totalStudents;
   @override

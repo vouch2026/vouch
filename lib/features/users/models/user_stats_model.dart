@@ -6,6 +6,7 @@ part 'user_stats_model.g.dart';
 @freezed
 class UserStatsModel with _$UserStatsModel {
   const factory UserStatsModel({
+    @Default(0) int totalUsers,
     @Default(0) int totalStudents,
     @Default(0) int activeStudents,
     @Default(0) int pendingStudents,
@@ -23,8 +24,6 @@ class UserStatsModel with _$UserStatsModel {
   }) = _UserStatsModel;
 
   const UserStatsModel._();
-
-  int get totalUsers => totalStudents + totalInstructors + totalOfficers;
 
   factory UserStatsModel.fromJson(Map<String, dynamic> json) => _$UserStatsModelFromJson(json);
 }

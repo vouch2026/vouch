@@ -6,9 +6,11 @@ final userStatsProvider = FutureProvider<UserStatsModel>((ref) async {
   final client = SupabaseConfig.client;
   
   try {
-    // Let's use a simpler approach for the prototype: query the users and their roles
-    final usersWithRoles = await client.from('users').select('id, account_status, user_roles(roles(name))');
+    // Query users and their roles from Supabase
+    final response = await client.from('users').select('id, account_status, user_roles(roles(name))');
+    final usersList = response as List;
     
+    int totalUsers = usersList.length;
     int students = 0;
     int activeStudents = 0;
     int suspendedStudents = 0;
@@ -17,28 +19,53 @@ final userStatsProvider = FutureProvider<UserStatsModel>((ref) async {
     int programHeads = 0;
     int governance = 0;
     
-    for (var user in (usersWithRoles as List)) {
-      final roles = (user['user_roles'] as List?)?.map((ur) => (ur['roles'] as Map)['name'] as String).toList() ?? [];
+    for (var user in usersList) {
+      final roles = (user['user_roles'] as List?)?.map((ur) {
+        final rolesMap = ur['roles'] as Map?;
+        return rolesMap?['name'] as String? ?? '';
+      }).toList() ?? [];
+      
       final status = user['account_status'] as String? ?? 'active';
       
-      if (roles.contains('Students')) {
+      // 1. Students Count
+      if (roles.any((r) => r.toLowerCase() == 'students' || r.toLowerCase() == 'student')) {
         students++;
         if (status == 'active') activeStudents++;
         if (status == 'suspended') suspendedStudents++;
       }
       
-      if (roles.contains('Faculty Dean') || roles.contains('Program Head') || roles.contains('Adviser')) {
+      // 2. Faculty & Advisers Count
+      // Criteria: Dean, Program Head, Adviser
+      final isFaculty = roles.any((r) {
+        final lr = r.toLowerCase();
+        return lr.contains('dean') || lr.contains('program head') || lr.contains('adviser');
+      });
+      
+      if (isFaculty) {
         faculty++;
-        if (roles.contains('Faculty Dean')) deans++;
-        if (roles.contains('Program Head')) programHeads++;
+        if (roles.any((r) => r.toLowerCase().contains('dean'))) deans++;
+        if (roles.any((r) => r.toLowerCase().contains('program head'))) programHeads++;
       }
       
-      if (roles.any((r) => r.contains('Governor') || r.contains('Secretary') || r.contains('Treasurer'))) {
+      // 3. Governance Roles Count
+      // Criteria: Governor, Vice-Governor, Secretary, Treasurer, Staff
+      final isGovernance = roles.any((r) {
+        final lr = r.toLowerCase();
+        return lr.contains('governor') || 
+               lr.contains('secretary') || 
+               lr.contains('treasurer') ||
+               lr.contains('staff') ||
+               lr.contains('officer') ||
+               lr.contains('council member');
+      });
+      
+      if (isGovernance) {
         governance++;
       }
     }
     
     return UserStatsModel(
+      totalUsers: totalUsers,
       totalStudents: students,
       activeStudents: activeStudents,
       suspendedStudents: suspendedStudents,
@@ -46,17 +73,13 @@ final userStatsProvider = FutureProvider<UserStatsModel>((ref) async {
       deansCount: deans,
       programHeadsCount: programHeads,
       totalOfficers: governance,
-      activeGovernanceAccounts: governance, // Simplified
+      activeGovernanceAccounts: governance, // Simplified active count
       studentTrend: 0.0,
       instructorTrend: 0.0,
       governanceTrend: 0.0,
     );
   } catch (e) {
     // Fallback to empty data if there's an error
-    return const UserStatsModel(
-      totalStudents: 0,
-      totalInstructors: 0,
-      totalOfficers: 0,
-    );
+    return const UserStatsModel();
   }
 });

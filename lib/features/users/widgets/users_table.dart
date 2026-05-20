@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../routes/route_names.dart';
 import '../providers/users_provider.dart';
 import '../../auth/models/user_model.dart';
 
@@ -64,8 +66,16 @@ class UsersTable extends ConsumerWidget {
                 DataCell(Text(user.facultyName ?? 'N/A', style: AppTextStyles.bodySmall)),
                 DataCell(Text(user.programName ?? 'N/A', style: AppTextStyles.bodySmall)),
                 DataCell(_StatusBadge(status: user.status)),
-                DataCell(PopupMenuButton(
+                DataCell(PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert_rounded, size: 20),
+                  onSelected: (value) {
+                    if (value == 'view') {
+                      context.pushNamed(
+                        RouteNames.userDetails,
+                        pathParameters: {'id': user.id!},
+                      );
+                    }
+                  },
                   itemBuilder: (context) => [
                     const PopupMenuItem(value: 'view', child: Text('View Profile')),
                     const PopupMenuItem(value: 'edit', child: Text('Edit')),
@@ -95,6 +105,12 @@ class UsersTable extends ConsumerWidget {
             title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('${user.schoolId} • ${user.roleDisplay}'),
             trailing: _StatusBadge(status: user.status),
+            onTap: () {
+              context.pushNamed(
+                RouteNames.userDetails,
+                pathParameters: {'id': user.id!},
+              );
+            },
           ),
         );
       },
