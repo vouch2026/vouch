@@ -51,24 +51,29 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Institutional Hierarchy',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Institutional Hierarchy',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    Text(
-                      'Expand to view faculties and programs',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: AppColors.textGrey,
+                      Text(
+                        'Expand to view faculties and programs',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.textGrey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: AppSpacing.md),
                 TextButton.icon(
                   onPressed: () => setState(() => _expandedCampuses.clear()),
                   icon: const Icon(Icons.unfold_less_rounded, size: 20),
