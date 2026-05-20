@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
+import '../../../core/utils/role_mapper.dart';
 
 class AuthRepository {
   final SupabaseClient _client;
@@ -89,7 +90,7 @@ class AuthRepository {
           
           final topRole = sortedRoles.first['roles'] as Map?;
           if (topRole != null) {
-            role = _mapRoleToAppFormat(topRole['name'] as String);
+            role = RoleMapper.mapDbRoleToAppFormat(topRole['name'] as String);
           }
         } catch (e) {
           debugPrint('Error sorting roles: $e');
@@ -101,37 +102,6 @@ class AuthRepository {
     } catch (e) {
       debugPrint('Error in getUserProfile: $e');
       rethrow;
-    }
-  }
-
-  String _mapRoleToAppFormat(String dbRole) {
-    final role = dbRole.trim().toLowerCase();
-    switch (role) {
-      case 'super admin':
-        return 'super_admin';
-      case 'students':
-      case 'student':
-        return 'student';
-      case 'comselec chair':
-      case 'comselec chairman':
-        return 'comselec_chairman';
-      case 'comselec officer':
-      case 'comselec commissioner':
-        return 'comselec_commissioner';
-      case 'faculty governor':
-      case 'program governor':
-      case 'governor':
-        return 'governor';
-      case 'faculty treasurer':
-      case 'program treasurer':
-      case 'treasurer':
-        return 'treasurer';
-      case 'faculty secretary':
-      case 'program secretary':
-      case 'secretary':
-        return 'secretary';
-      default:
-        return role.replaceAll(' ', '_');
     }
   }
 }

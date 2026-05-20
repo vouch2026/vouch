@@ -1,17 +1,54 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/models/user_model.dart';
-import 'users_provider.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/utils/role_mapper.dart';
 
-final userProfileProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, id) async {
-  // Check students first
-  final students = await ref.watch(studentsProvider.future);
-  final student = students.firstWhere((s) => (s['user'] as UserModel).id == id, orElse: () => {});
-  if (student.isNotEmpty) return student;
+final userProfileProvider = FutureProvider.family<UserModel?, String>((ref, id) async {
+  final client = SupabaseConfig.client;
+  
+  final response = await client
+      .from('users')
+      .select('''
+        *,
+        faculties:faculty_id(name),
+        programs:program_id(name),
+        user_roles:user_roles!user_roles_user_id_fkey(roles(name, hierarchy_level))
+      ''')
+      .eq('id', id)
+      .maybeSingle();
+      
+  if (response == null) return null;
 
-  // Then instructors
-  final instructors = await ref.watch(instructorsProvider.future);
-  final instructor = instructors.firstWhere((i) => (i['user'] as UserModel).id == id, orElse: () => {});
-  if (instructor.isNotEmpty) return instructor;
-
-  return null;
+  final userData = Map<String, dynamic>.from(response);
+  
+  // Flatten faculty and program names
+  if (userData['faculties'] != null) {
+    userData['facultyName'] = userData['faculties']['name'];
+  }
+  if (userData['programs'] != null) {
+    userData['programName'] = userData['programs']['name'];
+  }
+  
+  // Handle role extraction (highest hierarchy level)
+  final userRoles = userData['user_roles'] as List?;
+  String role = 'student';
+  if (userRoles != null && userRoles.isNotEmpty) {
+    final sortedRoles = List.from(userRoles);
+    sortedRoles.sort((a, b) {
+      final rolesA = a['roles'] as Map?;
+      final rolesB = b['roles'] as Map?;
+      if (rolesA == null || rolesB == null) return 0;
+      final levelA = (rolesA['hierarchy_level'] as num?)?.toInt() ?? 0;
+      final levelB = (rolesB['hierarchy_level'] as num?)?.toInt() ?? 0;
+      return levelB.compareTo(levelA);
+    });
+    
+    final topRole = sortedRoles.first['roles'] as Map?;
+    if (topRole != null) {
+      role = RoleMapper.mapDbRoleToAppFormat(topRole['name'] as String);
+    }
+  }
+  userData['role'] = role;
+  
+  return UserModel.fromJson(userData);
 });

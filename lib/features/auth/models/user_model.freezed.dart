@@ -21,19 +21,20 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$UserModel {
+  String? get id => throw _privateConstructorUsedError; // public.users.id
   @JsonKey(name: 'auth_id')
-  String get id => throw _privateConstructorUsedError;
+  String get authId => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
   @JsonKey(name: 'first_name')
   String? get firstName => throw _privateConstructorUsedError;
   @JsonKey(name: 'last_name')
   String? get lastName => throw _privateConstructorUsedError;
   @JsonKey(name: 'student_id_number')
-  String? get schoolId => throw _privateConstructorUsedError;
+  String get schoolId => throw _privateConstructorUsedError;
   @JsonKey(name: 'faculty_id')
-  String? get faculty => throw _privateConstructorUsedError;
+  String? get facultyId => throw _privateConstructorUsedError;
   @JsonKey(name: 'program_id')
-  String? get program => throw _privateConstructorUsedError;
+  String? get programId => throw _privateConstructorUsedError;
   @JsonKey(name: 'year')
   int? get yearLevel => throw _privateConstructorUsedError;
   @JsonKey(name: 'profile_photo_url')
@@ -45,16 +46,14 @@ mixin _$UserModel {
   @JsonKey(name: 'organization_ids')
   List<String> get organizationIds => throw _privateConstructorUsedError;
 
-  /// Role of the user. See [UserRole] for possible values.
-  /// Default roles include: super_admin, student, etc.
+  /// Derived or primary role
   String get role => throw _privateConstructorUsedError;
-
-  /// Status of the account. See [UserStatus] for possible values.
-  /// Default statuses include: pending, approved, etc.
   @JsonKey(name: 'account_status')
   String get status => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
-  DateTime? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get createdAt => throw _privateConstructorUsedError; // Join fields (not in users table but useful for UI)
+  String? get facultyName => throw _privateConstructorUsedError;
+  String? get programName => throw _privateConstructorUsedError;
 
   /// Serializes this UserModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -72,13 +71,14 @@ abstract class $UserModelCopyWith<$Res> {
       _$UserModelCopyWithImpl<$Res, UserModel>;
   @useResult
   $Res call({
-    @JsonKey(name: 'auth_id') String id,
+    String? id,
+    @JsonKey(name: 'auth_id') String authId,
     String email,
     @JsonKey(name: 'first_name') String? firstName,
     @JsonKey(name: 'last_name') String? lastName,
-    @JsonKey(name: 'student_id_number') String? schoolId,
-    @JsonKey(name: 'faculty_id') String? faculty,
-    @JsonKey(name: 'program_id') String? program,
+    @JsonKey(name: 'student_id_number') String schoolId,
+    @JsonKey(name: 'faculty_id') String? facultyId,
+    @JsonKey(name: 'program_id') String? programId,
     @JsonKey(name: 'year') int? yearLevel,
     @JsonKey(name: 'profile_photo_url') String? avatarUrl,
     @JsonKey(name: 'id_front_url') String? idFrontUrl,
@@ -87,6 +87,8 @@ abstract class $UserModelCopyWith<$Res> {
     String role,
     @JsonKey(name: 'account_status') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    String? facultyName,
+    String? programName,
   });
 }
 
@@ -105,13 +107,14 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? id = freezed,
+    Object? authId = null,
     Object? email = null,
     Object? firstName = freezed,
     Object? lastName = freezed,
-    Object? schoolId = freezed,
-    Object? faculty = freezed,
-    Object? program = freezed,
+    Object? schoolId = null,
+    Object? facultyId = freezed,
+    Object? programId = freezed,
     Object? yearLevel = freezed,
     Object? avatarUrl = freezed,
     Object? idFrontUrl = freezed,
@@ -120,12 +123,18 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? role = null,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? facultyName = freezed,
+    Object? programName = freezed,
   }) {
     return _then(
       _value.copyWith(
-            id: null == id
+            id: freezed == id
                 ? _value.id
                 : id // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            authId: null == authId
+                ? _value.authId
+                : authId // ignore: cast_nullable_to_non_nullable
                       as String,
             email: null == email
                 ? _value.email
@@ -139,17 +148,17 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
                 ? _value.lastName
                 : lastName // ignore: cast_nullable_to_non_nullable
                       as String?,
-            schoolId: freezed == schoolId
+            schoolId: null == schoolId
                 ? _value.schoolId
                 : schoolId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            facultyId: freezed == facultyId
+                ? _value.facultyId
+                : facultyId // ignore: cast_nullable_to_non_nullable
                       as String?,
-            faculty: freezed == faculty
-                ? _value.faculty
-                : faculty // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            program: freezed == program
-                ? _value.program
-                : program // ignore: cast_nullable_to_non_nullable
+            programId: freezed == programId
+                ? _value.programId
+                : programId // ignore: cast_nullable_to_non_nullable
                       as String?,
             yearLevel: freezed == yearLevel
                 ? _value.yearLevel
@@ -183,6 +192,14 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            facultyName: freezed == facultyName
+                ? _value.facultyName
+                : facultyName // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            programName: freezed == programName
+                ? _value.programName
+                : programName // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -199,13 +216,14 @@ abstract class _$$UserModelImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    @JsonKey(name: 'auth_id') String id,
+    String? id,
+    @JsonKey(name: 'auth_id') String authId,
     String email,
     @JsonKey(name: 'first_name') String? firstName,
     @JsonKey(name: 'last_name') String? lastName,
-    @JsonKey(name: 'student_id_number') String? schoolId,
-    @JsonKey(name: 'faculty_id') String? faculty,
-    @JsonKey(name: 'program_id') String? program,
+    @JsonKey(name: 'student_id_number') String schoolId,
+    @JsonKey(name: 'faculty_id') String? facultyId,
+    @JsonKey(name: 'program_id') String? programId,
     @JsonKey(name: 'year') int? yearLevel,
     @JsonKey(name: 'profile_photo_url') String? avatarUrl,
     @JsonKey(name: 'id_front_url') String? idFrontUrl,
@@ -214,6 +232,8 @@ abstract class _$$UserModelImplCopyWith<$Res>
     String role,
     @JsonKey(name: 'account_status') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    String? facultyName,
+    String? programName,
   });
 }
 
@@ -231,13 +251,14 @@ class __$$UserModelImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? id = freezed,
+    Object? authId = null,
     Object? email = null,
     Object? firstName = freezed,
     Object? lastName = freezed,
-    Object? schoolId = freezed,
-    Object? faculty = freezed,
-    Object? program = freezed,
+    Object? schoolId = null,
+    Object? facultyId = freezed,
+    Object? programId = freezed,
     Object? yearLevel = freezed,
     Object? avatarUrl = freezed,
     Object? idFrontUrl = freezed,
@@ -246,12 +267,18 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? role = null,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? facultyName = freezed,
+    Object? programName = freezed,
   }) {
     return _then(
       _$UserModelImpl(
-        id: null == id
+        id: freezed == id
             ? _value.id
             : id // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        authId: null == authId
+            ? _value.authId
+            : authId // ignore: cast_nullable_to_non_nullable
                   as String,
         email: null == email
             ? _value.email
@@ -265,17 +292,17 @@ class __$$UserModelImplCopyWithImpl<$Res>
             ? _value.lastName
             : lastName // ignore: cast_nullable_to_non_nullable
                   as String?,
-        schoolId: freezed == schoolId
+        schoolId: null == schoolId
             ? _value.schoolId
             : schoolId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        facultyId: freezed == facultyId
+            ? _value.facultyId
+            : facultyId // ignore: cast_nullable_to_non_nullable
                   as String?,
-        faculty: freezed == faculty
-            ? _value.faculty
-            : faculty // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        program: freezed == program
-            ? _value.program
-            : program // ignore: cast_nullable_to_non_nullable
+        programId: freezed == programId
+            ? _value.programId
+            : programId // ignore: cast_nullable_to_non_nullable
                   as String?,
         yearLevel: freezed == yearLevel
             ? _value.yearLevel
@@ -309,6 +336,14 @@ class __$$UserModelImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        facultyName: freezed == facultyName
+            ? _value.facultyName
+            : facultyName // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        programName: freezed == programName
+            ? _value.programName
+            : programName // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -318,13 +353,14 @@ class __$$UserModelImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$UserModelImpl extends _UserModel {
   const _$UserModelImpl({
-    @JsonKey(name: 'auth_id') required this.id,
+    this.id,
+    @JsonKey(name: 'auth_id') required this.authId,
     required this.email,
     @JsonKey(name: 'first_name') this.firstName,
     @JsonKey(name: 'last_name') this.lastName,
-    @JsonKey(name: 'student_id_number') this.schoolId,
-    @JsonKey(name: 'faculty_id') this.faculty,
-    @JsonKey(name: 'program_id') this.program,
+    @JsonKey(name: 'student_id_number') required this.schoolId,
+    @JsonKey(name: 'faculty_id') this.facultyId,
+    @JsonKey(name: 'program_id') this.programId,
     @JsonKey(name: 'year') this.yearLevel,
     @JsonKey(name: 'profile_photo_url') this.avatarUrl,
     @JsonKey(name: 'id_front_url') this.idFrontUrl,
@@ -334,6 +370,8 @@ class _$UserModelImpl extends _UserModel {
     this.role = 'student',
     @JsonKey(name: 'account_status') this.status = 'active',
     @JsonKey(name: 'created_at') this.createdAt,
+    this.facultyName,
+    this.programName,
   }) : _organizationIds = organizationIds,
        super._();
 
@@ -341,8 +379,11 @@ class _$UserModelImpl extends _UserModel {
       _$$UserModelImplFromJson(json);
 
   @override
+  final String? id;
+  // public.users.id
+  @override
   @JsonKey(name: 'auth_id')
-  final String id;
+  final String authId;
   @override
   final String email;
   @override
@@ -353,13 +394,13 @@ class _$UserModelImpl extends _UserModel {
   final String? lastName;
   @override
   @JsonKey(name: 'student_id_number')
-  final String? schoolId;
+  final String schoolId;
   @override
   @JsonKey(name: 'faculty_id')
-  final String? faculty;
+  final String? facultyId;
   @override
   @JsonKey(name: 'program_id')
-  final String? program;
+  final String? programId;
   @override
   @JsonKey(name: 'year')
   final int? yearLevel;
@@ -381,24 +422,25 @@ class _$UserModelImpl extends _UserModel {
     return EqualUnmodifiableListView(_organizationIds);
   }
 
-  /// Role of the user. See [UserRole] for possible values.
-  /// Default roles include: super_admin, student, etc.
+  /// Derived or primary role
   @override
   @JsonKey()
   final String role;
-
-  /// Status of the account. See [UserStatus] for possible values.
-  /// Default statuses include: pending, approved, etc.
   @override
   @JsonKey(name: 'account_status')
   final String status;
   @override
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  // Join fields (not in users table but useful for UI)
+  @override
+  final String? facultyName;
+  @override
+  final String? programName;
 
   @override
   String toString() {
-    return 'UserModel(id: $id, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, faculty: $faculty, program: $program, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt)';
+    return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, facultyName: $facultyName, programName: $programName)';
   }
 
   @override
@@ -407,6 +449,7 @@ class _$UserModelImpl extends _UserModel {
         (other.runtimeType == runtimeType &&
             other is _$UserModelImpl &&
             (identical(other.id, id) || other.id == id) &&
+            (identical(other.authId, authId) || other.authId == authId) &&
             (identical(other.email, email) || other.email == email) &&
             (identical(other.firstName, firstName) ||
                 other.firstName == firstName) &&
@@ -414,8 +457,10 @@ class _$UserModelImpl extends _UserModel {
                 other.lastName == lastName) &&
             (identical(other.schoolId, schoolId) ||
                 other.schoolId == schoolId) &&
-            (identical(other.faculty, faculty) || other.faculty == faculty) &&
-            (identical(other.program, program) || other.program == program) &&
+            (identical(other.facultyId, facultyId) ||
+                other.facultyId == facultyId) &&
+            (identical(other.programId, programId) ||
+                other.programId == programId) &&
             (identical(other.yearLevel, yearLevel) ||
                 other.yearLevel == yearLevel) &&
             (identical(other.avatarUrl, avatarUrl) ||
@@ -431,7 +476,11 @@ class _$UserModelImpl extends _UserModel {
             (identical(other.role, role) || other.role == role) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.facultyName, facultyName) ||
+                other.facultyName == facultyName) &&
+            (identical(other.programName, programName) ||
+                other.programName == programName));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -439,12 +488,13 @@ class _$UserModelImpl extends _UserModel {
   int get hashCode => Object.hash(
     runtimeType,
     id,
+    authId,
     email,
     firstName,
     lastName,
     schoolId,
-    faculty,
-    program,
+    facultyId,
+    programId,
     yearLevel,
     avatarUrl,
     idFrontUrl,
@@ -453,6 +503,8 @@ class _$UserModelImpl extends _UserModel {
     role,
     status,
     createdAt,
+    facultyName,
+    programName,
   );
 
   /// Create a copy of UserModel
@@ -471,13 +523,14 @@ class _$UserModelImpl extends _UserModel {
 
 abstract class _UserModel extends UserModel {
   const factory _UserModel({
-    @JsonKey(name: 'auth_id') required final String id,
+    final String? id,
+    @JsonKey(name: 'auth_id') required final String authId,
     required final String email,
     @JsonKey(name: 'first_name') final String? firstName,
     @JsonKey(name: 'last_name') final String? lastName,
-    @JsonKey(name: 'student_id_number') final String? schoolId,
-    @JsonKey(name: 'faculty_id') final String? faculty,
-    @JsonKey(name: 'program_id') final String? program,
+    @JsonKey(name: 'student_id_number') required final String schoolId,
+    @JsonKey(name: 'faculty_id') final String? facultyId,
+    @JsonKey(name: 'program_id') final String? programId,
     @JsonKey(name: 'year') final int? yearLevel,
     @JsonKey(name: 'profile_photo_url') final String? avatarUrl,
     @JsonKey(name: 'id_front_url') final String? idFrontUrl,
@@ -486,6 +539,8 @@ abstract class _UserModel extends UserModel {
     final String role,
     @JsonKey(name: 'account_status') final String status,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
+    final String? facultyName,
+    final String? programName,
   }) = _$UserModelImpl;
   const _UserModel._() : super._();
 
@@ -493,8 +548,10 @@ abstract class _UserModel extends UserModel {
       _$UserModelImpl.fromJson;
 
   @override
+  String? get id; // public.users.id
+  @override
   @JsonKey(name: 'auth_id')
-  String get id;
+  String get authId;
   @override
   String get email;
   @override
@@ -505,13 +562,13 @@ abstract class _UserModel extends UserModel {
   String? get lastName;
   @override
   @JsonKey(name: 'student_id_number')
-  String? get schoolId;
+  String get schoolId;
   @override
   @JsonKey(name: 'faculty_id')
-  String? get faculty;
+  String? get facultyId;
   @override
   @JsonKey(name: 'program_id')
-  String? get program;
+  String? get programId;
   @override
   @JsonKey(name: 'year')
   int? get yearLevel;
@@ -528,19 +585,19 @@ abstract class _UserModel extends UserModel {
   @JsonKey(name: 'organization_ids')
   List<String> get organizationIds;
 
-  /// Role of the user. See [UserRole] for possible values.
-  /// Default roles include: super_admin, student, etc.
+  /// Derived or primary role
   @override
   String get role;
-
-  /// Status of the account. See [UserStatus] for possible values.
-  /// Default statuses include: pending, approved, etc.
   @override
   @JsonKey(name: 'account_status')
   String get status;
   @override
   @JsonKey(name: 'created_at')
-  DateTime? get createdAt;
+  DateTime? get createdAt; // Join fields (not in users table but useful for UI)
+  @override
+  String? get facultyName;
+  @override
+  String? get programName;
 
   /// Create a copy of UserModel
   /// with the given fields replaced by the non-null parameter values.

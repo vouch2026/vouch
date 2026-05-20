@@ -5,8 +5,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../providers/user_profile_provider.dart';
 import '../../auth/models/user_model.dart';
-import '../models/student_profile_model.dart';
-import '../models/instructor_profile_model.dart';
 
 class UserProfilePage extends ConsumerStatefulWidget {
   final String id;
@@ -38,21 +36,18 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
     return DashboardLayout(
       title: 'User Profile',
       child: userAsync.when(
-        data: (data) {
-          if (data == null) return const Center(child: Text('User not found'));
-          
-          final user = data['user'] as UserModel;
-          final dynamic profile = data['profile'];
+        data: (user) {
+          if (user == null) return const Center(child: Text('User not found'));
           
           return Column(
             children: [
-              _buildProfileHeader(user, profile),
+              _buildProfileHeader(user),
               _buildTabBar(),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _OverviewTab(user: user, profile: profile),
+                    _OverviewTab(user: user),
                     const _PlaceholderTab(name: 'Organizations'),
                     const _PlaceholderTab(name: 'Attendance'),
                     const _PlaceholderTab(name: 'Payments'),
@@ -70,9 +65,8 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
     );
   }
 
-  Widget _buildProfileHeader(UserModel user, dynamic profile) {
+  Widget _buildProfileHeader(UserModel user) {
     final theme = Theme.of(context);
-    final status = profile is StudentProfileModel ? profile.status : (profile as InstructorProfileModel).status;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -91,18 +85,16 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
               children: [
                 Row(
                   children: [
-                    Text(user.fullName ?? 'Unknown', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
+                    Text(user.fullName, style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(width: AppSpacing.sm),
-                    _StatusBadge(status: status),
+                    _StatusBadge(status: user.status),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(user.email, style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 8),
                 Text(
-                  profile is StudentProfileModel 
-                    ? '${profile.studentNumber} • ${profile.programName} • Year ${profile.yearLevel}'
-                    : '${(profile as InstructorProfileModel).instructorId} • ${profile.position.toUpperCase()} • ${profile.facultyName}',
+                  '${user.schoolId} • ${user.roleDisplay}${user.programName != null ? ' • ${user.programName}' : ''}',
                   style: AppTextStyles.bodySmall,
                 ),
               ],
@@ -152,8 +144,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
 
 class _OverviewTab extends StatelessWidget {
   final UserModel user;
-  final dynamic profile;
-  const _OverviewTab({required this.user, required this.profile});
+  const _OverviewTab({required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -175,16 +166,11 @@ class _OverviewTab extends StatelessWidget {
       spacing: AppSpacing.xl,
       runSpacing: AppSpacing.lg,
       children: [
-        _InfoItem(label: 'Campus', value: profile.campusName ?? 'Not Assigned'),
-        _InfoItem(label: 'Faculty', value: profile.facultyName ?? 'Not Assigned'),
-        if (profile is StudentProfileModel) ...[
-          _InfoItem(label: 'Program', value: profile.programName ?? 'Not Assigned'),
-          _InfoItem(label: 'Year Level', value: '${profile.yearLevel}'),
-          _InfoItem(label: 'Student Number', value: profile.studentNumber),
-        ] else ...[
-          _InfoItem(label: 'Position', value: (profile as InstructorProfileModel).position.toUpperCase()),
-          _InfoItem(label: 'Instructor ID', value: profile.instructorId),
-        ],
+        _InfoItem(label: 'Faculty', value: user.facultyName ?? 'Not Assigned'),
+        _InfoItem(label: 'Program', value: user.programName ?? 'Not Assigned'),
+        if (user.yearLevel != null) _InfoItem(label: 'Year Level', value: '${user.yearLevel}'),
+        _InfoItem(label: 'ID Number', value: user.schoolId),
+        _InfoItem(label: 'Role', value: user.roleDisplay),
       ],
     );
   }
@@ -227,7 +213,21 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status == 'active' ? Colors.green : Colors.orange;
+    Color color;
+    switch (status.toLowerCase()) {
+      case 'active':
+        color = Colors.green;
+        break;
+      case 'pending':
+        color = Colors.orange;
+        break;
+      case 'suspended':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(

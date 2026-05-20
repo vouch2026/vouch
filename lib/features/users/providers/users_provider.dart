@@ -1,41 +1,55 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/student_profile_model.dart';
-import '../models/instructor_profile_model.dart';
 import '../../auth/models/user_model.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/utils/role_mapper.dart';
 
-final studentsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  await Future.delayed(const Duration(milliseconds: 500));
+final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
+  final client = SupabaseConfig.client;
   
-  return [
-    {
-      'user': const UserModel(id: 's1', email: 'juan.delacruz@dorsu.edu.ph', firstName: 'Juan Dela Cruz', role: 'student'),
-      'profile': const StudentProfileModel(userId: 's1', studentNumber: '2022-00123', campusName: 'Main Campus', facultyName: 'FCET', programName: 'BSIT', yearLevel: 3, status: 'active'),
-    },
-    {
-      'user': const UserModel(id: 's2', email: 'maria.clara@dorsu.edu.ph', firstName: 'Maria Clara', role: 'student'),
-      'profile': const StudentProfileModel(userId: 's2', studentNumber: '2022-00456', campusName: 'Main Campus', facultyName: 'FTE', programName: 'BEED', yearLevel: 2, status: 'pending'),
-    },
-  ];
-});
-
-final instructorsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  await Future.delayed(const Duration(milliseconds: 500));
+  // Fetch users with joins for faculty, program, and roles
+  final response = await client
+      .from('users')
+      .select('''
+        *,
+        faculties:faculty_id(name),
+        programs:program_id(name),
+        user_roles:user_roles!user_roles_user_id_fkey(roles(name, hierarchy_level))
+      ''');
   
-  return [
-    {
-      'user': const UserModel(id: 'i1', email: 'dr.doe@dorsu.edu.ph', firstName: 'Dr. John Doe', role: 'adviser'),
-      'profile': const InstructorProfileModel(userId: 'i1', instructorId: 'INS-001', campusName: 'Main Campus', facultyName: 'FCET', position: 'dean', status: 'active'),
-    },
-    {
-      'user': const UserModel(id: 'i2', email: 'prof.smith@dorsu.edu.ph', firstName: 'Prof. Jane Smith', role: 'adviser'),
-      'profile': const InstructorProfileModel(userId: 'i2', instructorId: 'INS-002', campusName: 'Banaybanay', facultyName: 'FCET', position: 'program_head', assignedProgramName: 'BSIT', status: 'active'),
-    },
-  ];
-});
-
-final allUsersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final students = await ref.watch(studentsProvider.future);
-  final instructors = await ref.watch(instructorsProvider.future);
+  final users = (response as List).map((data) {
+    final userData = Map<String, dynamic>.from(data);
+    
+    // Flatten faculty and program names
+    if (userData['faculties'] != null) {
+      userData['facultyName'] = userData['faculties']['name'];
+    }
+    if (userData['programs'] != null) {
+      userData['programName'] = userData['programs']['name'];
+    }
+    
+    // Handle role extraction (highest hierarchy level)
+    final userRoles = userData['user_roles'] as List?;
+    String role = 'student';
+    if (userRoles != null && userRoles.isNotEmpty) {
+      final sortedRoles = List.from(userRoles);
+      sortedRoles.sort((a, b) {
+        final rolesA = a['roles'] as Map?;
+        final rolesB = b['roles'] as Map?;
+        if (rolesA == null || rolesB == null) return 0;
+        final levelA = (rolesA['hierarchy_level'] as num?)?.toInt() ?? 0;
+        final levelB = (rolesB['hierarchy_level'] as num?)?.toInt() ?? 0;
+        return levelB.compareTo(levelA);
+      });
+      
+      final topRole = sortedRoles.first['roles'] as Map?;
+      if (topRole != null) {
+        role = RoleMapper.mapDbRoleToAppFormat(topRole['name'] as String);
+      }
+    }
+    userData['role'] = role;
+    
+    return UserModel.fromJson(userData);
+  }).toList();
   
-  return [...students, ...instructors];
+  return users;
 });

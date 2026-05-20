@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/users_provider.dart';
-import '../models/student_profile_model.dart';
-import '../models/instructor_profile_model.dart';
 import '../../auth/models/user_model.dart';
 
 class UsersTable extends ConsumerWidget {
@@ -28,7 +26,7 @@ class UsersTable extends ConsumerWidget {
     );
   }
 
-  Widget _buildDataTable(BuildContext context, List<Map<String, dynamic>> data) {
+  Widget _buildDataTable(BuildContext context, List<UserModel> data) {
     final theme = Theme.of(context);
     
     return Card(
@@ -50,29 +48,10 @@ class UsersTable extends ConsumerWidget {
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Actions')),
           ],
-          rows: data.map((item) {
-            final user = item['user'] as UserModel;
-            final profile = item['profile'];
-            
-            String idNumber = 'N/A';
-            String faculty = 'N/A';
-            String program = 'N/A';
-            String roleLabel = user.roleDisplay;
-            
-            if (profile is StudentProfileModel) {
-              idNumber = profile.studentNumber;
-              faculty = profile.facultyName ?? 'N/A';
-              program = profile.programName ?? 'N/A';
-            } else if (profile is InstructorProfileModel) {
-              idNumber = profile.instructorId;
-              faculty = profile.facultyName ?? 'N/A';
-              program = profile.assignedProgramName ?? 'N/A';
-              roleLabel = profile.position.replaceAll('_', ' ').toUpperCase();
-            }
-            
+          rows: data.map((user) {
             return DataRow(
               cells: [
-                DataCell(Text(idNumber, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold))),
+                DataCell(Text(user.schoolId, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold))),
                 DataCell(Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -81,10 +60,10 @@ class UsersTable extends ConsumerWidget {
                     Text(user.email, style: AppTextStyles.bodySmall),
                   ],
                 )),
-                DataCell(_RoleBadge(role: user.role, label: roleLabel)),
-                DataCell(Text(faculty, style: AppTextStyles.bodySmall)),
-                DataCell(Text(program, style: AppTextStyles.bodySmall)),
-                DataCell(_StatusBadge(status: (profile as dynamic).status)),
+                DataCell(_RoleBadge(role: user.role, label: user.roleDisplay)),
+                DataCell(Text(user.facultyName ?? 'N/A', style: AppTextStyles.bodySmall)),
+                DataCell(Text(user.programName ?? 'N/A', style: AppTextStyles.bodySmall)),
+                DataCell(_StatusBadge(status: user.status)),
                 DataCell(PopupMenuButton(
                   icon: const Icon(Icons.more_vert_rounded, size: 20),
                   itemBuilder: (context) => [
@@ -102,28 +81,20 @@ class UsersTable extends ConsumerWidget {
     );
   }
 
-  Widget _buildCardList(List<Map<String, dynamic>> data) {
+  Widget _buildCardList(List<UserModel> data) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: data.length,
       separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
-        final user = data[index]['user'] as UserModel;
-        final profile = data[index]['profile'];
-        
-        String idNumber = 'N/A';
-        if (profile is StudentProfileModel) {
-          idNumber = profile.studentNumber;
-        } else if (profile is InstructorProfileModel) {
-          idNumber = profile.instructorId;
-        }
+        final user = data[index];
         
         return Card(
           child: ListTile(
             title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('$idNumber • ${user.roleDisplay}'),
-            trailing: _StatusBadge(status: (profile as dynamic).status),
+            subtitle: Text('${user.schoolId} • ${user.roleDisplay}'),
+            trailing: _StatusBadge(status: user.status),
           ),
         );
       },
@@ -141,6 +112,8 @@ class _RoleBadge extends StatelessWidget {
     Color color;
     if (role == 'student') {
       color = Colors.blue;
+    } else if (role == 'super_admin') {
+      color = Colors.red;
     } else {
       color = Colors.indigo;
     }

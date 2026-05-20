@@ -37,7 +37,7 @@ class UsersPage extends StatelessWidget {
                 ),
                 HeaderActionButton(
                   icon: Icons.school_rounded,
-                  label: 'Add Instructor',
+                  label: 'Add Faculty',
                   onPressed: () {
                     showDialog(
                       context: context,

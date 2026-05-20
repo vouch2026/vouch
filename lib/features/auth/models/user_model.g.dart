@@ -8,13 +8,14 @@ part of 'user_model.dart';
 
 _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
     _$UserModelImpl(
-      id: json['auth_id'] as String,
+      id: json['id'] as String?,
+      authId: json['auth_id'] as String,
       email: json['email'] as String,
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
-      schoolId: json['student_id_number'] as String?,
-      faculty: json['faculty_id'] as String?,
-      program: json['program_id'] as String?,
+      schoolId: json['student_id_number'] as String,
+      facultyId: json['faculty_id'] as String?,
+      programId: json['program_id'] as String?,
       yearLevel: (json['year'] as num?)?.toInt(),
       avatarUrl: json['profile_photo_url'] as String?,
       idFrontUrl: json['id_front_url'] as String?,
@@ -29,17 +30,20 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+      facultyName: json['facultyName'] as String?,
+      programName: json['programName'] as String?,
     );
 
 Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
     <String, dynamic>{
-      'auth_id': instance.id,
+      'id': instance.id,
+      'auth_id': instance.authId,
       'email': instance.email,
       'first_name': instance.firstName,
       'last_name': instance.lastName,
       'student_id_number': instance.schoolId,
-      'faculty_id': instance.faculty,
-      'program_id': instance.program,
+      'faculty_id': instance.facultyId,
+      'program_id': instance.programId,
       'year': instance.yearLevel,
       'profile_photo_url': instance.avatarUrl,
       'id_front_url': instance.idFrontUrl,
@@ -48,4 +52,6 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
       'role': instance.role,
       'account_status': instance.status,
       'created_at': instance.createdAt?.toIso8601String(),
+      'facultyName': instance.facultyName,
+      'programName': instance.programName,
     };
