@@ -22,7 +22,7 @@ class UsersPage extends StatelessWidget {
           children: [
             UserManagementHeader(
               title: 'Users',
-              subtitle: 'Manage all university accounts, including students and instructors',
+              subtitle: 'Manage all university accounts, including students, faculty, and advisers',
               actions: [
                 HeaderActionButton(
                   icon: Icons.person_add_rounded,
@@ -69,8 +69,10 @@ class UsersPage extends StatelessWidget {
                   key: 'role',
                   options: [
                     FilterValue(label: 'Student', value: 'student'),
-                    FilterValue(label: 'Instructor', value: 'instructor'),
                     FilterValue(label: 'Adviser', value: 'adviser'),
+                    FilterValue(label: 'Governor', value: 'governor'),
+                    FilterValue(label: 'Secretary', value: 'secretary'),
+                    FilterValue(label: 'Treasurer', value: 'treasurer'),
                   ],
                 ),
                 FilterOption(

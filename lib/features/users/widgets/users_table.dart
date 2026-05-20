@@ -45,7 +45,8 @@ class UsersTable extends ConsumerWidget {
             DataColumn(label: Text('ID / Number')),
             DataColumn(label: Text('Full Name')),
             DataColumn(label: Text('Role')),
-            DataColumn(label: Text('Faculty / Program')),
+            DataColumn(label: Text('Faculty')),
+            DataColumn(label: Text('Program')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Actions')),
           ],
@@ -54,15 +55,18 @@ class UsersTable extends ConsumerWidget {
             final profile = item['profile'];
             
             String idNumber = 'N/A';
-            String secondaryInfo = 'N/A';
+            String faculty = 'N/A';
+            String program = 'N/A';
             String roleLabel = user.roleDisplay;
             
             if (profile is StudentProfileModel) {
               idNumber = profile.studentNumber;
-              secondaryInfo = profile.programName ?? profile.facultyName ?? 'N/A';
+              faculty = profile.facultyName ?? 'N/A';
+              program = profile.programName ?? 'N/A';
             } else if (profile is InstructorProfileModel) {
               idNumber = profile.instructorId;
-              secondaryInfo = profile.facultyName ?? 'N/A';
+              faculty = profile.facultyName ?? 'N/A';
+              program = profile.assignedProgramName ?? 'N/A';
               roleLabel = profile.position.replaceAll('_', ' ').toUpperCase();
             }
             
@@ -78,7 +82,8 @@ class UsersTable extends ConsumerWidget {
                   ],
                 )),
                 DataCell(_RoleBadge(role: user.role, label: roleLabel)),
-                DataCell(Text(secondaryInfo, style: AppTextStyles.bodySmall)),
+                DataCell(Text(faculty, style: AppTextStyles.bodySmall)),
+                DataCell(Text(program, style: AppTextStyles.bodySmall)),
                 DataCell(_StatusBadge(status: (profile as dynamic).status)),
                 DataCell(PopupMenuButton(
                   icon: const Icon(Icons.more_vert_rounded, size: 20),

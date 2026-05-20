@@ -286,7 +286,7 @@ class __$$UserStatsModelImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$UserStatsModelImpl implements _UserStatsModel {
+class _$UserStatsModelImpl extends _UserStatsModel {
   const _$UserStatsModelImpl({
     this.totalStudents = 0,
     this.activeStudents = 0,
@@ -302,7 +302,7 @@ class _$UserStatsModelImpl implements _UserStatsModel {
     this.studentTrend = 0.0,
     this.instructorTrend = 0.0,
     this.governanceTrend = 0.0,
-  });
+  }) : super._();
 
   factory _$UserStatsModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserStatsModelImplFromJson(json);
@@ -430,7 +430,7 @@ class _$UserStatsModelImpl implements _UserStatsModel {
   }
 }
 
-abstract class _UserStatsModel implements UserStatsModel {
+abstract class _UserStatsModel extends UserStatsModel {
   const factory _UserStatsModel({
     final int totalStudents,
     final int activeStudents,
@@ -447,6 +447,7 @@ abstract class _UserStatsModel implements UserStatsModel {
     final double instructorTrend,
     final double governanceTrend,
   }) = _$UserStatsModelImpl;
+  const _UserStatsModel._() : super._();
 
   factory _UserStatsModel.fromJson(Map<String, dynamic> json) =
       _$UserStatsModelImpl.fromJson;

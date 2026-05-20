@@ -22,5 +22,9 @@ class UserStatsModel with _$UserStatsModel {
     @Default(0.0) double governanceTrend,
   }) = _UserStatsModel;
 
+  const UserStatsModel._();
+
+  int get totalUsers => totalStudents + totalInstructors + totalOfficers;
+
   factory UserStatsModel.fromJson(Map<String, dynamic> json) => _$UserStatsModelFromJson(json);
 }
