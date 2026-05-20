@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../providers/user_profile_provider.dart';
+import '../controllers/user_controller.dart';
 import '../../auth/models/user_model.dart';
 
 class UserProfilePage extends ConsumerStatefulWidget {
@@ -31,6 +32,19 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateUserStatus(UserModel user, String status) async {
+    final success = await ref.read(userControllerProvider.notifier).updateStatus(user.id!, status);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Account status updated to $status' : 'Failed to update status'),
+          backgroundColor: success ? AppColors.success : AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -88,11 +102,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
           InkWell(
             onTap: () => context.go(RoutePaths.users),
             child: Text('Users', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
-          ),
-          const Icon(Icons.chevron_right, size: 16, color: AppColors.textGrey),
-          InkWell(
-            onTap: () => context.go(RoutePaths.users),
-            child: Text(user.roleDisplay, style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
           ),
           const Icon(Icons.chevron_right, size: 16, color: AppColors.textGrey),
           Text(user.fullName, style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
@@ -283,28 +292,32 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   }
 
   Widget _buildQuickActions(UserModel user, {bool isFullWidth = false}) {
+    final userController = ref.watch(userControllerProvider);
+    final isLoading = userController.isLoading;
+
     final actions = [
       _ActionBtn(
         label: 'Edit User',
         icon: Icons.edit_outlined,
-        onPressed: () {},
+        onPressed: isLoading ? () {} : () {},
         isPrimary: true,
       ),
       _ActionBtn(
-        label: 'Reset Password',
-        icon: Icons.lock_reset_rounded,
-        onPressed: () {},
+        label: 'Activate Account',
+        icon: Icons.check_circle_outline,
+        onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'active'),
+        color: AppColors.success,
       ),
       _ActionBtn(
         label: user.status == 'suspended' ? 'Approve User' : 'Suspend Account',
         icon: user.status == 'suspended' ? Icons.check_circle_outline : Icons.block_flipped,
-        onPressed: () {},
+        onPressed: isLoading ? () {} : () => _updateUserStatus(user, user.status == 'suspended' ? 'active' : 'suspended'),
         color: user.status == 'suspended' ? AppColors.success : AppColors.error,
       ),
       _ActionBtn(
         label: 'Archive User',
         icon: Icons.archive_outlined,
-        onPressed: () {},
+        onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'archived'),
       ),
     ];
 
