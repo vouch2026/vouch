@@ -27,8 +27,7 @@ class RoutePaths {
   static const String facultyDetails = '/faculties/:id';
   static const String programs = '/programs';
   static const String programDetails = '/programs/:id';
-  static const String students = '/users/students';
-  static const String instructors = '/users/instructors';
+  static const String users = '/users';
   static const String officers = '/users/officers';
   static const String userDetails = '/users/:id';
   static const String comselecDashboard = '/comselec';

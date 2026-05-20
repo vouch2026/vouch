@@ -32,3 +32,10 @@ final instructorsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asy
     },
   ];
 });
+
+final allUsersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final students = await ref.watch(studentsProvider.future);
+  final instructors = await ref.watch(instructorsProvider.future);
+  
+  return [...students, ...instructors];
+});

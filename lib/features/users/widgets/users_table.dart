@@ -4,16 +4,17 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/users_provider.dart';
 import '../models/student_profile_model.dart';
+import '../models/instructor_profile_model.dart';
 import '../../auth/models/user_model.dart';
 
-class StudentsTable extends ConsumerWidget {
-  const StudentsTable({super.key});
+class UsersTable extends ConsumerWidget {
+  const UsersTable({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final studentsAsync = ref.watch(studentsProvider);
+    final usersAsync = ref.watch(allUsersProvider);
 
-    return studentsAsync.when(
+    return usersAsync.when(
       data: (data) => LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 800) {
@@ -41,31 +42,44 @@ class StudentsTable extends ConsumerWidget {
         child: DataTable(
           headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
           columns: const [
-            DataColumn(label: Text('Student ID')),
+            DataColumn(label: Text('ID / Number')),
             DataColumn(label: Text('Full Name')),
-            DataColumn(label: Text('Program')),
-            DataColumn(label: Text('Year')),
+            DataColumn(label: Text('Role')),
+            DataColumn(label: Text('Faculty / Program')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Actions')),
           ],
           rows: data.map((item) {
             final user = item['user'] as UserModel;
-            final profile = item['profile'] as StudentProfileModel;
+            final profile = item['profile'];
+            
+            String idNumber = 'N/A';
+            String secondaryInfo = 'N/A';
+            String roleLabel = user.roleDisplay;
+            
+            if (profile is StudentProfileModel) {
+              idNumber = profile.studentNumber;
+              secondaryInfo = profile.programName ?? profile.facultyName ?? 'N/A';
+            } else if (profile is InstructorProfileModel) {
+              idNumber = profile.instructorId;
+              secondaryInfo = profile.facultyName ?? 'N/A';
+              roleLabel = profile.position.replaceAll('_', ' ').toUpperCase();
+            }
             
             return DataRow(
               cells: [
-                DataCell(Text(profile.studentNumber, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold))),
+                DataCell(Text(idNumber, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold))),
                 DataCell(Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(user.fullName ?? 'Unknown', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                    Text(user.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
                     Text(user.email, style: AppTextStyles.bodySmall),
                   ],
                 )),
-                DataCell(Text(profile.programName ?? 'N/A', style: AppTextStyles.bodySmall)),
-                DataCell(Text('${profile.yearLevel}', style: AppTextStyles.bodySmall)),
-                DataCell(_StatusBadge(status: profile.status)),
+                DataCell(_RoleBadge(role: user.role, label: roleLabel)),
+                DataCell(Text(secondaryInfo, style: AppTextStyles.bodySmall)),
+                DataCell(_StatusBadge(status: (profile as dynamic).status)),
                 DataCell(PopupMenuButton(
                   icon: const Icon(Icons.more_vert_rounded, size: 20),
                   itemBuilder: (context) => [
@@ -91,16 +105,52 @@ class StudentsTable extends ConsumerWidget {
       separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final user = data[index]['user'] as UserModel;
-        final profile = data[index]['profile'] as StudentProfileModel;
+        final profile = data[index]['profile'];
+        
+        String idNumber = 'N/A';
+        if (profile is StudentProfileModel) {
+          idNumber = profile.studentNumber;
+        } else if (profile is InstructorProfileModel) {
+          idNumber = profile.instructorId;
+        }
         
         return Card(
           child: ListTile(
-            title: Text(user.fullName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${profile.studentNumber} • ${profile.programName}'),
-            trailing: _StatusBadge(status: profile.status),
+            title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('$idNumber • ${user.roleDisplay}'),
+            trailing: _StatusBadge(status: (profile as dynamic).status),
           ),
         );
       },
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  final String role;
+  final String label;
+  const _RoleBadge({required this.role, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    if (role == 'student') {
+      color = Colors.blue;
+    } else {
+      color = Colors.indigo;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
     );
   }
 }

@@ -26,8 +26,7 @@ class RouteNames {
   static const String facultyDetails = 'faculty-details';
   static const String programs = 'programs';
   static const String programDetails = 'program-details';
-  static const String students = 'students';
-  static const String instructors = 'instructors';
+  static const String users = 'users';
   static const String officers = 'officers';
   static const String userDetails = 'user-details';
   static const String comselecDashboard = 'comselec-dashboard';

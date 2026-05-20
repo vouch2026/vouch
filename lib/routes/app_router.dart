@@ -14,8 +14,7 @@ import '../features/faculties/views/faculties_page.dart';
 import '../features/faculties/views/faculty_details_page.dart';
 import '../features/programs/views/programs_page.dart';
 import '../features/programs/views/program_details_page.dart';
-import '../features/users/views/students_page.dart';
-import '../features/users/views/instructors_page.dart';
+import '../features/users/views/users_page.dart';
 import '../features/users/views/officers_page.dart';
 import '../features/users/views/user_profile_page.dart';
 import '../features/elections/views/comselec_dashboard_page.dart';
@@ -133,14 +132,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: RoutePaths.students,
-        name: RouteNames.students,
-        builder: (context, state) => const StudentsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.instructors,
-        name: RouteNames.instructors,
-        builder: (context, state) => const InstructorsPage(),
+        path: RoutePaths.users,
+        name: RouteNames.users,
+        builder: (context, state) => const UsersPage(),
       ),
       GoRoute(
         path: RoutePaths.officers,

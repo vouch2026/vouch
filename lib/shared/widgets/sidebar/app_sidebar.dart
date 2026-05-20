@@ -58,13 +58,8 @@ class AppSidebar extends ConsumerWidget {
                     const _SidebarHeader(label: 'USER MANAGEMENT'),
                     _SidebarItem(
                       icon: Icons.people_outline_rounded,
-                      label: 'Students',
-                      path: RoutePaths.students,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.school_outlined,
-                      label: 'Instructors',
-                      path: RoutePaths.instructors,
+                      label: 'Users',
+                      path: RoutePaths.users,
                     ),
                     _SidebarItem(
                       icon: Icons.admin_panel_settings_outlined,
