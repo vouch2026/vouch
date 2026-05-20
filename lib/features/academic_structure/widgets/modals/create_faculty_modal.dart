@@ -95,11 +95,15 @@ class _CreateFacultyModalState extends ConsumerState<CreateFacultyModal> {
               const SizedBox(height: AppSpacing.xs),
               campusesAsync.when(
                 data: (campuses) => DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _selectedCampus,
                   decoration: const InputDecoration(hintText: 'Select Campus'),
                   items: campuses.map((c) => DropdownMenuItem(
                     value: c.id, 
-                    child: Text(c.name),
+                    child: Text(
+                      c.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   )).toList(),
                   onChanged: _isLoading ? null : (val) => setState(() => _selectedCampus = val),
                   validator: (val) => val == null ? 'Required' : null,

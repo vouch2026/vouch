@@ -103,11 +103,15 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
               const SizedBox(height: AppSpacing.xs),
               facultiesAsync.when(
                 data: (faculties) => DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _selectedFaculty,
                   decoration: const InputDecoration(hintText: 'Select Faculty'),
                   items: faculties.map((f) => DropdownMenuItem(
                     value: f.id, 
-                    child: Text(f.name),
+                    child: Text(
+                      f.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   )).toList(),
                   onChanged: _isLoading ? null : (val) => setState(() => _selectedFaculty = val),
                   validator: (val) => val == null ? 'Required' : null,
