@@ -225,6 +225,11 @@ CREATE POLICY "Public profiles are viewable by everyone"
 ON users FOR SELECT 
 USING (true);
 
+CREATE POLICY "Super admins can update any profile" 
+ON users FOR UPDATE 
+TO authenticated 
+USING (public.is_super_admin());
+
 -- Enable RLS for roles and user_roles
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
@@ -684,3 +689,10 @@ SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
 );
 
 UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
+
+
+
+
+
+
+

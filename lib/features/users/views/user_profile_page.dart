@@ -10,6 +10,7 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../providers/user_profile_provider.dart';
 import '../controllers/user_controller.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/providers/auth_provider.dart' as auth;
 
 class UserProfilePage extends ConsumerStatefulWidget {
   final String id;
@@ -101,10 +102,10 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
         children: [
           InkWell(
             onTap: () => context.go(RoutePaths.users),
-            child: Text('Users', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
+            child: Text('Users', style: AppTextStyles.headlineMedium.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold)),
           ),
-          const Icon(Icons.chevron_right, size: 16, color: AppColors.textGrey),
-          Text(user.fullName, style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+          const Icon(Icons.chevron_right, size: 20, color: AppColors.textGrey),
+          Text(user.fullName, style: AppTextStyles.headlineMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -292,6 +293,12 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   }
 
   Widget _buildQuickActions(UserModel user, {bool isFullWidth = false}) {
+    final currentUserAsync = ref.watch(auth.userProfileProvider);
+    final isSuperAdmin = currentUserAsync.value?.role == 'super_admin';
+    
+    // Only super admins can see and perform these actions
+    if (!isSuperAdmin) return const SizedBox.shrink();
+
     final userController = ref.watch(userControllerProvider);
     final isLoading = userController.isLoading;
 
@@ -302,23 +309,40 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
         onPressed: isLoading ? () {} : () {},
         isPrimary: true,
       ),
-      _ActionBtn(
-        label: 'Activate Account',
-        icon: Icons.check_circle_outline,
-        onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'active'),
-        color: AppColors.success,
-      ),
-      _ActionBtn(
-        label: user.status == 'suspended' ? 'Approve User' : 'Suspend Account',
-        icon: user.status == 'suspended' ? Icons.check_circle_outline : Icons.block_flipped,
-        onPressed: isLoading ? () {} : () => _updateUserStatus(user, user.status == 'suspended' ? 'active' : 'suspended'),
-        color: user.status == 'suspended' ? AppColors.success : AppColors.error,
-      ),
-      _ActionBtn(
-        label: 'Archive User',
-        icon: Icons.archive_outlined,
-        onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'archived'),
-      ),
+      if (user.status == 'pending' || user.status == 'rejected')
+        _ActionBtn(
+          label: 'Activate Account',
+          icon: Icons.check_circle_outline,
+          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'active'),
+          color: AppColors.success,
+        ),
+      if (user.status == 'suspended')
+        _ActionBtn(
+          label: 'Approve User',
+          icon: Icons.check_circle_outline,
+          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'active'),
+          color: AppColors.success,
+        ),
+      if (user.status == 'active')
+        _ActionBtn(
+          label: 'Suspend Account',
+          icon: Icons.block_flipped,
+          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'suspended'),
+          color: AppColors.error,
+        ),
+      if (user.status != 'archived')
+        _ActionBtn(
+          label: 'Archive User',
+          icon: Icons.archive_outlined,
+          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'archived'),
+        ),
+      if (user.status == 'archived')
+        _ActionBtn(
+          label: 'Restore User',
+          icon: Icons.unarchive_outlined,
+          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'active'),
+          color: AppColors.success,
+        ),
     ];
 
     if (isFullWidth) {

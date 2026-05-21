@@ -211,6 +211,22 @@ CREATE TABLE user_roles (
 );
 
 -- ------------------------------------------------------------
+-- HELPER FUNCTION FOR RBAC
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.id
+        WHERE ur.user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
+        AND r.name = 'Super Admin'
+        AND ur.is_active = true
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ------------------------------------------------------------
 -- Enable RLS for users
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
@@ -224,14 +240,12 @@ USING (auth.uid() = auth_id);
 
 CREATE POLICY "Super Admins can view all profiles" 
 ON users FOR SELECT 
-USING (
-  EXISTS (
-    SELECT 1 FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.id
-    WHERE ur.user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
-    AND r.name = 'Super Admin'
-  )
-);
+USING (public.is_super_admin());
+
+CREATE POLICY "Super admins can update any profile" 
+ON users FOR UPDATE 
+TO authenticated 
+USING (public.is_super_admin());
 -- ------------------------------------------------------------
 
 -- ==========================================
