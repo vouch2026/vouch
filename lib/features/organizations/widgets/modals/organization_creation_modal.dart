@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../campuses/providers/campus_provider.dart';
@@ -25,12 +27,29 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
   String? _selectedFacultyId;
   final List<String> _selectedProgramIds = [];
 
+  XFile? _logoImage;
+  XFile? _bannerImage;
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void dispose() {
     _nameController.dispose();
     _codeController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(bool isLogo) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        if (isLogo) {
+          _logoImage = image;
+        } else {
+          _bannerImage = image;
+        }
+      });
+    }
   }
 
   @override
@@ -198,11 +217,21 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 Row(
                   children: [
                     Expanded(
-                      child: _buildUploadButton(Icons.image_outlined, 'Upload Logo'),
+                      child: _buildUploadButton(
+                        Icons.image_outlined, 
+                        _logoImage != null ? 'Logo Selected' : 'Upload Logo',
+                        isLogo: true,
+                        isSelected: _logoImage != null,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
-                      child: _buildUploadButton(Icons.add_photo_alternate_outlined, 'Upload Banner'),
+                      child: _buildUploadButton(
+                        Icons.add_photo_alternate_outlined, 
+                        _bannerImage != null ? 'Banner Selected' : 'Upload Banner',
+                        isLogo: false,
+                        isSelected: _bannerImage != null,
+                      ),
                     ),
                   ],
                 ),
@@ -241,6 +270,8 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
         campusId: _selectedCampusId,
         facultyId: _selectedFacultyId,
         programIds: _selectedProgramIds,
+        logo: _logoImage != null ? File(_logoImage!.path) : null,
+        banner: _bannerImage != null ? File(_bannerImage!.path) : null,
       );
 
       if (success && mounted) {
@@ -259,15 +290,15 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
     );
   }
 
-  Widget _buildUploadButton(IconData icon, String label) {
+  Widget _buildUploadButton(IconData icon, String label, {required bool isLogo, bool isSelected = false}) {
     final theme = Theme.of(context);
     return OutlinedButton.icon(
-      onPressed: () {},
-      icon: Icon(icon, size: 20),
-      label: Text(label),
+      onPressed: () => _pickImage(isLogo),
+      icon: Icon(isSelected ? Icons.check_circle_rounded : icon, size: 20, color: isSelected ? Colors.green : null),
+      label: Text(label, style: TextStyle(color: isSelected ? Colors.green : null)),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
+        side: BorderSide(color: isSelected ? Colors.green : theme.colorScheme.outlineVariant),
       ),
     );
   }

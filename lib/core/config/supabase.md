@@ -16,7 +16,12 @@ Before running the script, you must remove old data from the auth system:
 4. Paste it into the editor and click **Run**.
 5. Ensure you see a "Success" message.
 
-### Step 3: Restart Your Flutter App (CRITICAL)
+### Step 3: Create Storage Buckets (CRITICAL)
+For images to work, you must create these buckets in **Storage**:
+1.  **ids**: Set to **Private**. (For user verification IDs)
+2.  **org-pictures**: Set to **Public**. (For organization logos and banners)
+
+### Step 4: Restart Your Flutter App (CRITICAL)
 1. **Fully stop and restart** your Flutter application.
 2. **Hot Reload is NOT enough.** Perform a **Hot Restart** or stop the debugger and run it again.
    * *Why?* The script recreates tables with new IDs. Your app must refresh its memory to use these new IDs, otherwise, it will crash with "Foreign Key" errors.

@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS sanction_rules CASCADE;
 DROP TABLE IF EXISTS event_ratings CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS fees CASCADE;
+DROP TABLE IF EXISTS organization_members CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS permissions CASCADE;
@@ -32,6 +33,23 @@ DROP TABLE IF EXISTS faculties CASCADE;
 DROP TABLE IF EXISTS campuses CASCADE;
 DROP TABLE IF EXISTS academic_terms CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+
+-- Robustly drop all versions of the organization creation function
+DO $$ 
+DECLARE
+    _sql text;
+BEGIN
+    SELECT 'DROP FUNCTION ' || string_agg(oid::regprocedure::text, '; DROP FUNCTION ')
+    FROM pg_proc 
+    WHERE proname = 'create_organization_with_members' 
+      AND pronamespace = 'public'::regnamespace
+    INTO _sql;
+    IF _sql IS NOT NULL THEN
+        EXECUTE _sql;
+    END IF;
+EXCEPTION WHEN OTHERS THEN 
+    NULL;
+END $$;
 
 -- 2. Drop all custom ENUM types
 DROP TYPE IF EXISTS sanction_status CASCADE;
@@ -155,7 +173,8 @@ updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 
 CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Add faculty_id and program_id back to users as they reference faculties and programs
+-- Add campus_id, faculty_id and program_id back to users as they reference campuses, faculties and programs
+ALTER TABLE users ADD COLUMN campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN program_id UUID REFERENCES programs(id) ON DELETE SET NULL;
 
@@ -264,29 +283,38 @@ CREATE OR REPLACE FUNCTION create_organization_with_members(
     p_type TEXT,
     p_campus_id UUID DEFAULT NULL,
     p_faculty_id UUID DEFAULT NULL,
-    p_program_ids UUID[] DEFAULT '{}'
+    p_program_ids UUID[] DEFAULT '{}',
+    p_logo_url TEXT DEFAULT NULL,
+    p_banner_url TEXT DEFAULT NULL
 ) RETURNS UUID AS $$
 DECLARE
     v_org_id UUID;
+    v_primary_program_id UUID;
 BEGIN
+    -- 0. Safely determine primary program ID
+    IF p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
+        v_primary_program_id := p_program_ids[1];
+    ELSE
+        v_primary_program_id := NULL;
+    END IF;
+
     -- 1. Create the organization
-    INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id)
-    VALUES (p_name, p_code, p_description, p_type, p_campus_id, p_faculty_id, 
-            CASE WHEN array_length(p_program_ids, 1) > 0 THEN p_program_ids[1] ELSE NULL END)
+    INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id, logo_url, banner_url)
+    VALUES (p_name, p_code, p_description, p_type, p_campus_id, p_faculty_id, v_primary_program_id, p_logo_url, p_banner_url)
     RETURNING id INTO v_org_id;
 
     -- 2. Add members based on type
-    IF p_type = 'campus-based' THEN
+    IF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
         INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM users WHERE campus_id = p_campus_id
+        SELECT v_org_id, id FROM public.users WHERE campus_id = p_campus_id
         ON CONFLICT DO NOTHING;
-    ELSIF p_type = 'faculty-based' THEN
+    ELSIF p_type = 'faculty-based' AND p_faculty_id IS NOT NULL THEN
         INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM users WHERE faculty_id = p_faculty_id
+        SELECT v_org_id, id FROM public.users WHERE faculty_id = p_faculty_id
         ON CONFLICT DO NOTHING;
-    ELSIF p_type = 'program-based' THEN
+    ELSIF p_type = 'program-based' AND p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
         INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM users WHERE program_id = ANY(p_program_ids)
+        SELECT v_org_id, id FROM public.users WHERE program_id = ANY(p_program_ids)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -636,6 +664,7 @@ DECLARE
     v_scope_id UUID;
     v_faculty_id UUID;
     v_program_id UUID;
+    v_campus_id UUID;
 BEGIN
     -- 1. Extract and Validate Metadata
     v_role := new.raw_user_meta_data->>'role';
@@ -644,6 +673,11 @@ BEGIN
     -- Safe casting for UUIDs
     v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
     v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
+
+    -- Derive campus_id if not provided
+    IF v_faculty_id IS NOT NULL THEN
+        SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
+    END IF;
 
     -- 2. Verify Foreign Keys (Crucial if DB was recently reset)
     IF v_faculty_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.faculties WHERE id = v_faculty_id) THEN
@@ -660,6 +694,7 @@ BEGIN
         first_name, 
         last_name, 
         student_id_number, 
+        campus_id,
         faculty_id, 
         program_id, 
         year,
@@ -673,6 +708,7 @@ BEGIN
         COALESCE(new.raw_user_meta_data->>'first_name', ''),
         COALESCE(new.raw_user_meta_data->>'last_name', ''), 
         COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+        v_campus_id,
         v_faculty_id,
         v_program_id,
         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
@@ -684,6 +720,7 @@ BEGIN
         email = EXCLUDED.email,
         first_name = EXCLUDED.first_name,
         last_name = EXCLUDED.last_name,
+        campus_id = EXCLUDED.campus_id,
         faculty_id = EXCLUDED.faculty_id,
         program_id = EXCLUDED.program_id,
         updated_at = CURRENT_TIMESTAMP

@@ -36,6 +36,8 @@ class OrganizationRepository {
     String? campusId,
     String? facultyId,
     List<String> programIds = const [],
+    String? logoUrl,
+    String? bannerUrl,
   }) async {
     final response = await _client.rpc(
       'create_organization_with_members',
@@ -47,6 +49,8 @@ class OrganizationRepository {
         'p_campus_id': campusId,
         'p_faculty_id': facultyId,
         'p_program_ids': programIds,
+        'p_logo_url': logoUrl,
+        'p_banner_url': bannerUrl,
       },
     );
     return response as String;

@@ -26,4 +26,23 @@ class StorageService {
 
     return _client.storage.from(bucket).getPublicUrl(path);
   }
+
+  Future<String> uploadOrganizationAsset({
+    required String code,
+    required File file,
+    required bool isLogo,
+  }) async {
+    final extension = p.extension(file.path);
+    final fileName = '${isLogo ? 'logo' : 'banner'}_${code}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'organizations/$fileName';
+    final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
+
+    await _client.storage.from(bucket).upload(
+          path,
+          file,
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
 }
