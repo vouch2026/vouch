@@ -28,6 +28,19 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<void>>(
+      authControllerProvider,
+      (previous, next) {
+        next.whenOrNull(
+          error: (error, stackTrace) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error.toString())),
+            );
+          },
+        );
+      },
+    );
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(

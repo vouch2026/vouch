@@ -44,6 +44,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         return loggingIn ? null : RoutePaths.login;
       }
 
+      // Check if email is confirmed
+      final user = auth?.session?.user;
+      if (user != null && user.emailConfirmedAt == null) {
+        if (state.matchedLocation != RoutePaths.emailVerification) {
+          return '${RoutePaths.emailVerification}?email=${user.email}';
+        }
+        return null;
+      }
+
       if (loggingIn) {
         return RoutePaths.dashboard;
       }

@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
+import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -34,9 +35,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       (previous, next) {
         next.whenOrNull(
           error: (error, stackTrace) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(error.toString())),
-            );
+            final errorMessage = error.toString();
+            if (errorMessage.toLowerCase().contains('email not confirmed')) {
+              context.goNamed(
+                RouteNames.emailVerification,
+                queryParameters: {'email': _emailController.text},
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(errorMessage)),
+              );
+            }
           },
         );
       },
