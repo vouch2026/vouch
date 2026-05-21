@@ -5,8 +5,7 @@ import '../widgets/user_management_header.dart';
 import '../widgets/user_kpi_cards.dart';
 import '../widgets/advanced_user_filter_panel.dart';
 import '../widgets/users_table.dart';
-import '../widgets/modals/create_student_modal.dart';
-import '../widgets/modals/create_instructor_modal.dart';
+import '../widgets/modals/create_user_modal.dart';
 
 class UsersPage extends StatelessWidget {
   const UsersPage({super.key});
@@ -26,25 +25,14 @@ class UsersPage extends StatelessWidget {
               actions: [
                 HeaderActionButton(
                   icon: Icons.person_add_rounded,
-                  label: 'Add Student',
+                  label: 'Add User',
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => const CreateStudentModal(),
+                      builder: (context) => const CreateUserModal(),
                     );
                   },
                   isPrimary: true,
-                ),
-                HeaderActionButton(
-                  icon: Icons.school_rounded,
-                  label: 'Add Faculty',
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => const CreateInstructorModal(),
-                    );
-                  },
-                  isPrimary: false,
                 ),
                 HeaderActionButton(
                   icon: Icons.file_upload_outlined,
