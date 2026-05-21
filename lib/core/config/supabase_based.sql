@@ -582,8 +582,16 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 DECLARE
     new_user_id UUID;
-    student_role_id UUID;
+    target_role_id UUID;
+    v_role TEXT;
+    v_position TEXT;
+    v_scope_type scope_type;
+    v_scope_id UUID;
 BEGIN
+    -- Extract metadata
+    v_role := new.raw_user_meta_data->>'role';
+    v_position := new.raw_user_meta_data->>'position';
+
     -- 1. Insert into public.users
     INSERT INTO public.users (
         auth_id, 
@@ -613,17 +621,31 @@ BEGIN
     )
     RETURNING id INTO new_user_id;
 
-    -- 2. Assign default 'Students' role
-    SELECT id INTO student_role_id FROM public.roles WHERE name = 'Students';
-    
-    IF student_role_id IS NOT NULL THEN
+    -- 2. Determine Role and Scope
+    IF v_role = 'super_admin' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Super Admin';
+        v_scope_type := 'Institutional';
+        v_scope_id := '00000000-0000-0000-0000-000000000000';
+    ELSIF v_role = 'student' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
+        v_scope_type := 'Program';
+        v_scope_id := (new.raw_user_meta_data->>'program_id')::uuid;
+    ELSIF v_role = 'faculty' THEN
+        IF v_position = 'dean' THEN
+            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
+            v_scope_type := 'Faculty';
+            v_scope_id := (new.raw_user_meta_data->>'faculty_id')::uuid;
+        ELSIF v_position = 'program_head' THEN
+            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Program Head';
+            v_scope_type := 'Program';
+            v_scope_id := (new.raw_user_meta_data->>'program_id')::uuid;
+        END IF;
+    END IF;
+
+    -- 3. Assign Role if determined
+    IF target_role_id IS NOT NULL AND v_scope_id IS NOT NULL THEN
         INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id)
-        VALUES (
-            new_user_id, 
-            student_role_id, 
-            'Program', 
-            (new.raw_user_meta_data->>'program_id')::uuid
-        );
+        VALUES (new_user_id, target_role_id, v_scope_type, v_scope_id);
     END IF;
 
     RETURN new;

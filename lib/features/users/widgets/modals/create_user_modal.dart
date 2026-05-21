@@ -93,7 +93,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                       const SizedBox(height: AppSpacing.md),
                       
                       if (_selectedRole == 'student') _buildStudentFields(facultiesAsync, programsAsync),
-                      if (_selectedRole != 'student') _buildFacultyFields(facultiesAsync),
+                      if (_selectedRole != 'student') _buildFacultyFields(facultiesAsync, programsAsync),
                       
                       const SizedBox(height: AppSpacing.lg),
                       _buildIdVerification(),
@@ -326,8 +326,9 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
     );
   }
 
-  Widget _buildFacultyFields(AsyncValue<List<FacultyModel>> facultiesAsync) {
+  Widget _buildFacultyFields(AsyncValue<List<FacultyModel>> facultiesAsync, AsyncValue<List<ProgramModel>> programsAsync) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: AppSpacing.md),
         Row(
@@ -345,7 +346,10 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                         value: f.id, 
                         child: Text(f.name, overflow: TextOverflow.ellipsis),
                       )).toList(),
-                      onChanged: (v) => setState(() => _selectedFacultyId = v),
+                      onChanged: (v) => setState(() {
+                        _selectedFacultyId = v;
+                        _selectedProgramId = null;
+                      }),
                       decoration: const InputDecoration(hintText: 'Select Faculty'),
                       validator: (v) => v == null ? 'Required' : null,
                     ),
@@ -370,7 +374,12 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                         DropdownMenuItem(value: 'dean', child: Text('Dean', overflow: TextOverflow.ellipsis)),
                         DropdownMenuItem(value: 'program_head', child: Text('Program Head', overflow: TextOverflow.ellipsis)),
                       ],
-                      onChanged: (val) => setState(() => _position = val!),
+                      onChanged: (val) => setState(() {
+                        _position = val!;
+                        if (_position == 'dean') {
+                          _selectedProgramId = null;
+                        }
+                      }),
                       decoration: const InputDecoration(hintText: 'Select Position'),
                     ),
                   ],
@@ -379,6 +388,26 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
             ],
           ],
         ),
+        if (_selectedRole == 'faculty' && _position != 'dean') ...[
+          const SizedBox(height: AppSpacing.md),
+          _buildLabel('Program Assignment'),
+          programsAsync.when(
+            data: (programs) => DropdownButtonFormField<String>(
+              value: _selectedProgramId,
+              isExpanded: true,
+              items: programs.map((p) => DropdownMenuItem(
+                value: p.id!, 
+                child: Text(p.name, overflow: TextOverflow.ellipsis),
+              )).toList(),
+              onChanged: (v) => setState(() => _selectedProgramId = v),
+              decoration: const InputDecoration(hintText: 'Select Program'),
+              validator: (v) => v == null ? 'Required' : null,
+              disabledHint: const Text('Select a Faculty first'),
+            ),
+            loading: () => const LinearProgressIndicator(),
+            error: (_, __) => const Text('Error loading programs'),
+          ),
+        ],
       ],
     );
   }
@@ -490,10 +519,11 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         schoolId: _idController.text.trim(),
-        facultyId: _selectedFacultyId ?? '',
-        programId: _selectedProgramId ?? '',
+        facultyId: _selectedFacultyId,
+        programId: _selectedProgramId,
         yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
         role: _selectedRole,
+        position: _selectedRole == 'faculty' ? _position : null,
         idFront: _idFrontImage != null ? File(_idFrontImage!.path) : null,
         idBack: _idBackImage != null ? File(_idBackImage!.path) : null,
       );
