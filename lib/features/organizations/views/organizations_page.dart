@@ -7,8 +7,6 @@ import '../widgets/quick_actions.dart';
 import '../widgets/analytics/kpi_cards.dart';
 import '../widgets/tables/organization_table.dart';
 import '../widgets/pending_requests_panel.dart';
-import '../widgets/analytics/organization_performance_charts.dart';
-import '../widgets/analytics/top_organizations_leaderboard.dart';
 
 class OrganizationsPage extends ConsumerWidget {
   const OrganizationsPage({super.key});
@@ -29,38 +27,6 @@ class OrganizationsPage extends ConsumerWidget {
             Text('Organization KPI Analytics', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppSpacing.md),
             const KpiCards(),
-            
-            const SizedBox(height: AppSpacing.xl),
-            
-            // Section 3 & 4 - Performance Analytics & Top Organizations
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth > 1000) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(
-                        flex: 2,
-                        child: OrganizationPerformanceCharts(),
-                      ),
-                      const SizedBox(width: AppSpacing.xl),
-                      const Expanded(
-                        flex: 1,
-                        child: TopOrganizationsLeaderboard(),
-                      ),
-                    ],
-                  );
-                }
-                return const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    OrganizationPerformanceCharts(),
-                    const SizedBox(height: AppSpacing.xl),
-                    TopOrganizationsLeaderboard(),
-                  ],
-                );
-              },
-            ),
             
             const SizedBox(height: AppSpacing.xl),
             

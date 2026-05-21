@@ -20,7 +20,7 @@ class _OrganizationDetailsPageState extends ConsumerState<OrganizationDetailsPag
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -51,7 +51,6 @@ class _OrganizationDetailsPageState extends ConsumerState<OrganizationDetailsPag
                   Tab(text: 'Officers'),
                   Tab(text: 'Events'),
                   Tab(text: 'Finance'),
-                  Tab(text: 'Analytics'),
                   Tab(text: 'Settings'),
                 ],
               ),
@@ -64,7 +63,6 @@ class _OrganizationDetailsPageState extends ConsumerState<OrganizationDetailsPag
                     _PlaceholderTab(name: 'Officers'),
                     _PlaceholderTab(name: 'Events'),
                     _PlaceholderTab(name: 'Finance'),
-                    _PlaceholderTab(name: 'Analytics'),
                     _PlaceholderTab(name: 'Settings'),
                   ],
                 ),
@@ -103,7 +101,7 @@ class _OrganizationDetailsPageState extends ConsumerState<OrganizationDetailsPag
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('${org.code} • ${org.type.toUpperCase()} • ${org.facultyProgram ?? "General"}', 
+                Text('${org.code} • ${org.facultyProgram ?? "General"}', 
                     style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 8),
                 Row(

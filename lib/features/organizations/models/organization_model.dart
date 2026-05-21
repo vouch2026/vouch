@@ -13,7 +13,7 @@ class OrganizationModel with _$OrganizationModel {
     String? logoUrl,
     String? bannerUrl,
     @Default('active') String status,
-    @Default('academic') String type,
+    @Default('campus-based') String type,
     String? facultyProgram,
     String? adviserName,
     String? campusId,

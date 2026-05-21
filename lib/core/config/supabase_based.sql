@@ -167,12 +167,21 @@ description TEXT,
 logo_url VARCHAR(2048),
 banner_url VARCHAR(2048),
 status VARCHAR(20) DEFAULT 'active',
-type VARCHAR(50) DEFAULT 'academic',
+type VARCHAR(50) DEFAULT 'campus-based',
 campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
 faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
 program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE organization_members (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+role VARCHAR(50) DEFAULT 'member', -- member, officer, etc.
+joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+UNIQUE(organization_id, user_id)
 );
 
 CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -247,6 +256,43 @@ ON permissions FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Role permissions are viewable by authenticated users"
 ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE OR REPLACE FUNCTION create_organization_with_members(
+    p_name TEXT,
+    p_code TEXT,
+    p_description TEXT,
+    p_type TEXT,
+    p_campus_id UUID DEFAULT NULL,
+    p_faculty_id UUID DEFAULT NULL,
+    p_program_ids UUID[] DEFAULT '{}'
+) RETURNS UUID AS $$
+DECLARE
+    v_org_id UUID;
+BEGIN
+    -- 1. Create the organization
+    INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id)
+    VALUES (p_name, p_code, p_description, p_type, p_campus_id, p_faculty_id, 
+            CASE WHEN array_length(p_program_ids, 1) > 0 THEN p_program_ids[1] ELSE NULL END)
+    RETURNING id INTO v_org_id;
+
+    -- 2. Add members based on type
+    IF p_type = 'campus-based' THEN
+        INSERT INTO organization_members (organization_id, user_id)
+        SELECT v_org_id, id FROM users WHERE campus_id = p_campus_id
+        ON CONFLICT DO NOTHING;
+    ELSIF p_type = 'faculty-based' THEN
+        INSERT INTO organization_members (organization_id, user_id)
+        SELECT v_org_id, id FROM users WHERE faculty_id = p_faculty_id
+        ON CONFLICT DO NOTHING;
+    ELSIF p_type = 'program-based' THEN
+        INSERT INTO organization_members (organization_id, user_id)
+        SELECT v_org_id, id FROM users WHERE program_id = ANY(p_program_ids)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    RETURN v_org_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ------------------------------------------------------------
 -- HELPER FUNCTION FOR RBAC
@@ -503,6 +549,7 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100),
 ('Faculty Dean', 80),
 ('Program Head', 70),
+('Instructor', 65),
 ('Comselec Chair', 60), 
 ('Faculty Governor', 50),
 ('Program Governor', 40),
@@ -660,6 +707,10 @@ BEGIN
             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Program Head';
             v_scope_type := 'Program';
             v_scope_id := v_program_id;
+        ELSIF v_position = 'instructor' THEN
+            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Instructor';
+            v_scope_type := 'Faculty';
+            v_scope_id := v_faculty_id;
         END IF;
     END IF;
 

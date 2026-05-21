@@ -1,21 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../campuses/providers/campus_provider.dart';
+import '../../../faculties/providers/faculty_provider.dart';
+import '../../../programs/providers/program_provider.dart';
+import '../../controllers/organization_controller.dart';
 
-class OrganizationCreationModal extends StatefulWidget {
+class OrganizationCreationModal extends ConsumerStatefulWidget {
   const OrganizationCreationModal({super.key});
 
   @override
-  State<OrganizationCreationModal> createState() => _OrganizationCreationModalState();
+  ConsumerState<OrganizationCreationModal> createState() => _OrganizationCreationModalState();
 }
 
-class _OrganizationCreationModalState extends State<OrganizationCreationModal> {
+class _OrganizationCreationModalState extends ConsumerState<OrganizationCreationModal> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _selectedType = 'academic';
-  String? _selectedFaculty;
+  
+  String _selectedType = 'campus-based';
+  String? _selectedCampusId;
+  String? _selectedFacultyId;
+  final List<String> _selectedProgramIds = [];
 
   @override
   void dispose() {
@@ -27,7 +35,27 @@ class _OrganizationCreationModalState extends State<OrganizationCreationModal> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    ref.listen<AsyncValue<void>>(
+      organizationControllerProvider,
+      (previous, next) {
+        next.whenOrNull(
+          error: (error, stackTrace) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error.toString())),
+            );
+          },
+        );
+      },
+    );
+
+    final campusesAsync = ref.watch(campusesProvider);
+    final facultiesAsync = _selectedCampusId != null 
+        ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
+        : const AsyncValue<List<dynamic>>.data([]);
+    final programsAsync = _selectedFacultyId != null
+        ? ref.watch(programsByFacultyProvider(_selectedFacultyId!))
+        : const AsyncValue<List<dynamic>>.data([]);
+    final organizationState = ref.watch(organizationControllerProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -50,6 +78,25 @@ class _OrganizationCreationModalState extends State<OrganizationCreationModal> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 
+                _buildFieldLabel('Organization Type'),
+                DropdownButtonFormField<String>(
+                  value: _selectedType,
+                  items: [
+                    {'value': 'campus-based', 'label': 'Campus-based'},
+                    {'value': 'faculty-based', 'label': 'Faculty-based'},
+                    {'value': 'program-based', 'label': 'Program-based'},
+                  ].map((e) => DropdownMenuItem<String>(
+                    value: e['value'], 
+                    child: Text(e['label']!)
+                  )).toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedType = val!;
+                    _selectedFacultyId = null;
+                    _selectedProgramIds.clear();
+                  }),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
                 _buildFieldLabel('Organization Name'),
                 TextFormField(
                   controller: _nameController,
@@ -58,57 +105,93 @@ class _OrganizationCreationModalState extends State<OrganizationCreationModal> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFieldLabel('Organization Code'),
-                          TextFormField(
-                            controller: _codeController,
-                            decoration: const InputDecoration(hintText: 'e.g. GDSC-VOUCH'),
-                            validator: (val) => val == null || val.isEmpty ? 'Code is required' : null,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFieldLabel('Organization Type'),
-                          DropdownButtonFormField<String>(
-                            value: _selectedType,
-                            items: ['academic', 'non-academic', 'sports', 'religious']
-                                .map((e) => DropdownMenuItem(value: e, child: Text(e.toUpperCase())))
-                                .toList(),
-                            onChanged: (val) => setState(() => _selectedType = val!),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                _buildFieldLabel('Organization Code'),
+                TextFormField(
+                  controller: _codeController,
+                  decoration: const InputDecoration(hintText: 'e.g. GDSC-VOUCH'),
+                  validator: (val) => val == null || val.isEmpty ? 'Code is required' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
+
+                // Dynamic Fields based on Type
+                _buildFieldLabel('Campus'),
+                campusesAsync.when(
+                  data: (campuses) => DropdownButtonFormField<String>(
+                    value: _selectedCampusId,
+                    items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
+                    onChanged: (val) => setState(() {
+                      _selectedCampusId = val;
+                      _selectedFacultyId = null;
+                      _selectedProgramIds.clear();
+                    }),
+                    validator: (val) => val == null ? 'Campus is required' : null,
+                    decoration: const InputDecoration(hintText: 'Select Campus'),
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('Error loading campuses'),
+                ),
+
+                if (_selectedType == 'faculty-based' || _selectedType == 'program-based') ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _buildFieldLabel('Faculty'),
+                  facultiesAsync.when(
+                    data: (faculties) => DropdownButtonFormField<String>(
+                      value: _selectedFacultyId,
+                      items: faculties.map((f) => DropdownMenuItem<String>(value: f.id, child: Text(f.name))).toList(),
+                      onChanged: (val) => setState(() {
+                        _selectedFacultyId = val;
+                        _selectedProgramIds.clear();
+                      }),
+                      validator: (val) => val == null ? 'Faculty is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select Faculty'),
+                      disabledHint: const Text('Select a Campus first'),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error loading faculties'),
+                  ),
+                ],
+
+                if (_selectedType == 'program-based') ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _buildFieldLabel('Programs'),
+                  programsAsync.when(
+                    data: (programs) => Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: programs.map((p) => CheckboxListTile(
+                          title: Text(p.name, style: AppTextStyles.bodySmall),
+                          value: _selectedProgramIds.contains(p.id),
+                          onChanged: (val) => setState(() {
+                            if (val == true) {
+                              _selectedProgramIds.add(p.id!);
+                            } else {
+                              _selectedProgramIds.remove(p.id);
+                            }
+                          }),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        )).toList(),
+                      ),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error loading programs'),
+                  ),
+                  if (_selectedProgramIds.isEmpty && _selectedFacultyId != null)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4, left: 12),
+                      child: Text('Select at least one program', style: TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
+                ],
                 
+                const SizedBox(height: AppSpacing.md),
                 _buildFieldLabel('Description'),
                 TextFormField(
                   controller: _descriptionController,
                   maxLines: 3,
                   decoration: const InputDecoration(hintText: 'Describe the organization\'s purpose'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                
-                _buildFieldLabel('Faculty / Program'),
-                DropdownButtonFormField<String>(
-                  value: _selectedFaculty,
-                  items: ['College of Engineering', 'College of Arts and Sciences', 'College of Education']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedFaculty = val),
-                  decoration: const InputDecoration(hintText: 'Select faculty/program'),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 
@@ -128,13 +211,12 @@ class _OrganizationCreationModalState extends State<OrganizationCreationModal> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // Submit logic
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text('Create Organization'),
+                    onPressed: organizationState.isLoading
+                      ? null
+                      : _handleSubmit,
+                    child: organizationState.isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Create Organization'),
                   ),
                 ),
               ],
@@ -143,6 +225,31 @@ class _OrganizationCreationModalState extends State<OrganizationCreationModal> {
         ),
       ),
     );
+  }
+
+  void _handleSubmit() async {
+    if (_formKey.currentState!.validate()) {
+      if (_selectedType == 'program-based' && _selectedProgramIds.isEmpty) {
+        return;
+      }
+      
+      final success = await ref.read(organizationControllerProvider.notifier).createOrganization(
+        name: _nameController.text.trim(),
+        code: _codeController.text.trim(),
+        description: _descriptionController.text.trim(),
+        type: _selectedType,
+        campusId: _selectedCampusId,
+        facultyId: _selectedFacultyId,
+        programIds: _selectedProgramIds,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Organization created successfully with members.')),
+        );
+        Navigator.pop(context);
+      }
+    }
   }
 
   Widget _buildFieldLabel(String label) {

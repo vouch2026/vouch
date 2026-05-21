@@ -28,6 +28,30 @@ class OrganizationRepository {
     return OrganizationModel.fromJson(response);
   }
 
+  Future<String> createOrganization({
+    required String name,
+    required String code,
+    required String description,
+    required String type,
+    String? campusId,
+    String? facultyId,
+    List<String> programIds = const [],
+  }) async {
+    final response = await _client.rpc(
+      'create_organization_with_members',
+      params: {
+        'p_name': name,
+        'p_code': code,
+        'p_description': description,
+        'p_type': type,
+        'p_campus_id': campusId,
+        'p_faculty_id': facultyId,
+        'p_program_ids': programIds,
+      },
+    );
+    return response as String;
+  }
+
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
     final response = await _client
         .from('organization_members')

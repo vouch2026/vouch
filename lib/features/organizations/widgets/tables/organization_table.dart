@@ -15,7 +15,6 @@ class OrganizationTable extends ConsumerStatefulWidget {
 class _OrganizationTableState extends ConsumerState<OrganizationTable> {
   String _searchQuery = '';
   String? _statusFilter;
-  String? _typeFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +26,7 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
           final matchesSearch = org.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
               org.code.toLowerCase().contains(_searchQuery.toLowerCase());
           final matchesStatus = _statusFilter == null || org.status == _statusFilter;
-          final matchesType = _typeFilter == null || org.type == _typeFilter;
-          return matchesSearch && matchesStatus && matchesType;
+          return matchesSearch && matchesStatus;
         }).toList();
 
         return LayoutBuilder(
@@ -64,7 +62,6 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
               headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
               columns: const [
                 DataColumn(label: Text('Organization')),
-                DataColumn(label: Text('Type')),
                 DataColumn(label: Text('Adviser')),
                 DataColumn(label: Text('Members')),
                 DataColumn(label: Text('Status')),
@@ -91,7 +88,6 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
                       ),
                     ],
                   )),
-                  DataCell(Text(org.type.toUpperCase(), style: AppTextStyles.bodySmall)),
                   DataCell(Text(org.adviserName ?? 'Not Assigned', style: AppTextStyles.bodySmall)),
                   DataCell(Text('${org.memberCount}', style: AppTextStyles.bodySmall)),
                   DataCell(_StatusBadge(status: org.status)),
@@ -126,7 +122,7 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
               child: org.logoUrl == null ? Text(org.code[0]) : null,
             ),
             title: Text(org.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('${org.type} • ${org.memberCount} members'),
+            subtitle: Text('${org.memberCount} members'),
             trailing: _StatusBadge(status: org.status),
             onTap: () {},
           ),
@@ -155,13 +151,6 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
           value: _statusFilter,
           items: ['active', 'inactive', 'pending', 'suspended'],
           onChanged: (val) => setState(() => _statusFilter = val),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        _buildFilterDropdown(
-          hint: 'Type',
-          value: _typeFilter,
-          items: ['academic', 'non-academic', 'sports', 'religious'],
-          onChanged: (val) => setState(() => _typeFilter = val),
         ),
       ],
     );
