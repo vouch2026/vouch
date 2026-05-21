@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../routes/route_names.dart';
 import '../../models/organization_model.dart';
 import '../../providers/organization_provider.dart';
 
@@ -91,8 +93,16 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
                   DataCell(Text(org.adviserName ?? 'Not Assigned', style: AppTextStyles.bodySmall)),
                   DataCell(Text('${org.memberCount}', style: AppTextStyles.bodySmall)),
                   DataCell(_StatusBadge(status: org.status)),
-                  DataCell(PopupMenuButton(
+                  DataCell(PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert_rounded, size: 20),
+                    onSelected: (value) {
+                      if (value == 'view') {
+                        context.pushNamed(
+                          RouteNames.organizationDetails,
+                          pathParameters: {'id': org.id},
+                        );
+                      }
+                    },
                     itemBuilder: (context) => [
                       const PopupMenuItem(value: 'view', child: Text('View Details')),
                       const PopupMenuItem(value: 'edit', child: Text('Edit Organization')),
@@ -124,7 +134,12 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
             title: Text(org.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
             subtitle: Text('${org.memberCount} members'),
             trailing: _StatusBadge(status: org.status),
-            onTap: () {},
+            onTap: () {
+              context.pushNamed(
+                RouteNames.organizationDetails,
+                pathParameters: {'id': org.id},
+              );
+            },
           ),
         )).toList(),
       ],
