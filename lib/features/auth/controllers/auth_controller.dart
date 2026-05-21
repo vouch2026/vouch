@@ -15,10 +15,14 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<void> signIn(String email, String password) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _repository.signInWithEmail(
+    final result = await AsyncValue.guard(() => _repository.signInWithEmail(
           email: email,
           password: password,
         ));
+    if (!result.hasError) {
+      ref.invalidate(userProfileProvider);
+    }
+    state = result;
   }
 
   Future<bool> signUp({
@@ -87,6 +91,9 @@ class AuthController extends AsyncNotifier<void> {
           token: token,
           type: OtpType.signup,
         ));
+    if (!result.hasError) {
+      ref.invalidate(userProfileProvider);
+    }
     state = result;
     return !result.hasError;
   }
@@ -102,6 +109,7 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> signOut() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _repository.signOut());
+    ref.invalidate(userProfileProvider);
   }
 }
 

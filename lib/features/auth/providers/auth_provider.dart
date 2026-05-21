@@ -8,15 +8,16 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(SupabaseConfig.client);
 });
 
-final authStateProvider = StreamProvider<AuthState>((ref) {
+final authStateProvider = StreamProvider.autoDispose<AuthState>((ref) {
   return ref.watch(authRepositoryProvider).authStateChanges;
 });
 
-final currentUserProvider = Provider<User?>((ref) {
-  return ref.watch(authRepositoryProvider).currentUser;
+final currentUserProvider = Provider.autoDispose<User?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  return authState.value?.session?.user;
 });
 
-final userProfileProvider = FutureProvider<UserModel?>((ref) async {
+final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
   return ref.watch(authRepositoryProvider).getUserProfile(user.id);
