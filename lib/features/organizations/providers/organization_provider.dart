@@ -3,6 +3,7 @@ import '../repositories/organization_repository.dart';
 import '../models/organization_model.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/models/user_model.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>((ref) {
   return OrganizationRepository(SupabaseConfig.client);
@@ -20,4 +21,8 @@ final userOrganizationsProvider = FutureProvider<List<OrganizationModel>>((ref) 
 
 final organizationProvider = FutureProvider.family<OrganizationModel?, String>((ref, id) async {
   return ref.watch(organizationRepositoryProvider).getOrganizationById(id);
+});
+
+final organizationMembersProvider = FutureProvider.family<List<UserModel>, String>((ref, orgId) async {
+  return ref.watch(organizationRepositoryProvider).getOrganizationMembers(orgId);
 });

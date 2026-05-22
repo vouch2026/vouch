@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/organization_model.dart';
+import '../../auth/models/user_model.dart';
 
 class OrganizationRepository {
   final SupabaseClient _client;
@@ -77,6 +78,17 @@ class OrganizationRepository {
     if (response == null || (response as List).isEmpty) {
       throw Exception('Organization not found or you don\'t have permission to delete it');
     }
+  }
+
+  Future<List<UserModel>> getOrganizationMembers(String orgId) async {
+    final response = await _client
+        .from('organization_members')
+        .select('users (*)')
+        .eq('organization_id', orgId);
+    
+    return (response as List)
+        .map((json) => UserModel.fromJson(json['users']))
+        .toList();
   }
 
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {

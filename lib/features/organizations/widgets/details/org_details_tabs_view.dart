@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../models/organization_model.dart';
+import '../../providers/organization_provider.dart';
+import '../../../auth/models/user_model.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -81,7 +84,7 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
       case 'Overview':
         return _OverviewTab(org: widget.org);
       case 'Members':
-        return _MembersTab();
+        return _MembersTab(orgId: widget.org.id);
       case 'Officers':
         return _OfficersTab();
       case 'Attendance':
@@ -243,9 +246,14 @@ class _FinanceTab extends StatelessWidget {
   }
 }
 
-class _MembersTab extends StatelessWidget {
+class _MembersTab extends ConsumerWidget {
+  final String orgId;
+  const _MembersTab({required this.orgId});
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membersAsync = ref.watch(organizationMembersProvider(orgId));
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
       child: Column(
@@ -263,13 +271,39 @@ class _MembersTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          _buildMembersTable(),
+          membersAsync.when(
+            data: (members) => _buildMembersTable(context, members),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(child: Text('Error loading members: $err')),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMembersTable() {
+  Widget _buildMembersTable(BuildContext context, List<UserModel> members) {
+    if (members.isEmpty) {
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(Icons.people_outline_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
+                const SizedBox(height: AppSpacing.md),
+                Text('No members found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -279,18 +313,22 @@ class _MembersTab extends StatelessWidget {
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: 5,
+        itemCount: members.length,
         separatorBuilder: (context, index) => const Divider(height: 1),
         itemBuilder: (context, index) {
+          final user = members[index];
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-            leading: const CircleAvatar(child: Icon(Icons.person)),
-            title: Text('Student Name $index', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('2022-00${100 + index} • BSIT • 3rd Year', style: AppTextStyles.bodySmall),
+            leading: CircleAvatar(
+              backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+              child: user.avatarUrl == null ? const Icon(Icons.person) : null,
+            ),
+            title: Text(user.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+            subtitle: Text('${user.schoolId} • ${user.programName ?? user.roleDisplay} • ${user.yearLevel ?? ""}${user.yearLevel != null ? " Year" : ""}', style: AppTextStyles.bodySmall),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildStatusBadge('Active'),
+                _buildStatusBadge(user.status),
                 IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert_rounded)),
               ],
             ),
@@ -301,13 +339,21 @@ class _MembersTab extends StatelessWidget {
   }
 
   Widget _buildStatusBadge(String status) {
+    final isActive = status.toLowerCase() == 'active';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: (isActive ? AppColors.success : AppColors.warning).withOpacity(0.1),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(status, style: const TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.bold)),
+      child: Text(
+        status.toUpperCase(), 
+        style: TextStyle(
+          color: isActive ? AppColors.success : AppColors.warning, 
+          fontSize: 10, 
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
