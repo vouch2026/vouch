@@ -67,6 +67,20 @@ class OrganizationController extends AsyncNotifier<void> {
     state = const AsyncData(null);
     return true;
   }
+
+  Future<bool> deleteOrganization(String id) async {
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() => _repository.deleteOrganization(id));
+    
+    if (result.hasError) {
+      state = AsyncValue.error(result.error!, result.stackTrace!);
+      return false;
+    }
+
+    ref.invalidate(organizationsProvider);
+    state = const AsyncData(null);
+    return true;
+  }
 }
 
 final organizationControllerProvider = AsyncNotifierProvider<OrganizationController, void>(() {

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../routes/route_names.dart';
 import '../../models/organization_model.dart';
 import '../../providers/organization_provider.dart';
+import '../../controllers/organization_controller.dart';
 
 class OrganizationTable extends ConsumerStatefulWidget {
   const OrganizationTable({super.key});
@@ -121,12 +122,43 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
                   DataCell(_StatusBadge(status: org.status)),
                   DataCell(PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert_rounded, size: 20),
-                    onSelected: (value) {
+                    onSelected: (value) async {
                       if (value == 'view') {
                         context.pushNamed(
                           RouteNames.organizationDetails,
                           pathParameters: {'id': org.id},
                         );
+                      } else if (value == 'delete') {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Organization'),
+                            content: Text('Are you sure you want to delete ${org.name}? This action cannot be undone.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed == true && mounted) {
+                          final success = await ref.read(organizationControllerProvider.notifier).deleteOrganization(org.id);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(success ? 'Organization deleted' : 'Failed to delete organization'),
+                                backgroundColor: success ? Colors.green : Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
                     itemBuilder: (context) => [
@@ -134,6 +166,11 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
                       const PopupMenuItem(value: 'edit', child: Text('Edit Organization')),
                       const PopupMenuItem(value: 'members', child: Text('Manage Members')),
                       const PopupMenuItem(value: 'deactivate', child: Text('Deactivate')),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 'delete', 
+                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                      ),
                     ],
                   )),
                 ],

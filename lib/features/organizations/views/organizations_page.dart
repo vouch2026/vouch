@@ -6,7 +6,6 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/analytics/kpi_cards.dart';
 import '../widgets/tables/organization_table.dart';
-import '../widgets/pending_requests_panel.dart';
 
 class OrganizationsPage extends ConsumerWidget {
   const OrganizationsPage({super.key});
@@ -30,44 +29,10 @@ class OrganizationsPage extends ConsumerWidget {
             
             const SizedBox(height: AppSpacing.xl),
             
-            // Section 2 & 5 - Organization Table & Pending Requests
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth > 1000) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('All Organizations', style: AppTextStyles.titleLarge),
-                            const SizedBox(height: AppSpacing.md),
-                            const OrganizationTable(),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xl),
-                      const Expanded(
-                        flex: 1,
-                        child: PendingRequestsPanel(),
-                      ),
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('All Organizations', style: AppTextStyles.titleLarge),
-                    const SizedBox(height: AppSpacing.md),
-                    const OrganizationTable(),
-                    const SizedBox(height: AppSpacing.xl),
-                    const PendingRequestsPanel(),
-                  ],
-                );
-              },
-            ),
+            // Section 2 - Organization Table
+            Text('All Organizations', style: AppTextStyles.titleLarge),
+            const SizedBox(height: AppSpacing.md),
+            const OrganizationTable(),
           ],
         ),
       ),

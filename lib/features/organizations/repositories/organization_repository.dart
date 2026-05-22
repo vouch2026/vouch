@@ -56,6 +56,13 @@ class OrganizationRepository {
     return response as String;
   }
 
+  Future<void> deleteOrganization(String id) async {
+    await _client
+        .from('organizations')
+        .delete()
+        .eq('id', id);
+  }
+
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
     final response = await _client
         .from('organization_members')
