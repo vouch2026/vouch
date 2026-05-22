@@ -95,17 +95,20 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   }
 
   Widget _buildBreadcrumbs(UserModel user) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      color: AppColors.white,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
       child: Row(
         children: [
+          Icon(Icons.people_outline_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
+          const SizedBox(width: 8),
           InkWell(
             onTap: () => context.go(RoutePaths.users),
-            child: Text('Users', style: AppTextStyles.headlineMedium.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold)),
+            child: Text('Users', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
           ),
-          const Icon(Icons.chevron_right, size: 20, color: AppColors.textGrey),
-          Text(user.fullName, style: AppTextStyles.headlineMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 8),
+          Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
+          const SizedBox(width: 8),
+          Text(user.fullName, style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
         ],
       ),
     );

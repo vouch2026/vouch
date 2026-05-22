@@ -71,25 +71,51 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
               ],
               rows: orgs.map((org) => DataRow(
                 cells: [
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-                        child: org.logoUrl == null ? Text(org.code[0], style: const TextStyle(fontSize: 12)) : null,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(org.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                          Text(org.code, style: AppTextStyles.bodySmall),
-                        ],
-                      ),
-                    ],
-                  )),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: theme.colorScheme.primaryContainer,
+                          backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
+                          child: org.logoUrl == null 
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.asset(
+                                  'assets/logos/vouch.png',
+                                  width: 32,
+                                  height: 32,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Text(
+                                    org.code[0], 
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onPrimaryContainer,
+                                    ),
+                                  ),
+                                ),
+                              ) 
+                            : null,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(org.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                            Text(org.code, style: AppTextStyles.bodySmall),
+                          ],
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      context.pushNamed(
+                        RouteNames.organizationDetails,
+                        pathParameters: {'id': org.id},
+                      );
+                    },
+                  ),
                   DataCell(Text(org.adviserName ?? 'Not Assigned', style: AppTextStyles.bodySmall)),
                   DataCell(Text('${org.memberCount}', style: AppTextStyles.bodySmall)),
                   DataCell(_StatusBadge(status: org.status)),
@@ -128,8 +154,20 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
           margin: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: ListTile(
             leading: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-              child: org.logoUrl == null ? Text(org.code[0]) : null,
+              child: org.logoUrl == null 
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/logos/vouch.png',
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Text(org.code[0]),
+                    ),
+                  ) 
+                : null,
             ),
             title: Text(org.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
             subtitle: Text('${org.memberCount} members'),

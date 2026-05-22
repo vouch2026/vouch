@@ -25,16 +25,22 @@ mixin _$OrganizationModel {
   String get name => throw _privateConstructorUsedError;
   String get code => throw _privateConstructorUsedError;
   String? get description => throw _privateConstructorUsedError;
+  @JsonKey(name: 'logo_url')
   String? get logoUrl => throw _privateConstructorUsedError;
+  @JsonKey(name: 'banner_url')
   String? get bannerUrl => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   String get type => throw _privateConstructorUsedError;
   String? get facultyProgram => throw _privateConstructorUsedError;
   String? get adviserName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'campus_id')
   String? get campusId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'faculty_id')
   String? get facultyId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'program_id')
   String? get programId => throw _privateConstructorUsedError;
   int get memberCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this OrganizationModel to a JSON map.
@@ -59,17 +65,17 @@ abstract class $OrganizationModelCopyWith<$Res> {
     String name,
     String code,
     String? description,
-    String? logoUrl,
-    String? bannerUrl,
+    @JsonKey(name: 'logo_url') String? logoUrl,
+    @JsonKey(name: 'banner_url') String? bannerUrl,
     String status,
     String type,
     String? facultyProgram,
     String? adviserName,
-    String? campusId,
-    String? facultyId,
-    String? programId,
+    @JsonKey(name: 'campus_id') String? campusId,
+    @JsonKey(name: 'faculty_id') String? facultyId,
+    @JsonKey(name: 'program_id') String? programId,
     int memberCount,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -186,17 +192,17 @@ abstract class _$$OrganizationModelImplCopyWith<$Res>
     String name,
     String code,
     String? description,
-    String? logoUrl,
-    String? bannerUrl,
+    @JsonKey(name: 'logo_url') String? logoUrl,
+    @JsonKey(name: 'banner_url') String? bannerUrl,
     String status,
     String type,
     String? facultyProgram,
     String? adviserName,
-    String? campusId,
-    String? facultyId,
-    String? programId,
+    @JsonKey(name: 'campus_id') String? campusId,
+    @JsonKey(name: 'faculty_id') String? facultyId,
+    @JsonKey(name: 'program_id') String? programId,
     int memberCount,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -305,17 +311,17 @@ class _$OrganizationModelImpl implements _OrganizationModel {
     required this.name,
     required this.code,
     this.description,
-    this.logoUrl,
-    this.bannerUrl,
+    @JsonKey(name: 'logo_url') this.logoUrl,
+    @JsonKey(name: 'banner_url') this.bannerUrl,
     this.status = 'active',
-    this.type = 'academic',
+    this.type = 'campus-based',
     this.facultyProgram,
     this.adviserName,
-    this.campusId,
-    this.facultyId,
-    this.programId,
+    @JsonKey(name: 'campus_id') this.campusId,
+    @JsonKey(name: 'faculty_id') this.facultyId,
+    @JsonKey(name: 'program_id') this.programId,
     this.memberCount = 0,
-    this.createdAt,
+    @JsonKey(name: 'created_at') this.createdAt,
   });
 
   factory _$OrganizationModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -330,8 +336,10 @@ class _$OrganizationModelImpl implements _OrganizationModel {
   @override
   final String? description;
   @override
+  @JsonKey(name: 'logo_url')
   final String? logoUrl;
   @override
+  @JsonKey(name: 'banner_url')
   final String? bannerUrl;
   @override
   @JsonKey()
@@ -344,15 +352,19 @@ class _$OrganizationModelImpl implements _OrganizationModel {
   @override
   final String? adviserName;
   @override
+  @JsonKey(name: 'campus_id')
   final String? campusId;
   @override
+  @JsonKey(name: 'faculty_id')
   final String? facultyId;
   @override
+  @JsonKey(name: 'program_id')
   final String? programId;
   @override
   @JsonKey()
   final int memberCount;
   @override
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt;
 
   @override
@@ -435,17 +447,17 @@ abstract class _OrganizationModel implements OrganizationModel {
     required final String name,
     required final String code,
     final String? description,
-    final String? logoUrl,
-    final String? bannerUrl,
+    @JsonKey(name: 'logo_url') final String? logoUrl,
+    @JsonKey(name: 'banner_url') final String? bannerUrl,
     final String status,
     final String type,
     final String? facultyProgram,
     final String? adviserName,
-    final String? campusId,
-    final String? facultyId,
-    final String? programId,
+    @JsonKey(name: 'campus_id') final String? campusId,
+    @JsonKey(name: 'faculty_id') final String? facultyId,
+    @JsonKey(name: 'program_id') final String? programId,
     final int memberCount,
-    final DateTime? createdAt,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
   }) = _$OrganizationModelImpl;
 
   factory _OrganizationModel.fromJson(Map<String, dynamic> json) =
@@ -460,8 +472,10 @@ abstract class _OrganizationModel implements OrganizationModel {
   @override
   String? get description;
   @override
+  @JsonKey(name: 'logo_url')
   String? get logoUrl;
   @override
+  @JsonKey(name: 'banner_url')
   String? get bannerUrl;
   @override
   String get status;
@@ -472,14 +486,18 @@ abstract class _OrganizationModel implements OrganizationModel {
   @override
   String? get adviserName;
   @override
+  @JsonKey(name: 'campus_id')
   String? get campusId;
   @override
+  @JsonKey(name: 'faculty_id')
   String? get facultyId;
   @override
+  @JsonKey(name: 'program_id')
   String? get programId;
   @override
   int get memberCount;
   @override
+  @JsonKey(name: 'created_at')
   DateTime? get createdAt;
 
   /// Create a copy of OrganizationModel

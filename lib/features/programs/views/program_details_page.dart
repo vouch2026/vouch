@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../routes/route_paths.dart';
 
 class ProgramDetailsPage extends StatelessWidget {
   final String id;
@@ -16,6 +18,25 @@ class ProgramDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Breadcrumbs
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
+              child: Row(
+                children: [
+                  Icon(Icons.school_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => context.go(RoutePaths.academicStructure),
+                    child: Text('Academic Structure', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
+                  const SizedBox(width: 8),
+                  Text('Program Details', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             _buildBanner(),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),

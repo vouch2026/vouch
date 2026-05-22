@@ -64,9 +64,18 @@ class OrgDetailsHeader extends StatelessWidget {
                   backgroundColor: AppColors.background,
                   backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
                   child: org.logoUrl == null
-                      ? Text(
-                          org.code[0],
-                          style: AppTextStyles.headlineLarge.copyWith(color: AppColors.primary),
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(50),
+                          child: Image.asset(
+                            'assets/logos/vouch.png',
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Text(
+                              org.code[0],
+                              style: AppTextStyles.headlineLarge.copyWith(color: AppColors.primary),
+                            ),
+                          ),
                         )
                       : null,
                 ),

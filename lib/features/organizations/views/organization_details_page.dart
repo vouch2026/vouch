@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../routes/route_paths.dart';
 import '../providers/organization_provider.dart';
 import '../widgets/details/org_details_header.dart';
 import '../widgets/details/org_details_analytics_cards.dart';
@@ -36,7 +38,10 @@ class OrganizationDetailsPage extends ConsumerWidget {
                     children: [
                       Icon(Icons.business_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
                       const SizedBox(width: 8),
-                      Text('Organizations', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                      InkWell(
+                        onTap: () => context.go(RoutePaths.organizations),
+                        child: Text('Organizations', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                      ),
                       const SizedBox(width: 8),
                       Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
                       const SizedBox(width: 8),

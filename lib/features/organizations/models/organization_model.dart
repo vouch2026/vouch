@@ -10,17 +10,17 @@ class OrganizationModel with _$OrganizationModel {
     required String name,
     required String code,
     String? description,
-    String? logoUrl,
-    String? bannerUrl,
+    @JsonKey(name: 'logo_url') String? logoUrl,
+    @JsonKey(name: 'banner_url') String? bannerUrl,
     @Default('active') String status,
     @Default('campus-based') String type,
     String? facultyProgram,
     String? adviserName,
-    String? campusId,
-    String? facultyId,
-    String? programId,
+    @JsonKey(name: 'campus_id') String? campusId,
+    @JsonKey(name: 'faculty_id') String? facultyId,
+    @JsonKey(name: 'program_id') String? programId,
     @Default(0) int memberCount,
-    DateTime? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _OrganizationModel;
 
   factory OrganizationModel.fromJson(Map<String, dynamic> json) => _$OrganizationModelFromJson(json);

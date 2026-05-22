@@ -53,15 +53,31 @@ class UsersTable extends ConsumerWidget {
           rows: data.map((user) {
             return DataRow(
               cells: [
-                DataCell(Text(user.schoolId, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold))),
-                DataCell(Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(user.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                    Text(user.email, style: AppTextStyles.bodySmall),
-                  ],
-                )),
+                DataCell(
+                  Text(user.schoolId, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                  onTap: () {
+                    context.pushNamed(
+                      RouteNames.userDetails,
+                      pathParameters: {'id': user.id!},
+                    );
+                  },
+                ),
+                DataCell(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(user.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                      Text(user.email, style: AppTextStyles.bodySmall),
+                    ],
+                  ),
+                  onTap: () {
+                    context.pushNamed(
+                      RouteNames.userDetails,
+                      pathParameters: {'id': user.id!},
+                    );
+                  },
+                ),
                 DataCell(_RoleBadge(role: user.role, label: user.roleDisplay)),
                 DataCell(Text(user.facultyName ?? 'N/A', style: AppTextStyles.bodySmall)),
                 DataCell(Text(user.programName ?? 'N/A', style: AppTextStyles.bodySmall)),
