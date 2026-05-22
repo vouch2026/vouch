@@ -671,11 +671,12 @@ BEGIN
     v_position := new.raw_user_meta_data->>'position';
     
     -- Safe casting for UUIDs
+    v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
     v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
     v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
 
-    -- Derive campus_id if not provided
-    IF v_faculty_id IS NOT NULL THEN
+    -- Derive campus_id if not provided but faculty_id is available
+    IF v_campus_id IS NULL AND v_faculty_id IS NOT NULL THEN
         SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
     END IF;
 

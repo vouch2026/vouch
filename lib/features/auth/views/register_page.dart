@@ -11,6 +11,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
+import '../../campuses/providers/campus_provider.dart';
+import '../../campuses/models/campus_model.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
 import '../../faculties/models/faculty_model.dart';
@@ -35,6 +37,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _confirmPasswordController = TextEditingController();
 
   // State
+  String? _selectedCampusId;
   String? _selectedFacultyId;
   String? _selectedProgramId;
   String? _selectedYearLevel;
@@ -224,7 +227,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Widget _buildRegisterFormCard(BuildContext context, {required bool isDesktop}) {
     final authState = ref.watch(authControllerProvider);
-    final facultiesAsync = ref.watch(facultiesProvider);
+    final campusesAsync = ref.watch(campusesProvider);
+    final facultiesAsync = _selectedCampusId != null
+        ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
+        : const AsyncValue<List<FacultyModel>>.data([]);
     final programsAsync = _selectedFacultyId != null 
         ? ref.watch(programsByFacultyProvider(_selectedFacultyId!))
         : const AsyncValue<List<ProgramModel>>.data([]);
@@ -278,10 +284,32 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ],
               ),
             const SizedBox(height: AppSpacing.xl),
+            _buildLabel('Campus'),
+            campusesAsync.when(
+              data: (campuses) => _buildDropdown<String>(
+                hint: 'Select Campus',
+                value: _selectedCampusId,
+                items: campuses.map((c) => DropdownMenuItem(
+                  value: c.id,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Text(c.name),
+                  ),
+                )).toList(),
+                onChanged: (val) => setState(() {
+                  _selectedCampusId = val;
+                  _selectedFacultyId = null;
+                  _selectedProgramId = null;
+                }),
+              ),
+              loading: () => _buildDropdownPlaceholder('Loading campuses...'),
+              error: (e, _) => _buildDropdownPlaceholder('Error loading campuses'),
+            ),
+            const SizedBox(height: AppSpacing.md),
             _buildLabel('Faculty'),
             facultiesAsync.when(
               data: (faculties) => _buildDropdown<String>(
-                hint: 'Select Faculty',
+                hint: _selectedCampusId == null ? 'Select Campus first' : 'Select Faculty',
                 value: _selectedFacultyId,
                 items: faculties.map((f) => DropdownMenuItem(
                   value: f.id,
@@ -290,7 +318,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     child: Text(f.name),
                   ),
                 )).toList(),
-                onChanged: (val) => setState(() {
+                onChanged: _selectedCampusId == null ? null : (val) => setState(() {
                   _selectedFacultyId = val;
                   _selectedProgramId = null;
                 }),
@@ -447,9 +475,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             );
                             return;
                           }
-                          if (_selectedFacultyId == null || _selectedProgramId == null || _selectedYearLevel == null) {
+                          if (_selectedCampusId == null || _selectedFacultyId == null || _selectedProgramId == null || _selectedYearLevel == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please select faculty, program, and year level')),
+                              const SnackBar(content: Text('Please select campus, faculty, program, and year level')),
                             );
                             return;
                           }
@@ -460,6 +488,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 firstName: _firstNameController.text,
                                 lastName: _lastNameController.text,
                                 schoolId: _schoolIdController.text,
+                                campusId: _selectedCampusId ?? '',
                                 facultyId: _selectedFacultyId ?? '',
                                 programId: _selectedProgramId ?? '',
                                 yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
