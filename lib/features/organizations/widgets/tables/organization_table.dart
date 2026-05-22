@@ -149,14 +149,27 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
                         );
 
                         if (confirmed == true && mounted) {
+                          // Show a loading snackbar or indicator if needed, 
+                          // but the controller will set its state to loading.
                           final success = await ref.read(organizationControllerProvider.notifier).deleteOrganization(org.id);
+                          
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(success ? 'Organization deleted' : 'Failed to delete organization'),
-                                backgroundColor: success ? Colors.green : Colors.red,
-                              ),
-                            );
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Organization deleted successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } else {
+                              final error = ref.read(organizationControllerProvider).error;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to delete: ${error?.toString() ?? 'Unknown error'}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           }
                         }
                       }

@@ -9,12 +9,23 @@ class OrganizationRepository {
   Future<List<OrganizationModel>> getOrganizations() async {
     final response = await _client
         .from('organizations')
-        .select()
+        .select('''
+          *,
+          member_count:organization_members(count)
+        ''')
         .order('name');
     
-    return (response as List)
-        .map((json) => OrganizationModel.fromJson(json))
-        .toList();
+    return (response as List).map((json) {
+      final countData = json['member_count'] as List?;
+      final count = (countData != null && countData.isNotEmpty) 
+          ? countData.first['count'] as int 
+          : 0;
+      
+      return OrganizationModel.fromJson({
+        ...json,
+        'memberCount': count,
+      });
+    }).toList();
   }
 
   Future<OrganizationModel?> getOrganizationById(String id) async {
@@ -57,10 +68,15 @@ class OrganizationRepository {
   }
 
   Future<void> deleteOrganization(String id) async {
-    await _client
+    final response = await _client
         .from('organizations')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
+    
+    if (response == null || (response as List).isEmpty) {
+      throw Exception('Organization not found or you don\'t have permission to delete it');
+    }
   }
 
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
