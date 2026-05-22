@@ -759,6 +759,31 @@ BEGIN
         ON CONFLICT DO NOTHING;
     END IF;
 
+    -- 6. Automatically add user to relevant organizations
+    -- Campus-based
+    IF v_campus_id IS NOT NULL THEN
+        INSERT INTO public.organization_members (organization_id, user_id)
+        SELECT id, new_user_id FROM public.organizations 
+        WHERE type = 'campus-based' AND campus_id = v_campus_id
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Faculty-based
+    IF v_faculty_id IS NOT NULL THEN
+        INSERT INTO public.organization_members (organization_id, user_id)
+        SELECT id, new_user_id FROM public.organizations 
+        WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Program-based
+    IF v_program_id IS NOT NULL THEN
+        INSERT INTO public.organization_members (organization_id, user_id)
+        SELECT id, new_user_id FROM public.organizations 
+        WHERE type = 'program-based' AND program_id = v_program_id
+        ON CONFLICT DO NOTHING;
+    END IF;
+
     RETURN new;
 EXCEPTION WHEN OTHERS THEN
     -- Gracefully handle errors to prevent 500 AuthRetryableFetchException
@@ -770,6 +795,24 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- ------------------------------------------------------------
+-- RLS for Organization Members
+-- ------------------------------------------------------------
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Members can view their own memberships" 
+ON organization_members FOR SELECT 
+USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+
+CREATE POLICY "Organization members are viewable by everyone" 
+ON organization_members FOR SELECT 
+USING (true);
+
+CREATE POLICY "Super admins can manage organization memberships" 
+ON organization_members FOR ALL 
+TO authenticated 
+USING (public.is_super_admin());
 
 -- ==============================================================================
 -- 9. SUPER ADMIN SEED
