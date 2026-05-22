@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../campuses/providers/campus_provider.dart';
+import '../../../campuses/models/campus_model.dart';
 import '../../../faculties/providers/faculty_provider.dart';
 import '../../../faculties/models/faculty_model.dart';
 import '../../../programs/providers/program_provider.dart';
@@ -30,6 +32,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
   final _passwordController = TextEditingController();
   
   String _selectedRole = 'student';
+  String? _selectedCampusId;
   String? _selectedFacultyId;
   String? _selectedProgramId;
   String? _selectedYearLevel;
@@ -51,7 +54,10 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
 
   @override
   Widget build(BuildContext context) {
-    final facultiesAsync = ref.watch(facultiesProvider);
+    final campusesAsync = ref.watch(campusesProvider);
+    final facultiesAsync = _selectedCampusId != null
+        ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
+        : const AsyncValue<List<FacultyModel>>.data([]);
     final programsAsync = _selectedFacultyId != null 
         ? ref.watch(programsByFacultyProvider(_selectedFacultyId!))
         : const AsyncValue<List<ProgramModel>>.data([]);
@@ -92,6 +98,9 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                       _buildPasswordInfo(),
                       const SizedBox(height: AppSpacing.md),
                       
+                      _buildCampusField(campusesAsync),
+                      const SizedBox(height: AppSpacing.md),
+                      
                       if (_selectedRole == 'student') _buildStudentFields(facultiesAsync, programsAsync),
                       if (_selectedRole != 'student') _buildFacultyFields(facultiesAsync, programsAsync),
                       
@@ -108,6 +117,34 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCampusField(AsyncValue<List<CampusModel>> campusesAsync) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('Campus'),
+        campusesAsync.when(
+          data: (campuses) => DropdownButtonFormField<String>(
+            value: _selectedCampusId,
+            isExpanded: true,
+            items: campuses.map((c) => DropdownMenuItem(
+              value: c.id, 
+              child: Text(c.name, overflow: TextOverflow.ellipsis),
+            )).toList(),
+            onChanged: (v) => setState(() {
+              _selectedCampusId = v;
+              _selectedFacultyId = null;
+              _selectedProgramId = null;
+            }),
+            decoration: const InputDecoration(hintText: 'Select Campus'),
+            validator: (v) => v == null ? 'Required' : null,
+          ),
+          loading: () => const LinearProgressIndicator(),
+          error: (_, __) => const Text('Error loading campuses'),
+        ),
+      ],
     );
   }
 
@@ -253,7 +290,6 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
   Widget _buildStudentFields(AsyncValue<List<FacultyModel>> facultiesAsync, AsyncValue<List<ProgramModel>> programsAsync) {
     return Column(
       children: [
-        const SizedBox(height: AppSpacing.md),
         Row(
           children: [
             Expanded(
@@ -269,12 +305,13 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                         value: f.id, 
                         child: Text(f.name, overflow: TextOverflow.ellipsis),
                       )).toList(),
-                      onChanged: (v) => setState(() {
+                      onChanged: _selectedCampusId == null ? null : (v) => setState(() {
                         _selectedFacultyId = v;
                         _selectedProgramId = null;
                       }),
                       decoration: const InputDecoration(hintText: 'Select Faculty'),
                       validator: (v) => v == null ? 'Required' : null,
+                      disabledHint: const Text('Select a Campus first'),
                     ),
                     loading: () => const LinearProgressIndicator(),
                     error: (_, __) => const Text('Error loading faculties'),
@@ -330,7 +367,6 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: AppSpacing.md),
         Row(
           children: [
             Expanded(
@@ -346,12 +382,13 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                         value: f.id, 
                         child: Text(f.name, overflow: TextOverflow.ellipsis),
                       )).toList(),
-                      onChanged: (v) => setState(() {
+                      onChanged: _selectedCampusId == null ? null : (v) => setState(() {
                         _selectedFacultyId = v;
                         _selectedProgramId = null;
                       }),
                       decoration: const InputDecoration(hintText: 'Select Faculty'),
                       validator: (v) => v == null ? 'Required' : null,
+                      disabledHint: const Text('Select a Campus first'),
                     ),
                     loading: () => const LinearProgressIndicator(),
                     error: (_, __) => const Text('Error loading faculties'),
@@ -519,6 +556,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         schoolId: _idController.text.trim(),
+        campusId: _selectedCampusId,
         facultyId: _selectedFacultyId,
         programId: _selectedProgramId,
         yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
