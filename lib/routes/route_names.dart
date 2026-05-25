@@ -37,4 +37,22 @@ class RouteNames {
   static const String comselecResults = 'comselec-results';
   static const String comselecAnalytics = 'comselec-analytics';
   static const String comselecOfficials = 'comselec-officials';
+
+  // Governor Route Names
+  static const String governorMembers = 'governor-members';
+  static const String governorOfficers = 'governor-officers';
+  static const String governorEvents = 'governor-events';
+  static const String governorAttendance = 'governor-attendance';
+  static const String governorAnnouncements = 'governor-announcements';
+  static const String governorDocuments = 'governor-documents';
+  static const String governorFees = 'governor-fees';
+  static const String governorCollections = 'governor-collections';
+  static const String governorFinanceReports = 'governor-finance-reports';
+  static const String governorElections = 'governor-elections';
+  static const String governorCompliance = 'governor-compliance';
+  static const String governorSanctions = 'governor-sanctions';
+  static const String governorParticipation = 'governor-participation';
+  static const String governorAttendanceAnalytics = 'governor-attendance-analytics';
+  static const String governorFinancialAnalytics = 'governor-financial-analytics';
+  static const String governorSettings = 'governor-settings';
 }

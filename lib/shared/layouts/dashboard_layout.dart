@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/sidebar/app_sidebar.dart';
+import '../widgets/sidebar/governor_sidebar.dart';
 import '../widgets/navbar/profile_dropdown.dart';
+import '../../features/auth/providers/auth_provider.dart';
 
 class DashboardLayout extends ConsumerWidget {
   final Widget child;
@@ -17,6 +19,9 @@ class DashboardLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isGovernor = userProfile?.role == 'governor';
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -25,7 +30,7 @@ class DashboardLayout extends ConsumerWidget {
           const ProfileDropdown(),
         ],
       ),
-      drawer: const AppSidebar(),
+      drawer: isGovernor ? const GovernorSidebar() : const AppSidebar(),
       body: child,
     );
   }

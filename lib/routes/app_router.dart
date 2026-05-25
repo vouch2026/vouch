@@ -25,6 +25,7 @@ import '../features/elections/views/election_results_page.dart';
 import '../features/elections/views/election_analytics_page.dart';
 import '../features/elections/views/comselec_officials_page.dart';
 import '../features/academic_structure/views/academic_structure_page.dart';
+import '../features/dashboard/views/governor_module_placeholder.dart';
 import '../features/auth/providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -192,6 +193,88 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.comselecOfficials,
         name: RouteNames.comselecOfficials,
         builder: (context, state) => const ComselecOfficialsPage(),
+      ),
+
+      // Governor Routes
+      GoRoute(
+        path: RoutePaths.governorMembers,
+        name: RouteNames.governorMembers,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Members'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorOfficers,
+        name: RouteNames.governorOfficers,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Officers'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorEvents,
+        name: RouteNames.governorEvents,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Events'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorAttendance,
+        name: RouteNames.governorAttendance,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Attendance'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorAnnouncements,
+        name: RouteNames.governorAnnouncements,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Announcements'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorDocuments,
+        name: RouteNames.governorDocuments,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Documents'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorFees,
+        name: RouteNames.governorFees,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Fees'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorCollections,
+        name: RouteNames.governorCollections,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Collections'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorFinanceReports,
+        name: RouteNames.governorFinanceReports,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Financial Reports'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorElections,
+        name: RouteNames.governorElections,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Elections'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorCompliance,
+        name: RouteNames.governorCompliance,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Compliance'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorSanctions,
+        name: RouteNames.governorSanctions,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Sanctions'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorParticipation,
+        name: RouteNames.governorParticipation,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Participation Analytics'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorAttendanceAnalytics,
+        name: RouteNames.governorAttendanceAnalytics,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Attendance Analytics'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorFinancialAnalytics,
+        name: RouteNames.governorFinancialAnalytics,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Analytics'),
+      ),
+      GoRoute(
+        path: RoutePaths.governorSettings,
+        name: RouteNames.governorSettings,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Settings'),
       ),
     ],
   );
