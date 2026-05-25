@@ -15,77 +15,92 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userProfile = ref.watch(userProfileProvider).value;
-    final isGovernor = userProfile?.role == 'governor';
+    final userProfileAsync = ref.watch(userProfileProvider);
 
-    return DashboardLayout(
-      title: isGovernor ? 'Organization Command Center' : 'Dashboard',
-      child: isGovernor 
-          ? const GovernorDashboardView()
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final isDesktop = constraints.maxWidth >= 1024;
+    return userProfileAsync.when(
+      data: (userProfile) {
+        final isGovernor = userProfile?.role == 'governor';
+        
+        return DashboardLayout(
+          title: isGovernor ? 'Organization Command Center' : 'Dashboard',
+          child: isGovernor 
+              ? const GovernorDashboardView()
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isDesktop = constraints.maxWidth >= 1024;
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: isDesktop
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Main Content Area (Left)
-                            Expanded(
-                              flex: 5,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  WelcomeHeader(),
-                                  SizedBox(height: AppSpacing.lg),
-                                  QuickActionsSection(),
-                                  SizedBox(height: AppSpacing.lg),
-                                  KpiCardsSection(),
-                                  SizedBox(height: AppSpacing.lg),
-                                  AnalyticsOverviewSection(),
-                                ],
-                              ),
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: isDesktop
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Main Content Area (Left)
+                                Expanded(
+                                  flex: 5,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: const [
+                                      WelcomeHeader(),
+                                      SizedBox(height: AppSpacing.lg),
+                                      QuickActionsSection(),
+                                      SizedBox(height: AppSpacing.lg),
+                                      KpiCardsSection(),
+                                      SizedBox(height: AppSpacing.lg),
+                                      AnalyticsOverviewSection(),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.lg),
+                                // Sidebar Area (Right)
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: const [
+                                      PendingApprovalsPanel(),
+                                      SizedBox(height: AppSpacing.lg),
+                                      RecentActivityFeed(),
+                                      SizedBox(height: AppSpacing.lg),
+                                      SystemHealthPanel(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                WelcomeHeader(),
+                                SizedBox(height: AppSpacing.lg),
+                                QuickActionsSection(),
+                                SizedBox(height: AppSpacing.lg),
+                                KpiCardsSection(),
+                                SizedBox(height: AppSpacing.lg),
+                                AnalyticsOverviewSection(),
+                                SizedBox(height: AppSpacing.lg),
+                                PendingApprovalsPanel(),
+                                SizedBox(height: AppSpacing.lg),
+                                RecentActivityFeed(),
+                                SizedBox(height: AppSpacing.lg),
+                                SystemHealthPanel(),
+                              ],
                             ),
-                            const SizedBox(width: AppSpacing.lg),
-                            // Sidebar Area (Right)
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  PendingApprovalsPanel(),
-                                  SizedBox(height: AppSpacing.lg),
-                                  RecentActivityFeed(),
-                                  SizedBox(height: AppSpacing.lg),
-                                  SystemHealthPanel(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            WelcomeHeader(),
-                            SizedBox(height: AppSpacing.lg),
-                            QuickActionsSection(),
-                            SizedBox(height: AppSpacing.lg),
-                            KpiCardsSection(),
-                            SizedBox(height: AppSpacing.lg),
-                            AnalyticsOverviewSection(),
-                            SizedBox(height: AppSpacing.lg),
-                            PendingApprovalsPanel(),
-                            SizedBox(height: AppSpacing.lg),
-                            RecentActivityFeed(),
-                            SizedBox(height: AppSpacing.lg),
-                            SystemHealthPanel(),
-                          ],
-                        ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+        );
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, stack) => Scaffold(
+        body: Center(
+          child: Text('Error loading profile: $err'),
+        ),
+      ),
     );
   }
 }
