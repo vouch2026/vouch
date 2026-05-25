@@ -9,12 +9,17 @@ import '../widgets/academic_hierarchy_view.dart';
 import '../widgets/modals/create_campus_modal.dart';
 import '../widgets/modals/create_faculty_modal.dart';
 import '../widgets/modals/create_program_modal.dart';
+import '../widgets/modals/manage_terms_modal.dart';
+import '../providers/term_provider.dart';
+import '../models/academic_term_model.dart';
 
 class AcademicStructurePage extends ConsumerWidget {
   const AcademicStructurePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeTermAsync = ref.watch(activeTermProvider);
+
     return DashboardLayout(
       title: 'Academic Structure',
       child: SingleChildScrollView(
@@ -22,7 +27,7 @@ class AcademicStructurePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            _buildHeader(context, activeTermAsync),
             const SizedBox(height: AppSpacing.xl),
             const AcademicKpiSection(),
             const SizedBox(height: AppSpacing.xl),
@@ -33,7 +38,7 @@ class AcademicStructurePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AsyncValue<AcademicTermModel?> activeTermAsync) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 800;
@@ -48,13 +53,48 @@ class AcademicStructurePage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Academic Structure',
-                        style: AppTextStyles.displaySmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                          fontSize: isMobile ? 24 : 36,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Academic Structure',
+                            style: AppTextStyles.displaySmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                              fontSize: isMobile ? 24 : 36,
+                            ),
+                          ),
+                          if (!isMobile) ...[
+                            const SizedBox(width: AppSpacing.md),
+                            activeTermAsync.when(
+                              data: (term) => term != null
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.event_available_rounded, size: 16, color: AppColors.primary),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '${term.academicYear} - ${term.semester}',
+                                            style: AppTextStyles.labelLarge.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : const SizedBox(),
+                              loading: () => const SizedBox(),
+                              error: (_, __) => const SizedBox(),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -65,6 +105,22 @@ class AcademicStructurePage extends ConsumerWidget {
                           fontSize: isMobile ? 12 : 14,
                         ),
                       ),
+                      if (isMobile) ...[
+                        const SizedBox(height: 8),
+                        activeTermAsync.when(
+                          data: (term) => term != null
+                              ? Text(
+                                  'Current: ${term.academicYear} - ${term.semester}',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : const SizedBox(),
+                          loading: () => const SizedBox(),
+                          error: (_, __) => const SizedBox(),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -103,6 +159,16 @@ class AcademicStructurePage extends ConsumerWidget {
                       builder: (context) => const CreateProgramModal(),
                     ),
                     color: Colors.indigo,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  _QuickActionButton(
+                    icon: Icons.calendar_month_rounded,
+                    label: 'Manage Terms',
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => const ManageTermsModal(),
+                    ),
+                    color: Colors.teal,
                   ),
                 ],
               ),

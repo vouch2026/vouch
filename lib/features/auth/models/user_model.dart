@@ -14,6 +14,7 @@ class UserModel with _$UserModel {
     @JsonKey(name: 'student_id_number') required String schoolId,
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,
+    @JsonKey(name: 'campus_id') String? campusId,
     @JsonKey(name: 'year') int? yearLevel,
     @JsonKey(name: 'profile_photo_url') String? avatarUrl,
     @JsonKey(name: 'id_front_url') String? idFrontUrl,

@@ -35,6 +35,8 @@ mixin _$UserModel {
   String? get facultyId => throw _privateConstructorUsedError;
   @JsonKey(name: 'program_id')
   String? get programId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'campus_id')
+  String? get campusId => throw _privateConstructorUsedError;
   @JsonKey(name: 'year')
   int? get yearLevel => throw _privateConstructorUsedError;
   @JsonKey(name: 'profile_photo_url')
@@ -79,6 +81,7 @@ abstract class $UserModelCopyWith<$Res> {
     @JsonKey(name: 'student_id_number') String schoolId,
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,
+    @JsonKey(name: 'campus_id') String? campusId,
     @JsonKey(name: 'year') int? yearLevel,
     @JsonKey(name: 'profile_photo_url') String? avatarUrl,
     @JsonKey(name: 'id_front_url') String? idFrontUrl,
@@ -115,6 +118,7 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? schoolId = null,
     Object? facultyId = freezed,
     Object? programId = freezed,
+    Object? campusId = freezed,
     Object? yearLevel = freezed,
     Object? avatarUrl = freezed,
     Object? idFrontUrl = freezed,
@@ -159,6 +163,10 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
             programId: freezed == programId
                 ? _value.programId
                 : programId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            campusId: freezed == campusId
+                ? _value.campusId
+                : campusId // ignore: cast_nullable_to_non_nullable
                       as String?,
             yearLevel: freezed == yearLevel
                 ? _value.yearLevel
@@ -224,6 +232,7 @@ abstract class _$$UserModelImplCopyWith<$Res>
     @JsonKey(name: 'student_id_number') String schoolId,
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,
+    @JsonKey(name: 'campus_id') String? campusId,
     @JsonKey(name: 'year') int? yearLevel,
     @JsonKey(name: 'profile_photo_url') String? avatarUrl,
     @JsonKey(name: 'id_front_url') String? idFrontUrl,
@@ -259,6 +268,7 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? schoolId = null,
     Object? facultyId = freezed,
     Object? programId = freezed,
+    Object? campusId = freezed,
     Object? yearLevel = freezed,
     Object? avatarUrl = freezed,
     Object? idFrontUrl = freezed,
@@ -303,6 +313,10 @@ class __$$UserModelImplCopyWithImpl<$Res>
         programId: freezed == programId
             ? _value.programId
             : programId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        campusId: freezed == campusId
+            ? _value.campusId
+            : campusId // ignore: cast_nullable_to_non_nullable
                   as String?,
         yearLevel: freezed == yearLevel
             ? _value.yearLevel
@@ -361,6 +375,7 @@ class _$UserModelImpl extends _UserModel {
     @JsonKey(name: 'student_id_number') required this.schoolId,
     @JsonKey(name: 'faculty_id') this.facultyId,
     @JsonKey(name: 'program_id') this.programId,
+    @JsonKey(name: 'campus_id') this.campusId,
     @JsonKey(name: 'year') this.yearLevel,
     @JsonKey(name: 'profile_photo_url') this.avatarUrl,
     @JsonKey(name: 'id_front_url') this.idFrontUrl,
@@ -402,6 +417,9 @@ class _$UserModelImpl extends _UserModel {
   @JsonKey(name: 'program_id')
   final String? programId;
   @override
+  @JsonKey(name: 'campus_id')
+  final String? campusId;
+  @override
   @JsonKey(name: 'year')
   final int? yearLevel;
   @override
@@ -440,7 +458,7 @@ class _$UserModelImpl extends _UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, facultyName: $facultyName, programName: $programName)';
+    return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, facultyName: $facultyName, programName: $programName)';
   }
 
   @override
@@ -461,6 +479,8 @@ class _$UserModelImpl extends _UserModel {
                 other.facultyId == facultyId) &&
             (identical(other.programId, programId) ||
                 other.programId == programId) &&
+            (identical(other.campusId, campusId) ||
+                other.campusId == campusId) &&
             (identical(other.yearLevel, yearLevel) ||
                 other.yearLevel == yearLevel) &&
             (identical(other.avatarUrl, avatarUrl) ||
@@ -485,7 +505,7 @@ class _$UserModelImpl extends _UserModel {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     authId,
@@ -495,6 +515,7 @@ class _$UserModelImpl extends _UserModel {
     schoolId,
     facultyId,
     programId,
+    campusId,
     yearLevel,
     avatarUrl,
     idFrontUrl,
@@ -505,7 +526,7 @@ class _$UserModelImpl extends _UserModel {
     createdAt,
     facultyName,
     programName,
-  );
+  ]);
 
   /// Create a copy of UserModel
   /// with the given fields replaced by the non-null parameter values.
@@ -531,6 +552,7 @@ abstract class _UserModel extends UserModel {
     @JsonKey(name: 'student_id_number') required final String schoolId,
     @JsonKey(name: 'faculty_id') final String? facultyId,
     @JsonKey(name: 'program_id') final String? programId,
+    @JsonKey(name: 'campus_id') final String? campusId,
     @JsonKey(name: 'year') final int? yearLevel,
     @JsonKey(name: 'profile_photo_url') final String? avatarUrl,
     @JsonKey(name: 'id_front_url') final String? idFrontUrl,
@@ -569,6 +591,9 @@ abstract class _UserModel extends UserModel {
   @override
   @JsonKey(name: 'program_id')
   String? get programId;
+  @override
+  @JsonKey(name: 'campus_id')
+  String? get campusId;
   @override
   @JsonKey(name: 'year')
   int? get yearLevel;

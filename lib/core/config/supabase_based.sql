@@ -100,8 +100,25 @@ CREATE TYPE signature_status AS ENUM ('Pending', 'Signed', 'Rejected');
 CREATE TYPE sanction_status AS ENUM ('Pending Item', 'Item Received');
 
 -- ==========================================
--- 2. CORE ORGANIZATION & USERS
+-- 2. BASE TABLES (No Foreign Key Dependencies)
 -- ==========================================
+
+CREATE TABLE roles (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(100) NOT NULL UNIQUE,
+hierarchy_level INT NOT NULL
+);
+
+CREATE TABLE permissions (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+action VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE role_permissions (
+role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+PRIMARY KEY (role_id, permission_id)
+);
 
 CREATE TABLE academic_terms (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -129,6 +146,10 @@ updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_campuses_updated_at BEFORE UPDATE ON campuses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ==========================================
+-- 3. CORE ENTITIES (Users, Faculties, Programs)
+-- ==========================================
 
 CREATE TABLE users (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -173,10 +194,14 @@ updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 
 CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Add campus_id, faculty_id and program_id back to users as they reference campuses, faculties and programs
+-- Circular Reference handling
 ALTER TABLE users ADD COLUMN campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN program_id UUID REFERENCES programs(id) ON DELETE SET NULL;
+
+-- ==========================================
+-- 4. GOVERNANCE & ORGANIZATIONS
+-- ==========================================
 
 CREATE TABLE organizations (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -194,36 +219,19 @@ created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TABLE organization_members (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
 user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-role VARCHAR(50) DEFAULT 'member', -- member, officer, etc.
+role_id UUID REFERENCES roles(id) ON DELETE SET NULL,
+academic_term_id UUID REFERENCES academic_terms(id) ON DELETE SET NULL,
+status VARCHAR(20) DEFAULT 'active', -- active, expired, pending, removed, archived
+assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-UNIQUE(organization_id, user_id)
-);
-
-CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ==========================================
--- 3. ROLE-BASED ACCESS CONTROL (RBAC)
--- ==========================================
-
-CREATE TABLE roles (
-id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-name VARCHAR(100) NOT NULL UNIQUE,
-hierarchy_level INT NOT NULL
-);
-
-CREATE TABLE permissions (
-id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-action VARCHAR(100) NOT NULL UNIQUE
-);
-
-CREATE TABLE role_permissions (
-role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-PRIMARY KEY (role_id, permission_id)
+UNIQUE(organization_id, user_id, academic_term_id)
 );
 
 CREATE TABLE user_roles (
@@ -234,136 +242,22 @@ scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL, 
 assigned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
 assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-is_active BOOLEAN DEFAULT true
+is_active BOOLEAN DEFAULT true,
+UNIQUE(user_id, role_id, scope_type, scope_id)
 );
 
--- ------------------------------------------------------------
--- Enable RLS for users
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their own profile" 
-ON users FOR SELECT 
-USING (auth.uid() = auth_id);
-
-CREATE POLICY "Users can update their own profile" 
-ON users FOR UPDATE 
-USING (auth.uid() = auth_id);
-
-CREATE POLICY "Public profiles are viewable by everyone" 
-ON users FOR SELECT 
-USING (true);
-
-CREATE POLICY "Super admins can update any profile" 
-ON users FOR UPDATE 
-TO authenticated 
-USING (public.is_super_admin());
-
--- Enable RLS for roles and user_roles
-ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Roles are viewable by authenticated users"
-ON roles FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "User roles are viewable by authenticated users"
-ON user_roles FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Permissions are viewable by authenticated users"
-ON permissions FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Role permissions are viewable by authenticated users"
-ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE OR REPLACE FUNCTION create_organization_with_members(
-    p_name TEXT,
-    p_code TEXT,
-    p_description TEXT,
-    p_type TEXT,
-    p_campus_id UUID DEFAULT NULL,
-    p_faculty_id UUID DEFAULT NULL,
-    p_program_ids UUID[] DEFAULT '{}',
-    p_logo_url TEXT DEFAULT NULL,
-    p_banner_url TEXT DEFAULT NULL
-) RETURNS UUID AS $$
-DECLARE
-    v_org_id UUID;
-    v_primary_program_id UUID;
-BEGIN
-    -- 0. Safely determine primary program ID
-    IF p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
-        v_primary_program_id := p_program_ids[1];
-    ELSE
-        v_primary_program_id := NULL;
-    END IF;
-
-    -- 1. Create the organization
-    INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id, logo_url, banner_url)
-    VALUES (p_name, p_code, p_description, p_type, p_campus_id, p_faculty_id, v_primary_program_id, p_logo_url, p_banner_url)
-    RETURNING id INTO v_org_id;
-
-    -- 2. Add members based on type
-    IF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
-        INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM public.users WHERE campus_id = p_campus_id
-        ON CONFLICT DO NOTHING;
-    ELSIF p_type = 'faculty-based' AND p_faculty_id IS NOT NULL THEN
-        INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM public.users WHERE faculty_id = p_faculty_id
-        ON CONFLICT DO NOTHING;
-    ELSIF p_type = 'program-based' AND p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
-        INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM public.users WHERE program_id = ANY(p_program_ids)
-        ON CONFLICT DO NOTHING;
-    END IF;
-
-    RETURN v_org_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ------------------------------------------------------------
--- HELPER FUNCTION FOR RBAC
--- ------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.is_super_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-RETURN EXISTS (
-SELECT 1 FROM public.user_roles ur
-JOIN public.roles r ON ur.role_id = r.id
-WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-AND r.name = 'Super Admin'
-AND ur.is_active = true
+CREATE TABLE governance_audit_logs (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+action VARCHAR(100) NOT NULL,
+performed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+details JSONB,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ------------------------------------------------------------
--- RLS for Academic Structure
--- ------------------------------------------------------------
-ALTER TABLE campuses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
-ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
-
--- Select policies (Viewable by everyone)
-CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
-CREATE POLICY "Faculties are viewable by everyone" ON faculties FOR SELECT USING (true);
-CREATE POLICY "Programs are viewable by everyone" ON programs FOR SELECT USING (true);
-CREATE POLICY "Organizations are viewable by everyone" ON organizations FOR SELECT USING (true);
-CREATE POLICY "Academic terms are viewable by everyone" ON academic_terms FOR SELECT USING (true);
-
--- Manage policies (Super Admin only)
-CREATE POLICY "Super admins can manage campuses" ON campuses FOR ALL TO authenticated USING (public.is_super_admin());
-CREATE POLICY "Super admins can manage faculties" ON faculties FOR ALL TO authenticated USING (public.is_super_admin());
-CREATE POLICY "Super admins can manage programs" ON programs FOR ALL TO authenticated USING (public.is_super_admin());
-CREATE POLICY "Super admins can manage organizations" ON organizations FOR ALL TO authenticated USING (public.is_super_admin());
-CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
--- ------------------------------------------------------------
 
 -- ==========================================
--- 4. REQUIREMENTS (EVENTS, FEES & SANCTIONS)
+-- 5. REQUIREMENTS (EVENTS, FEES & SANCTIONS)
 -- ==========================================
 
 CREATE TABLE fees (
@@ -428,7 +322,7 @@ UNIQUE(scope_id, academic_term_id, absence_count)
 );
 
 -- ==========================================
--- 5. FULFILLMENT (ATTENDANCE, PAYMENTS & SANCTIONS)
+-- 6. FULFILLMENT (ATTENDANCE, PAYMENTS & SANCTIONS)
 -- ==========================================
 
 CREATE TABLE student_attendance (
@@ -493,7 +387,7 @@ CREATE TRIGGER update_sanctions_updated_at BEFORE UPDATE ON student_sanction_rec
 CREATE INDEX idx_student_sanctions_student_id ON student_sanction_records(student_id);
 
 -- ==========================================
--- 6. THE CLEARANCE WORKFLOW
+-- 7. THE CLEARANCE WORKFLOW
 -- ==========================================
 
 CREATE TABLE activity_card_clearance_requests (
@@ -527,13 +421,360 @@ remarks VARCHAR(255)
 
 CREATE INDEX idx_clearance_signatures_request_id ON activity_card_clearance_signatures(clearance_request_id);
 
--- ==========================================
--- 7. INITIAL DATA SEEDING
--- ==========================================
+-- ==============================================================================
+-- 8. SECURITY, AUTH & RBAC POLICIES
+-- ==============================================================================
+
+-- Enable RLS
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campuses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
+
+-- ------------------------------------------------------------
+-- HELPER FUNCTION FOR RBAC
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+RETURN EXISTS (
+SELECT 1 FROM public.user_roles ur
+JOIN public.roles r ON ur.role_id = r.id
+WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+AND r.name = 'Super Admin'
+AND ur.is_active = true
+);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ------------------------------------------------------------
+-- POLICIES
+-- ------------------------------------------------------------
+
+-- Users
+CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = auth_id);
+CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = auth_id);
+CREATE POLICY "Public profiles are viewable by everyone" ON users FOR SELECT USING (true);
+CREATE POLICY "Super admins can update any profile" ON users FOR UPDATE TO authenticated USING (public.is_super_admin());
+
+-- Roles & RBAC
+CREATE POLICY "Roles are viewable by authenticated users" ON roles FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "User roles are viewable by authenticated users" ON user_roles FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Permissions are viewable by authenticated users" ON permissions FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Role permissions are viewable by authenticated users" ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Academic Structure
+CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
+CREATE POLICY "Faculties are viewable by everyone" ON faculties FOR SELECT USING (true);
+CREATE POLICY "Programs are viewable by everyone" ON programs FOR SELECT USING (true);
+CREATE POLICY "Organizations are viewable by everyone" ON organizations FOR SELECT USING (true);
+CREATE POLICY "Academic terms are viewable by everyone" ON academic_terms FOR SELECT USING (true);
+
+-- Manage policies (Super Admin only)
+CREATE POLICY "Super admins can manage campuses" ON campuses FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage faculties" ON faculties FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage programs" ON programs FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage organizations" ON organizations FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
+
+-- Organization Members
+CREATE POLICY "Members can view their own memberships" ON organization_members FOR SELECT 
+USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+CREATE POLICY "Organization members are viewable by everyone" ON organization_members FOR SELECT USING (true);
+CREATE POLICY "Super admins can manage organization memberships" ON organization_members FOR ALL TO authenticated USING (public.is_super_admin());
+
+-- ==============================================================================
+-- 9. FUNCTIONS & PROCEDURES
+-- ==============================================================================
+
+CREATE OR REPLACE FUNCTION assign_organization_officer(
+    p_org_id UUID,
+    p_user_id UUID,
+    p_role_id UUID,
+    p_term_id UUID,
+    p_assigned_by UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_actual_assigned_by_id UUID;
+    v_org_type TEXT;
+    v_scope_id UUID;
+    v_scope_type public.scope_type;
+BEGIN
+    -- Standardize ID: The app might send Auth UID or internal User ID
+    SELECT id INTO v_actual_assigned_by_id 
+    FROM public.users 
+    WHERE id = p_assigned_by OR auth_id = p_assigned_by
+    LIMIT 1;
+
+    -- Fetch Org Info for Scope Mapping
+    SELECT type, 
+           CASE 
+             WHEN type = 'campus-based' THEN campus_id 
+             WHEN type = 'faculty-based' THEN faculty_id
+             WHEN type = 'program-based' THEN program_id
+           END
+    INTO v_org_type, v_scope_id
+    FROM public.organizations WHERE id = p_org_id;
+
+    v_scope_type := CASE 
+                      WHEN v_org_type = 'campus-based' THEN 'Institutional'::public.scope_type
+                      WHEN v_org_type = 'faculty-based' THEN 'Faculty'::public.scope_type
+                      WHEN v_org_type = 'program-based' THEN 'Program'::public.scope_type
+                    END;
+
+    -- 1. Insert or Update membership (Organization Context)
+    -- If they have a base membership (NULL term), upgrade it
+    UPDATE organization_members 
+    SET 
+        role_id = p_role_id,
+        academic_term_id = p_term_id,
+        status = 'active',
+        assigned_at = CURRENT_TIMESTAMP
+    WHERE organization_id = p_org_id 
+      AND user_id = p_user_id 
+      AND academic_term_id IS NULL;
+
+    IF NOT FOUND THEN
+        INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
+        VALUES (p_org_id, p_user_id, p_role_id, p_term_id, 'active')
+        ON CONFLICT (organization_id, user_id, academic_term_id) 
+        DO UPDATE SET 
+            role_id = EXCLUDED.role_id,
+            status = 'active',
+            assigned_at = CURRENT_TIMESTAMP;
+    END IF;
+
+    -- 2. Sync to System Roles (RBAC Context)
+    -- This ensures the role ID in user_roles matches the role ID in organization_members
+    IF v_scope_id IS NOT NULL AND v_scope_type IS NOT NULL THEN
+        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id, assigned_by_user_id)
+        VALUES (p_user_id, p_role_id, v_scope_type, v_scope_id, v_actual_assigned_by_id)
+        ON CONFLICT (user_id, role_id, scope_type, scope_id) 
+        DO UPDATE SET 
+            is_active = true,
+            assigned_at = CURRENT_TIMESTAMP;
+    END IF;
+
+    -- 3. Log the action
+    INSERT INTO governance_audit_logs (organization_id, action, performed_by_user_id, target_user_id, details)
+    VALUES (
+        p_org_id, 
+        'assign_officer', 
+        v_actual_assigned_by_id, 
+        p_user_id, 
+        jsonb_build_object(
+            'role_id', p_role_id,
+            'term_id', p_term_id,
+            'scope_type', v_scope_type,
+            'scope_id', v_scope_id
+        )
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION create_organization_with_members(
+    p_name TEXT,
+    p_code TEXT,
+    p_description TEXT,
+    p_type TEXT,
+    p_campus_id UUID DEFAULT NULL,
+    p_faculty_id UUID DEFAULT NULL,
+    p_program_ids UUID[] DEFAULT '{}',
+    p_logo_url TEXT DEFAULT NULL,
+    p_banner_url TEXT DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+    v_org_id UUID;
+    v_primary_program_id UUID;
+BEGIN
+    IF p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
+        v_primary_program_id := p_program_ids[1];
+    ELSE
+        v_primary_program_id := NULL;
+    END IF;
+
+    INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id, logo_url, banner_url)
+    VALUES (p_name, p_code, p_description, p_type, p_campus_id, p_faculty_id, v_primary_program_id, p_logo_url, p_banner_url)
+    RETURNING id INTO v_org_id;
+
+    IF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
+        INSERT INTO organization_members (organization_id, user_id)
+        SELECT v_org_id, id FROM public.users WHERE campus_id = p_campus_id
+        ON CONFLICT DO NOTHING;
+    ELSIF p_type = 'faculty-based' AND p_faculty_id IS NOT NULL THEN
+        INSERT INTO organization_members (organization_id, user_id)
+        SELECT v_org_id, id FROM public.users WHERE faculty_id = p_faculty_id
+        ON CONFLICT DO NOTHING;
+    ELSIF p_type = 'program-based' AND p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
+        INSERT INTO organization_members (organization_id, user_id)
+        SELECT v_org_id, id FROM public.users WHERE program_id = ANY(p_program_ids)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    RETURN v_org_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_my_role()
+RETURNS TABLE (
+role_name VARCHAR, 
+hierarchy_level INT, 
+scope_type VARCHAR,
+permissions JSONB
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+RETURN QUERY
+SELECT 
+r.name, 
+r.hierarchy_level, 
+ur.scope_type::VARCHAR,
+COALESCE(
+    jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), 
+    '[]'::jsonb
+) AS permissions
+FROM user_roles ur
+JOIN roles r ON ur.role_id = r.id
+JOIN users u ON ur.user_id = u.id
+LEFT JOIN role_permissions rp ON r.id = rp.role_id
+LEFT JOIN permissions p ON rp.permission_id = p.id
+WHERE u.auth_id = auth.uid() 
+AND ur.is_active = true
+GROUP BY r.id, r.name, r.hierarchy_level, ur.scope_type;
+END;
+$$;
+
+-- ==============================================================================
+-- 10. AUTH TRIGGERS
+-- ==============================================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+DECLARE
+    new_user_id UUID;
+    target_role_id UUID;
+    v_role TEXT;
+    v_position TEXT;
+    v_scope_type public.scope_type;
+    v_scope_id UUID;
+    v_faculty_id UUID;
+    v_program_id UUID;
+    v_campus_id UUID;
+BEGIN
+    v_role := new.raw_user_meta_data->>'role';
+    v_position := new.raw_user_meta_data->>'position';
+    v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
+    v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
+    v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
+
+    IF v_campus_id IS NULL AND v_faculty_id IS NOT NULL THEN
+        SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
+    END IF;
+
+    INSERT INTO public.users (
+        auth_id, email, first_name, last_name, student_id_number, 
+        campus_id, faculty_id, program_id, year,
+        id_front_url, id_back_url, account_status
+    )
+    VALUES (
+        new.id, new.email, 
+        COALESCE(new.raw_user_meta_data->>'first_name', ''),
+        COALESCE(new.raw_user_meta_data->>'last_name', ''), 
+        COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+        v_campus_id, v_faculty_id, v_program_id,
+        (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
+        new.raw_user_meta_data->>'id_front_url', new.raw_user_meta_data->>'id_back_url',
+        COALESCE(new.raw_user_meta_data->>'status', 'active')
+    )
+    ON CONFLICT (auth_id) DO UPDATE SET
+        email = EXCLUDED.email,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        campus_id = EXCLUDED.campus_id,
+        faculty_id = EXCLUDED.faculty_id,
+        program_id = EXCLUDED.program_id,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO new_user_id;
+
+    IF v_role = 'super_admin' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Super Admin';
+        v_scope_type := 'Institutional';
+        v_scope_id := '00000000-0000-0000-0000-000000000000';
+    ELSIF v_role = 'student' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
+        v_scope_type := 'Program';
+        v_scope_id := v_program_id;
+    ELSIF v_role = 'faculty' THEN
+        IF v_position = 'dean' THEN
+            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
+            v_scope_type := 'Faculty';
+            v_scope_id := v_faculty_id;
+        ELSIF v_position = 'program_head' THEN
+            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Program Head';
+            v_scope_type := 'Program';
+            v_scope_id := v_program_id;
+        ELSIF v_position = 'instructor' THEN
+            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Instructor';
+            v_scope_type := 'Faculty';
+            v_scope_id := v_faculty_id;
+        END IF;
+    END IF;
+
+    IF target_role_id IS NOT NULL AND v_scope_id IS NOT NULL THEN
+        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id)
+        VALUES (new_user_id, target_role_id, v_scope_type, v_scope_id)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    IF v_campus_id IS NOT NULL THEN
+        INSERT INTO public.organization_members (organization_id, user_id, role_id)
+        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Students')
+        FROM public.organizations 
+        WHERE type = 'campus-based' AND campus_id = v_campus_id
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    IF v_faculty_id IS NOT NULL THEN
+        INSERT INTO public.organization_members (organization_id, user_id, role_id)
+        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Students')
+        FROM public.organizations 
+        WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    IF v_program_id IS NOT NULL THEN
+        INSERT INTO public.organization_members (organization_id, user_id, role_id)
+        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Students')
+        FROM public.organizations 
+        WHERE type = 'program-based' AND program_id = v_program_id
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    RETURN new;
+EXCEPTION WHEN OTHERS THEN
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- ==============================================================================
+-- 11. DATA SEEDING
+-- ==============================================================================
 
 -- 1. INSERT CAMPUSES
-INSERT INTO campuses (name, location) VALUES
-('DORSU Main Campus', 'Mati City, Davao Oriental');
+INSERT INTO campuses (name, location) VALUES ('DORSU Main Campus', 'Mati City, Davao Oriental');
 
 -- 2. INSERT FACULTIES
 INSERT INTO faculties (campus_id, name, code) VALUES
@@ -574,21 +815,10 @@ INSERT INTO programs (faculty_id, name, code) VALUES
 
 -- 4. INSERT ROLES
 INSERT INTO roles (name, hierarchy_level) VALUES
-('Super Admin', 100),
-('Faculty Dean', 80),
-('Program Head', 70),
-('Instructor', 65),
-('Comselec Chair', 60), 
-('Faculty Governor', 50),
-('Program Governor', 40),
-('Faculty Treasurer', 30),
-('Faculty Secretary', 30),
-('Program Treasurer', 20),
-('Program Secretary', 20),
-('Faculty Council Member', 15),
-('Comselec Officer', 15), 
-('Program Council Member', 10),
-('Students', 5);
+('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Comselec Chair', 60), 
+('Governor', 50), ('Vice Governor', 45), ('Secretary', 40), ('Assistant Secretary', 35),
+('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), ('PIO', 20),
+('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Students', 5);
 
 -- 5. INSERT PERMISSIONS
 INSERT INTO permissions (action) VALUES
@@ -604,268 +834,37 @@ INSERT INTO permissions (action) VALUES
 ('view_faculty_analytics');
 
 -- 6. MAP PERMISSIONS TO ROLES
--- Super Admin
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'Super Admin' AND p.action IN (
-'manage_academic_terms', 'manage_faculties', 'manage_programs',
-'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics',
-'manage_elections'
-);
+WHERE r.name = 'Super Admin' AND p.action IN ('manage_academic_terms', 'manage_faculties', 'manage_programs', 'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics', 'manage_elections');
 
--- (Simplified mapping for other roles, similar to sample.sql)
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Students' AND p.action IN ('request_clearance');
 
--- 7. UTILITY RPC FOR ROLES
-CREATE OR REPLACE FUNCTION get_my_role()
-RETURNS TABLE (
-role_name VARCHAR, 
-hierarchy_level INT, 
-scope_type VARCHAR,
-permissions JSONB
-) 
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-RETURN QUERY
-SELECT 
-r.name, 
-r.hierarchy_level, 
-ur.scope_type::VARCHAR,
-COALESCE(
-    jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), 
-    '[]'::jsonb
-) AS permissions
-FROM user_roles ur
-JOIN roles r ON ur.role_id = r.id
-JOIN users u ON ur.user_id = u.id
-LEFT JOIN role_permissions rp ON r.id = rp.role_id
-LEFT JOIN permissions p ON rp.permission_id = p.id
-WHERE u.auth_id = auth.uid() 
-AND ur.is_active = true
-GROUP BY r.id, r.name, r.hierarchy_level, ur.scope_type;
-END;
-$$;
-
--- ==============================================================================
--- 8. SECURITY & AUTH TRIGGERS
--- ==============================================================================
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-DECLARE
-    new_user_id UUID;
-    target_role_id UUID;
-    v_role TEXT;
-    v_position TEXT;
-    v_scope_type public.scope_type;
-    v_scope_id UUID;
-    v_faculty_id UUID;
-    v_program_id UUID;
-    v_campus_id UUID;
-BEGIN
-    -- 1. Extract and Validate Metadata
-    v_role := new.raw_user_meta_data->>'role';
-    v_position := new.raw_user_meta_data->>'position';
-    
-    -- Safe casting for UUIDs
-    v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
-    v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
-    v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
-
-    -- Derive campus_id if not provided but faculty_id is available
-    IF v_campus_id IS NULL AND v_faculty_id IS NOT NULL THEN
-        SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
-    END IF;
-
-    -- 2. Verify Foreign Keys (Crucial if DB was recently reset)
-    IF v_faculty_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.faculties WHERE id = v_faculty_id) THEN
-        v_faculty_id := NULL;
-    END IF;
-    IF v_program_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.programs WHERE id = v_program_id) THEN
-        v_program_id := NULL;
-    END IF;
-
-    -- 3. Upsert into public.users (Handles existing records and stale FKs)
-    INSERT INTO public.users (
-        auth_id, 
-        email, 
-        first_name, 
-        last_name, 
-        student_id_number, 
-        campus_id,
-        faculty_id, 
-        program_id, 
-        year,
-        id_front_url,
-        id_back_url,
-        account_status
-    )
-    VALUES (
-        new.id, 
-        new.email, 
-        COALESCE(new.raw_user_meta_data->>'first_name', ''),
-        COALESCE(new.raw_user_meta_data->>'last_name', ''), 
-        COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
-        v_campus_id,
-        v_faculty_id,
-        v_program_id,
-        (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
-        new.raw_user_meta_data->>'id_front_url',
-        new.raw_user_meta_data->>'id_back_url',
-        COALESCE(new.raw_user_meta_data->>'status', 'active')
-    )
-    ON CONFLICT (auth_id) DO UPDATE SET
-        email = EXCLUDED.email,
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        campus_id = EXCLUDED.campus_id,
-        faculty_id = EXCLUDED.faculty_id,
-        program_id = EXCLUDED.program_id,
-        updated_at = CURRENT_TIMESTAMP
-    RETURNING id INTO new_user_id;
-
-    -- 4. Determine Role and Scope
-    IF v_role = 'super_admin' THEN
-        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Super Admin';
-        v_scope_type := 'Institutional';
-        v_scope_id := '00000000-0000-0000-0000-000000000000';
-    ELSIF v_role = 'student' THEN
-        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
-        v_scope_type := 'Program';
-        v_scope_id := v_program_id;
-    ELSIF v_role = 'faculty' THEN
-        IF v_position = 'dean' THEN
-            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
-            v_scope_type := 'Faculty';
-            v_scope_id := v_faculty_id;
-        ELSIF v_position = 'program_head' THEN
-            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Program Head';
-            v_scope_type := 'Program';
-            v_scope_id := v_program_id;
-        ELSIF v_position = 'instructor' THEN
-            SELECT id INTO target_role_id FROM public.roles WHERE name = 'Instructor';
-            v_scope_type := 'Faculty';
-            v_scope_id := v_faculty_id;
-        END IF;
-    END IF;
-
-    -- 5. Assign Role (Only if determined and scope is valid)
-    IF target_role_id IS NOT NULL AND v_scope_id IS NOT NULL THEN
-        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id)
-        VALUES (new_user_id, target_role_id, v_scope_type, v_scope_id)
-        ON CONFLICT DO NOTHING;
-    END IF;
-
-    -- 6. Automatically add user to relevant organizations
-    -- Campus-based
-    IF v_campus_id IS NOT NULL THEN
-        INSERT INTO public.organization_members (organization_id, user_id)
-        SELECT id, new_user_id FROM public.organizations 
-        WHERE type = 'campus-based' AND campus_id = v_campus_id
-        ON CONFLICT DO NOTHING;
-    END IF;
-
-    -- Faculty-based
-    IF v_faculty_id IS NOT NULL THEN
-        INSERT INTO public.organization_members (organization_id, user_id)
-        SELECT id, new_user_id FROM public.organizations 
-        WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
-        ON CONFLICT DO NOTHING;
-    END IF;
-
-    -- Program-based
-    IF v_program_id IS NOT NULL THEN
-        INSERT INTO public.organization_members (organization_id, user_id)
-        SELECT id, new_user_id FROM public.organizations 
-        WHERE type = 'program-based' AND program_id = v_program_id
-        ON CONFLICT DO NOTHING;
-    END IF;
-
-    RETURN new;
-EXCEPTION WHEN OTHERS THEN
-    -- Gracefully handle errors to prevent 500 AuthRetryableFetchException
-    -- This ensures the auth user is still created even if the profile insertion fails
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-AFTER INSERT ON auth.users
-FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-
--- ------------------------------------------------------------
--- RLS for Organization Members
--- ------------------------------------------------------------
-ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can view their own memberships" 
-ON organization_members FOR SELECT 
-USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
-
-CREATE POLICY "Organization members are viewable by everyone" 
-ON organization_members FOR SELECT 
-USING (true);
-
-CREATE POLICY "Super admins can manage organization memberships" 
-ON organization_members FOR ALL 
-TO authenticated 
-USING (public.is_super_admin());
-
--- ==============================================================================
--- 9. SUPER ADMIN SEED
--- ==============================================================================
+-- 7. SUPER ADMIN SEED
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- 1. Insert into Supabase Auth (auth.users)
 INSERT INTO auth.users (
-instance_id, id, aud, role, email, encrypted_password, 
-email_confirmed_at, raw_app_meta_data, raw_user_meta_data, 
-created_at, updated_at, confirmation_token, recovery_token, 
-email_change_token_new, is_super_admin
+instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, is_super_admin
 ) VALUES (
-'00000000-0000-0000-0000-000000000000',
-'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
-'authenticated', 'authenticated', 'vouch.app.admin@gmail.com',
-crypt('Admin-2026', gen_salt('bf')),
-current_timestamp, '{"provider":"email","providers":["email"]}',
-'{"full_name":"Vouch Admin"}', current_timestamp, current_timestamp,
-'', '', '', false
+'00000000-0000-0000-0000-000000000000', 'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 'authenticated', 'authenticated', 'vouch.app.admin@gmail.com', crypt('Admin-2026', gen_salt('bf')), current_timestamp, '{"provider":"email","providers":["email"]}', '{"full_name":"Vouch Admin"}', current_timestamp, current_timestamp, '', '', '', false
 ) ON CONFLICT (id) DO NOTHING;
 
--- 2. Insert into Supabase Auth Identities
 INSERT INTO auth.identities (
-id, provider_id, user_id, identity_data, provider, 
-last_sign_in_at, created_at, updated_at
+id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
 ) VALUES (
-'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c',
-format('{"sub":"%s","email":"%s"}','cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c','vouch.app.admin@gmail.com')::jsonb,
-'email', current_timestamp, current_timestamp, current_timestamp
+'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', format('{"sub":"%s","email":"%s"}','cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c','vouch.app.admin@gmail.com')::jsonb, 'email', current_timestamp, current_timestamp, current_timestamp
 ) ON CONFLICT (id) DO NOTHING;
 
--- 3. Upsert into public.users
-INSERT INTO public.users (
-auth_id, student_id_number, first_name, last_name, email, account_status
-) VALUES (
-'cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 
-'SA-2026-001', 'Vouch', 'Admin', 'vouch.app.admin@gmail.com', 'active'
-) ON CONFLICT (auth_id) DO UPDATE SET
-student_id_number = EXCLUDED.student_id_number,
-first_name = EXCLUDED.first_name,
-last_name = EXCLUDED.last_name,
-account_status = EXCLUDED.account_status;
+INSERT INTO public.users (auth_id, student_id_number, first_name, last_name, email, account_status)
+VALUES ('cc097ff9-8f10-4a76-b5d8-ecb1b87ae75c', 'SA-2026-001', 'Vouch', 'Admin', 'vouch.app.admin@gmail.com', 'active')
+ON CONFLICT (auth_id) DO UPDATE SET student_id_number = EXCLUDED.student_id_number, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, account_status = EXCLUDED.account_status;
 
--- 4. Assign the 'Super Admin' role
 INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id) 
 SELECT u.id, r.id, 'Institutional', '00000000-0000-0000-0000-000000000000'
 FROM public.users u CROSS JOIN public.roles r
 WHERE u.email = 'vouch.app.admin@gmail.com' AND r.name = 'Super Admin'
-AND NOT EXISTS (
-SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
-);
+AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id);
 
 UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;

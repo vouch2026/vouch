@@ -4,8 +4,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../models/organization_model.dart';
+import '../../models/organization_membership_model.dart';
 import '../../providers/organization_provider.dart';
 import '../../../auth/models/user_model.dart';
+import '../../../academic_structure/providers/term_provider.dart';
+import '../../../academic_structure/models/academic_term_model.dart';
+import '../../../../core/config/supabase_config.dart';
+import './assign_officer_dialog.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -86,11 +91,15 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
       case 'Members':
         return _MembersTab(orgId: widget.org.id);
       case 'Officers':
-        return _OfficersTab();
+        return _OfficersTab(org: widget.org);
+      case 'Governance':
+        return _GovernanceTab(org: widget.org);
       case 'Attendance':
         return _AttendanceTab();
       case 'Finance':
         return _FinanceTab();
+      case 'Audit Logs':
+        return _AuditLogsTab(org: widget.org);
       default:
         return _PlaceholderTab(name: tabName);
     }
@@ -358,9 +367,15 @@ class _MembersTab extends ConsumerWidget {
   }
 }
 
-class _OfficersTab extends StatelessWidget {
+class _OfficersTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _OfficersTab({required this.org});
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final officersAsync = ref.watch(organizationOfficersProvider(org.id));
+    final activeTermAsync = ref.watch(activeTermProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
       child: Column(
@@ -369,60 +384,304 @@ class _OfficersTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Organization Leadership', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Current Leadership', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                  activeTermAsync.when(
+                    data: (term) => Text(
+                      term != null ? '${term.academicYear} - ${term.semester}' : 'No active term',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                    ),
+                    loading: () => const SizedBox(),
+                    error: (_, __) => const SizedBox(),
+                  ),
+                ],
+              ),
               FilledButton.icon(
-                onPressed: () {},
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (context) => AssignOfficerDialog(org: org),
+                ),
                 icon: const Icon(Icons.assignment_ind_rounded, size: 18),
                 label: const Text('Assign Officer'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF041E42), // Royal Blue
+                  foregroundColor: const Color(0xFFC5A059), // Gold
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            childAspectRatio: 3,
-            children: [
-              _buildOfficerCard('Governor', 'Juan Dela Cruz'),
-              _buildOfficerCard('Vice Governor', 'Maria Clara'),
-              _buildOfficerCard('Secretary', 'John Doe'),
-              _buildOfficerCard('Treasurer', 'Jane Smith'),
-            ],
+          officersAsync.when(
+            data: (officers) {
+              final currentTermOfficers = officers.where((o) => o.status == 'active').toList();
+              
+              if (currentTermOfficers.isEmpty) {
+                return _buildEmptyState('No active officers assigned for this term.');
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 400,
+                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 2.5,
+                ),
+                itemCount: currentTermOfficers.length,
+                itemBuilder: (context, index) => _buildOfficerCard(currentTermOfficers[index]),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(child: Text('Error loading officers: $err')),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOfficerCard(String role, String name) {
+  Widget _buildEmptyState(String message) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl * 2),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.assignment_late_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
+              const SizedBox(height: AppSpacing.md),
+              Text(message, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfficerCard(OrganizationMembershipModel officer) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
       ),
-      child: Padding(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              AppColors.primary.withOpacity(0.02),
+            ],
+          ),
+        ),
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
-            const CircleAvatar(radius: 20, backgroundColor: AppColors.primary, child: Icon(Icons.security, color: Colors.white, size: 16)),
+            Hero(
+              tag: 'officer-${officer.id}',
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundImage: officer.user?.avatarUrl != null ? NetworkImage(officer.user!.avatarUrl!) : null,
+                child: officer.user?.avatarUrl == null ? const Icon(Icons.person, color: AppColors.primary) : null,
+              ),
+            ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(role, style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                  Text(name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      officer.roleName ?? 'OFFICER',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    officer.user?.fullName ?? 'Unknown',
+                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    officer.user?.schoolId ?? '',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                  ),
                 ],
               ),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert_rounded, color: AppColors.textGrey),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _GovernanceTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _GovernanceTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final officersAsync = ref.watch(organizationOfficersProvider(org.id));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Governance Hierarchy', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.lg),
+          _buildHierarchyView(officersAsync),
+          const SizedBox(height: AppSpacing.xl * 2),
+          Text('Governance History', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.lg),
+          _buildHistoryTable(officersAsync),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHierarchyView(AsyncValue<List<OrganizationMembershipModel>> officersAsync) {
+    return officersAsync.when(
+      data: (officers) {
+        final activeOfficers = officers.where((o) => o.status == 'active').toList();
+        // Sort by hierarchy level
+        activeOfficers.sort((a, b) => (b.hierarchyLevel ?? 0).compareTo(a.hierarchyLevel ?? 0));
+
+        if (activeOfficers.isEmpty) return const Center(child: Text('No active governance structure.'));
+
+        return Center(
+          child: Column(
+            children: [
+              if (activeOfficers.isNotEmpty) _buildHierarchyNode(activeOfficers.first),
+              if (activeOfficers.length > 1) ...[
+                const Icon(Icons.arrow_downward_rounded, color: AppColors.primary),
+                Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.md,
+                  alignment: WrapAlignment.center,
+                  children: activeOfficers.skip(1).map((o) => _buildHierarchyNode(o, isSmall: true)).toList(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Text('Error: $err'),
+    );
+  }
+
+  Widget _buildHierarchyNode(OrganizationMembershipModel officer, {bool isSmall = false}) {
+    return Container(
+      width: isSmall ? 200 : 300,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            officer.roleName?.toUpperCase() ?? 'OFFICER',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          CircleAvatar(
+            radius: isSmall ? 20 : 30,
+            backgroundImage: officer.user?.avatarUrl != null ? NetworkImage(officer.user!.avatarUrl!) : null,
+            child: officer.user?.avatarUrl == null ? const Icon(Icons.person) : null,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            officer.user?.fullName ?? 'Unknown',
+            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryTable(AsyncValue<List<OrganizationMembershipModel>> officersAsync) {
+    return officersAsync.when(
+      data: (officers) {
+        if (officers.isEmpty) return const Center(child: Text('No governance history available.'));
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: officers.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final officer = officers[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: officer.user?.avatarUrl != null ? NetworkImage(officer.user!.avatarUrl!) : null,
+                  child: officer.user?.avatarUrl == null ? const Icon(Icons.person) : null,
+                ),
+                title: Text(officer.user?.fullName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('${officer.roleName} • ${officer.term?.academicYear ?? "N/A"} ${officer.term?.semester ?? ""}'),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (officer.status == 'active' ? AppColors.success : AppColors.textGrey).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    officer.status.toUpperCase(),
+                    style: TextStyle(
+                      color: officer.status == 'active' ? AppColors.success : AppColors.textGrey,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Text('Error: $err'),
     );
   }
 }
@@ -554,6 +813,66 @@ class _PlaceholderTab extends StatelessWidget {
           Icon(Icons.construction_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
           const SizedBox(height: AppSpacing.md),
           Text('$name module is under development', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuditLogsTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _AuditLogsTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final logsAsync = FutureProvider((ref) async {
+      final client = SupabaseConfig.client;
+      final response = await client
+          .from('governance_audit_logs')
+          .select('''
+            *,
+            performed_by:users!governance_audit_logs_performed_by_user_id_fkey (*),
+            target_user:users!governance_audit_logs_target_user_id_fkey (*)
+          ''')
+          .eq('organization_id', org.id)
+          .order('created_at', ascending: false);
+      return response as List;
+    });
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Governance Audit Logs', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.md),
+          const Text('Tracking all leadership changes and governance actions.', style: TextStyle(color: AppColors.textGrey)),
+          const SizedBox(height: AppSpacing.lg),
+          ref.watch(logsAsync).when(
+            data: (logs) {
+              if (logs.isEmpty) return const Center(child: Text('No audit logs found.'));
+              
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: logs.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final log = logs[index];
+                  final performedBy = log['performed_by']?['first_name'] ?? 'System';
+                  final target = log['target_user']?['first_name'] ?? 'Unknown';
+                  
+                  return ListTile(
+                    leading: const Icon(Icons.history_edu_rounded, color: AppColors.primary),
+                    title: Text('Officer Assigned: $target'),
+                    subtitle: Text('Performed by: $performedBy • ${DateTime.parse(log['created_at']).toLocal()}'),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Text('Error: $err'),
+          ),
         ],
       ),
     );

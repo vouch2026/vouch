@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/organization_model.dart';
+import '../models/organization_membership_model.dart';
 import '../../auth/models/user_model.dart';
 
 class OrganizationRepository {
@@ -86,9 +87,59 @@ class OrganizationRepository {
         .select('users (*)')
         .eq('organization_id', orgId);
     
-    return (response as List)
-        .map((json) => UserModel.fromJson(json['users']))
-        .toList();
+    // Use a Map to filter by user ID for guaranteed uniqueness
+    final Map<String, UserModel> uniqueUsers = {};
+    for (var json in (response as List)) {
+      final user = UserModel.fromJson(json['users']);
+      if (user.id != null) {
+        uniqueUsers[user.id!] = user;
+      }
+    }
+    
+    return uniqueUsers.values.toList();
+  }
+
+  Future<List<OrganizationMembershipModel>> getOrganizationOfficers(String orgId) async {
+    final response = await _client
+        .from('organization_members')
+        .select('''
+          *,
+          user:users (*),
+          role:roles (*),
+          term:academic_terms (*)
+        ''')
+        .eq('organization_id', orgId)
+        .not('role_id', 'is', null)
+        .order('assigned_at', ascending: false);
+    
+    return (response as List).map((json) {
+      return OrganizationMembershipModel.fromJson({
+        ...json,
+        'user': json['user'],
+        'term': json['term'],
+        'role_name': json['role']?['name'],
+        'hierarchy_level': json['role']?['hierarchy_level'],
+      });
+    }).toList();
+  }
+
+  Future<void> assignOfficer({
+    required String userId,
+    required String orgId,
+    required String roleId,
+    required String termId,
+    required String assignedBy,
+  }) async {
+    await _client.rpc(
+      'assign_organization_officer',
+      params: {
+        'p_org_id': orgId,
+        'p_user_id': userId,
+        'p_role_id': roleId,
+        'p_term_id': termId,
+        'p_assigned_by': assignedBy,
+      },
+    );
   }
 
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
