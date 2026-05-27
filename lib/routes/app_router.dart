@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'route_names.dart';
@@ -27,15 +28,32 @@ import '../features/elections/views/comselec_officials_page.dart';
 import '../features/academic_structure/views/academic_structure_page.dart';
 import '../features/dashboard/views/governor_module_placeholder.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/organizations/providers/workspace_provider.dart';
+
+/// A notifier that notifies the [GoRouter] when the authentication state 
+/// or workspace state changes.
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen(authStateProvider, (_, __) => notifyListeners());
+    _ref.listen(workspaceProvider, (_, __) => notifyListeners());
+  }
+}
+
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  return RouterNotifier(ref);
+});
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-
+  final notifier = ref.watch(routerNotifierProvider);
+  
   return GoRouter(
     initialLocation: RoutePaths.login,
     debugLogDiagnostics: true,
+    refreshListenable: notifier,
     redirect: (context, state) {
-      final auth = authState.value;
+      final auth = ref.read(authStateProvider).value;
       final loggingIn = state.matchedLocation == RoutePaths.login ||
           state.matchedLocation == RoutePaths.register ||
           state.matchedLocation == RoutePaths.forgotPassword ||
@@ -58,9 +76,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.dashboard;
       }
 
+      // Redirect if accessing governor routes without a selected organization
+      final workspace = ref.read(workspaceProvider);
+      if (state.matchedLocation.startsWith('/governor') && workspace.selectedOrganization == null) {
+        return RoutePaths.dashboard;
+      }
+
       return null;
     },
     routes: [
+
       GoRoute(
         path: RoutePaths.login,
         name: RouteNames.login,
@@ -83,6 +108,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.dashboard,
         name: RouteNames.dashboard,
         builder: (context, state) => const DashboardPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.notifications,
+        name: RouteNames.notifications,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
       ),
       GoRoute(
         path: RoutePaths.academicStructure,

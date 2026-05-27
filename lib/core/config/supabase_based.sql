@@ -551,18 +551,7 @@ BEGIN
             assigned_at = CURRENT_TIMESTAMP;
     END IF;
 
-    -- 2. Sync to System Roles (RBAC Context)
-    -- This ensures the role ID in user_roles matches the role ID in organization_members
-    IF v_scope_id IS NOT NULL AND v_scope_type IS NOT NULL THEN
-        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id, assigned_by_user_id)
-        VALUES (p_user_id, p_role_id, v_scope_type, v_scope_id, v_actual_assigned_by_id)
-        ON CONFLICT (user_id, role_id, scope_type, scope_id) 
-        DO UPDATE SET 
-            is_active = true,
-            assigned_at = CURRENT_TIMESTAMP;
-    END IF;
-
-    -- 3. Log the action
+    -- 2. Log the action
     INSERT INTO governance_audit_logs (organization_id, action, performed_by_user_id, target_user_id, details)
     VALUES (
         p_org_id, 

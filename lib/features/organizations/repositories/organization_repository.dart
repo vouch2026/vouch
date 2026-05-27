@@ -145,11 +145,17 @@ class OrganizationRepository {
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
     final response = await _client
         .from('organization_members')
-        .select('organizations (*)')
+        .select('*, organizations(*)')
         .eq('user_id', userId);
     
-    return (response as List)
-        .map((json) => OrganizationModel.fromJson(json['organizations']))
-        .toList();
+    final List<OrganizationModel> organizations = [];
+    
+    for (var json in (response as List)) {
+      if (json['organizations'] != null) {
+        organizations.add(OrganizationModel.fromJson(json['organizations'] as Map<String, dynamic>));
+      }
+    }
+    
+    return organizations;
   }
 }

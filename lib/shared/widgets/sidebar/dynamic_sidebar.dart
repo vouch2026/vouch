@@ -7,14 +7,19 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
+import '../../../../features/organizations/providers/workspace_provider.dart';
+import 'organization_switcher.dart';
 
-class AppSidebar extends ConsumerWidget {
-  const AppSidebar({super.key});
+class DynamicSidebar extends ConsumerWidget {
+  const DynamicSidebar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final workspace = ref.watch(workspaceProvider);
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
+    final selectedOrg = workspace.selectedOrganization;
+    final activeRole = workspace.activeRole;
 
     return Drawer(
       backgroundColor: AppColors.white,
@@ -29,103 +34,112 @@ class AppSidebar extends ConsumerWidget {
           _buildBackgroundDecorations(),
           Column(
             children: [
+              _buildSidebarHeader(),
+              const OrganizationSwitcher(),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    _buildSidebarHeader(),
-                    _SidebarItem(
+                    const _SidebarHeader(label: 'PERSONAL HUB'),
+                    const _SidebarItem(
                       icon: Icons.dashboard_outlined,
                       label: 'Dashboard',
                       path: RoutePaths.dashboard,
                     ),
-                    const _SidebarHeader(label: 'CAMPUS MANAGEMENT'),
-                    _SidebarItem(
-                      icon: Icons.account_tree_outlined,
-                      label: 'Academic Structure',
-                      path: RoutePaths.academicStructure,
-                    ),
-                    _SidebarItem(
+                    const _SidebarItem(
                       icon: Icons.corporate_fare_outlined,
-                      label: 'Organizations',
+                      label: 'My Organizations',
                       path: RoutePaths.organizations,
                     ),
-                    _SidebarItem(
+                    const _SidebarItem(
                       icon: Icons.event_outlined,
-                      label: 'Events',
+                      label: 'My Events',
                       path: RoutePaths.events,
                     ),
-                    _SidebarItem(
-                      icon: Icons.payments_outlined,
-                      label: 'Fees',
-                      path: RoutePaths.fees,
+                    const _SidebarItem(
+                      icon: Icons.notifications_none_rounded,
+                      label: 'Notifications',
+                      path: RoutePaths.notifications,
                     ),
-                    const _SidebarHeader(label: 'USER MANAGEMENT'),
-                    _SidebarItem(
-                      icon: Icons.people_outline_rounded,
-                      label: 'Users',
-                      path: RoutePaths.users,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.admin_panel_settings_outlined,
-                      label: 'Officers',
-                      path: RoutePaths.officers,
-                    ),
-                    const _SidebarHeader(label: 'COMSELEC'),
-                    _SidebarItem(
-                      icon: Icons.how_to_vote_rounded,
-                      label: 'Elections',
-                      path: RoutePaths.comselecDashboard,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.groups_rounded,
-                      label: 'Candidates',
-                      path: RoutePaths.comselecCandidates,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.person_search_rounded,
-                      label: 'Voters',
-                      path: RoutePaths.comselecVoters,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.analytics_rounded,
-                      label: 'Results',
-                      path: RoutePaths.comselecResults,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.query_stats_rounded,
-                      label: 'Analytics',
-                      path: RoutePaths.comselecAnalytics,
-                    ),
-                    _SidebarItem(
-                      icon: Icons.badge_outlined,
-                      label: 'Officials',
-                      path: RoutePaths.comselecOfficials,
-                    ),
-                    if (!isSuperAdmin) ...[
-                      _SidebarItem(
+
+                    if (selectedOrg != null) ...[
+                      const _SectionDivider(),
+                      _SidebarHeader(label: 'WORKSPACE: ${selectedOrg.code}'),
+                      const _SidebarItem(
+                        icon: Icons.grid_view_rounded,
+                        label: 'Workspace Home',
+                        path: RoutePaths.dashboard,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.people_outline_rounded,
+                        label: 'Members',
+                        path: RoutePaths.governorMembers,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Events',
+                        path: RoutePaths.governorEvents,
+                      ),
+                      const _SidebarItem(
                         icon: Icons.how_to_reg_outlined,
                         label: 'Attendance',
-                        path: RoutePaths.attendance,
+                        path: RoutePaths.governorAttendance,
                       ),
-                      _SidebarItem(
-                        icon: Icons.how_to_vote_outlined,
-                        label: 'Elections',
-                        path: RoutePaths.elections,
+                      
+                      if (activeRole?.roleName == 'Governor' || activeRole?.roleName == 'Treasurer')
+                        const _SidebarItem(
+                          icon: Icons.payments_outlined,
+                          label: 'Finance',
+                          path: RoutePaths.governorFees,
+                        ),
+                      if (activeRole?.roleName == 'Governor' || activeRole?.roleName == 'Auditor')
+                        const _SidebarItem(
+                          icon: Icons.analytics_outlined,
+                          label: 'Analytics',
+                          path: RoutePaths.governorParticipation,
+                        ),
+                      
+                      const _SidebarItem(
+                        icon: Icons.campaign_outlined,
+                        label: 'Announcements',
+                        path: RoutePaths.governorAnnouncements,
                       ),
-                      _SidebarItem(
-                        icon: Icons.payments_outlined,
-                        label: 'Finance',
-                        path: RoutePaths.finance,
+                      const _SidebarItem(
+                        icon: Icons.settings_outlined,
+                        label: 'Settings',
+                        path: RoutePaths.governorSettings,
+                      ),
+                    ] else if (isSuperAdmin) ...[
+                      const _SectionDivider(),
+                      const _SidebarHeader(label: 'SYSTEM ADMINISTRATION'),
+                      const _SidebarItem(
+                        icon: Icons.account_tree_outlined,
+                        label: 'Academic Structure',
+                        path: RoutePaths.academicStructure,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.people_outline_rounded,
+                        label: 'All Users',
+                        path: RoutePaths.users,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.how_to_vote_rounded,
+                        label: 'Global Elections',
+                        path: RoutePaths.comselecDashboard,
                       ),
                     ],
                   ],
                 ),
               ),
               const Divider(height: 1),
-              _SidebarItem(
+              const _SidebarItem(
+                icon: Icons.person_outline_rounded,
+                label: 'My Profile',
+                path: RoutePaths.profile,
+              ),
+              const _SidebarItem(
                 icon: Icons.settings_outlined,
-                label: 'Settings',
+                label: 'App Settings',
                 path: RoutePaths.settings,
               ),
               Padding(
@@ -139,7 +153,7 @@ class AppSidebar extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version 1.0.0+1',
+                      'Version 2.0.0 (Contextual)',
                       style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.grey.shade400,
                         fontSize: 10,
@@ -188,20 +202,20 @@ class AppSidebar extends ConsumerWidget {
 
   Widget _buildSidebarHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.xl),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
             'assets/logos/vouch.png',
-            width: 40,
-            height: 40,
+            width: 32,
+            height: 32,
           ),
           const SizedBox(width: AppSpacing.sm),
           RichText(
             text: TextSpan(
               style: GoogleFonts.poppins(
-                fontSize: 32,
+                fontSize: 24,
                 fontWeight: FontWeight.w700,
               ),
               children: const [
@@ -234,7 +248,7 @@ class _SidebarHeader extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.poppins(
-          fontSize: 11,
+          fontSize: 10,
           color: AppColors.textGrey,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
@@ -266,24 +280,24 @@ class _SidebarItem extends StatelessWidget {
         selected: isSelected,
         selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
         leading: Container(
-          width: 36,
-          height: 36,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.1)
-                : AppColors.accent.withValues(alpha: 0.15),
+                : AppColors.accent.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
-            size: 18,
+            size: 16,
             color: isSelected ? AppColors.primary : Colors.grey.shade700,
           ),
         ),
         title: Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: 14,
+            fontSize: 13,
             color: isSelected ? AppColors.primary : Colors.black87,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
@@ -293,6 +307,18 @@ class _SidebarItem extends StatelessWidget {
           Navigator.pop(context); // Close drawer
         },
       ),
+    );
+  }
+}
+
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      child: Divider(height: 1, thickness: 0.5),
     );
   }
 }

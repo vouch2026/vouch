@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../organizations/providers/managed_organization_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../widgets/welcome_header.dart';
 
@@ -12,82 +12,77 @@ class GovernorDashboardView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final managedOrgAsync = ref.watch(managedOrganizationProvider);
-    final userProfile = ref.watch(userProfileProvider).value;
+    final workspace = ref.watch(workspaceProvider);
+    final org = workspace.selectedOrganization;
+    final activeRole = workspace.activeRole;
 
-    return managedOrgAsync.when(
-      data: (org) {
-        if (org == null) {
-          return const Center(
-            child: Text('You are not currently assigned to manage any organization.'),
-          );
-        }
+    if (org == null) {
+      return const Center(
+        child: Text('No organization selected.'),
+      );
+    }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 1024;
-            
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildOrgHeader(context, org),
-                  const SizedBox(height: AppSpacing.xl),
-                  
-                  if (isDesktop) 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildKpiSection(org),
-                              const SizedBox(height: AppSpacing.lg),
-                              _buildUpcomingEvents(org),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.lg),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildPendingApprovals(org),
-                              const SizedBox(height: AppSpacing.lg),
-                              _buildRecentActivity(org),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Column(
-                      children: [
-                        _buildKpiSection(org),
-                        const SizedBox(height: AppSpacing.lg),
-                        _buildPendingApprovals(org),
-                        const SizedBox(height: AppSpacing.lg),
-                        _buildUpcomingEvents(org),
-                        const SizedBox(height: AppSpacing.lg),
-                        _buildRecentActivity(org),
-                      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 1024;
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildOrgHeader(context, org, activeRole?.roleName ?? 'Member'),
+              const SizedBox(height: AppSpacing.xl),
+              
+              if (isDesktop) 
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildKpiSection(org, activeRole?.roleName),
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildUpcomingEvents(org),
+                        ],
+                      ),
                     ),
-                ],
-              ),
-            );
-          },
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPendingApprovals(org),
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildRecentActivity(org),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    _buildKpiSection(org, activeRole?.roleName),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildPendingApprovals(org),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildUpcomingEvents(org),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildRecentActivity(org),
+                  ],
+                ),
+            ],
+          ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('Error loading dashboard: $err')),
     );
   }
 
-  Widget _buildOrgHeader(BuildContext context, dynamic org) {
+  Widget _buildOrgHeader(BuildContext context, dynamic org, String roleName) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -165,7 +160,7 @@ class GovernorDashboardView extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              org.type.replaceAll('-', ' ').toUpperCase(),
+                              roleName.toUpperCase(),
                               style: AppTextStyles.labelSmall.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -174,26 +169,13 @@ class GovernorDashboardView extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '• AY 2025-2026',
+                            '• ${org.type.replaceAll('-', ' ').toUpperCase()}',
                             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
                           ),
                         ],
                       ),
                     ],
                   ),
-                ),
-                Column(
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Edit Organization'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF041E42), // Royal Blue
-                        foregroundColor: const Color(0xFFC5A059), // Gold
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -203,7 +185,9 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiSection(dynamic org) {
+  Widget _buildKpiSection(dynamic org, String? roleName) {
+    final bool isOfficer = roleName != null && roleName != 'Student';
+
     return GridView.count(
       crossAxisCount: 3,
       shrinkWrap: true,
@@ -212,15 +196,22 @@ class GovernorDashboardView extends ConsumerWidget {
       mainAxisSpacing: AppSpacing.md,
       childAspectRatio: 1.5,
       children: [
-        _buildKpiCard('Total Members', '124', Icons.people_outline_rounded, Colors.blue),
-        _buildKpiCard('Active Officers', '12', Icons.admin_panel_settings_outlined, Colors.orange),
-        _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
-        _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
-        _buildKpiCard('Upcoming Events', '3', Icons.event_outlined, Colors.purple),
-        _buildKpiCard('Pending Requests', '7', Icons.pending_actions_rounded, Colors.red),
+        if (isOfficer) ...[
+          _buildKpiCard('Total Members', '124', Icons.people_outline_rounded, Colors.blue),
+          _buildKpiCard('Active Officers', '12', Icons.admin_panel_settings_outlined, Colors.orange),
+          _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
+          _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
+          _buildKpiCard('Upcoming Events', '3', Icons.event_outlined, Colors.purple),
+          _buildKpiCard('Pending Requests', '7', Icons.pending_actions_rounded, Colors.red),
+        ] else ...[
+          _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
+          _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
+          _buildKpiCard('Events Attended', '15', Icons.event_available_rounded, Colors.blue),
+        ],
       ],
     );
   }
+
 
   Widget _buildKpiCard(String label, String value, IconData icon, Color color) {
     return Container(

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/sidebar/app_sidebar.dart';
-import '../widgets/sidebar/governor_sidebar.dart';
+import '../widgets/sidebar/dynamic_sidebar.dart';
 import '../widgets/navbar/profile_dropdown.dart';
-import '../../features/auth/providers/auth_provider.dart';
+import '../../features/organizations/providers/workspace_provider.dart';
 
 class DashboardLayout extends ConsumerWidget {
   final Widget child;
@@ -19,19 +18,30 @@ class DashboardLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userProfile = ref.watch(userProfileProvider).value;
-    final isGovernor = userProfile?.role == 'governor';
+    final workspace = ref.watch(workspaceProvider);
+    final selectedOrg = workspace.selectedOrganization;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title),
+            if (selectedOrg != null)
+              Text(
+                '${selectedOrg.name} • ${workspace.activeRole?.roleName ?? 'Member'}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+          ],
+        ),
         actions: [
           if (actions != null) ...actions!,
           const ProfileDropdown(),
         ],
       ),
-      drawer: isGovernor ? const GovernorSidebar() : const AppSidebar(),
+      drawer: const DynamicSidebar(),
       body: child,
     );
   }
 }
+

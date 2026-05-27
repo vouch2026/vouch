@@ -13,6 +13,7 @@ class RoutePaths {
   static const String elections = '/elections';
   static const String finance = '/finance';
   static const String announcements = '/announcements';
+  static const String notifications = '/notifications';
   static const String activityCard = '/activity-card';
   static const String profile = '/profile';
   static const String settings = '/settings';

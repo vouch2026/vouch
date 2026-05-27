@@ -15,9 +15,9 @@ final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) asyn
 });
 
 final userOrganizationsProvider = FutureProvider<List<OrganizationModel>>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return [];
-  return ref.watch(organizationRepositoryProvider).getUserOrganizations(user.id);
+  final userProfile = ref.watch(userProfileProvider).value;
+  if (userProfile == null || userProfile.id == null) return [];
+  return ref.watch(organizationRepositoryProvider).getUserOrganizations(userProfile.id!);
 });
 
 final organizationProvider = FutureProvider.family<OrganizationModel?, String>((ref, id) async {
