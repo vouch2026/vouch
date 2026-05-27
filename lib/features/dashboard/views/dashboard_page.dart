@@ -21,14 +21,18 @@ class DashboardPage extends ConsumerWidget {
     final selectedOrg = workspace.selectedOrganization;
 
     return userProfileAsync.when(
-      data: (profile) => DashboardLayout(
-        key: ValueKey(selectedOrg?.id ?? 'global'),
-        title: selectedOrg != null ? 'Workspace Command Center' : 'Main Dashboard',
-        child: workspace.isLoading 
-            ? const Center(child: CircularProgressIndicator())
-            : selectedOrg != null 
-                ? const GovernorDashboardView()
-                : LayoutBuilder(
+      data: (profile) {
+        final isSuperAdmin = profile?.role == 'super_admin';
+        final showGovernorView = selectedOrg != null && !isSuperAdmin;
+
+        return DashboardLayout(
+          key: ValueKey(isSuperAdmin ? 'admin' : (selectedOrg?.id ?? 'global')),
+          title: showGovernorView ? 'Workspace Command Center' : 'Main Dashboard',
+          child: workspace.isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : showGovernorView 
+                  ? const GovernorDashboardView()
+                  : LayoutBuilder(
                     builder: (context, constraints) {
                       final isDesktop = constraints.maxWidth >= 1024;
 
@@ -92,7 +96,8 @@ class DashboardPage extends ConsumerWidget {
                       );
                     },
                   ),
-      ),
+        );
+      },
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );

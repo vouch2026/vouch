@@ -16,6 +16,7 @@ class RouteNames {
   static const String notifications = 'notifications';
   static const String activityCard = 'activity-card';
   static const String profile = 'profile';
+  static const String help = 'help';
   static const String emailVerification = 'email-verification';
   static const String resetPassword = 'reset-password';
   static const String changeEmail = 'change-email';

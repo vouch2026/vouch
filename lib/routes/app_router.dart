@@ -115,6 +115,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
       ),
       GoRoute(
+        path: RoutePaths.help,
+        name: RouteNames.help,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Help & Support'),
+      ),
+      GoRoute(
         path: RoutePaths.academicStructure,
         name: RouteNames.academicStructure,
         builder: (context, state) => const AcademicStructurePage(),

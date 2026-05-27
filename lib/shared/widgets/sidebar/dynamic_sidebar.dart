@@ -35,7 +35,7 @@ class DynamicSidebar extends ConsumerWidget {
           Column(
             children: [
               _buildSidebarHeader(),
-              const OrganizationSwitcher(),
+              if (!isSuperAdmin) const OrganizationSwitcher(),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
@@ -62,7 +62,25 @@ class DynamicSidebar extends ConsumerWidget {
                       path: RoutePaths.notifications,
                     ),
 
-                    if (selectedOrg != null) ...[
+                    if (isSuperAdmin) ...[
+                      const _SectionDivider(),
+                      const _SidebarHeader(label: 'SYSTEM ADMINISTRATION'),
+                      const _SidebarItem(
+                        icon: Icons.account_tree_outlined,
+                        label: 'Academic Structure',
+                        path: RoutePaths.academicStructure,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.people_outline_rounded,
+                        label: 'All Users',
+                        path: RoutePaths.users,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.how_to_vote_rounded,
+                        label: 'Global Elections',
+                        path: RoutePaths.comselecDashboard,
+                      ),
+                    ] else if (selectedOrg != null) ...[
                       const _SectionDivider(),
                       _SidebarHeader(label: 'WORKSPACE: ${selectedOrg.code}'),
                       const _SidebarItem(
@@ -109,33 +127,15 @@ class DynamicSidebar extends ConsumerWidget {
                         label: 'Settings',
                         path: RoutePaths.governorSettings,
                       ),
-                    ] else if (isSuperAdmin) ...[
-                      const _SectionDivider(),
-                      const _SidebarHeader(label: 'SYSTEM ADMINISTRATION'),
-                      const _SidebarItem(
-                        icon: Icons.account_tree_outlined,
-                        label: 'Academic Structure',
-                        path: RoutePaths.academicStructure,
-                      ),
-                      const _SidebarItem(
-                        icon: Icons.people_outline_rounded,
-                        label: 'All Users',
-                        path: RoutePaths.users,
-                      ),
-                      const _SidebarItem(
-                        icon: Icons.how_to_vote_rounded,
-                        label: 'Global Elections',
-                        path: RoutePaths.comselecDashboard,
-                      ),
                     ],
                   ],
                 ),
               ),
               const Divider(height: 1),
               const _SidebarItem(
-                icon: Icons.person_outline_rounded,
-                label: 'My Profile',
-                path: RoutePaths.profile,
+                icon: Icons.help_outline_rounded,
+                label: 'Help & Support',
+                path: RoutePaths.help,
               ),
               const _SidebarItem(
                 icon: Icons.settings_outlined,
@@ -153,7 +153,7 @@ class DynamicSidebar extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version 2.0.0 (Contextual)',
+                      'Version 2.0.0 (Beta)',
                       style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.grey.shade400,
                         fontSize: 10,
