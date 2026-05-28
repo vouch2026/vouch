@@ -116,11 +116,6 @@ class DynamicSidebar extends ConsumerWidget {
                         label: 'Announcements',
                         path: RoutePaths.governorAnnouncements,
                       ),
-                      const _SidebarItem(
-                        icon: Icons.settings_outlined,
-                        label: 'Settings',
-                        path: RoutePaths.governorSettings,
-                      ),
                     ],
                   ],
                 ),

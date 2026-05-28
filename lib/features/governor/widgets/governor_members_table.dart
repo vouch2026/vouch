@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -17,7 +18,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'john.doe@university.edu.ph',
         'program': 'BSIT',
         'year': '3rd Year',
-        'status': 'Active',
+        'role': 'Governor',
         'joined': 'Aug 15, 2023',
       },
       {
@@ -26,7 +27,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'jane.smith@university.edu.ph',
         'program': 'BSCS',
         'year': '2nd Year',
-        'status': 'Active',
+        'role': 'Treasurer',
         'joined': 'Sep 02, 2023',
       },
       {
@@ -35,7 +36,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'm.chen@university.edu.ph',
         'program': 'BSIT',
         'year': '1st Year',
-        'status': 'Pending',
+        'role': 'Member',
         'joined': 'Jan 10, 2024',
       },
       {
@@ -44,7 +45,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 's.johnson@university.edu.ph',
         'program': 'BSBA',
         'year': '4th Year',
-        'status': 'Active',
+        'role': 'Officer',
         'joined': 'Aug 20, 2022',
       },
       {
@@ -53,7 +54,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'd.wilson@university.edu.ph',
         'program': 'BSCrim',
         'year': '3rd Year',
-        'status': 'Inactive',
+        'role': 'Member',
         'joined': 'Oct 12, 2023',
       },
       {
@@ -62,7 +63,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'e.davis@university.edu.ph',
         'program': 'BSIT',
         'year': '1st Year',
-        'status': 'Active',
+        'role': 'Member',
         'joined': 'Jan 15, 2024',
       },
       {
@@ -71,7 +72,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'r.brown@university.edu.ph',
         'program': 'BSCS',
         'year': '2nd Year',
-        'status': 'Active',
+        'role': 'Member',
         'joined': 'Aug 28, 2023',
       },
       {
@@ -80,7 +81,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 's.garcia@university.edu.ph',
         'program': 'BSBA',
         'year': '4th Year',
-        'status': 'Active',
+        'role': 'Member',
         'joined': 'Aug 18, 2022',
       },
       {
@@ -89,7 +90,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'j.miller@university.edu.ph',
         'program': 'BSIT',
         'year': '1st Year',
-        'status': 'Pending',
+        'role': 'Member',
         'joined': 'Feb 05, 2024',
       },
       {
@@ -98,7 +99,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'i.martinez@university.edu.ph',
         'program': 'BSCrim',
         'year': '3rd Year',
-        'status': 'Active',
+        'role': 'Member',
         'joined': 'Sep 15, 2023',
       },
     ];
@@ -119,7 +120,7 @@ class GovernorMembersTable extends StatelessWidget {
               DataColumn(label: Text('Student ID')),
               DataColumn(label: Text('Program & Year')),
               DataColumn(label: Text('Joined Date')),
-              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Role')),
               DataColumn(label: Text('Actions')),
             ],
             rows: mockMembers.map((member) {
@@ -151,7 +152,7 @@ class GovernorMembersTable extends StatelessWidget {
                   DataCell(Text(member['id'], style: AppTextStyles.bodySmall)),
                   DataCell(Text('${member['program']} - ${member['year']}', style: AppTextStyles.bodySmall)),
                   DataCell(Text(member['joined'], style: AppTextStyles.bodySmall)),
-                  DataCell(_StatusBadge(status: member['status'])),
+                  DataCell(_RoleBadge(role: member['role'])),
                   DataCell(
                     IconButton(
                       icon: const Icon(Icons.more_vert_rounded, size: 20),
@@ -187,22 +188,25 @@ class GovernorMembersTable extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  final String status;
-  const _StatusBadge({required this.status});
+class _RoleBadge extends StatelessWidget {
+  final String role;
+  const _RoleBadge({required this.role});
 
   @override
   Widget build(BuildContext context) {
     Color color;
-    switch (status.toLowerCase()) {
-      case 'active':
-        color = Colors.green;
+    switch (role.toLowerCase()) {
+      case 'governor':
+        color = AppColors.primary;
         break;
-      case 'pending':
+      case 'treasurer':
         color = Colors.orange;
         break;
-      case 'inactive':
-        color = Colors.red;
+      case 'officer':
+        color = Colors.blue;
+        break;
+      case 'member':
+        color = Colors.green;
         break;
       default:
         color = Colors.grey;
@@ -216,7 +220,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Text(
-        status.toUpperCase(),
+        role.toUpperCase(),
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );

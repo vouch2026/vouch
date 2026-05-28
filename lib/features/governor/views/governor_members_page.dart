@@ -78,12 +78,11 @@ class GovernorMembersPage extends ConsumerWidget {
                   ],
                 ),
                 FilterOption(
-                  label: 'Status',
-                  key: 'status',
+                  label: 'Role',
+                  key: 'role',
                   options: [
-                    FilterValue(label: 'Active', value: 'active'),
-                    FilterValue(label: 'Inactive', value: 'inactive'),
-                    FilterValue(label: 'Pending', value: 'pending'),
+                    FilterValue(label: 'Officer', value: 'officer'),
+                    FilterValue(label: 'Member', value: 'member'),
                   ],
                 ),
               ],
