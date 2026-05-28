@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../providers/auth_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/providers/storage_provider.dart';
 
 class AuthController extends AsyncNotifier<void> {
@@ -21,6 +22,7 @@ class AuthController extends AsyncNotifier<void> {
         ));
     if (!result.hasError) {
       ref.invalidate(userProfileProvider);
+      ref.invalidate(workspaceProvider);
     }
     state = result;
   }
@@ -110,8 +112,10 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<void> signOut() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _repository.signOut());
+    await _repository.signOut();
     ref.invalidate(userProfileProvider);
+    ref.invalidate(workspaceProvider);
+    state = const AsyncData(null);
   }
 }
 

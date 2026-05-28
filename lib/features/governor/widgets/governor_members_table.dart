@@ -36,7 +36,7 @@ class GovernorMembersTable extends StatelessWidget {
         'email': 'm.chen@university.edu.ph',
         'program': 'BSIT',
         'year': '1st Year',
-        'role': 'Member',
+        'role': 'Staff',
         'joined': 'Jan 10, 2024',
       },
       {
@@ -154,10 +154,7 @@ class GovernorMembersTable extends StatelessWidget {
                   DataCell(Text(member['joined'], style: AppTextStyles.bodySmall)),
                   DataCell(_RoleBadge(role: member['role'])),
                   DataCell(
-                    IconButton(
-                      icon: const Icon(Icons.more_vert_rounded, size: 20),
-                      onPressed: () {},
-                    ),
+                    _buildMemberActions(context, member),
                   ),
                 ],
               );
@@ -186,6 +183,115 @@ class GovernorMembersTable extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildMemberActions(BuildContext context, Map<String, dynamic> member) {
+    final role = member['role'].toString().toLowerCase();
+    final isStaff = role == 'staff';
+    final isMember = role == 'member';
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, size: 20),
+      onSelected: (value) {
+        if (value == 'promote_staff') {
+          _showPromotionDialog(context, member, true);
+        } else if (value == 'demote_staff') {
+          _showPromotionDialog(context, member, false);
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'view',
+          child: Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('View Profile'),
+            ],
+          ),
+        ),
+        if (isMember)
+          const PopupMenuItem(
+            value: 'promote_staff',
+            child: Row(
+              children: [
+                Icon(Icons.admin_panel_settings_outlined, size: 18, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Promote to Staff'),
+              ],
+            ),
+          ),
+        if (isStaff)
+          const PopupMenuItem(
+            value: 'demote_staff',
+            child: Row(
+              children: [
+                Icon(Icons.person_remove_outlined, size: 18, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Demote from Staff'),
+              ],
+            ),
+          ),
+        const PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('Edit Details'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: 'remove',
+          child: Row(
+            children: [
+              Icon(Icons.person_off_outlined, size: 18, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Remove from Org', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPromotionDialog(BuildContext context, Map<String, dynamic> member, bool isPromoting) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isPromoting ? 'Promote to Staff' : 'Demote from Staff'),
+        content: Text(
+          isPromoting
+              ? 'Are you sure you want to promote ${member['name']} to Event Staff? They will be able to scan QR codes during organization events.'
+              : 'Are you sure you want to demote ${member['name']} from Event Staff? They will no longer have scanning privileges.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Implementation would update the state/provider
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${member['name']} successfully ${isPromoting ? 'promoted' : 'demoted'}.'),
+                  backgroundColor: isPromoting ? Colors.green : Colors.blue,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isPromoting ? AppColors.primary : Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(isPromoting ? 'Confirm Promotion' : 'Confirm Demotion'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RoleBadge extends StatelessWidget {
@@ -204,6 +310,9 @@ class _RoleBadge extends StatelessWidget {
         break;
       case 'officer':
         color = Colors.blue;
+        break;
+      case 'staff':
+        color = Colors.purple;
         break;
       case 'member':
         color = Colors.green;

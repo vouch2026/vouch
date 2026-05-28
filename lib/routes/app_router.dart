@@ -7,6 +7,8 @@ import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
+import '../features/activity_cards/views/activity_cards_dashboard_page.dart';
+import '../features/activity_cards/views/activity_card_details_page.dart';
 import '../features/organizations/views/organizations_page.dart';
 import '../features/organizations/views/organization_details_page.dart';
 import '../features/campuses/views/campuses_page.dart';
@@ -31,6 +33,8 @@ import '../features/governor/views/governor_events_page.dart';
 import '../features/governor/views/governor_announcements_page.dart';
 import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
+import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
+import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 
@@ -80,9 +84,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.dashboard;
       }
 
-      // Redirect if accessing governor routes without a selected organization
+      // Redirect if accessing workspace routes without a selected organization
       final workspace = ref.read(workspaceProvider);
-      if (state.matchedLocation.startsWith('/governor') && workspace.selectedOrganization == null) {
+      if (state.matchedLocation.startsWith('/workspace') && workspace.selectedOrganization == null) {
         return RoutePaths.dashboard;
       }
 
@@ -127,6 +131,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.notifications,
         name: RouteNames.notifications,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
+      ),
+      GoRoute(
+        path: RoutePaths.activityCards,
+        name: RouteNames.activityCards,
+        builder: (context, state) => const ActivityCardsDashboardPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.activityCardDetails,
+        name: RouteNames.activityCardDetails,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ActivityCardDetailsPage(id: id);
+        },
       ),
       GoRoute(
         path: RoutePaths.aboutUs,
@@ -249,85 +266,98 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ComselecOfficialsPage(),
       ),
 
-      // Governor Routes
+      // Workspace Routes
       GoRoute(
-        path: RoutePaths.governorMembers,
-        name: RouteNames.governorMembers,
+        path: RoutePaths.workspaceMembers,
+        name: RouteNames.workspaceMembers,
         builder: (context, state) => const GovernorMembersPage(),
       ),
       GoRoute(
-        path: RoutePaths.governorOfficers,
-        name: RouteNames.governorOfficers,
+        path: RoutePaths.workspaceOfficers,
+        name: RouteNames.workspaceOfficers,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Officers'),
       ),
       GoRoute(
-        path: RoutePaths.governorEvents,
-        name: RouteNames.governorEvents,
+        path: RoutePaths.workspaceEvents,
+        name: RouteNames.workspaceEvents,
         builder: (context, state) => const GovernorEventsPage(),
       ),
       GoRoute(
-        path: RoutePaths.governorAttendance,
-        name: RouteNames.governorAttendance,
+        path: RoutePaths.workspaceAttendance,
+        name: RouteNames.workspaceAttendance,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Attendance'),
       ),
       GoRoute(
-        path: RoutePaths.governorAnnouncements,
-        name: RouteNames.governorAnnouncements,
+        path: RoutePaths.workspaceAnnouncements,
+        name: RouteNames.workspaceAnnouncements,
         builder: (context, state) => const GovernorAnnouncementsPage(),
       ),
       GoRoute(
-        path: RoutePaths.governorDocuments,
-        name: RouteNames.governorDocuments,
+        path: RoutePaths.workspaceDocuments,
+        name: RouteNames.workspaceDocuments,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Documents'),
       ),
       GoRoute(
-        path: RoutePaths.governorFees,
-        name: RouteNames.governorFees,
+        path: RoutePaths.workspaceFees,
+        name: RouteNames.workspaceFees,
         builder: (context, state) => const GovernorFinancePage(),
       ),
       GoRoute(
-        path: RoutePaths.governorCollections,
-        name: RouteNames.governorCollections,
+        path: RoutePaths.workspaceCollections,
+        name: RouteNames.workspaceCollections,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Collections'),
       ),
       GoRoute(
-        path: RoutePaths.governorFinanceReports,
-        name: RouteNames.governorFinanceReports,
+        path: RoutePaths.workspaceFinanceReports,
+        name: RouteNames.workspaceFinanceReports,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Financial Reports'),
       ),
       GoRoute(
-        path: RoutePaths.governorElections,
-        name: RouteNames.governorElections,
+        path: RoutePaths.workspaceElections,
+        name: RouteNames.workspaceElections,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Elections'),
       ),
       GoRoute(
-        path: RoutePaths.governorCompliance,
-        name: RouteNames.governorCompliance,
+        path: RoutePaths.workspaceCompliance,
+        name: RouteNames.workspaceCompliance,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Compliance'),
       ),
       GoRoute(
-        path: RoutePaths.governorSanctions,
-        name: RouteNames.governorSanctions,
+        path: RoutePaths.workspaceSanctions,
+        name: RouteNames.workspaceSanctions,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Sanctions'),
       ),
       GoRoute(
-        path: RoutePaths.governorParticipation,
-        name: RouteNames.governorParticipation,
+        path: RoutePaths.workspaceParticipation,
+        name: RouteNames.workspaceParticipation,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Participation Analytics'),
       ),
       GoRoute(
-        path: RoutePaths.governorAttendanceAnalytics,
-        name: RouteNames.governorAttendanceAnalytics,
+        path: RoutePaths.workspaceAttendanceAnalytics,
+        name: RouteNames.workspaceAttendanceAnalytics,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Attendance Analytics'),
       ),
       GoRoute(
-        path: RoutePaths.governorFinancialAnalytics,
-        name: RouteNames.governorFinancialAnalytics,
+        path: RoutePaths.workspaceFinancialAnalytics,
+        name: RouteNames.workspaceFinancialAnalytics,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Analytics'),
       ),
       GoRoute(
-        path: RoutePaths.governorSettings,
-        name: RouteNames.governorSettings,
+        path: RoutePaths.workspaceActivityCards,
+        name: RouteNames.workspaceActivityCards,
+        builder: (context, state) => const GovernorActivityCardsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceActivityCardDetails,
+        name: RouteNames.workspaceActivityCardDetails,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return GovernorActivityCardReviewPage(id: id);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceSettings,
+        name: RouteNames.workspaceSettings,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Settings'),
       ),
     ],

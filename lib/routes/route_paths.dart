@@ -14,7 +14,8 @@ class RoutePaths {
   static const String finance = '/finance';
   static const String announcements = '/announcements';
   static const String notifications = '/notifications';
-  static const String activityCard = '/activity-card';
+  static const String activityCards = '/activity-cards';
+  static const String activityCardDetails = '/activity-cards/:id';
   static const String profile = '/profile';
   static const String aboutUs = '/about-us';
   static const String help = '/help';
@@ -41,21 +42,23 @@ class RoutePaths {
   static const String comselecAnalytics = '/comselec/analytics';
   static const String comselecOfficials = '/comselec/officials';
 
-  // Governor Routes
-  static const String governorMembers = '/governor/members';
-  static const String governorOfficers = '/governor/officers';
-  static const String governorEvents = '/governor/events';
-  static const String governorAttendance = '/governor/attendance';
-  static const String governorAnnouncements = '/governor/announcements';
-  static const String governorDocuments = '/governor/documents';
-  static const String governorFees = '/governor/fees';
-  static const String governorCollections = '/governor/collections';
-  static const String governorFinanceReports = '/governor/finance-reports';
-  static const String governorElections = '/governor/elections';
-  static const String governorCompliance = '/governor/compliance';
-  static const String governorSanctions = '/governor/sanctions';
-  static const String governorParticipation = '/governor/participation';
-  static const String governorAttendanceAnalytics = '/governor/attendance-analytics';
-  static const String governorFinancialAnalytics = '/governor/financial-analytics';
-  static const String governorSettings = '/governor/settings';
+  // Workspace Routes
+  static const String workspaceMembers = '/workspace/members';
+  static const String workspaceOfficers = '/workspace/officers';
+  static const String workspaceEvents = '/workspace/events';
+  static const String workspaceAttendance = '/workspace/attendance';
+  static const String workspaceAnnouncements = '/workspace/announcements';
+  static const String workspaceDocuments = '/workspace/documents';
+  static const String workspaceFees = '/workspace/fees';
+  static const String workspaceCollections = '/workspace/collections';
+  static const String workspaceFinanceReports = '/workspace/finance-reports';
+  static const String workspaceElections = '/workspace/elections';
+  static const String workspaceCompliance = '/workspace/compliance';
+  static const String workspaceSanctions = '/workspace/sanctions';
+  static const String workspaceParticipation = '/workspace/participation';
+  static const String workspaceAttendanceAnalytics = '/workspace/attendance-analytics';
+  static const String workspaceFinancialAnalytics = '/workspace/financial-analytics';
+  static const String workspaceActivityCards = '/workspace/activity-cards';
+  static const String workspaceActivityCardDetails = '/workspace/activity-cards/:id';
+  static const String workspaceSettings = '/workspace/settings';
 }

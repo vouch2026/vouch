@@ -24,7 +24,15 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
   final OrganizationRepository _repository;
   final Ref _ref;
 
-  WorkspaceNotifier(this._repository, this._ref) : super(const WorkspaceState());
+  WorkspaceNotifier(this._repository, this._ref) : super(const WorkspaceState()) {
+    // Listen to auth state changes to reset workspace when user logs out
+    _ref.listen(authStateProvider, (previous, next) {
+      final session = next.value?.session;
+      if (session == null) {
+        state = const WorkspaceState();
+      }
+    });
+  }
 
   Future<void> selectOrganization(OrganizationModel? org) async {
     if (org == null) {
@@ -35,32 +43,40 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
     state = state.copyWith(isLoading: true, selectedOrganization: org);
     
     try {
-      final profile = _ref.read(userProfileProvider).value;
+      final profile = await _ref.read(userProfileProvider.future);
       if (profile == null || profile.id == null) {
         state = state.copyWith(isLoading: false);
         return;
       }
 
       final memberships = await _repository.getOrganizationOfficers(org.id);
-      final myMembership = memberships.firstWhere(
-        (m) => m.userId == profile.id,
-        orElse: () => OrganizationMembershipModel(
-          id: '',
-          organizationId: org.id,
-          userId: profile.id!,
-          status: 'active',
-        ),
-      );
+      
+      // Filter all memberships for this user
+      final myMemberships = memberships.where((m) => m.userId == profile.id).toList();
+      
+      OrganizationMembershipModel? activeMembership;
+      if (myMemberships.isNotEmpty) {
+        // Sort by hierarchy level descending (highest role first)
+        myMemberships.sort((a, b) => (b.hierarchyLevel ?? 0).compareTo(a.hierarchyLevel ?? 0));
+        activeMembership = myMemberships.first;
+      }
 
       AppRole? role;
-      if (myMembership.roleName != null) {
+      if (activeMembership?.roleName != null) {
         role = AppRole(
-          roleName: myMembership.roleName!,
-          hierarchyLevel: myMembership.hierarchyLevel ?? 0,
+          roleName: activeMembership!.roleName!,
+          hierarchyLevel: activeMembership.hierarchyLevel ?? 0,
           scopeType: org.type,
           permissions: [], 
         );
       } else {
+        // Fallback to basic membership if not an officer
+        activeMembership = OrganizationMembershipModel(
+          id: '',
+          organizationId: org.id,
+          userId: profile.id!,
+          status: 'active',
+        );
         role = AppRole(
           roleName: 'Student',
           hierarchyLevel: 5,
@@ -70,7 +86,7 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       }
 
       state = state.copyWith(
-        activeMembership: myMembership,
+        activeMembership: activeMembership,
         activeRole: role,
         isLoading: false,
       );

@@ -61,6 +61,11 @@ class DynamicSidebar extends ConsumerWidget {
                       label: 'Notifications',
                       path: RoutePaths.notifications,
                     ),
+                    const _SidebarItem(
+                      icon: Icons.badge_outlined,
+                      label: 'Activity Cards',
+                      path: RoutePaths.activityCards,
+                    ),
 
                     if (isSuperAdmin) ...[
                       const _SectionDivider(),
@@ -88,33 +93,38 @@ class DynamicSidebar extends ConsumerWidget {
                     ] else if (selectedOrg != null) ...[
                       const _SectionDivider(),
                       _SidebarHeader(label: 'WORKSPACE: ${selectedOrg.code}'),
-                      const _SidebarItem(
+                      _SidebarItem(
                         icon: Icons.grid_view_rounded,
-                        label: 'Workspace Home',
+                        label: '${activeRole?.roleName ?? 'Workspace'} Home',
                         path: RoutePaths.dashboard,
                       ),
                       const _SidebarItem(
                         icon: Icons.people_outline_rounded,
                         label: 'Members',
-                        path: RoutePaths.governorMembers,
+                        path: RoutePaths.workspaceMembers,
                       ),
                       const _SidebarItem(
                         icon: Icons.calendar_today_outlined,
                         label: 'Events',
-                        path: RoutePaths.governorEvents,
+                        path: RoutePaths.workspaceEvents,
                       ),
                       
                       if (activeRole?.roleName == 'Governor' || activeRole?.roleName == 'Treasurer')
                         const _SidebarItem(
                           icon: Icons.payments_outlined,
                           label: 'Finance',
-                          path: RoutePaths.governorFees,
+                          path: RoutePaths.workspaceFees,
                         ),
                       
                       const _SidebarItem(
                         icon: Icons.campaign_outlined,
                         label: 'Announcements',
-                        path: RoutePaths.governorAnnouncements,
+                        path: RoutePaths.workspaceAnnouncements,
+                      ),
+                      const _SidebarItem(
+                        icon: Icons.badge_outlined,
+                        label: 'Activity Cards',
+                        path: RoutePaths.workspaceActivityCards,
                       ),
                     ],
                   ],

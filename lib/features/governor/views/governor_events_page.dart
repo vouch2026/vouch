@@ -9,6 +9,8 @@ import '../widgets/governor_event_card.dart';
 import '../widgets/governor_past_event_card.dart';
 import '../widgets/governor_rate_event_card.dart';
 
+import '../../organizations/providers/workspace_provider.dart';
+
 class GovernorEventsPage extends ConsumerStatefulWidget {
   const GovernorEventsPage({super.key});
 
@@ -34,6 +36,9 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole?.roleName;
+    final canCreateEvent = activeRole == 'Governor' || activeRole == 'Secretary';
 
     return DashboardLayout(
       title: 'Organization Events',
@@ -49,12 +54,13 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                     title: 'Events',
                     subtitle: 'Manage organization events, attendance, and feedback',
                     actions: [
-                      HeaderActionButton(
-                        icon: Icons.add_rounded,
-                        label: 'Create Event',
-                        onPressed: () {},
-                        isPrimary: true,
-                      ),
+                      if (canCreateEvent)
+                        HeaderActionButton(
+                          icon: Icons.add_rounded,
+                          label: 'Create Event',
+                          onPressed: () {},
+                          isPrimary: true,
+                        ),
                     ],
                   ),
                 ),

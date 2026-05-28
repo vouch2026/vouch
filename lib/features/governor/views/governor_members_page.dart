@@ -82,6 +82,7 @@ class GovernorMembersPage extends ConsumerWidget {
                   key: 'role',
                   options: [
                     FilterValue(label: 'Officer', value: 'officer'),
+                    FilterValue(label: 'Staff', value: 'staff'),
                     FilterValue(label: 'Member', value: 'member'),
                   ],
                 ),
