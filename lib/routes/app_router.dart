@@ -27,6 +27,8 @@ import '../features/elections/views/election_analytics_page.dart';
 import '../features/elections/views/comselec_officials_page.dart';
 import '../features/academic_structure/views/academic_structure_page.dart';
 import '../features/dashboard/views/governor_module_placeholder.dart';
+import '../features/governor/views/governor_events_page.dart';
+import '../features/governor/views/governor_members_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 
@@ -249,7 +251,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.governorMembers,
         name: RouteNames.governorMembers,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Members'),
+        builder: (context, state) => const GovernorMembersPage(),
       ),
       GoRoute(
         path: RoutePaths.governorOfficers,
@@ -259,7 +261,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.governorEvents,
         name: RouteNames.governorEvents,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Events'),
+        builder: (context, state) => const GovernorEventsPage(),
       ),
       GoRoute(
         path: RoutePaths.governorAttendance,

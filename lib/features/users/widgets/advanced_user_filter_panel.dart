@@ -57,37 +57,40 @@ class _AdvancedUserFilterPanelState extends State<AdvancedUserFilterPanel> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
-                children: widget.filters.map((filter) {
-                  return SizedBox(
-                    width: 200,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(filter.label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        DropdownButtonFormField<dynamic>(
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.md,
+                  children: widget.filters.map((filter) {
+                    return SizedBox(
+                      width: 200,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(filter.label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          DropdownButtonFormField<dynamic>(
+                            decoration: InputDecoration(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            isExpanded: true,
+                            value: _activeFilters[filter.key],
+                            items: [
+                              DropdownMenuItem(value: null, child: Text('All ${filter.label}')),
+                              ...filter.options.map((opt) => DropdownMenuItem(value: opt.value, child: Text(opt.label))),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _activeFilters[filter.key] = val);
+                              widget.onFiltersChanged(_activeFilters);
+                            },
                           ),
-                          isExpanded: true,
-                          value: _activeFilters[filter.key],
-                          items: [
-                            DropdownMenuItem(value: null, child: Text('All ${filter.label}')),
-                            ...filter.options.map((opt) => DropdownMenuItem(value: opt.value, child: Text(opt.label))),
-                          ],
-                          onChanged: (val) {
-                            setState(() => _activeFilters[filter.key] = val);
-                            widget.onFiltersChanged(_activeFilters);
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ),
