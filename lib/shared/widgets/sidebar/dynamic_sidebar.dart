@@ -47,9 +47,9 @@ class DynamicSidebar extends ConsumerWidget {
                       path: RoutePaths.dashboard,
                     ),
                     const _SidebarItem(
-                      icon: Icons.corporate_fare_outlined,
-                      label: 'My Organizations',
-                      path: RoutePaths.organizations,
+                      icon: Icons.payments_outlined,
+                      label: 'My Fees',
+                      path: RoutePaths.fees,
                     ),
                     const _SidebarItem(
                       icon: Icons.event_outlined,
@@ -65,6 +65,11 @@ class DynamicSidebar extends ConsumerWidget {
                     if (isSuperAdmin) ...[
                       const _SectionDivider(),
                       const _SidebarHeader(label: 'SYSTEM ADMINISTRATION'),
+                      const _SidebarItem(
+                        icon: Icons.corporate_fare_outlined,
+                        label: 'My Organizations',
+                        path: RoutePaths.organizations,
+                      ),
                       const _SidebarItem(
                         icon: Icons.account_tree_outlined,
                         label: 'Academic Structure',
@@ -138,9 +143,9 @@ class DynamicSidebar extends ConsumerWidget {
                 path: RoutePaths.help,
               ),
               const _SidebarItem(
-                icon: Icons.settings_outlined,
-                label: 'App Settings',
-                path: RoutePaths.settings,
+                icon: Icons.info_outline_rounded,
+                label: 'About Us',
+                path: RoutePaths.aboutUs,
               ),
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.lg, top: AppSpacing.sm),

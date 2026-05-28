@@ -135,14 +135,13 @@ class ProfileMenuContent extends ConsumerWidget {
             ),
             _buildMenuItem(
               context,
-              icon: Icons.settings_outlined,
-              label: 'App Settings',
+              icon: Icons.info_outline_rounded,
+              label: 'About Us',
               onTap: () {
                 Navigator.of(context).pop();
-                context.push(RoutePaths.settings);
+                context.push(RoutePaths.aboutUs);
               },
-            ),
-            _buildMenuItem(
+            ),            _buildMenuItem(
               context,
               icon: Icons.help_outline_rounded,
               label: 'Support Center',
