@@ -106,7 +106,14 @@ class GovernorDashboardView extends ConsumerWidget {
               width: double.infinity,
               color: AppColors.primary,
               child: org.bannerUrl != null 
-                ? Image.network(org.bannerUrl!, fit: BoxFit.cover)
+                ? Image.network(
+                    org.bannerUrl!, 
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Opacity(
+                      opacity: 0.1,
+                      child: Icon(Icons.hub_rounded, size: 100, color: Colors.white),
+                    ),
+                  )
                 : const Opacity(
                     opacity: 0.1,
                     child: Icon(Icons.hub_rounded, size: 100, color: Colors.white),

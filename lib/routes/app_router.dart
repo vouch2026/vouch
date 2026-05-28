@@ -28,6 +28,7 @@ import '../features/elections/views/comselec_officials_page.dart';
 import '../features/academic_structure/views/academic_structure_page.dart';
 import '../features/dashboard/views/governor_module_placeholder.dart';
 import '../features/governor/views/governor_events_page.dart';
+import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
@@ -281,7 +282,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.governorFees,
         name: RouteNames.governorFees,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Fees'),
+        builder: (context, state) => const GovernorFinancePage(),
       ),
       GoRoute(
         path: RoutePaths.governorCollections,

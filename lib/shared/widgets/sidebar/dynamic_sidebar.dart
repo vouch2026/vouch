@@ -103,23 +103,12 @@ class DynamicSidebar extends ConsumerWidget {
                         label: 'Events',
                         path: RoutePaths.governorEvents,
                       ),
-                      const _SidebarItem(
-                        icon: Icons.how_to_reg_outlined,
-                        label: 'Attendance',
-                        path: RoutePaths.governorAttendance,
-                      ),
                       
                       if (activeRole?.roleName == 'Governor' || activeRole?.roleName == 'Treasurer')
                         const _SidebarItem(
                           icon: Icons.payments_outlined,
                           label: 'Finance',
                           path: RoutePaths.governorFees,
-                        ),
-                      if (activeRole?.roleName == 'Governor' || activeRole?.roleName == 'Auditor')
-                        const _SidebarItem(
-                          icon: Icons.analytics_outlined,
-                          label: 'Analytics',
-                          path: RoutePaths.governorParticipation,
                         ),
                       
                       const _SidebarItem(
@@ -276,7 +265,12 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isSelected = GoRouterState.of(context).matchedLocation == path;
+    bool isSelected = false;
+    try {
+      isSelected = GoRouterState.of(context).matchedLocation == path;
+    } catch (_) {
+      // Fallback or ignore if GoRouterState is not available
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),

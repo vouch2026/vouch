@@ -176,7 +176,16 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
     return Image.network(
       imagePath,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 40)),
+      errorBuilder: (context, error, stackTrace) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.broken_image_outlined, size: 32, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Image error', style: TextStyle(fontSize: 10, color: Colors.grey)),
+          ],
+        ),
+      ),
     );
   }
 }
