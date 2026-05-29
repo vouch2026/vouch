@@ -467,7 +467,7 @@ ALTER TABLE activity_card_clearance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_card_clearance_signatures ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
--- HELPER FUNCTION FOR RBAC
+-- HELPER FUNCTIONS FOR RBAC
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
@@ -479,6 +479,52 @@ WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
 AND r.name = 'Super Admin'
 AND ur.is_active = true
 );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.has_scope_permission(
+    p_action TEXT,
+    p_scope_type public.scope_type,
+    p_scope_id UUID
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    SELECT id INTO v_user_id FROM public.users WHERE auth_id = auth.uid();
+    IF v_user_id IS NULL THEN RETURN FALSE; END IF;
+
+    -- Check Super Admin
+    IF public.is_super_admin() THEN RETURN TRUE; END IF;
+
+    -- Check Organization Members (Officers)
+    IF EXISTS (
+        SELECT 1 FROM public.organization_members om
+        JOIN public.organizations o ON om.organization_id = o.id
+        JOIN public.role_permissions rp ON om.role_id = rp.role_id
+        JOIN public.permissions p ON rp.permission_id = p.id
+        WHERE om.user_id = v_user_id
+        AND p.action = p_action
+        AND om.status = 'active'
+        AND (
+            (o.type = 'campus-based' AND p_scope_type = 'Institutional' AND o.campus_id = p_scope_id) OR
+            (o.type = 'faculty-based' AND p_scope_type = 'Faculty' AND o.faculty_id = p_scope_id) OR
+            (o.type = 'program-based' AND p_scope_type = 'Program' AND o.program_id = p_scope_id)
+        )
+    ) THEN RETURN TRUE; END IF;
+
+    -- Check User Roles (System-wide roles like Dean, Program Head)
+    IF EXISTS (
+        SELECT 1 FROM public.user_roles ur
+        JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+        JOIN public.permissions p ON rp.permission_id = p.id
+        WHERE ur.user_id = v_user_id
+        AND p.action = p_action
+        AND ur.scope_type = p_scope_type
+        AND ur.scope_id = p_scope_id
+        AND ur.is_active = true
+    ) THEN RETURN TRUE; END IF;
+
+    RETURN FALSE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -521,152 +567,34 @@ CREATE POLICY "Super admins can manage organization memberships" ON organization
 -- Events
 CREATE POLICY "Events are viewable by everyone" ON events FOR SELECT USING (true);
 CREATE POLICY "Officers can create events" ON events FOR INSERT TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = events.scope_type
-    AND ur.scope_id = events.scope_id
-    AND p.action = 'create_event'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+WITH CHECK (public.has_scope_permission('create_event', events.scope_type, events.scope_id));
 CREATE POLICY "Officers can update events" ON events FOR UPDATE TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = events.scope_type
-    AND ur.scope_id = events.scope_id
-    AND p.action = 'edit_event'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('edit_event', events.scope_type, events.scope_id));
 CREATE POLICY "Officers can delete events" ON events FOR DELETE TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = events.scope_type
-    AND ur.scope_id = events.scope_id
-    AND p.action = 'delete_event'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('delete_event', events.scope_type, events.scope_id));
 
 -- Announcements
 CREATE POLICY "Announcements are viewable by everyone" ON announcements FOR SELECT USING (true);
 CREATE POLICY "Officers can create announcements" ON announcements FOR INSERT TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = announcements.scope_type
-    AND ur.scope_id = announcements.scope_id
-    AND p.action = 'create_announcement'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+WITH CHECK (public.has_scope_permission('create_announcement', announcements.scope_type, announcements.scope_id));
 CREATE POLICY "Officers can update announcements" ON announcements FOR UPDATE TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = announcements.scope_type
-    AND ur.scope_id = announcements.scope_id
-    AND p.action = 'edit_announcement'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('edit_announcement', announcements.scope_type, announcements.scope_id));
 CREATE POLICY "Officers can delete announcements" ON announcements FOR DELETE TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = announcements.scope_type
-    AND ur.scope_id = announcements.scope_id
-    AND p.action = 'delete_announcement'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('delete_announcement', announcements.scope_type, announcements.scope_id));
 
 -- Fees
 CREATE POLICY "Fees are viewable by everyone" ON fees FOR SELECT USING (true);
 CREATE POLICY "Officers can create fees" ON fees FOR INSERT TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = fees.scope_type
-    AND ur.scope_id = fees.scope_id
-    AND p.action = 'create_fee'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+WITH CHECK (public.has_scope_permission('create_fee', fees.scope_type, fees.scope_id));
 CREATE POLICY "Officers can update fees" ON fees FOR UPDATE TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = fees.scope_type
-    AND ur.scope_id = fees.scope_id
-    AND p.action = 'edit_fee'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('edit_fee', fees.scope_type, fees.scope_id));
 CREATE POLICY "Officers can delete fees" ON fees FOR DELETE TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND ur.scope_type = fees.scope_type
-    AND ur.scope_id = fees.scope_id
-    AND p.action = 'delete_fee'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('delete_fee', fees.scope_type, fees.scope_id));
 
 -- Payment Receivers
 CREATE POLICY "Payment receivers are viewable by everyone" ON payment_receiver FOR SELECT USING (true);
 CREATE POLICY "Officers can manage payment receivers" ON payment_receiver FOR ALL TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
-    JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-    AND p.action = 'manage_payment_receivers'
-    AND ur.is_active = true
-  )
-  OR public.is_super_admin()
-);
+USING (public.has_scope_permission('manage_payment_receivers', payment_receiver.scope_type, payment_receiver.scope_id));
 
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES
