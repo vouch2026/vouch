@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../events/models/event_model.dart';
 
 class GovernorEventCard extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final EventModel event;
 
   const GovernorEventCard({super.key, required this.event});
 
@@ -45,9 +47,9 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
                     height: 160,
                     width: double.infinity,
                     color: theme.colorScheme.surfaceVariant,
-                    child: _buildEventImage(widget.event['image'] as String?),
+                    child: _buildEventImage(widget.event.imageUrl),
                   ),
-                  if (widget.event['isObligatory'] == true)
+                  if (widget.event.isMandatory)
                     Positioned(
                       top: 12,
                       right: 12,
@@ -65,7 +67,7 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
                           ],
                         ),
                         child: Text(
-                          'OBLIGATORY',
+                          'MANDATORY',
                           style: AppTextStyles.labelSmall.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -83,7 +85,7 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.event['name'] ?? 'Event',
+                        widget.event.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.titleMedium.copyWith(
@@ -97,7 +99,7 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
                           Icon(Icons.calendar_today_outlined, size: 14, color: theme.colorScheme.primary),
                           const SizedBox(width: AppSpacing.sm),
                           Text(
-                            widget.event['date'] ?? '',
+                            DateFormat.yMMMMd().format(widget.event.eventDate),
                             style: AppTextStyles.labelMedium.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w600,
@@ -106,9 +108,9 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
                         ],
                       ),
                       const Spacer(),
-                      _buildInfoRow(context, Icons.login_rounded, 'Time in:', widget.event['timeIn'] ?? '-'),
+                      _buildInfoRow(context, Icons.login_rounded, 'Time in:', '${widget.event.timeInStart} - ${widget.event.timeInEnd}'),
                       const SizedBox(height: AppSpacing.xs),
-                      _buildInfoRow(context, Icons.logout_rounded, 'Time out:', widget.event['timeOut'] ?? '-'),
+                      _buildInfoRow(context, Icons.logout_rounded, 'Time out:', '${widget.event.timeOutStart} - ${widget.event.timeOutEnd}'),
                       const SizedBox(height: AppSpacing.md),
                       SizedBox(
                         width: double.infinity,

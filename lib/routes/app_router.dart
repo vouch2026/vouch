@@ -30,6 +30,7 @@ import '../features/elections/views/comselec_officials_page.dart';
 import '../features/academic_structure/views/academic_structure_page.dart';
 import '../features/dashboard/views/governor_module_placeholder.dart';
 import '../features/governor/views/governor_events_page.dart';
+import '../features/governor/views/governor_create_event_page.dart';
 import '../features/governor/views/governor_announcements_page.dart';
 import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
@@ -281,6 +282,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.workspaceEvents,
         name: RouteNames.workspaceEvents,
         builder: (context, state) => const GovernorEventsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceCreateEvent,
+        name: 'workspaceCreateEvent',
+        builder: (context, state) => const GovernorCreateEventPage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceAttendance,

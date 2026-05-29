@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -7,6 +8,8 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
+import '../../events/models/event_model.dart';
+import '../../events/providers/event_provider.dart';
 import '../widgets/welcome_header.dart';
 
 class GovernorDashboardView extends ConsumerWidget {
@@ -25,6 +28,7 @@ class GovernorDashboardView extends ConsumerWidget {
     }
 
     final membersAsync = ref.watch(organizationMembersProvider(org.id));
+    final eventsAsync = ref.watch(workspaceEventsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -38,56 +42,63 @@ class GovernorDashboardView extends ConsumerWidget {
               _buildOrgHeader(context, org, activeRole?.roleName ?? 'Member'),
               const SizedBox(height: AppSpacing.xl),
               
-              membersAsync.when(
-                data: (members) {
-                  return Column(
-                    children: [
-                      if (isDesktop) 
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildKpiSection(org, activeRole?.roleName, members),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  _buildUpcomingEvents(org),
-                                ],
+              eventsAsync.when(
+                data: (events) => membersAsync.when(
+                  data: (members) {
+                    final upcomingEvents = events.where((e) => e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1)))).toList();
+                    upcomingEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+
+                    return Column(
+                      children: [
+                        if (isDesktop) 
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildKpiSection(org, activeRole?.roleName, members, events),
+                                    const SizedBox(height: AppSpacing.lg),
+                                    _buildUpcomingEvents(org, upcomingEvents),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.lg),
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildPendingApprovals(org, members),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  _buildRecentActivity(org, members),
-                                ],
+                              const SizedBox(width: AppSpacing.lg),
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildPendingApprovals(org, members),
+                                    const SizedBox(height: AppSpacing.lg),
+                                    _buildRecentActivity(org, members),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        )
-                      else
-                        Column(
-                          children: [
-                            _buildKpiSection(org, activeRole?.roleName, members),
-                            const SizedBox(height: AppSpacing.lg),
-                            _buildPendingApprovals(org, members),
-                            const SizedBox(height: AppSpacing.lg),
-                            _buildUpcomingEvents(org),
-                            const SizedBox(height: AppSpacing.lg),
-                            _buildRecentActivity(org, members),
-                          ],
-                        ),
-                    ],
-                  );
-                },
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              _buildKpiSection(org, activeRole?.roleName, members, events),
+                              const SizedBox(height: AppSpacing.lg),
+                              _buildPendingApprovals(org, members),
+                              const SizedBox(height: AppSpacing.lg),
+                              _buildUpcomingEvents(org, upcomingEvents),
+                              const SizedBox(height: AppSpacing.lg),
+                              _buildRecentActivity(org, members),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error members: $err')),
+                ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text('Error: $err')),
+                error: (err, _) => Center(child: Text('Error events: $err')),
               ),
             ],
           ),
@@ -206,11 +217,12 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiSection(dynamic org, String? roleName, List<UserModel> members) {
+  Widget _buildKpiSection(dynamic org, String? roleName, List<UserModel> members, List<EventModel> events) {
     final bool isOfficer = roleName != null && roleName != 'Student';
     final totalMembers = members.length;
     final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
     final pendingRequests = members.where((m) => m.status.toLowerCase() == 'pending').length;
+    final upcomingCount = events.where((e) => e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1)))).length;
 
     return GridView.count(
       crossAxisCount: 3,
@@ -225,7 +237,7 @@ class GovernorDashboardView extends ConsumerWidget {
           _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
           _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
           _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
-          _buildKpiCard('Upcoming Events', '3', Icons.event_outlined, Colors.purple),
+          _buildKpiCard('Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
           _buildKpiCard('Pending Requests', pendingRequests.toString(), Icons.pending_actions_rounded, Colors.red),
         ] else ...[
           _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
@@ -281,7 +293,7 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildUpcomingEvents(dynamic org) {
+  Widget _buildUpcomingEvents(dynamic org, List<EventModel> events) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -300,11 +312,23 @@ class GovernorDashboardView extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          _buildEventTile('Tech Summit 2026', 'May 28, 2026 • 8:00 AM', 'Social Hall', 'Mandatory'),
-          const Divider(),
-          _buildEventTile('Coding Competition', 'June 05, 2026 • 1:00 PM', 'Computer Lab 1', 'Optional'),
-          const Divider(),
-          _buildEventTile('Monthly Assembly', 'June 12, 2026 • 3:00 PM', 'Social Hall', 'Mandatory'),
+          if (events.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: Text('No upcoming events.')),
+            )
+          else
+            ...events.take(3).map((e) => Column(
+              children: [
+                _buildEventTile(
+                  e.name, 
+                  '${DateFormat.yMMMd().format(e.eventDate)} • ${e.timeInStart}', 
+                  e.location, 
+                  e.isMandatory ? 'Mandatory' : 'Optional'
+                ),
+                if (e != events.take(3).last) const Divider(),
+              ],
+            )),
         ],
       ),
     );

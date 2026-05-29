@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../routes/route_paths.dart';
 import '../../users/widgets/user_management_header.dart';
-import '../models/governor_event_mock_data.dart';
+import '../../events/models/event_model.dart';
+import '../../events/providers/event_provider.dart';
 import '../widgets/governor_event_card.dart';
 import '../widgets/governor_past_event_card.dart';
 import '../widgets/governor_rate_event_card.dart';
@@ -39,79 +42,98 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole?.roleName;
     final canCreateEvent = activeRole == 'Governor' || activeRole == 'Secretary';
+    
+    final eventsAsync = ref.watch(workspaceEventsProvider);
 
     return DashboardLayout(
       title: 'Organization Events',
-      child: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: UserManagementHeader(
-                    title: 'Events',
-                    subtitle: 'Manage organization events, attendance, and feedback',
-                    actions: [
-                      if (canCreateEvent)
-                        HeaderActionButton(
-                          icon: Icons.add_rounded,
-                          label: 'Create Event',
-                          onPressed: () {},
-                          isPrimary: true,
+      child: eventsAsync.when(
+        data: (events) {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          
+          final todayEvents = events.where((e) {
+            final eDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
+            return eDate.isAtSameMomentAs(today);
+          }).toList();
+          
+          final upcomingEvents = events.where((e) => e.eventDate.isAfter(today.add(const Duration(days: 1)))).toList();
+          final pastEvents = events.where((e) => e.eventDate.isBefore(today)).toList();
+          
+          return NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: UserManagementHeader(
+                        title: 'Events',
+                        subtitle: 'Manage organization events, attendance, and feedback',
+                        actions: [
+                          if (canCreateEvent)
+                            HeaderActionButton(
+                              icon: Icons.add_rounded,
+                              label: 'Create Event',
+                              onPressed: () => context.push(RoutePaths.workspaceCreateEvent),
+                              isPrimary: true,
+                            ),
+                        ],
+                      ),
+                    ),
+                    
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
                         ),
-                    ],
-                  ),
-                ),
-                
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                        child: TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          labelColor: theme.colorScheme.primary,
+                          unselectedLabelColor: Colors.grey[600],
+                          dividerColor: Colors.transparent,
+                          indicatorColor: theme.colorScheme.primary,
+                          indicatorWeight: 3,
+                          labelStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                          tabs: const [
+                            Tab(text: 'Today'),
+                            Tab(text: 'Upcoming'),
+                            Tab(text: 'Past'),
+                            Tab(text: 'Ratings'),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      labelColor: theme.colorScheme.primary,
-                      unselectedLabelColor: Colors.grey[600],
-                      dividerColor: Colors.transparent,
-                      indicatorColor: theme.colorScheme.primary,
-                      indicatorWeight: 3,
-                      labelStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
-                      tabs: const [
-                        Tab(text: 'Today'),
-                        Tab(text: 'Upcoming'),
-                        Tab(text: 'Past'),
-                        Tab(text: 'Ratings'),
-                      ],
-                    ),
-                  ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.md),
+              ),
+            ],
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTabView(todayEvents, (event) => GovernorEventCard(event: event)),
+                _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event)),
+                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event)),
+                _buildTabView([], (event) => GovernorRateEventCard(event: event)), // Ratings still mock/placeholder
               ],
             ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildTabView(GovernorEventMockData.todayEvents, (event) => GovernorEventCard(event: event)),
-            _buildTabView(GovernorEventMockData.upcomingEvents, (event) => GovernorEventCard(event: event)),
-            _buildTabView(GovernorEventMockData.pastEvents, (event) => GovernorPastEventCard(event: event)),
-            _buildTabView(GovernorEventMockData.ratedEvents, (event) => GovernorRateEventCard(event: event)),
-          ],
-        ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
   }
 
-  Widget _buildTabView(List<Map<String, dynamic>> events, Widget Function(Map<String, dynamic>) builder) {
+  Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder) {
     if (events.isEmpty) {
       return SingleChildScrollView(
         child: Center(

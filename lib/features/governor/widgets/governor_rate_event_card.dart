@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../events/models/event_model.dart';
 
 class GovernorRateEventCard extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final EventModel event;
 
   const GovernorRateEventCard({super.key, required this.event});
 
@@ -17,8 +19,9 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rating = (widget.event['rating'] ?? 0.0) as double;
-    final reviews = widget.event['reviews'] ?? 0;
+    // TODO: Connect to real rating data
+    const rating = 0.0;
+    const reviews = 0;
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -48,7 +51,7 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.event['name'] ?? 'Event',
+                            widget.event.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.titleMedium.copyWith(
@@ -62,7 +65,7 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
                               Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[600]),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
-                                widget.event['date'] ?? '',
+                                DateFormat.yMMMMd().format(widget.event.eventDate),
                                 style: AppTextStyles.labelMedium.copyWith(color: Colors.grey[600]),
                               ),
                             ],
@@ -91,9 +94,9 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
                             ),
                           ),
                         ),
-                        Text(
+                        const Text(
                           '$reviews reviews',
-                          style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                          style: TextStyle(color: Colors.grey, fontSize: 10),
                         ),
                       ],
                     ),
@@ -101,7 +104,7 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
                 ),
                 const Spacer(),
                 const Divider(height: 24),
-                ..._buildRatingBreakdown(widget.event['ratingBreakdown'] as Map<String, int>? ?? {}),
+                ..._buildRatingBreakdown({}),
                 const SizedBox(height: AppSpacing.lg),
                 SizedBox(
                   width: double.infinity,
