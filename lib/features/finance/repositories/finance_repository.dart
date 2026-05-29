@@ -60,10 +60,12 @@ class FinanceRepository {
 
   // --- Payment Receivers ---
 
-  Future<List<PaymentReceiverModel>> getPaymentReceivers() async {
+  Future<List<PaymentReceiverModel>> getPaymentReceivers(String scopeType, String scopeId) async {
     final response = await _client
         .from('payment_receiver')
         .select()
+        .eq('scope_type', scopeType)
+        .eq('scope_id', scopeId)
         .order('account_name', ascending: true);
     
     return (response as List).map((json) => PaymentReceiverModel.fromJson(json)).toList();

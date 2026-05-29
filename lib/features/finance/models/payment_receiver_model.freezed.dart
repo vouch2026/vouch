@@ -30,6 +30,10 @@ mixin _$PaymentReceiverModel {
   String get accountNumber => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_by_user_id')
   String? get createdByUserId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'scope_type')
+  String? get scopeType => throw _privateConstructorUsedError;
+  @JsonKey(name: 'scope_id')
+  String? get scopeId => throw _privateConstructorUsedError;
 
   /// Serializes this PaymentReceiverModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -54,6 +58,8 @@ abstract class $PaymentReceiverModelCopyWith<$Res> {
     @JsonKey(name: 'account_name') String accountName,
     @JsonKey(name: 'account_number') String accountNumber,
     @JsonKey(name: 'created_by_user_id') String? createdByUserId,
+    @JsonKey(name: 'scope_type') String? scopeType,
+    @JsonKey(name: 'scope_id') String? scopeId,
   });
 }
 
@@ -80,6 +86,8 @@ class _$PaymentReceiverModelCopyWithImpl<
     Object? accountName = null,
     Object? accountNumber = null,
     Object? createdByUserId = freezed,
+    Object? scopeType = freezed,
+    Object? scopeId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -103,6 +111,14 @@ class _$PaymentReceiverModelCopyWithImpl<
                 ? _value.createdByUserId
                 : createdByUserId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            scopeType: freezed == scopeType
+                ? _value.scopeType
+                : scopeType // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            scopeId: freezed == scopeId
+                ? _value.scopeId
+                : scopeId // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -124,6 +140,8 @@ abstract class _$$PaymentReceiverModelImplCopyWith<$Res>
     @JsonKey(name: 'account_name') String accountName,
     @JsonKey(name: 'account_number') String accountNumber,
     @JsonKey(name: 'created_by_user_id') String? createdByUserId,
+    @JsonKey(name: 'scope_type') String? scopeType,
+    @JsonKey(name: 'scope_id') String? scopeId,
   });
 }
 
@@ -146,6 +164,8 @@ class __$$PaymentReceiverModelImplCopyWithImpl<$Res>
     Object? accountName = null,
     Object? accountNumber = null,
     Object? createdByUserId = freezed,
+    Object? scopeType = freezed,
+    Object? scopeId = freezed,
   }) {
     return _then(
       _$PaymentReceiverModelImpl(
@@ -169,6 +189,14 @@ class __$$PaymentReceiverModelImplCopyWithImpl<$Res>
             ? _value.createdByUserId
             : createdByUserId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        scopeType: freezed == scopeType
+            ? _value.scopeType
+            : scopeType // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        scopeId: freezed == scopeId
+            ? _value.scopeId
+            : scopeId // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -183,6 +211,8 @@ class _$PaymentReceiverModelImpl implements _PaymentReceiverModel {
     @JsonKey(name: 'account_name') required this.accountName,
     @JsonKey(name: 'account_number') required this.accountNumber,
     @JsonKey(name: 'created_by_user_id') this.createdByUserId,
+    @JsonKey(name: 'scope_type') this.scopeType,
+    @JsonKey(name: 'scope_id') this.scopeId,
   });
 
   factory _$PaymentReceiverModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -202,10 +232,16 @@ class _$PaymentReceiverModelImpl implements _PaymentReceiverModel {
   @override
   @JsonKey(name: 'created_by_user_id')
   final String? createdByUserId;
+  @override
+  @JsonKey(name: 'scope_type')
+  final String? scopeType;
+  @override
+  @JsonKey(name: 'scope_id')
+  final String? scopeId;
 
   @override
   String toString() {
-    return 'PaymentReceiverModel(id: $id, bankType: $bankType, accountName: $accountName, accountNumber: $accountNumber, createdByUserId: $createdByUserId)';
+    return 'PaymentReceiverModel(id: $id, bankType: $bankType, accountName: $accountName, accountNumber: $accountNumber, createdByUserId: $createdByUserId, scopeType: $scopeType, scopeId: $scopeId)';
   }
 
   @override
@@ -221,7 +257,10 @@ class _$PaymentReceiverModelImpl implements _PaymentReceiverModel {
             (identical(other.accountNumber, accountNumber) ||
                 other.accountNumber == accountNumber) &&
             (identical(other.createdByUserId, createdByUserId) ||
-                other.createdByUserId == createdByUserId));
+                other.createdByUserId == createdByUserId) &&
+            (identical(other.scopeType, scopeType) ||
+                other.scopeType == scopeType) &&
+            (identical(other.scopeId, scopeId) || other.scopeId == scopeId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -233,6 +272,8 @@ class _$PaymentReceiverModelImpl implements _PaymentReceiverModel {
     accountName,
     accountNumber,
     createdByUserId,
+    scopeType,
+    scopeId,
   );
 
   /// Create a copy of PaymentReceiverModel
@@ -260,6 +301,8 @@ abstract class _PaymentReceiverModel implements PaymentReceiverModel {
     @JsonKey(name: 'account_name') required final String accountName,
     @JsonKey(name: 'account_number') required final String accountNumber,
     @JsonKey(name: 'created_by_user_id') final String? createdByUserId,
+    @JsonKey(name: 'scope_type') final String? scopeType,
+    @JsonKey(name: 'scope_id') final String? scopeId,
   }) = _$PaymentReceiverModelImpl;
 
   factory _PaymentReceiverModel.fromJson(Map<String, dynamic> json) =
@@ -279,6 +322,12 @@ abstract class _PaymentReceiverModel implements PaymentReceiverModel {
   @override
   @JsonKey(name: 'created_by_user_id')
   String? get createdByUserId;
+  @override
+  @JsonKey(name: 'scope_type')
+  String? get scopeType;
+  @override
+  @JsonKey(name: 'scope_id')
+  String? get scopeId;
 
   /// Create a copy of PaymentReceiverModel
   /// with the given fields replaced by the non-null parameter values.

@@ -30,7 +30,22 @@ final workspaceFeesProvider = FutureProvider<List<FeeModel>>((ref) async {
 });
 
 final paymentReceiversProvider = FutureProvider<List<PaymentReceiverModel>>((ref) async {
-  return ref.watch(financeRepositoryProvider).getPaymentReceivers();
+  final workspace = ref.watch(workspaceProvider);
+  final org = workspace.selectedOrganization;
+  
+  if (org == null) return [];
+  
+  final scopeType = org.type == 'campus-based' 
+      ? 'Institutional' 
+      : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
+  
+  final scopeId = org.type == 'campus-based' 
+      ? org.campusId 
+      : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+
+  if (scopeId == null) return [];
+  
+  return ref.watch(financeRepositoryProvider).getPaymentReceivers(scopeType, scopeId);
 });
 
 final workspaceStudentPaymentsProvider = FutureProvider<List<StudentPaymentModel>>((ref) async {

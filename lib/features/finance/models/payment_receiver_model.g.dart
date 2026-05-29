@@ -14,6 +14,8 @@ _$PaymentReceiverModelImpl _$$PaymentReceiverModelImplFromJson(
   accountName: json['account_name'] as String,
   accountNumber: json['account_number'] as String,
   createdByUserId: json['created_by_user_id'] as String?,
+  scopeType: json['scope_type'] as String?,
+  scopeId: json['scope_id'] as String?,
 );
 
 Map<String, dynamic> _$$PaymentReceiverModelImplToJson(
@@ -24,4 +26,6 @@ Map<String, dynamic> _$$PaymentReceiverModelImplToJson(
   'account_name': instance.accountName,
   'account_number': instance.accountNumber,
   'created_by_user_id': instance.createdByUserId,
+  'scope_type': instance.scopeType,
+  'scope_id': instance.scopeId,
 };

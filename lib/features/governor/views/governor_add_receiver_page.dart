@@ -6,6 +6,7 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../finance/models/payment_receiver_model.dart';
 import '../../finance/providers/finance_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 class GovernorAddReceiverPage extends ConsumerStatefulWidget {
   const GovernorAddReceiverPage({super.key});
@@ -38,12 +39,24 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
 
     try {
       final user = ref.read(userProfileProvider).value!;
+      final workspace = ref.read(workspaceProvider);
+      final org = workspace.selectedOrganization!;
+
+      final scopeType = org.type == 'campus-based' 
+          ? 'Institutional' 
+          : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
+      
+      final scopeId = org.type == 'campus-based' 
+          ? org.campusId 
+          : (org.type == 'faculty-based' ? org.facultyId : org.programId);
       
       final receiver = PaymentReceiverModel(
         bankType: _selectedProvider,
         accountName: _nameController.text,
         accountNumber: _numberController.text,
         createdByUserId: user.id,
+        scopeType: scopeType,
+        scopeId: scopeId,
       );
 
       await ref.read(financeRepositoryProvider).createPaymentReceiver(receiver);

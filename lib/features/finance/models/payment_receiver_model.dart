@@ -11,6 +11,8 @@ class PaymentReceiverModel with _$PaymentReceiverModel {
     @JsonKey(name: 'account_name') required String accountName,
     @JsonKey(name: 'account_number') required String accountNumber,
     @JsonKey(name: 'created_by_user_id') String? createdByUserId,
+    @JsonKey(name: 'scope_type') String? scopeType,
+    @JsonKey(name: 'scope_id') String? scopeId,
   }) = _PaymentReceiverModel;
 
   factory PaymentReceiverModel.fromJson(Map<String, dynamic> json) => _$PaymentReceiverModelFromJson(json);

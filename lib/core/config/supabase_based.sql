@@ -365,6 +365,8 @@ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 bank_type VARCHAR(100) NOT NULL,
 account_name VARCHAR(255) NOT NULL,
 account_number VARCHAR(100) NOT NULL,
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL,
 created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
