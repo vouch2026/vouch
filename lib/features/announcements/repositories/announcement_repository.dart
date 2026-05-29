@@ -11,7 +11,7 @@ class AnnouncementRepository {
         .from('announcements')
         .select('''
           *,
-          author:users (
+          users (
             first_name,
             last_name
           )
@@ -21,11 +21,24 @@ class AnnouncementRepository {
         .order('created_at', ascending: false);
     
     return (response as List).map((json) {
-      final model = AnnouncementModel.fromJson(json);
-      final author = json['author'] as Map<String, dynamic>?;
-      return model.copyWith(
-        authorName: author != null ? '${author['first_name']} ${author['last_name']}' : 'System',
-      );
+      try {
+        final model = AnnouncementModel.fromJson(json);
+        final author = json['users'] as Map<String, dynamic>?;
+        return model.copyWith(
+          authorName: author != null ? '${author['first_name']} ${author['last_name']}' : 'System',
+        );
+      } catch (e) {
+        // Fallback for parsing errors to see if we at least get the data
+        return AnnouncementModel(
+          id: json['id'] as String?,
+          title: json['title'] as String? ?? 'Error parsing',
+          content: json['content'] as String? ?? 'Error parsing details: $e',
+          type: json['type'] as String? ?? 'General',
+          scopeType: scopeType,
+          scopeId: scopeId,
+          academicTermId: json['academic_term_id'] as String? ?? '',
+        );
+      }
     }).toList();
   }
 

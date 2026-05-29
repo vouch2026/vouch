@@ -305,6 +305,8 @@ CREATE TABLE announcements (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 title VARCHAR(255) NOT NULL,
 content TEXT NOT NULL,
+type VARCHAR(50) DEFAULT 'General',
+link_url VARCHAR(2048),
 image_url VARCHAR(2048),
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,

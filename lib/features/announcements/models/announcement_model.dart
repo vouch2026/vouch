@@ -9,6 +9,8 @@ class AnnouncementModel with _$AnnouncementModel {
     String? id,
     required String title,
     required String content,
+    @Default('General') String type,
+    @JsonKey(name: 'link_url') String? linkUrl,
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'scope_type') required String scopeType,
     @JsonKey(name: 'scope_id') required String scopeId,

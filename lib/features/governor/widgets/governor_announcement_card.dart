@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../announcements/models/announcement_model.dart';
@@ -23,40 +25,59 @@ class GovernorAnnouncementCard extends StatefulWidget {
 class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
   bool _isHovered = false;
 
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch $url')),
+        );
+      }
+    }
+  }
+
+  void _copyToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Link copied to clipboard')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const isPinned = false; // Placeholder
     const category = 'General'; // Placeholder
     
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        transform: _isHovered ? Matrix4.translationValues(0, -4, 0) : Matrix4.identity(),
-        child: Card(
-          elevation: _isHovered ? 8 : 0,
-          shadowColor: theme.colorScheme.primary.withOpacity(0.15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: _isHovered ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.5),
-              width: _isHovered ? 1.5 : 1,
+    return Card(
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.announcement.imageUrl != null)
+            Image.network(
+              widget.announcement.imageUrl!,
+              height: 140,
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
-          ),
-          child: Padding(
+          Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    const _CategoryBadge(category: category),
+                    _CategoryBadge(category: widget.announcement.type),
                     const Spacer(),
-                    if (isPinned)
-                      Icon(Icons.push_pin_rounded, size: 16, color: theme.colorScheme.primary),
-                    const SizedBox(width: AppSpacing.sm),
                     Text(
                       widget.announcement.createdAt != null 
                         ? DateFormat.yMMMd().format(widget.announcement.createdAt!)
@@ -68,26 +89,61 @@ class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.announcement.title,
-                        style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        widget.announcement.content,
-                        style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[800], height: 1.5),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                Text(
+                  widget.announcement.title,
+                  style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  widget.announcement.content,
+                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[800], height: 1.5),
+                  maxLines: widget.announcement.imageUrl != null ? 3 : 6,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                if (widget.announcement.linkUrl != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.link_rounded, size: 16, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _launchUrl(widget.announcement.linkUrl!),
+                            child: Text(
+                              widget.announcement.linkUrl!,
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _copyToClipboard(widget.announcement.linkUrl!),
+                          icon: const Icon(Icons.copy_rounded, size: 14),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
@@ -106,18 +162,12 @@ class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
                         style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
-                    Icon(Icons.remove_red_eye_outlined, size: 14, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '0', // Placeholder
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
                   ],
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -179,6 +229,12 @@ class _CategoryBadge extends StatelessWidget {
         break;
       case 'events':
         color = Colors.blue;
+        break;
+      case 'fees':
+        color = Colors.orange;
+        break;
+      case 'academic':
+        color = Colors.purple;
         break;
       default:
         color = Colors.green;

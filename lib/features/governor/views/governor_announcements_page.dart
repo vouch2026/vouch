@@ -6,6 +6,7 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_announcement_card.dart';
 import 'governor_create_announcement_page.dart';
 
@@ -19,7 +20,7 @@ class GovernorAnnouncementsPage extends ConsumerStatefulWidget {
 class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncementsPage> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'General', 'Urgent', 'Events', 'Academic'];
+  final List<String> _categories = ['All', 'General', 'Urgent', 'Events', 'Fees', 'Academic', 'Others'];
 
   @override
   void initState() {
@@ -37,48 +38,59 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final announcementsAsync = ref.watch(workspaceAnnouncementsProvider);
+    final workspace = ref.watch(workspaceProvider);
+    final org = workspace.selectedOrganization;
 
     return DashboardLayout(
       title: 'Organization Announcements',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: UserManagementHeader(
-              title: 'Announcements',
-              subtitle: 'Broadcast important updates and news to your members',
-              actions: [
-                HeaderActionButton(
-                  icon: Icons.add_comment_rounded,
-                  label: 'Post Announcement',
-                  onPressed: () => _navigateToCreate(context),
-                  isPrimary: true,
-                ),
-              ],
-            ),
-          ),
+      child: announcementsAsync.when(
+        data: (announcements) {
+          final query = _searchController.text.toLowerCase();
+          final filtered = announcements.where((a) {
+            final matchesCategory = _selectedCategory == 'All' || a.type == _selectedCategory; 
+            final matchesQuery = a.title.toLowerCase().contains(query) ||
+                                a.content.toLowerCase().contains(query);
+            return matchesCategory && matchesQuery;
+          }).toList();
 
-          // Filters & Search Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(workspaceAnnouncementsProvider.future),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search announcements...',
-                          prefixIcon: const Icon(Icons.search_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        ),
-                      ),
+                UserManagementHeader(
+                  title: 'Announcements',
+                  subtitle: 'Broadcast important updates and news to your members',
+                  actions: [
+                    HeaderActionButton(
+                      icon: Icons.add_comment_rounded,
+                      label: 'Post Announcement',
+                      onPressed: () => _navigateToCreate(context),
+                      isPrimary: true,
                     ),
                   ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                
+                if (org != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Text(
+                      'Scope: ${org.type.replaceAll('-', ' ').toUpperCase()} | Total Found: ${announcements.length}',
+                      style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[500]),
+                    ),
+                  ),
+
+                // Filters & Search Section
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search announcements...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 SingleChildScrollView(
@@ -102,75 +114,49 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                     }).toList(),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+
+                if (filtered.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 64),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            announcements.isEmpty 
+                              ? 'No announcements found in this scope' 
+                              : 'No announcements match your filters',
+                            style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                          ),
+                          if (announcements.isNotEmpty)
+                            TextButton(
+                              onPressed: () => setState(() => _selectedCategory = 'All'),
+                              child: const Text('Clear Filters'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...filtered.map((a) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    child: GovernorAnnouncementCard(
+                      key: ValueKey(a.id),
+                      announcement: a,
+                      onPin: () {},
+                      onDelete: () => _deleteAnnouncement(a.id!),
+                    ),
+                  )),
               ],
             ),
-          ),
-
-          const SizedBox(height: AppSpacing.lg),
-
-          Expanded(
-            child: announcementsAsync.when(
-              data: (announcements) => _buildAnnouncementList(announcements),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
-            ),
-          ),
-        ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Error: $err')),
       ),
-    );
-  }
-
-  Widget _buildAnnouncementList(List<AnnouncementModel> announcements) {
-    final query = _searchController.text.toLowerCase();
-    final filtered = announcements.where((a) {
-      // Category is currently placeholder in the model/db
-      final matchesCategory = _selectedCategory == 'All'; 
-      final matchesQuery = a.title.toLowerCase().contains(query) ||
-                          a.content.toLowerCase().contains(query);
-      return matchesCategory && matchesQuery;
-    }).toList();
-
-    if (filtered.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'No announcements found',
-              style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = 1;
-        if (constraints.maxWidth > 1200) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth > 700) {
-          crossAxisCount = 2;
-        }
-
-        return GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.lg,
-            mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: 260,
-          ),
-          itemCount: filtered.length,
-          itemBuilder: (context, index) => GovernorAnnouncementCard(
-            announcement: filtered[index],
-            onPin: () {},
-            onDelete: () => _deleteAnnouncement(filtered[index].id!),
-          ),
-        );
-      },
     );
   }
 

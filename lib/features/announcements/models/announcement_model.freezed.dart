@@ -24,6 +24,9 @@ mixin _$AnnouncementModel {
   String? get id => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String get content => throw _privateConstructorUsedError;
+  String get type => throw _privateConstructorUsedError;
+  @JsonKey(name: 'link_url')
+  String? get linkUrl => throw _privateConstructorUsedError;
   @JsonKey(name: 'image_url')
   String? get imageUrl => throw _privateConstructorUsedError;
   @JsonKey(name: 'scope_type')
@@ -62,6 +65,8 @@ abstract class $AnnouncementModelCopyWith<$Res> {
     String? id,
     String title,
     String content,
+    String type,
+    @JsonKey(name: 'link_url') String? linkUrl,
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'scope_type') String scopeType,
     @JsonKey(name: 'scope_id') String scopeId,
@@ -91,6 +96,8 @@ class _$AnnouncementModelCopyWithImpl<$Res, $Val extends AnnouncementModel>
     Object? id = freezed,
     Object? title = null,
     Object? content = null,
+    Object? type = null,
+    Object? linkUrl = freezed,
     Object? imageUrl = freezed,
     Object? scopeType = null,
     Object? scopeId = null,
@@ -114,6 +121,14 @@ class _$AnnouncementModelCopyWithImpl<$Res, $Val extends AnnouncementModel>
                 ? _value.content
                 : content // ignore: cast_nullable_to_non_nullable
                       as String,
+            type: null == type
+                ? _value.type
+                : type // ignore: cast_nullable_to_non_nullable
+                      as String,
+            linkUrl: freezed == linkUrl
+                ? _value.linkUrl
+                : linkUrl // ignore: cast_nullable_to_non_nullable
+                      as String?,
             imageUrl: freezed == imageUrl
                 ? _value.imageUrl
                 : imageUrl // ignore: cast_nullable_to_non_nullable
@@ -165,6 +180,8 @@ abstract class _$$AnnouncementModelImplCopyWith<$Res>
     String? id,
     String title,
     String content,
+    String type,
+    @JsonKey(name: 'link_url') String? linkUrl,
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'scope_type') String scopeType,
     @JsonKey(name: 'scope_id') String scopeId,
@@ -193,6 +210,8 @@ class __$$AnnouncementModelImplCopyWithImpl<$Res>
     Object? id = freezed,
     Object? title = null,
     Object? content = null,
+    Object? type = null,
+    Object? linkUrl = freezed,
     Object? imageUrl = freezed,
     Object? scopeType = null,
     Object? scopeId = null,
@@ -216,6 +235,14 @@ class __$$AnnouncementModelImplCopyWithImpl<$Res>
             ? _value.content
             : content // ignore: cast_nullable_to_non_nullable
                   as String,
+        type: null == type
+            ? _value.type
+            : type // ignore: cast_nullable_to_non_nullable
+                  as String,
+        linkUrl: freezed == linkUrl
+            ? _value.linkUrl
+            : linkUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
         imageUrl: freezed == imageUrl
             ? _value.imageUrl
             : imageUrl // ignore: cast_nullable_to_non_nullable
@@ -260,6 +287,8 @@ class _$AnnouncementModelImpl implements _AnnouncementModel {
     this.id,
     required this.title,
     required this.content,
+    this.type = 'General',
+    @JsonKey(name: 'link_url') this.linkUrl,
     @JsonKey(name: 'image_url') this.imageUrl,
     @JsonKey(name: 'scope_type') required this.scopeType,
     @JsonKey(name: 'scope_id') required this.scopeId,
@@ -279,6 +308,12 @@ class _$AnnouncementModelImpl implements _AnnouncementModel {
   final String title;
   @override
   final String content;
+  @override
+  @JsonKey()
+  final String type;
+  @override
+  @JsonKey(name: 'link_url')
+  final String? linkUrl;
   @override
   @JsonKey(name: 'image_url')
   final String? imageUrl;
@@ -307,7 +342,7 @@ class _$AnnouncementModelImpl implements _AnnouncementModel {
 
   @override
   String toString() {
-    return 'AnnouncementModel(id: $id, title: $title, content: $content, imageUrl: $imageUrl, scopeType: $scopeType, scopeId: $scopeId, academicTermId: $academicTermId, createdAt: $createdAt, updatedAt: $updatedAt, createdByUserId: $createdByUserId, authorName: $authorName)';
+    return 'AnnouncementModel(id: $id, title: $title, content: $content, type: $type, linkUrl: $linkUrl, imageUrl: $imageUrl, scopeType: $scopeType, scopeId: $scopeId, academicTermId: $academicTermId, createdAt: $createdAt, updatedAt: $updatedAt, createdByUserId: $createdByUserId, authorName: $authorName)';
   }
 
   @override
@@ -318,6 +353,8 @@ class _$AnnouncementModelImpl implements _AnnouncementModel {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.content, content) || other.content == content) &&
+            (identical(other.type, type) || other.type == type) &&
+            (identical(other.linkUrl, linkUrl) || other.linkUrl == linkUrl) &&
             (identical(other.imageUrl, imageUrl) ||
                 other.imageUrl == imageUrl) &&
             (identical(other.scopeType, scopeType) ||
@@ -342,6 +379,8 @@ class _$AnnouncementModelImpl implements _AnnouncementModel {
     id,
     title,
     content,
+    type,
+    linkUrl,
     imageUrl,
     scopeType,
     scopeId,
@@ -374,6 +413,8 @@ abstract class _AnnouncementModel implements AnnouncementModel {
     final String? id,
     required final String title,
     required final String content,
+    final String type,
+    @JsonKey(name: 'link_url') final String? linkUrl,
     @JsonKey(name: 'image_url') final String? imageUrl,
     @JsonKey(name: 'scope_type') required final String scopeType,
     @JsonKey(name: 'scope_id') required final String scopeId,
@@ -394,6 +435,11 @@ abstract class _AnnouncementModel implements AnnouncementModel {
   String get title;
   @override
   String get content;
+  @override
+  String get type;
+  @override
+  @JsonKey(name: 'link_url')
+  String? get linkUrl;
   @override
   @JsonKey(name: 'image_url')
   String? get imageUrl;

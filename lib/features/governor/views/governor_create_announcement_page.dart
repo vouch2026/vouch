@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../core/providers/storage_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
@@ -23,21 +29,37 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
+  late final TextEditingController _linkController;
   
+  String _selectedType = 'General';
+  File? _announcementImage;
+  final _picker = ImagePicker();
   bool _isLoading = false;
+
+  final List<String> _types = ['General', 'Urgent', 'Events', 'Fees', 'Academic', 'Others'];
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.initialData?.title);
     _contentController = TextEditingController(text: widget.initialData?.content);
+    _linkController = TextEditingController(text: widget.initialData?.linkUrl);
+    _selectedType = widget.initialData?.type ?? 'General';
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _linkController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() => _announcementImage = File(pickedFile.path));
+    }
   }
 
   Future<void> _submit() async {
@@ -55,6 +77,14 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
         throw Exception('No active academic term found. Please contact an administrator.');
       }
 
+      String? imageUrl = widget.initialData?.imageUrl;
+      if (_announcementImage != null) {
+        imageUrl = await ref.read(storageServiceProvider).uploadAnnouncementImage(
+          file: _announcementImage!,
+          title: _titleController.text,
+        );
+      }
+
       final scopeType = org.type == 'campus-based' 
           ? 'Institutional' 
           : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
@@ -67,6 +97,9 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
         id: widget.initialData?.id,
         title: _titleController.text,
         content: _contentController.text,
+        type: _selectedType,
+        linkUrl: _linkController.text.isNotEmpty ? _linkController.text : null,
+        imageUrl: imageUrl,
         scopeType: scopeType,
         scopeId: scopeId!,
         academicTermId: activeTerm.id,
@@ -124,6 +157,42 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
               
               _buildFormSection(
                 context,
+                title: 'VISUALS (OPTIONAL)',
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: double.infinity,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[300]!),
+                        image: _announcementImage != null
+                            ? DecorationImage(image: FileImage(_announcementImage!), fit: BoxFit.cover)
+                            : (widget.initialData?.imageUrl != null
+                                ? DecorationImage(image: NetworkImage(widget.initialData!.imageUrl!), fit: BoxFit.cover)
+                                : null),
+                      ),
+                      child: _announcementImage == null && widget.initialData?.imageUrl == null
+                          ? const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Text('Add an image (Optional)', style: TextStyle(color: Colors.grey)),
+                              ],
+                            )
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: AppSpacing.lg),
+
+              _buildFormSection(
+                context,
                 title: 'CONTENT',
                 children: [
                   _buildLabel('Announcement Title'),
@@ -139,12 +208,48 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
                   _buildLabel('Message Content'),
                   TextFormField(
                     controller: _contentController,
-                    maxLines: 8,
+                    maxLines: 6,
                     decoration: const InputDecoration(
                       hintText: 'Enter the full message details here...',
                       alignLabelWithHint: true,
                     ),
                     validator: (v) => v?.isEmpty == true ? 'Content is required' : null,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildLabel('Reference Link (Optional)'),
+                  TextFormField(
+                    controller: _linkController,
+                    decoration: const InputDecoration(
+                      hintText: 'https://example.com',
+                      prefixIcon: Icon(Icons.link_rounded),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: AppSpacing.lg),
+              
+              _buildFormSection(
+                context,
+                title: 'SETTINGS',
+                children: [
+                  _buildLabel('Announcement Type'),
+                  Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
+                    children: _types.map((t) {
+                      final isSelected = _selectedType == t;
+                      return ChoiceChip(
+                        label: Text(t),
+                        selected: isSelected,
+                        onSelected: (val) => setState(() => _selectedType = t),
+                        selectedColor: theme.colorScheme.primaryContainer,
+                        labelStyle: TextStyle(
+                          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
