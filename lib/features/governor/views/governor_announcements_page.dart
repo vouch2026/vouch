@@ -4,7 +4,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
-import '../models/governor_announcement_mock_data.dart';
+import '../../announcements/models/announcement_model.dart';
+import '../../announcements/providers/announcement_provider.dart';
 import '../widgets/governor_announcement_card.dart';
 import 'governor_create_announcement_page.dart';
 
@@ -35,6 +36,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final announcementsAsync = ref.watch(workspaceAnnouncementsProvider);
 
     return DashboardLayout(
       title: 'Organization Announcements',
@@ -107,27 +109,26 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
           const SizedBox(height: AppSpacing.lg),
 
           Expanded(
-            child: _buildAnnouncementList(),
+            child: announcementsAsync.when(
+              data: (announcements) => _buildAnnouncementList(announcements),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAnnouncementList() {
+  Widget _buildAnnouncementList(List<AnnouncementModel> announcements) {
     final query = _searchController.text.toLowerCase();
-    final filtered = GovernorAnnouncementMockData.announcements.where((a) {
-      final matchesCategory = _selectedCategory == 'All' || a['category'] == _selectedCategory;
-      final matchesQuery = a['title']!.toLowerCase().contains(query) ||
-                          a['content']!.toLowerCase().contains(query);
+    final filtered = announcements.where((a) {
+      // Category is currently placeholder in the model/db
+      final matchesCategory = _selectedCategory == 'All'; 
+      final matchesQuery = a.title.toLowerCase().contains(query) ||
+                          a.content.toLowerCase().contains(query);
       return matchesCategory && matchesQuery;
     }).toList();
-
-    // Sort: Pinned first, then by date (mock data is already sorted by date)
-    filtered.sort((a, b) {
-      if (a['isPinned'] == b['isPinned']) return 0;
-      return a['isPinned'] == true ? -1 : 1;
-    });
 
     if (filtered.isEmpty) {
       return Center(
@@ -166,7 +167,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
           itemBuilder: (context, index) => GovernorAnnouncementCard(
             announcement: filtered[index],
             onPin: () {},
-            onDelete: () {},
+            onDelete: () => _deleteAnnouncement(filtered[index].id!),
           ),
         );
       },
@@ -175,5 +176,37 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
 
   void _navigateToCreate(BuildContext context) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateAnnouncementPage()));
+  }
+
+  Future<void> _deleteAnnouncement(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Announcement'),
+        content: const Text('Are you sure you want to delete this announcement? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(announcementRepositoryProvider).deleteAnnouncement(id);
+        ref.invalidate(workspaceAnnouncementsProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Announcement deleted successfully')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
   }
 }

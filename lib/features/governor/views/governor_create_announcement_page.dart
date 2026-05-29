@@ -3,9 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../academic_structure/providers/term_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../announcements/models/announcement_model.dart';
+import '../../announcements/repositories/announcement_repository.dart';
+import '../../announcements/providers/announcement_provider.dart';
 
 class GovernorCreateAnnouncementPage extends ConsumerStatefulWidget {
-  final Map<String, dynamic>? initialData;
+  final AnnouncementModel? initialData;
 
   const GovernorCreateAnnouncementPage({super.key, this.initialData});
 
@@ -17,18 +23,14 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
-  String _selectedCategory = 'General';
-  bool _isPinned = false;
-
-  final List<String> _categories = ['General', 'Urgent', 'Events', 'Academic', 'Others'];
+  
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.initialData?['title']);
-    _contentController = TextEditingController(text: widget.initialData?['content']);
-    _selectedCategory = widget.initialData?['category'] ?? 'General';
-    _isPinned = widget.initialData?['isPinned'] ?? false;
+    _titleController = TextEditingController(text: widget.initialData?.title);
+    _contentController = TextEditingController(text: widget.initialData?.content);
   }
 
   @override
@@ -36,6 +38,63 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final workspace = ref.read(workspaceProvider);
+      final org = workspace.selectedOrganization!;
+      final user = ref.read(userProfileProvider).value!;
+      final activeTerm = await ref.read(activeTermProvider.future);
+
+      if (activeTerm == null) {
+        throw Exception('No active academic term found. Please contact an administrator.');
+      }
+
+      final scopeType = org.type == 'campus-based' 
+          ? 'Institutional' 
+          : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
+      
+      final scopeId = org.type == 'campus-based' 
+          ? org.campusId 
+          : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+
+      final announcement = AnnouncementModel(
+        id: widget.initialData?.id,
+        title: _titleController.text,
+        content: _contentController.text,
+        scopeType: scopeType,
+        scopeId: scopeId!,
+        academicTermId: activeTerm.id,
+        createdByUserId: user.id,
+      );
+
+      if (widget.initialData != null) {
+        await ref.read(announcementRepositoryProvider).updateAnnouncement(announcement);
+      } else {
+        await ref.read(announcementRepositoryProvider).createAnnouncement(announcement);
+      }
+
+      if (mounted) {
+        ref.invalidate(workspaceAnnouncementsProvider);
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Announcement ${widget.initialData != null ? 'updated' : 'posted'} successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -90,49 +149,13 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
                 ],
               ),
               
-              const SizedBox(height: AppSpacing.lg),
-              
-              _buildFormSection(
-                context,
-                title: 'SETTINGS',
-                children: [
-                  _buildLabel('Category'),
-                  Wrap(
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.md,
-                    children: _categories.map((c) {
-                      final isSelected = _selectedCategory == c;
-                      return ChoiceChip(
-                        label: Text(c),
-                        selected: isSelected,
-                        onSelected: (val) => setState(() => _selectedCategory = c),
-                        selectedColor: theme.colorScheme.primaryContainer,
-                        labelStyle: TextStyle(
-                          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SwitchListTile(
-                    title: const Text('Pin to Top', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Keep this announcement at the top of the feed'),
-                    value: _isPinned,
-                    onChanged: (v) => setState(() => _isPinned = v),
-                    contentPadding: EdgeInsets.zero,
-                    activeColor: theme.colorScheme.primary,
-                  ),
-                ],
-              ),
-              
               const SizedBox(height: AppSpacing.xxl),
               
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
@@ -142,15 +165,13 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
                   const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Navigator.pop(context, true);
-                        }
-                      },
+                      onPressed: _isLoading ? null : _submit,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
-                      child: Text(isEdit ? 'Update Post' : 'Post Announcement'),
+                      child: _isLoading 
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(isEdit ? 'Update Post' : 'Post Announcement'),
                     ),
                   ),
                 ],

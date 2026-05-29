@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
 DROP TABLE IF EXISTS student_sanction_records CASCADE;
+DROP TABLE IF EXISTS announcements CASCADE;
 DROP TABLE IF EXISTS student_payments CASCADE;
 DROP TABLE IF EXISTS payment_receiver CASCADE;
 DROP TABLE IF EXISTS student_attendance CASCADE;
@@ -300,6 +301,21 @@ created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 
 CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TABLE announcements (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+title VARCHAR(255) NOT NULL,
+content TEXT NOT NULL,
+image_url VARCHAR(2048),
+scope_type scope_type NOT NULL,
+scope_id UUID NOT NULL,
+academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON announcements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TABLE event_ratings (
 id SERIAL PRIMARY KEY,
 event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
@@ -438,6 +454,7 @@ ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_payments ENABLE ROW LEVEL SECURITY;
@@ -537,6 +554,51 @@ USING (
     AND ur.scope_type = events.scope_type
     AND ur.scope_id = events.scope_id
     AND p.action = 'delete_event'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+
+-- Announcements
+CREATE POLICY "Announcements are viewable by everyone" ON announcements FOR SELECT USING (true);
+CREATE POLICY "Officers can create announcements" ON announcements FOR INSERT TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = announcements.scope_type
+    AND ur.scope_id = announcements.scope_id
+    AND p.action = 'create_announcement'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+CREATE POLICY "Officers can update announcements" ON announcements FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = announcements.scope_type
+    AND ur.scope_id = announcements.scope_id
+    AND p.action = 'edit_announcement'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+CREATE POLICY "Officers can delete announcements" ON announcements FOR DELETE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = announcements.scope_type
+    AND ur.scope_id = announcements.scope_id
+    AND p.action = 'delete_announcement'
     AND ur.is_active = true
   )
   OR public.is_super_admin()
@@ -976,7 +1038,7 @@ INSERT INTO permissions (action) VALUES
 ('reject_clearance'), ('view_clearance_dashboard'), ('create_sanction_rules'),
 ('edit_sanction_rules'), ('delete_sanction_rules'), ('receive_sanction_items'),
 ('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
-('view_faculty_analytics');
+('view_faculty_analytics'), ('create_announcement'), ('edit_announcement'), ('delete_announcement');
 
 -- 6. MAP PERMISSIONS TO ROLES
 INSERT INTO role_permissions (role_id, permission_id)
@@ -991,17 +1053,17 @@ WHERE r.name = 'Students' AND p.action IN ('request_clearance');
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Governor', 'Vice Governor') 
-AND p.action IN ('create_event', 'edit_event', 'delete_event', 'scan_event_attendance', 'override_attendance', 'create_fee', 'edit_fee', 'delete_fee', 'view_clearance_dashboard', 'reject_clearance', 'manage_payment_receivers');
+AND p.action IN ('create_event', 'edit_event', 'delete_event', 'scan_event_attendance', 'override_attendance', 'create_fee', 'edit_fee', 'delete_fee', 'view_clearance_dashboard', 'reject_clearance', 'manage_payment_receivers', 'create_announcement', 'edit_announcement', 'delete_announcement');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Treasurer', 'Assistant Treasurer') 
-AND p.action IN ('create_fee', 'edit_fee', 'delete_fee', 'verify_payment', 'reject_payment', 'manage_payment_receivers');
+AND p.action IN ('create_fee', 'edit_fee', 'delete_fee', 'verify_payment', 'reject_payment', 'manage_payment_receivers', 'create_announcement', 'edit_announcement', 'delete_announcement');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Secretary', 'Assistant Secretary') 
-AND p.action IN ('create_event', 'edit_event', 'scan_event_attendance');
+AND p.action IN ('create_event', 'edit_event', 'scan_event_attendance', 'create_announcement', 'edit_announcement', 'delete_announcement');
 
 -- 8. SUPER ADMIN SEED
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
