@@ -38,64 +38,72 @@ class GovernorMembersTable extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
-                  columns: const [
-                    DataColumn(label: Text('Member')),
-                    DataColumn(label: Text('Student ID')),
-                    DataColumn(label: Text('Program & Year')),
-                    DataColumn(label: Text('Joined Date')),
-                    DataColumn(label: Text('Role')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: members.map((member) {
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: theme.colorScheme.primaryContainer,
-                                backgroundImage: member.avatarUrl != null ? NetworkImage(member.avatarUrl!) : null,
-                                child: member.avatarUrl == null
-                                    ? Text(
-                                        member.fullName[0].toUpperCase(),
-                                        style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
-                                      )
-                                    : null,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: DataTable(
+                        columnSpacing: AppSpacing.lg,
+                        headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
+                        columns: const [
+                          DataColumn(label: Text('Member')),
+                          DataColumn(label: Text('Student ID')),
+                          DataColumn(label: Text('Program & Year')),
+                          DataColumn(label: Text('Joined Date')),
+                          DataColumn(label: Text('Role')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: members.map((member) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: theme.colorScheme.primaryContainer,
+                                      backgroundImage: member.avatarUrl != null ? NetworkImage(member.avatarUrl!) : null,
+                                      child: member.avatarUrl == null
+                                          ? Text(
+                                              member.fullName[0].toUpperCase(),
+                                              style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(member.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                                        Text(member.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(width: AppSpacing.md),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(member.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                                  Text(member.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
-                                ],
+                              DataCell(Text(member.schoolId, style: AppTextStyles.bodySmall)),
+                              DataCell(Text(
+                                '${member.programName ?? 'N/A'} - ${member.yearLevel ?? ''}${member.yearLevel != null ? " Year" : ""}',
+                                style: AppTextStyles.bodySmall,
+                              )),
+                              DataCell(Text(
+                                member.joinedAt != null ? DateFormat.yMMMd().format(member.joinedAt!) : 'N/A',
+                                style: AppTextStyles.bodySmall,
+                              )),
+                              DataCell(_RoleBadge(role: member.role)),
+                              DataCell(
+                                _buildMemberActions(context, member),
                               ),
                             ],
-                          ),
-                        ),
-                        DataCell(Text(member.schoolId, style: AppTextStyles.bodySmall)),
-                        DataCell(Text(
-                          '${member.programName ?? 'N/A'} - ${member.yearLevel ?? ''}${member.yearLevel != null ? " Year" : ""}',
-                          style: AppTextStyles.bodySmall,
-                        )),
-                        DataCell(Text(
-                          member.joinedAt != null ? DateFormat.yMMMd().format(member.joinedAt!) : 'N/A',
-                          style: AppTextStyles.bodySmall,
-                        )),
-                        DataCell(_RoleBadge(role: member.role)),
-                        DataCell(
-                          _buildMemberActions(context, member),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  );
+                },
               ),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),

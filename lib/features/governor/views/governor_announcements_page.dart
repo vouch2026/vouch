@@ -53,110 +53,186 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
             return matchesCategory && matchesQuery;
           }).toList();
 
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(workspaceAnnouncementsProvider.future),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                UserManagementHeader(
-                  title: 'Announcements',
-                  subtitle: 'Broadcast important updates and news to your members',
-                  actions: [
-                    HeaderActionButton(
-                      icon: Icons.add_comment_rounded,
-                      label: 'Post Announcement',
-                      onPressed: () => _navigateToCreate(context),
-                      isPrimary: true,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                
-                if (org != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Text(
-                      'Scope: ${org.type.replaceAll('-', ' ').toUpperCase()} | Total Found: ${announcements.length}',
-                      style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[500]),
-                    ),
-                  ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 1000;
+              final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : 3);
 
-                // Filters & Search Section
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search announcements...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _categories.map((c) {
-                      final isSelected = _selectedCategory == c;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.sm),
-                        child: ChoiceChip(
-                          label: Text(c),
-                          selected: isSelected,
-                          onSelected: (val) => setState(() => _selectedCategory = c),
-                          selectedColor: theme.colorScheme.primaryContainer,
-                          labelStyle: TextStyle(
-                            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
+              return RefreshIndicator(
+                onRefresh: () => ref.refresh(workspaceAnnouncementsProvider.future),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  children: [
+                    UserManagementHeader(
+                      title: 'Announcements',
+                      subtitle: 'Broadcast important updates and news to your members',
+                      actions: [
+                        HeaderActionButton(
+                          icon: Icons.add_comment_rounded,
+                          label: 'Post Announcement',
+                          onPressed: () => _navigateToCreate(context),
+                          isPrimary: true,
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    
+                    if (org != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: Text(
+                          'Scope: ${org.type.replaceAll('-', ' ').toUpperCase()} | Total Found: ${announcements.length}',
+                          style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[500]),
+                        ),
+                      ),
 
-                if (filtered.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 64),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                    // Filters & Search Section
+                    if (isMobile) ...[
+                      TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search announcements...',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _buildCategoryFilters(theme),
+                    ] else
+                      Row(
                         children: [
-                          Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[300]),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            announcements.isEmpty 
-                              ? 'No announcements found in this scope' 
-                              : 'No announcements match your filters',
-                            style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
-                          ),
-                          if (announcements.isNotEmpty)
-                            TextButton(
-                              onPressed: () => setState(() => _selectedCategory = 'All'),
-                              child: const Text('Clear Filters'),
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: 'Search announcements...',
+                                prefixIcon: const Icon(Icons.search_rounded),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                              ),
                             ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            flex: 3,
+                            child: _buildCategoryFilters(theme),
+                          ),
                         ],
                       ),
-                    ),
-                  )
-                else
-                  ...filtered.map((a) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                    child: GovernorAnnouncementCard(
-                      key: ValueKey(a.id),
-                      announcement: a,
-                      onPin: () {},
-                      onDelete: () => _deleteAnnouncement(a.id!),
-                    ),
-                  )),
-              ],
-            ),
+                    
+                    const SizedBox(height: AppSpacing.xl),
+
+                    if (filtered.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 64),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[300]),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                announcements.isEmpty 
+                                  ? 'No announcements found in this scope' 
+                                  : 'No announcements match your filters',
+                                style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                              ),
+                              if (announcements.isNotEmpty)
+                                TextButton(
+                                  onPressed: () => setState(() => _selectedCategory = 'All'),
+                                  child: const Text('Clear Filters'),
+                                ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      _buildMasonryGrid(filtered, crossAxisCount),
+                  ],
+                ),
+              );
+            },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
+    );
+  }
+
+  Widget _buildCategoryFilters(ThemeData theme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _categories.map((c) {
+          final isSelected = _selectedCategory == c;
+          return Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            child: ChoiceChip(
+              label: Text(c),
+              selected: isSelected,
+              onSelected: (val) => setState(() => _selectedCategory = c),
+              selectedColor: theme.colorScheme.primaryContainer,
+              labelStyle: TextStyle(
+                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildMasonryGrid(List<AnnouncementModel> announcements, int crossAxisCount) {
+    if (crossAxisCount <= 1) {
+      return Column(
+        children: announcements.map((a) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: GovernorAnnouncementCard(
+            key: ValueKey(a.id),
+            announcement: a,
+            onPin: () {},
+            onDelete: () => _deleteAnnouncement(a.id!),
+          ),
+        )).toList(),
+      );
+    }
+
+    final List<List<AnnouncementModel>> columns = List.generate(crossAxisCount, (_) => []);
+    for (int i = 0; i < announcements.length; i++) {
+      columns[i % crossAxisCount].add(announcements[i]);
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: columns.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final col = entry.value;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: idx == 0 ? 0 : AppSpacing.md / 2,
+              right: idx == crossAxisCount - 1 ? 0 : AppSpacing.md / 2,
+            ),
+            child: Column(
+              children: col.map((a) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                child: GovernorAnnouncementCard(
+                  key: ValueKey(a.id),
+                  announcement: a,
+                  onPin: () {},
+                  onDelete: () => _deleteAnnouncement(a.id!),
+                ),
+              )).toList(),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

@@ -62,11 +62,13 @@ class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (widget.announcement.imageUrl != null)
-            Image.network(
-              widget.announcement.imageUrl!,
-              height: 140,
-              width: double.infinity,
-              fit: BoxFit.cover,
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                widget.announcement.imageUrl!,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),

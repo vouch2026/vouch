@@ -60,7 +60,7 @@ class GovernorDashboardView extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildKpiSection(org, activeRole?.roleName, members, events),
+                                    _buildKpiSection(context, org, activeRole?.roleName, members, events),
                                     const SizedBox(height: AppSpacing.lg),
                                     _buildUpcomingEvents(org, upcomingEvents),
                                   ],
@@ -83,7 +83,7 @@ class GovernorDashboardView extends ConsumerWidget {
                         else
                           Column(
                             children: [
-                              _buildKpiSection(org, activeRole?.roleName, members, events),
+                              _buildKpiSection(context, org, activeRole?.roleName, members, events),
                               const SizedBox(height: AppSpacing.lg),
                               _buildPendingApprovals(org, members),
                               const SizedBox(height: AppSpacing.lg),
@@ -218,34 +218,40 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiSection(dynamic org, String? roleName, List<UserModel> members, List<EventModel> events) {
+  Widget _buildKpiSection(BuildContext context, dynamic org, String? roleName, List<UserModel> members, List<EventModel> events) {
     final bool isOfficer = roleName != null && roleName != 'Student';
     final totalMembers = members.length;
     final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
     final pendingRequests = members.where((m) => m.status.toLowerCase() == 'pending').length;
     final upcomingCount = events.where((e) => e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1)))).length;
 
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: AppSpacing.md,
-      mainAxisSpacing: AppSpacing.md,
-      childAspectRatio: 1.5,
-      children: [
-        if (isOfficer) ...[
-          _buildKpiCard('Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
-          _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
-          _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
-          _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
-          _buildKpiCard('Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
-          _buildKpiCard('Pending Requests', pendingRequests.toString(), Icons.pending_actions_rounded, Colors.red),
-        ] else ...[
-          _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
-          _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
-          _buildKpiCard('Events Attended', '15', Icons.event_available_rounded, Colors.blue),
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth < 450 ? 1 : (constraints.maxWidth < 800 ? 2 : 3);
+        
+        return GridView.count(
+          crossAxisCount: crossAxisCount,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.5,
+          children: [
+            if (isOfficer) ...[
+              _buildKpiCard('Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
+              _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
+              _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
+              _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
+              _buildKpiCard('Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
+              _buildKpiCard('Pending Requests', pendingRequests.toString(), Icons.pending_actions_rounded, Colors.red),
+            ] else ...[
+              _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
+              _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
+              _buildKpiCard('Events Attended', '15', Icons.event_available_rounded, Colors.blue),
+            ],
+          ],
+        );
+      }
     );
   }
 

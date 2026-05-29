@@ -871,7 +871,7 @@ BEGIN
 
     IF v_campus_id IS NOT NULL THEN
         INSERT INTO public.organization_members (organization_id, user_id, role_id)
-        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Students')
+        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
         FROM public.organizations 
         WHERE type = 'campus-based' AND campus_id = v_campus_id
         ON CONFLICT DO NOTHING;
@@ -879,7 +879,7 @@ BEGIN
 
     IF v_faculty_id IS NOT NULL THEN
         INSERT INTO public.organization_members (organization_id, user_id, role_id)
-        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Students')
+        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
         FROM public.organizations 
         WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
         ON CONFLICT DO NOTHING;
@@ -887,7 +887,7 @@ BEGIN
 
     IF v_program_id IS NOT NULL THEN
         INSERT INTO public.organization_members (organization_id, user_id, role_id)
-        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Students')
+        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
         FROM public.organizations 
         WHERE type = 'program-based' AND program_id = v_program_id
         ON CONFLICT DO NOTHING;
@@ -952,7 +952,7 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Comselec Chair', 60), 
 ('Governor', 50), ('Vice Governor', 45), ('Secretary', 40), ('Assistant Secretary', 35),
 ('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), ('PIO', 20),
-('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Students', 5);
+('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Member', 5), ('Students', 5);
 
 -- 5. INSERT PERMISSIONS
 INSERT INTO permissions (action) VALUES

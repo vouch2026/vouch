@@ -14,39 +14,44 @@ class GovernorMembersPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DashboardLayout(
       title: 'Organization Members',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            UserManagementHeader(
-              title: 'Members',
-              subtitle: 'View and manage all members of your organization',
-              actions: [
-                HeaderActionButton(
-                  icon: Icons.person_add_rounded,
-                  label: 'Add Member',
-                  onPressed: () {},
-                  isPrimary: true,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 600;
+          final verticalGap = isMobile ? AppSpacing.lg : AppSpacing.xl;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                UserManagementHeader(
+                  title: 'Members',
+                  subtitle: 'View and manage all members of your organization',
+                  actions: [
+                    HeaderActionButton(
+                      icon: Icons.person_add_rounded,
+                      label: 'Add Member',
+                      onPressed: () {},
+                      isPrimary: true,
+                    ),
+                    HeaderActionButton(
+                      icon: Icons.file_upload_outlined,
+                      label: 'Import',
+                      onPressed: () {},
+                    ),
+                    HeaderActionButton(
+                      icon: Icons.file_download_outlined,
+                      label: 'Export',
+                      onPressed: () {},
+                    ),
+                  ],
                 ),
-                HeaderActionButton(
-                  icon: Icons.file_upload_outlined,
-                  label: 'Import',
-                  onPressed: () {},
-                ),
-                HeaderActionButton(
-                  icon: Icons.file_download_outlined,
-                  label: 'Export',
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            const GovernorMembersKpi(),
-            const SizedBox(height: AppSpacing.xl),
-            
-            AdvancedUserFilterPanel(
+                SizedBox(height: verticalGap),
+                
+                const GovernorMembersKpi(),
+                SizedBox(height: verticalGap),
+                
+                AdvancedUserFilterPanel(
               filters: const [
                 FilterOption(
                   label: 'Year Level',
@@ -95,7 +100,9 @@ class GovernorMembersPage extends ConsumerWidget {
             const GovernorMembersTable(),
           ],
         ),
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }

@@ -78,7 +78,7 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
           status: 'active',
         );
         role = AppRole(
-          roleName: 'Student',
+          roleName: 'Member',
           hierarchyLevel: 5,
           scopeType: org.type,
           permissions: ['request_clearance'],

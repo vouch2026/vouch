@@ -31,50 +31,59 @@ class GovernorMembersKpi extends ConsumerWidget {
           return m.joinedAt!.isAfter(startOfMonth);
         }).length;
 
-        return GridView.count(
-          crossAxisCount: 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: AppSpacing.lg,
-          mainAxisSpacing: AppSpacing.lg,
-          childAspectRatio: 2.5,
-          children: [
-            _buildKpiCard(
-              context,
-              title: 'Total Members',
-              value: totalMembers.toString(),
-              icon: Icons.people_alt_rounded,
-              color: Colors.blue,
-              trend: 'All registered students',
-            ),
-            _buildKpiCard(
-              context,
-              title: 'Active Members',
-              value: activeMembers.toString(),
-              icon: Icons.check_circle_rounded,
-              color: Colors.green,
-              trend: totalMembers > 0 
-                ? '${((activeMembers / totalMembers) * 100).toInt()}% of total'
-                : '0% of total',
-            ),
-            _buildKpiCard(
-              context,
-              title: 'Pending Approval',
-              value: pendingMembers.toString(),
-              icon: Icons.pending_actions_rounded,
-              color: Colors.orange,
-              trend: 'Requires review',
-            ),
-            _buildKpiCard(
-              context,
-              title: 'New This Month',
-              value: newMembersThisMonth.toString(),
-              icon: Icons.person_add_rounded,
-              color: Colors.purple,
-              trend: 'Joined since ${now.month}/${now.year}',
-              isTrendPositive: newMembersThisMonth > 0,
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+            final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 1100;
+            final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : 4);
+            final childAspectRatio = isMobile ? 3.5 : (isTablet ? 3.0 : 2.5);
+
+            return GridView.count(
+              crossAxisCount: crossAxisCount,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: AppSpacing.lg,
+              mainAxisSpacing: AppSpacing.lg,
+              childAspectRatio: childAspectRatio,
+              children: [
+                _buildKpiCard(
+                  context,
+                  title: 'Total Members',
+                  value: totalMembers.toString(),
+                  icon: Icons.people_alt_rounded,
+                  color: Colors.blue,
+                  trend: 'All registered students',
+                ),
+                _buildKpiCard(
+                  context,
+                  title: 'Active Members',
+                  value: activeMembers.toString(),
+                  icon: Icons.check_circle_rounded,
+                  color: Colors.green,
+                  trend: totalMembers > 0 
+                    ? '${((activeMembers / totalMembers) * 100).toInt()}% of total'
+                    : '0% of total',
+                ),
+                _buildKpiCard(
+                  context,
+                  title: 'Pending Approval',
+                  value: pendingMembers.toString(),
+                  icon: Icons.pending_actions_rounded,
+                  color: Colors.orange,
+                  trend: 'Requires review',
+                ),
+                _buildKpiCard(
+                  context,
+                  title: 'New This Month',
+                  value: newMembersThisMonth.toString(),
+                  icon: Icons.person_add_rounded,
+                  color: Colors.purple,
+                  trend: 'Joined since ${now.month}/${now.year}',
+                  isTrendPositive: newMembersThisMonth > 0,
+                ),
+              ],
+            );
+          },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

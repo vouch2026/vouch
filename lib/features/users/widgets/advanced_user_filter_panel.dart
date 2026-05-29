@@ -26,76 +26,86 @@ class _AdvancedUserFilterPanelState extends State<AdvancedUserFilterPanel> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      children: [
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        return Column(
           children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search by name, ID, or email...',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, ID, or email...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    ),
+                    onChanged: widget.onSearchChanged,
+                  ),
                 ),
-                onChanged: widget.onSearchChanged,
-              ),
+                const SizedBox(width: AppSpacing.md),
+                if (isMobile)
+                  IconButton.filledTonal(
+                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                    icon: Icon(_isExpanded ? Icons.filter_list_off_rounded : Icons.filter_list_rounded),
+                    tooltip: _isExpanded ? 'Hide Filters' : 'Filters',
+                  )
+                else
+                  FilledButton.tonalIcon(
+                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                    icon: Icon(_isExpanded ? Icons.filter_list_off_rounded : Icons.filter_list_rounded),
+                    label: Text(_isExpanded ? 'Hide Filters' : 'Filters'),
+                  ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.md),
-            FilledButton.tonalIcon(
-              onPressed: () => setState(() => _isExpanded = !_isExpanded),
-              icon: Icon(_isExpanded ? Icons.filter_list_off_rounded : Icons.filter_list_rounded),
-              label: Text(_isExpanded ? 'Hide Filters' : 'Filters'),
-            ),
-          ],
-        ),
-        if (_isExpanded) ...[
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Wrap(
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.md,
-                  children: widget.filters.map((filter) {
-                    return SizedBox(
-                      width: 200,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(filter.label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          DropdownButtonFormField<dynamic>(
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            if (_isExpanded) ...[
+              const SizedBox(height: AppSpacing.md),
+              Card(
+                elevation: 0,
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
+                    children: widget.filters.map((filter) {
+                      return SizedBox(
+                        width: isMobile ? (constraints.maxWidth - AppSpacing.xl) / 2 - 10 : 200,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(filter.label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            DropdownButtonFormField<dynamic>(
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              isExpanded: true,
+                              value: _activeFilters[filter.key],
+                              items: [
+                                DropdownMenuItem(value: null, child: Text('All ${filter.label}')),
+                                ...filter.options.map((opt) => DropdownMenuItem(value: opt.value, child: Text(opt.label))),
+                              ],
+                              onChanged: (val) {
+                                setState(() => _activeFilters[filter.key] = val);
+                                widget.onFiltersChanged(_activeFilters);
+                              },
                             ),
-                            isExpanded: true,
-                            value: _activeFilters[filter.key],
-                            items: [
-                              DropdownMenuItem(value: null, child: Text('All ${filter.label}')),
-                              ...filter.options.map((opt) => DropdownMenuItem(value: opt.value, child: Text(opt.label))),
-                            ],
-                            onChanged: (val) {
-                              setState(() => _activeFilters[filter.key] = val);
-                              widget.onFiltersChanged(_activeFilters);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
-      ],
+            ],
+          ],
+        );
+      },
     );
   }
 }
