@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../finance/models/payment_receiver_model.dart';
+import '../../finance/providers/finance_provider.dart';
 
 class GovernorAddReceiverPage extends ConsumerStatefulWidget {
   const GovernorAddReceiverPage({super.key});
@@ -16,7 +19,8 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
   String _selectedProvider = 'GCash';
   final _nameController = TextEditingController();
   final _numberController = TextEditingController();
-  final _positionController = TextEditingController();
+  
+  bool _isLoading = false;
 
   final List<String> _providers = ['GCash', 'Maya', 'ShopeePay', 'Bank Transfer'];
 
@@ -24,8 +28,42 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
   void dispose() {
     _nameController.dispose();
     _numberController.dispose();
-    _positionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = ref.read(userProfileProvider).value!;
+      
+      final receiver = PaymentReceiverModel(
+        bankType: _selectedProvider,
+        accountName: _nameController.text,
+        accountNumber: _numberController.text,
+        createdByUserId: user.id,
+      );
+
+      await ref.read(financeRepositoryProvider).createPaymentReceiver(receiver);
+      
+      if (mounted) {
+        ref.invalidate(paymentReceiversProvider);
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment reference added successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -103,16 +141,6 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
                     ),
                     validator: (v) => v?.isEmpty == true ? 'Number is required' : null,
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildLabel('Position / Title'),
-                  TextFormField(
-                    controller: _positionController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., Treasurer',
-                      prefixIcon: Icon(Icons.work_outline_rounded),
-                    ),
-                    validator: (v) => v?.isEmpty == true ? 'Position is required' : null,
-                  ),
                 ],
               ),
               
@@ -122,7 +150,7 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
@@ -132,15 +160,13 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
                   const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Navigator.pop(context, true);
-                        }
-                      },
+                      onPressed: _isLoading ? null : _submit,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
-                      child: const Text('Save Reference'),
+                      child: _isLoading 
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Save Reference'),
                     ),
                   ),
                 ],

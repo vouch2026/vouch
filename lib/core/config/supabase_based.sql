@@ -542,6 +542,66 @@ USING (
   OR public.is_super_admin()
 );
 
+-- Fees
+CREATE POLICY "Fees are viewable by everyone" ON fees FOR SELECT USING (true);
+CREATE POLICY "Officers can create fees" ON fees FOR INSERT TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = fees.scope_type
+    AND ur.scope_id = fees.scope_id
+    AND p.action = 'create_fee'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+CREATE POLICY "Officers can update fees" ON fees FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = fees.scope_type
+    AND ur.scope_id = fees.scope_id
+    AND p.action = 'edit_fee'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+CREATE POLICY "Officers can delete fees" ON fees FOR DELETE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = fees.scope_type
+    AND ur.scope_id = fees.scope_id
+    AND p.action = 'delete_fee'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+
+-- Payment Receivers
+CREATE POLICY "Payment receivers are viewable by everyone" ON payment_receiver FOR SELECT USING (true);
+CREATE POLICY "Officers can manage payment receivers" ON payment_receiver FOR ALL TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND p.action = 'manage_payment_receivers'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES
 -- ==============================================================================
@@ -931,12 +991,12 @@ WHERE r.name = 'Students' AND p.action IN ('request_clearance');
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Governor', 'Vice Governor') 
-AND p.action IN ('create_event', 'edit_event', 'delete_event', 'scan_event_attendance', 'override_attendance', 'create_fee', 'edit_fee', 'delete_fee', 'view_clearance_dashboard', 'reject_clearance');
+AND p.action IN ('create_event', 'edit_event', 'delete_event', 'scan_event_attendance', 'override_attendance', 'create_fee', 'edit_fee', 'delete_fee', 'view_clearance_dashboard', 'reject_clearance', 'manage_payment_receivers');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Treasurer', 'Assistant Treasurer') 
-AND p.action IN ('create_fee', 'edit_fee', 'delete_fee', 'verify_payment', 'reject_payment');
+AND p.action IN ('create_fee', 'edit_fee', 'delete_fee', 'verify_payment', 'reject_payment', 'manage_payment_receivers');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../finance/models/student_payment_model.dart';
 
 class GovernorSubmissionCard extends StatefulWidget {
-  final Map<String, dynamic> submission;
+  final StudentPaymentModel submission;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onViewReceipt;
@@ -26,7 +28,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final status = widget.submission['status'] as String? ?? 'Pending';
+    final status = widget.submission.status;
     final statusColor = _getStatusColor(status);
     
     return MouseRegion(
@@ -64,7 +66,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                         radius: 22,
                         backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.5),
                         child: Text(
-                          _getInitials(widget.submission['studentName'] ?? ''),
+                          _getInitials(widget.submission.studentName ?? ''),
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -79,13 +81,13 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.submission['studentName'] ?? 'Student',
+                            widget.submission.studentName ?? 'Student',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            widget.submission['studentProgram'] ?? '',
+                            'Student', // Placeholder for now
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
@@ -105,7 +107,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.submission['feeTitle'] ?? '',
+                            widget.submission.feeName ?? '',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodyMedium.copyWith(
@@ -115,7 +117,9 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${widget.submission['paymentMethod']} • ${widget.submission['timeAgo']}',
+                            widget.submission.paidAt != null 
+                              ? 'Paid: ${DateFormat.yMMMd().format(widget.submission.paidAt!)}'
+                              : 'Date Unknown',
                             style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
                           ),
                         ],
@@ -123,7 +127,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      '₱${widget.submission['amount']}',
+                      '₱${widget.submission.amountPaid.toStringAsFixed(2)}',
                       style: AppTextStyles.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
@@ -145,7 +149,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          widget.submission['proofFile'] ?? 'receipt.jpg',
+                          'View Proof of Payment',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
@@ -196,7 +200,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                     ],
                   ),
                 ],
-                if (status == 'Rejected' && widget.submission['rejectionNote'] != null) ...[
+                if (status == 'Rejected' && widget.submission.rejectionNote != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   Container(
                     width: double.infinity,
@@ -212,7 +216,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Reason: ${widget.submission['rejectionNote']}',
+                            'Reason: ${widget.submission.rejectionNote}',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: theme.colorScheme.error,
                               fontWeight: FontWeight.w500,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../finance/models/payment_receiver_model.dart';
 
 class GovernorReceiverCard extends StatefulWidget {
-  final Map<String, dynamic> receiver;
+  final PaymentReceiverModel receiver;
   final VoidCallback? onEdit;
 
   const GovernorReceiverCard({
@@ -21,7 +22,7 @@ class _GovernorReceiverCardState extends State<GovernorReceiverCard> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = widget.receiver['provider'] as String? ?? 'GCash';
+    final provider = widget.receiver.bankType;
     final color = _getProviderColor(provider);
     
     return MouseRegion(
@@ -89,22 +90,13 @@ class _GovernorReceiverCardState extends State<GovernorReceiverCard> {
                     ),
                     const Spacer(),
                     Text(
-                      widget.receiver['name'] ?? '',
+                      widget.receiver.accountName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.titleLarge.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
-                      ),
-                    ),
-                    Text(
-                      widget.receiver['position'] ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: Colors.white.withOpacity(0.8),
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -122,7 +114,7 @@ class _GovernorReceiverCardState extends State<GovernorReceiverCard> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _formatNumber(widget.receiver['gcashNumber'] ?? ''),
+                          _formatNumber(widget.receiver.accountNumber),
                           style: AppTextStyles.titleMedium.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

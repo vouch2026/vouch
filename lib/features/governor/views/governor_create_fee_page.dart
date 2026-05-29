@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../academic_structure/providers/term_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../finance/models/fee_model.dart';
+import '../../finance/providers/finance_provider.dart';
 
 class GovernorCreateFeePage extends ConsumerStatefulWidget {
-  final Map<String, dynamic>? initialData;
+  final FeeModel? initialData;
 
   const GovernorCreateFeePage({super.key, this.initialData});
 
@@ -19,15 +25,24 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
   late final TextEditingController _amountController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _dueDateController;
+  
+  DateTime? _selectedDueDate;
   bool _isMandatory = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.initialData?['title']);
-    _amountController = TextEditingController(text: widget.initialData?['amount']?.toString());
-    _descriptionController = TextEditingController(text: widget.initialData?['description']);
+    _titleController = TextEditingController(text: widget.initialData?.name);
+    _amountController = TextEditingController(text: widget.initialData?.amount.toString());
+    _descriptionController = TextEditingController(text: widget.initialData?.description);
     _dueDateController = TextEditingController();
+    
+    if (widget.initialData != null) {
+      _selectedDueDate = widget.initialData!.dueDate;
+      _dueDateController.text = DateFormat.yMMMd().format(_selectedDueDate!);
+      _isMandatory = widget.initialData!.isMandatory;
+    }
   }
 
   @override
@@ -37,6 +52,73 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
     _descriptionController.dispose();
     _dueDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    if (_selectedDueDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a due date')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final workspace = ref.read(workspaceProvider);
+      final org = workspace.selectedOrganization!;
+      final user = ref.read(userProfileProvider).value!;
+      final activeTerm = await ref.read(activeTermProvider.future);
+
+      if (activeTerm == null) {
+        throw Exception('No active academic term found. Please contact an administrator.');
+      }
+
+      final scopeType = org.type == 'campus-based' 
+          ? 'Institutional' 
+          : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
+      
+      final scopeId = org.type == 'campus-based' 
+          ? org.campusId 
+          : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+
+      final fee = FeeModel(
+        id: widget.initialData?.id,
+        name: _titleController.text,
+        description: _descriptionController.text,
+        amount: double.parse(_amountController.text),
+        scopeType: scopeType,
+        scopeId: scopeId!,
+        isMandatory: _isMandatory,
+        dueDate: _selectedDueDate!,
+        academicTermId: activeTerm.id,
+        createdByUserId: user.id,
+      );
+
+      if (widget.initialData != null) {
+        await ref.read(financeRepositoryProvider).updateFee(fee);
+      } else {
+        await ref.read(financeRepositoryProvider).createFee(fee);
+      }
+
+      if (mounted) {
+        ref.invalidate(workspaceFeesProvider);
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fee ${widget.initialData != null ? 'updated' : 'created'} successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -87,12 +169,16 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
                             _buildLabel('Amount (₱)'),
                             TextFormField(
                               controller: _amountController,
-                              keyboardType: TextInputType.number,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               decoration: const InputDecoration(
                                 hintText: '0.00',
                                 prefixIcon: Icon(Icons.payments_outlined),
                               ),
-                              validator: (v) => v?.isEmpty == true ? 'Amount is required' : null,
+                              validator: (v) {
+                                if (v?.isEmpty == true) return 'Amount is required';
+                                if (double.tryParse(v!) == null) return 'Invalid amount';
+                                return null;
+                              },
                             ),
                           ],
                         ),
@@ -112,6 +198,7 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
                                 suffixIcon: Icon(Icons.arrow_drop_down_rounded),
                               ),
                               onTap: () => _selectDate(context),
+                              validator: (v) => v?.isEmpty == true ? 'Due date is required' : null,
                             ),
                           ],
                         ),
@@ -153,7 +240,7 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
@@ -163,15 +250,13 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
                   const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Navigator.pop(context, true);
-                        }
-                      },
+                      onPressed: _isLoading ? null : _submit,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
-                      child: Text(isEdit ? 'Update Fee' : 'Create Fee'),
+                      child: _isLoading 
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(isEdit ? 'Update Fee' : 'Create Fee'),
                     ),
                   ),
                 ],
@@ -223,13 +308,14 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().add(const Duration(days: 7)),
+      initialDate: _selectedDueDate ?? DateTime.now().add(const Duration(days: 7)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
       setState(() {
-        _dueDateController.text = "${picked.month}/${picked.day}/${picked.year}";
+        _selectedDueDate = picked;
+        _dueDateController.text = DateFormat.yMMMd().format(picked);
       });
     }
   }

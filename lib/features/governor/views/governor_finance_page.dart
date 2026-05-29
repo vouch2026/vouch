@@ -4,7 +4,11 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
-import '../models/governor_finance_mock_data.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../finance/models/fee_model.dart';
+import '../../finance/models/student_payment_model.dart';
+import '../../finance/models/payment_receiver_model.dart';
+import '../../finance/providers/finance_provider.dart';
 import '../widgets/governor_receiver_card.dart';
 import '../widgets/governor_submission_card.dart';
 import 'governor_add_receiver_page.dart';
@@ -39,6 +43,8 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final receiversAsync = ref.watch(paymentReceiversProvider);
+    final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
 
     return DashboardLayout(
       title: 'Organization Finance',
@@ -106,18 +112,22 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                 
                 const SizedBox(height: AppSpacing.md),
                 
-                SizedBox(
-                  height: 210,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    itemCount: GovernorFinanceMockData.receivers.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
-                    itemBuilder: (context, index) => GovernorReceiverCard(
-                      receiver: GovernorFinanceMockData.receivers[index],
-                      onEdit: () {},
+                receiversAsync.when(
+                  data: (receivers) => SizedBox(
+                    height: 210,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      itemCount: receivers.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
+                      itemBuilder: (context, index) => GovernorReceiverCard(
+                        receiver: receivers[index],
+                        onEdit: () {},
+                      ),
                     ),
                   ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error: $err')),
                 ),
 
                 const SizedBox(height: AppSpacing.xl),
@@ -209,13 +219,17 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
             ),
           ),
         ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildSubmissionList('Pending'),
-            _buildSubmissionList('Approved'),
-            _buildSubmissionList('Rejected'),
-          ],
+        body: submissionsAsync.when(
+          data: (submissions) => TabBarView(
+            controller: _tabController,
+            children: [
+              _buildSubmissionList(submissions, 'Pending'),
+              _buildSubmissionList(submissions, 'Paid'), // Maps to 'Approved' in UI
+              _buildSubmissionList(submissions, 'Rejected'),
+            ],
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
     );
@@ -269,12 +283,12 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     );
   }
 
-  Widget _buildSubmissionList(String status) {
+  Widget _buildSubmissionList(List<StudentPaymentModel> submissions, String status) {
     final query = _searchController.text.toLowerCase();
-    final filtered = GovernorFinanceMockData.submissions.where((s) {
-      final matchesStatus = s['status'] == status;
-      final matchesQuery = s['studentName']!.toLowerCase().contains(query) ||
-                          s['feeTitle']!.toLowerCase().contains(query);
+    final filtered = submissions.where((s) {
+      final matchesStatus = s.status == status;
+      final matchesQuery = (s.studentName?.toLowerCase().contains(query) ?? false) ||
+                          (s.feeName?.toLowerCase().contains(query) ?? false);
       return matchesStatus && matchesQuery;
     }).toList();
 
@@ -329,8 +343,8 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           itemCount: filtered.length,
           itemBuilder: (context, index) => GovernorSubmissionCard(
             submission: filtered[index],
-            onApprove: () {},
-            onReject: () {},
+            onApprove: () => _updateStatus(filtered[index].id!, 'Paid'),
+            onReject: () => _showRejectDialog(filtered[index].id!),
             onViewReceipt: () => _showReceiptPreview(context, filtered[index]),
           ),
         );
@@ -338,7 +352,51 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     );
   }
 
-  void _showReceiptPreview(BuildContext context, Map<String, dynamic> submission) {
+  Future<void> _updateStatus(String id, String status, [String? reason]) async {
+    try {
+      final user = ref.read(userProfileProvider).value!;
+      await ref.read(financeRepositoryProvider).updatePaymentStatus(id, status, reason, user.id!);
+      ref.invalidate(workspaceStudentPaymentsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment $status successfully')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  void _showRejectDialog(String id) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Payment'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Reason for rejection...',
+            labelText: 'Reason',
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateStatus(id, 'Rejected', controller.text);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReceiptPreview(BuildContext context, StudentPaymentModel submission) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -359,26 +417,17 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
             Flexible(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  submission['receiptUrl'],
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const Center(child: CircularProgressIndicator(color: Colors.white));
-                  },
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    padding: const EdgeInsets.all(32),
-                    color: Colors.white,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.broken_image_outlined, size: 48, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text('Unable to load receipt image', style: AppTextStyles.bodyMedium),
-                      ],
-                    ),
-                  ),
-                ),
+                child: submission.proofPhotoUrl != null 
+                  ? Image.network(
+                      submission.proofPhotoUrl!,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(child: CircularProgressIndicator(color: Colors.white));
+                      },
+                      errorBuilder: (context, error, stackTrace) => _buildImageError(),
+                    )
+                  : _buildImageError(),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -392,11 +441,11 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    submission['studentName'],
+                    submission.studentName ?? 'Unknown Student',
                     style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '${submission['feeTitle']} • ₱${submission['amount']}',
+                    '${submission.feeName} • ₱${submission.amountPaid.toStringAsFixed(2)}',
                     style: AppTextStyles.bodySmall,
                   ),
                 ],
@@ -404,6 +453,21 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildImageError() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.broken_image_outlined, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text('Unable to load receipt image', style: AppTextStyles.bodyMedium),
+        ],
       ),
     );
   }
