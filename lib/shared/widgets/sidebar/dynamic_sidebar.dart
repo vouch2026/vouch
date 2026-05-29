@@ -98,18 +98,21 @@ class DynamicSidebar extends ConsumerWidget {
                         label: '${activeRole?.roleName ?? 'Workspace'} Home',
                         path: RoutePaths.dashboard,
                       ),
-                      const _SidebarItem(
-                        icon: Icons.people_outline_rounded,
-                        label: 'Members',
-                        path: RoutePaths.workspaceMembers,
-                      ),
+                      if (activeRole?.roleName != 'Student')
+                        const _SidebarItem(
+                          icon: Icons.people_outline_rounded,
+                          label: 'Members',
+                          path: RoutePaths.workspaceMembers,
+                        ),
                       const _SidebarItem(
                         icon: Icons.calendar_today_outlined,
                         label: 'Events',
                         path: RoutePaths.workspaceEvents,
                       ),
                       
-                      if (activeRole?.roleName == 'Governor' || activeRole?.roleName == 'Treasurer')
+                      if (activeRole?.roleName == 'Governor' || 
+                          activeRole?.roleName == 'Treasurer' || 
+                          activeRole?.roleName == 'Student')
                         const _SidebarItem(
                           icon: Icons.payments_outlined,
                           label: 'Finance',
@@ -121,11 +124,13 @@ class DynamicSidebar extends ConsumerWidget {
                         label: 'Announcements',
                         path: RoutePaths.workspaceAnnouncements,
                       ),
-                      const _SidebarItem(
-                        icon: Icons.badge_outlined,
-                        label: 'Activity Cards',
-                        path: RoutePaths.workspaceActivityCards,
-                      ),
+
+                      if (activeRole?.roleName != 'Student')
+                        const _SidebarItem(
+                          icon: Icons.badge_outlined,
+                          label: 'Activity Cards',
+                          path: RoutePaths.workspaceActivityCards,
+                        ),
                     ],
                   ],
                 ),
