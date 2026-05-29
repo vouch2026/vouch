@@ -53,7 +53,9 @@ mixin _$UserModel {
   @JsonKey(name: 'account_status')
   String get status => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
-  DateTime? get createdAt => throw _privateConstructorUsedError; // Join fields (not in users table but useful for UI)
+  DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'joined_at')
+  DateTime? get joinedAt => throw _privateConstructorUsedError; // Join fields (not in users table but useful for UI)
   String? get facultyName => throw _privateConstructorUsedError;
   String? get programName => throw _privateConstructorUsedError;
 
@@ -90,6 +92,7 @@ abstract class $UserModelCopyWith<$Res> {
     String role,
     @JsonKey(name: 'account_status') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'joined_at') DateTime? joinedAt,
     String? facultyName,
     String? programName,
   });
@@ -127,6 +130,7 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? role = null,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? joinedAt = freezed,
     Object? facultyName = freezed,
     Object? programName = freezed,
   }) {
@@ -200,6 +204,10 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            joinedAt: freezed == joinedAt
+                ? _value.joinedAt
+                : joinedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
             facultyName: freezed == facultyName
                 ? _value.facultyName
                 : facultyName // ignore: cast_nullable_to_non_nullable
@@ -241,6 +249,7 @@ abstract class _$$UserModelImplCopyWith<$Res>
     String role,
     @JsonKey(name: 'account_status') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'joined_at') DateTime? joinedAt,
     String? facultyName,
     String? programName,
   });
@@ -277,6 +286,7 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? role = null,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? joinedAt = freezed,
     Object? facultyName = freezed,
     Object? programName = freezed,
   }) {
@@ -350,6 +360,10 @@ class __$$UserModelImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        joinedAt: freezed == joinedAt
+            ? _value.joinedAt
+            : joinedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
         facultyName: freezed == facultyName
             ? _value.facultyName
             : facultyName // ignore: cast_nullable_to_non_nullable
@@ -385,6 +399,7 @@ class _$UserModelImpl extends _UserModel {
     this.role = 'student',
     @JsonKey(name: 'account_status') this.status = 'active',
     @JsonKey(name: 'created_at') this.createdAt,
+    @JsonKey(name: 'joined_at') this.joinedAt,
     this.facultyName,
     this.programName,
   }) : _organizationIds = organizationIds,
@@ -450,6 +465,9 @@ class _$UserModelImpl extends _UserModel {
   @override
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @override
+  @JsonKey(name: 'joined_at')
+  final DateTime? joinedAt;
   // Join fields (not in users table but useful for UI)
   @override
   final String? facultyName;
@@ -458,7 +476,7 @@ class _$UserModelImpl extends _UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, facultyName: $facultyName, programName: $programName)';
+    return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, joinedAt: $joinedAt, facultyName: $facultyName, programName: $programName)';
   }
 
   @override
@@ -497,6 +515,8 @@ class _$UserModelImpl extends _UserModel {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
+            (identical(other.joinedAt, joinedAt) ||
+                other.joinedAt == joinedAt) &&
             (identical(other.facultyName, facultyName) ||
                 other.facultyName == facultyName) &&
             (identical(other.programName, programName) ||
@@ -524,6 +544,7 @@ class _$UserModelImpl extends _UserModel {
     role,
     status,
     createdAt,
+    joinedAt,
     facultyName,
     programName,
   ]);
@@ -561,6 +582,7 @@ abstract class _UserModel extends UserModel {
     final String role,
     @JsonKey(name: 'account_status') final String status,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
+    @JsonKey(name: 'joined_at') final DateTime? joinedAt,
     final String? facultyName,
     final String? programName,
   }) = _$UserModelImpl;
@@ -618,7 +640,10 @@ abstract class _UserModel extends UserModel {
   String get status;
   @override
   @JsonKey(name: 'created_at')
-  DateTime? get createdAt; // Join fields (not in users table but useful for UI)
+  DateTime? get createdAt;
+  @override
+  @JsonKey(name: 'joined_at')
+  DateTime? get joinedAt; // Join fields (not in users table but useful for UI)
   @override
   String? get facultyName;
   @override

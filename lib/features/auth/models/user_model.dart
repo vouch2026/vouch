@@ -22,8 +22,9 @@ class UserModel with _$UserModel {
     @Default([]) @JsonKey(name: 'organization_ids') List<String> organizationIds,
     /// Derived or primary role
     @Default('student') String role,
-    @Default('active') @JsonKey(name: 'account_status') String status,
+    @JsonKey(name: 'account_status') @Default('active') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'joined_at') DateTime? joinedAt,
     
     // Join fields (not in users table but useful for UI)
     String? facultyName,

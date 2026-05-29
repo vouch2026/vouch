@@ -4,7 +4,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/models/user_model.dart';
 import '../widgets/welcome_header.dart';
 
 class GovernorDashboardView extends ConsumerWidget {
@@ -22,6 +24,8 @@ class GovernorDashboardView extends ConsumerWidget {
       );
     }
 
+    final membersAsync = ref.watch(organizationMembersProvider(org.id));
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 1024;
@@ -34,47 +38,57 @@ class GovernorDashboardView extends ConsumerWidget {
               _buildOrgHeader(context, org, activeRole?.roleName ?? 'Member'),
               const SizedBox(height: AppSpacing.xl),
               
-              if (isDesktop) 
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildKpiSection(org, activeRole?.roleName),
-                          const SizedBox(height: AppSpacing.lg),
-                          _buildUpcomingEvents(org),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.lg),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildPendingApprovals(org),
-                          const SizedBox(height: AppSpacing.lg),
-                          _buildRecentActivity(org),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    _buildKpiSection(org, activeRole?.roleName),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildPendingApprovals(org),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildUpcomingEvents(org),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildRecentActivity(org),
-                  ],
-                ),
+              membersAsync.when(
+                data: (members) {
+                  return Column(
+                    children: [
+                      if (isDesktop) 
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildKpiSection(org, activeRole?.roleName, members),
+                                  const SizedBox(height: AppSpacing.lg),
+                                  _buildUpcomingEvents(org),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.lg),
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildPendingApprovals(org, members),
+                                  const SizedBox(height: AppSpacing.lg),
+                                  _buildRecentActivity(org, members),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Column(
+                          children: [
+                            _buildKpiSection(org, activeRole?.roleName, members),
+                            const SizedBox(height: AppSpacing.lg),
+                            _buildPendingApprovals(org, members),
+                            const SizedBox(height: AppSpacing.lg),
+                            _buildUpcomingEvents(org),
+                            const SizedBox(height: AppSpacing.lg),
+                            _buildRecentActivity(org, members),
+                          ],
+                        ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(child: Text('Error: $err')),
+              ),
             ],
           ),
         );
@@ -192,8 +206,11 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiSection(dynamic org, String? roleName) {
+  Widget _buildKpiSection(dynamic org, String? roleName, List<UserModel> members) {
     final bool isOfficer = roleName != null && roleName != 'Student';
+    final totalMembers = members.length;
+    final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
+    final pendingRequests = members.where((m) => m.status.toLowerCase() == 'pending').length;
 
     return GridView.count(
       crossAxisCount: 3,
@@ -204,12 +221,12 @@ class GovernorDashboardView extends ConsumerWidget {
       childAspectRatio: 1.5,
       children: [
         if (isOfficer) ...[
-          _buildKpiCard('Total Members', '124', Icons.people_outline_rounded, Colors.blue),
-          _buildKpiCard('Active Officers', '12', Icons.admin_panel_settings_outlined, Colors.orange),
+          _buildKpiCard('Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
+          _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
           _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
           _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
           _buildKpiCard('Upcoming Events', '3', Icons.event_outlined, Colors.purple),
-          _buildKpiCard('Pending Requests', '7', Icons.pending_actions_rounded, Colors.red),
+          _buildKpiCard('Pending Requests', pendingRequests.toString(), Icons.pending_actions_rounded, Colors.red),
         ] else ...[
           _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
           _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
@@ -325,7 +342,9 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildPendingApprovals(dynamic org) {
+  Widget _buildPendingApprovals(dynamic org, List<UserModel> members) {
+    final pendingMembers = members.where((m) => m.status.toLowerCase() == 'pending').toList();
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -338,9 +357,14 @@ class GovernorDashboardView extends ConsumerWidget {
         children: [
           Text('Pending Approvals', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.md),
-          _buildApprovalItem('Juan Dela Cruz', 'Membership Request', '2 hours ago'),
-          _buildApprovalItem('Maria Clara', 'Payment Verification (₱100)', '5 hours ago'),
-          _buildApprovalItem('Pedro Penduko', 'Attendance Validation', '1 day ago'),
+          if (pendingMembers.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: Text('No pending membership requests.')),
+            )
+          else
+            ...pendingMembers.take(3).map((m) => _buildApprovalItem(m.fullName, 'Membership Request', 'Recent')),
+          
           const SizedBox(height: AppSpacing.md),
           SizedBox(
             width: double.infinity,
@@ -359,7 +383,7 @@ class GovernorDashboardView extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         children: [
-          CircleAvatar(radius: 18, child: Text(name[0])),
+          CircleAvatar(radius: 18, child: Text(name[0].toUpperCase())),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -376,7 +400,10 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentActivity(dynamic org) {
+  Widget _buildRecentActivity(dynamic org, List<UserModel> members) {
+    final recentMembers = [...members];
+    recentMembers.sort((a, b) => (b.joinedAt ?? DateTime(2000)).compareTo(a.joinedAt ?? DateTime(2000)));
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -389,9 +416,12 @@ class GovernorDashboardView extends ConsumerWidget {
         children: [
           Text('Recent Activities', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.md),
-          _buildActivityItem('Officer Assigned', 'Maria Clara was assigned as Treasurer.', '3 hours ago'),
-          _buildActivityItem('Event Created', 'Annual Tech Summit 2026 was published.', 'Yesterday'),
-          _buildActivityItem('Announcement', 'Welcome message sent to 5 new members.', '2 days ago'),
+          if (recentMembers.isNotEmpty)
+            _buildActivityItem('Member Joined', '${recentMembers.first.fullName} joined the organization.', 'Recently')
+          else
+            const Center(child: Text('No recent activities.')),
+          
+          _buildActivityItem('System Update', 'Workspace synchronization complete.', 'Today'),
         ],
       ),
     );

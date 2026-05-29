@@ -1,55 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 
-class GovernorMembersKpi extends StatelessWidget {
+class GovernorMembersKpi extends ConsumerWidget {
   const GovernorMembersKpi({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: AppSpacing.lg,
-      mainAxisSpacing: AppSpacing.lg,
-      childAspectRatio: 2.5,
-      children: [
-        _buildKpiCard(
-          context,
-          title: 'Total Members',
-          value: '1,248',
-          icon: Icons.people_alt_rounded,
-          color: Colors.blue,
-          trend: '+12% from last sem',
-          isTrendPositive: true,
-        ),
-        _buildKpiCard(
-          context,
-          title: 'Active Members',
-          value: '1,102',
-          icon: Icons.check_circle_rounded,
-          color: Colors.green,
-          trend: '88% of total',
-        ),
-        _buildKpiCard(
-          context,
-          title: 'Pending Approval',
-          value: '45',
-          icon: Icons.pending_actions_rounded,
-          color: Colors.orange,
-          trend: 'Requires review',
-        ),
-        _buildKpiCard(
-          context,
-          title: 'New This Month',
-          value: '86',
-          icon: Icons.person_add_rounded,
-          color: Colors.purple,
-          trend: '+5% vs prev month',
-          isTrendPositive: true,
-        ),
-      ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workspace = ref.watch(workspaceProvider);
+    final selectedOrg = workspace.selectedOrganization;
+
+    if (selectedOrg == null) return const SizedBox.shrink();
+
+    final membersAsync = ref.watch(organizationMembersProvider(selectedOrg.id));
+
+    return membersAsync.when(
+      data: (members) {
+        final totalMembers = members.length;
+        final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
+        final pendingMembers = members.where((m) => m.status.toLowerCase() == 'pending').length;
+        
+        // Calculate new members this month
+        final now = DateTime.now();
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        final newMembersThisMonth = members.where((m) {
+          if (m.joinedAt == null) return false;
+          return m.joinedAt!.isAfter(startOfMonth);
+        }).length;
+
+        return GridView.count(
+          crossAxisCount: 4,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: AppSpacing.lg,
+          mainAxisSpacing: AppSpacing.lg,
+          childAspectRatio: 2.5,
+          children: [
+            _buildKpiCard(
+              context,
+              title: 'Total Members',
+              value: totalMembers.toString(),
+              icon: Icons.people_alt_rounded,
+              color: Colors.blue,
+              trend: 'All registered students',
+            ),
+            _buildKpiCard(
+              context,
+              title: 'Active Members',
+              value: activeMembers.toString(),
+              icon: Icons.check_circle_rounded,
+              color: Colors.green,
+              trend: totalMembers > 0 
+                ? '${((activeMembers / totalMembers) * 100).toInt()}% of total'
+                : '0% of total',
+            ),
+            _buildKpiCard(
+              context,
+              title: 'Pending Approval',
+              value: pendingMembers.toString(),
+              icon: Icons.pending_actions_rounded,
+              color: Colors.orange,
+              trend: 'Requires review',
+            ),
+            _buildKpiCard(
+              context,
+              title: 'New This Month',
+              value: newMembersThisMonth.toString(),
+              icon: Icons.person_add_rounded,
+              color: Colors.purple,
+              trend: 'Joined since ${now.month}/${now.year}',
+              isTrendPositive: newMembersThisMonth > 0,
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 

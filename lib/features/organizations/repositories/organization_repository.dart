@@ -84,13 +84,36 @@ class OrganizationRepository {
   Future<List<UserModel>> getOrganizationMembers(String orgId) async {
     final response = await _client
         .from('organization_members')
-        .select('users (*)')
+        .select('''
+          *,
+          user:users (
+            *,
+            program:programs!users_program_id_fkey (name),
+            faculty:faculties!users_faculty_id_fkey (name)
+          ),
+          role:roles (name)
+        ''')
         .eq('organization_id', orgId);
     
-    // Use a Map to filter by user ID for guaranteed uniqueness
     final Map<String, UserModel> uniqueUsers = {};
     for (var json in (response as List)) {
-      final user = UserModel.fromJson(json['users']);
+      final userData = json['user'];
+      if (userData == null) continue;
+      
+      final roleData = json['role'];
+      final roleName = roleData != null ? roleData['name'] : 'Member';
+      
+      final programData = userData['program'];
+      final facultyData = userData['faculty'];
+      
+      final user = UserModel.fromJson({
+        ...userData,
+        'role': roleName,
+        'programName': programData?['name'],
+        'facultyName': facultyData?['name'],
+        'joined_at': json['joined_at'],
+      });
+      
       if (user.id != null) {
         uniqueUsers[user.id!] = user;
       }

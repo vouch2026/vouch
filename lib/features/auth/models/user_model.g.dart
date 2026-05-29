@@ -31,6 +31,9 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+      joinedAt: json['joined_at'] == null
+          ? null
+          : DateTime.parse(json['joined_at'] as String),
       facultyName: json['facultyName'] as String?,
       programName: json['programName'] as String?,
     );
@@ -54,6 +57,7 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
       'role': instance.role,
       'account_status': instance.status,
       'created_at': instance.createdAt?.toIso8601String(),
+      'joined_at': instance.joinedAt?.toIso8601String(),
       'facultyName': instance.facultyName,
       'programName': instance.programName,
     };

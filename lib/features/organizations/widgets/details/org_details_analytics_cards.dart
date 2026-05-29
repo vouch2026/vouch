@@ -1,56 +1,70 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../providers/organization_provider.dart';
 
-class OrgDetailsAnalyticsCards extends StatelessWidget {
-  const OrgDetailsAnalyticsCards({super.key});
+class OrgDetailsAnalyticsCards extends ConsumerWidget {
+  final String orgId;
+  const OrgDetailsAnalyticsCards({super.key, required this.orgId});
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membersAsync = ref.watch(organizationMembersProvider(orgId));
+
+    return membersAsync.when(
+      data: (members) {
+        final totalMembers = members.length;
+        final attendanceRate = 88.4; // Still mock for now
         
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: constraints.maxWidth > 1200 ? 1.8 : 2.5,
-          children: [
-            _AnalyticsCard(
-              title: 'Total Members',
-              value: '1,248',
-              trend: 12.5,
-              icon: Icons.people_alt_rounded,
-              color: AppColors.primary,
-            ),
-            _AnalyticsCard(
-              title: 'Attendance Rate',
-              value: '88.4%',
-              trend: 5.2,
-              icon: Icons.fact_check_rounded,
-              color: AppColors.success,
-            ),
-            _AnalyticsCard(
-              title: 'Collection Rate',
-              value: '92.1%',
-              trend: -2.4,
-              icon: Icons.payments_rounded,
-              color: AppColors.warning,
-            ),
-            _AnalyticsCard(
-              title: 'Governance Score',
-              value: '95/100',
-              trend: 0.8,
-              icon: Icons.gavel_rounded,
-              color: AppColors.info,
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
+            
+            return GridView.count(
+              crossAxisCount: crossAxisCount,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
+              childAspectRatio: constraints.maxWidth > 1200 ? 1.8 : 2.5,
+              children: [
+                _AnalyticsCard(
+                  title: 'Total Members',
+                  value: totalMembers.toString(),
+                  trend: 0.0,
+                  icon: Icons.people_alt_rounded,
+                  color: AppColors.primary,
+                ),
+                _AnalyticsCard(
+                  title: 'Attendance Rate',
+                  value: '$attendanceRate%',
+                  trend: 5.2,
+                  icon: Icons.fact_check_rounded,
+                  color: AppColors.success,
+                ),
+                _AnalyticsCard(
+                  title: 'Collection Rate',
+                  value: '92.1%',
+                  trend: -2.4,
+                  icon: Icons.payments_rounded,
+                  color: AppColors.warning,
+                ),
+                _AnalyticsCard(
+                  title: 'Governance Score',
+                  value: '95/100',
+                  trend: 0.8,
+                  icon: Icons.gavel_rounded,
+                  color: AppColors.info,
+                ),
+              ],
+            );
+          },
         );
       },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Error: $err')),
     );
   }
 }

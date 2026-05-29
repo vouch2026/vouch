@@ -60,7 +60,7 @@ class OrganizationDetailsPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 2. High-level Analytics Metrics
-                      const OrgDetailsAnalyticsCards(),
+                      OrgDetailsAnalyticsCards(orgId: id),
                       const SizedBox(height: AppSpacing.xl),
                       
                       // 3. Main Content Area (Tabs + Sidebar)
