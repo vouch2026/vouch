@@ -437,6 +437,13 @@ ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_sanction_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_card_clearance_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_card_clearance_signatures ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
 -- HELPER FUNCTION FOR RBAC
@@ -489,6 +496,51 @@ CREATE POLICY "Members can view their own memberships" ON organization_members F
 USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
 CREATE POLICY "Organization members are viewable by everyone" ON organization_members FOR SELECT USING (true);
 CREATE POLICY "Super admins can manage organization memberships" ON organization_members FOR ALL TO authenticated USING (public.is_super_admin());
+
+-- Events
+CREATE POLICY "Events are viewable by everyone" ON events FOR SELECT USING (true);
+CREATE POLICY "Officers can create events" ON events FOR INSERT TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = events.scope_type
+    AND ur.scope_id = events.scope_id
+    AND p.action = 'create_event'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+CREATE POLICY "Officers can update events" ON events FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = events.scope_type
+    AND ur.scope_id = events.scope_id
+    AND p.action = 'edit_event'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
+CREATE POLICY "Officers can delete events" ON events FOR DELETE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.role_permissions rp ON ur.role_id = rp.role_id
+    JOIN public.permissions p ON rp.permission_id = p.id
+    WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
+    AND ur.scope_type = events.scope_type
+    AND ur.scope_id = events.scope_id
+    AND p.action = 'delete_event'
+    AND ur.is_active = true
+  )
+  OR public.is_super_admin()
+);
 
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES
@@ -875,7 +927,23 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Students' AND p.action IN ('request_clearance');
 
--- 7. SUPER ADMIN SEED
+-- 7. MAP PERMISSIONS FOR OFFICERS (Governor, Treasurer, etc.)
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name IN ('Governor', 'Vice Governor') 
+AND p.action IN ('create_event', 'edit_event', 'delete_event', 'scan_event_attendance', 'override_attendance', 'create_fee', 'edit_fee', 'delete_fee', 'view_clearance_dashboard', 'reject_clearance');
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name IN ('Treasurer', 'Assistant Treasurer') 
+AND p.action IN ('create_fee', 'edit_fee', 'delete_fee', 'verify_payment', 'reject_payment');
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name IN ('Secretary', 'Assistant Secretary') 
+AND p.action IN ('create_event', 'edit_event', 'scan_event_attendance');
+
+-- 8. SUPER ADMIN SEED
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 INSERT INTO auth.users (

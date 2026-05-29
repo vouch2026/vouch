@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/utils/time_formatter.dart';
 import '../../auth/models/user_model.dart';
 import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
@@ -322,7 +323,7 @@ class GovernorDashboardView extends ConsumerWidget {
               children: [
                 _buildEventTile(
                   e.name, 
-                  '${DateFormat.yMMMd().format(e.eventDate)} • ${e.timeInStart}', 
+                  '${DateFormat.yMMMd().format(e.eventDate)} • ${TimeFormatter.formatDbTimeTo12Hour(e.timeInStart)}', 
                   e.location, 
                   e.isMandatory ? 'Mandatory' : 'Optional'
                 ),

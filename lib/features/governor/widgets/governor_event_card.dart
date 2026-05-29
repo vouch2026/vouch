@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/time_formatter.dart';
 import '../../events/models/event_model.dart';
 
 class GovernorEventCard extends StatefulWidget {
@@ -108,9 +109,9 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
                         ],
                       ),
                       const Spacer(),
-                      _buildInfoRow(context, Icons.login_rounded, 'Time in:', '${widget.event.timeInStart} - ${widget.event.timeInEnd}'),
+                      _buildInfoRow(context, Icons.login_rounded, 'Time in:', TimeFormatter.formatTimeRange(widget.event.timeInStart, widget.event.timeInEnd)),
                       const SizedBox(height: AppSpacing.xs),
-                      _buildInfoRow(context, Icons.logout_rounded, 'Time out:', '${widget.event.timeOutStart} - ${widget.event.timeOutEnd}'),
+                      _buildInfoRow(context, Icons.logout_rounded, 'Time out:', TimeFormatter.formatTimeRange(widget.event.timeOutStart, widget.event.timeOutEnd)),
                       const SizedBox(height: AppSpacing.md),
                       SizedBox(
                         width: double.infinity,

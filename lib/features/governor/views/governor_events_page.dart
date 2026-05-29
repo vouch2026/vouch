@@ -57,7 +57,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             return eDate.isAtSameMomentAs(today);
           }).toList();
           
-          final upcomingEvents = events.where((e) => e.eventDate.isAfter(today.add(const Duration(days: 1)))).toList();
+          final upcomingEvents = events.where((e) => e.eventDate.isAfter(today)).toList();
           final pastEvents = events.where((e) => e.eventDate.isBefore(today)).toList();
           
           return NestedScrollView(

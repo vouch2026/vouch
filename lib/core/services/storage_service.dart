@@ -45,4 +45,22 @@ class StorageService {
 
     return _client.storage.from(bucket).getPublicUrl(path);
   }
+
+  Future<String> uploadEventImage({
+    required File file,
+    required String eventName,
+  }) async {
+    final extension = p.extension(file.path);
+    final fileName = 'event_${eventName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'events/$fileName';
+    final bucket = dotenv.get('SUPABASE_EVENT_BUCKET', fallback: 'event-pictures');
+
+    await _client.storage.from(bucket).upload(
+          path,
+          file,
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
 }
