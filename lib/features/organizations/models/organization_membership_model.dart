@@ -23,6 +23,7 @@ class OrganizationMembershipModel with _$OrganizationMembershipModel {
     AcademicTermModel? term,
     @JsonKey(name: 'role_name') String? roleName,
     @JsonKey(name: 'hierarchy_level') int? hierarchyLevel,
+    @Default([]) List<String> permissions,
   }) = _OrganizationMembershipModel;
 
   factory OrganizationMembershipModel.fromJson(Map<String, dynamic> json) => _$OrganizationMembershipModelFromJson(json);

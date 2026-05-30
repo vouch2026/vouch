@@ -45,6 +45,7 @@ mixin _$OrganizationMembershipModel {
   String? get roleName => throw _privateConstructorUsedError;
   @JsonKey(name: 'hierarchy_level')
   int? get hierarchyLevel => throw _privateConstructorUsedError;
+  List<String> get permissions => throw _privateConstructorUsedError;
 
   /// Serializes this OrganizationMembershipModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -81,6 +82,7 @@ abstract class $OrganizationMembershipModelCopyWith<$Res> {
     AcademicTermModel? term,
     @JsonKey(name: 'role_name') String? roleName,
     @JsonKey(name: 'hierarchy_level') int? hierarchyLevel,
+    List<String> permissions,
   });
 
   $UserModelCopyWith<$Res>? get user;
@@ -118,6 +120,7 @@ class _$OrganizationMembershipModelCopyWithImpl<
     Object? term = freezed,
     Object? roleName = freezed,
     Object? hierarchyLevel = freezed,
+    Object? permissions = null,
   }) {
     return _then(
       _value.copyWith(
@@ -173,6 +176,10 @@ class _$OrganizationMembershipModelCopyWithImpl<
                 ? _value.hierarchyLevel
                 : hierarchyLevel // ignore: cast_nullable_to_non_nullable
                       as int?,
+            permissions: null == permissions
+                ? _value.permissions
+                : permissions // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
           )
           as $Val,
     );
@@ -230,6 +237,7 @@ abstract class _$$OrganizationMembershipModelImplCopyWith<$Res>
     AcademicTermModel? term,
     @JsonKey(name: 'role_name') String? roleName,
     @JsonKey(name: 'hierarchy_level') int? hierarchyLevel,
+    List<String> permissions,
   });
 
   @override
@@ -269,6 +277,7 @@ class __$$OrganizationMembershipModelImplCopyWithImpl<$Res>
     Object? term = freezed,
     Object? roleName = freezed,
     Object? hierarchyLevel = freezed,
+    Object? permissions = null,
   }) {
     return _then(
       _$OrganizationMembershipModelImpl(
@@ -324,6 +333,10 @@ class __$$OrganizationMembershipModelImplCopyWithImpl<$Res>
             ? _value.hierarchyLevel
             : hierarchyLevel // ignore: cast_nullable_to_non_nullable
                   as int?,
+        permissions: null == permissions
+            ? _value._permissions
+            : permissions // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
       ),
     );
   }
@@ -347,7 +360,8 @@ class _$OrganizationMembershipModelImpl
     this.term,
     @JsonKey(name: 'role_name') this.roleName,
     @JsonKey(name: 'hierarchy_level') this.hierarchyLevel,
-  });
+    final List<String> permissions = const [],
+  }) : _permissions = permissions;
 
   factory _$OrganizationMembershipModelImpl.fromJson(
     Map<String, dynamic> json,
@@ -390,10 +404,18 @@ class _$OrganizationMembershipModelImpl
   @override
   @JsonKey(name: 'hierarchy_level')
   final int? hierarchyLevel;
+  final List<String> _permissions;
+  @override
+  @JsonKey()
+  List<String> get permissions {
+    if (_permissions is EqualUnmodifiableListView) return _permissions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_permissions);
+  }
 
   @override
   String toString() {
-    return 'OrganizationMembershipModel(id: $id, organizationId: $organizationId, userId: $userId, roleId: $roleId, academicTermId: $academicTermId, status: $status, assignedAt: $assignedAt, expiredAt: $expiredAt, joinedAt: $joinedAt, user: $user, term: $term, roleName: $roleName, hierarchyLevel: $hierarchyLevel)';
+    return 'OrganizationMembershipModel(id: $id, organizationId: $organizationId, userId: $userId, roleId: $roleId, academicTermId: $academicTermId, status: $status, assignedAt: $assignedAt, expiredAt: $expiredAt, joinedAt: $joinedAt, user: $user, term: $term, roleName: $roleName, hierarchyLevel: $hierarchyLevel, permissions: $permissions)';
   }
 
   @override
@@ -420,7 +442,11 @@ class _$OrganizationMembershipModelImpl
             (identical(other.roleName, roleName) ||
                 other.roleName == roleName) &&
             (identical(other.hierarchyLevel, hierarchyLevel) ||
-                other.hierarchyLevel == hierarchyLevel));
+                other.hierarchyLevel == hierarchyLevel) &&
+            const DeepCollectionEquality().equals(
+              other._permissions,
+              _permissions,
+            ));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -440,6 +466,7 @@ class _$OrganizationMembershipModelImpl
     term,
     roleName,
     hierarchyLevel,
+    const DeepCollectionEquality().hash(_permissions),
   );
 
   /// Create a copy of OrganizationMembershipModel
@@ -475,6 +502,7 @@ abstract class _OrganizationMembershipModel
     final AcademicTermModel? term,
     @JsonKey(name: 'role_name') final String? roleName,
     @JsonKey(name: 'hierarchy_level') final int? hierarchyLevel,
+    final List<String> permissions,
   }) = _$OrganizationMembershipModelImpl;
 
   factory _OrganizationMembershipModel.fromJson(Map<String, dynamic> json) =
@@ -515,6 +543,8 @@ abstract class _OrganizationMembershipModel
   @override
   @JsonKey(name: 'hierarchy_level')
   int? get hierarchyLevel;
+  @override
+  List<String> get permissions;
 
   /// Create a copy of OrganizationMembershipModel
   /// with the given fields replaced by the non-null parameter values.

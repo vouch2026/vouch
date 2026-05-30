@@ -950,7 +950,7 @@ INSERT INTO programs (faculty_id, name, code) VALUES
 -- 4. INSERT ROLES
 INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Comselec Chair', 60), 
-('Governor', 50), ('Vice Governor', 45), ('Secretary', 40), ('Assistant Secretary', 35),
+('Governor', 50), ('Vice Governor', 45), ('President', 50), ('Vice President', 45), ('Secretary', 40), ('Assistant Secretary', 35),
 ('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), ('PIO', 20),
 ('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Member', 5), ('Students', 5);
 
@@ -958,39 +958,53 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 INSERT INTO permissions (action) VALUES
 ('manage_academic_terms'), ('manage_faculties'), ('manage_programs'),
 ('assign_roles'), ('revoke_roles'), ('create_event'), ('edit_event'),
-('delete_event'), ('scan_event_attendance'), ('override_attendance'),
-('create_fee'), ('edit_fee'), ('delete_fee'), ('manage_payment_receivers'),
-('verify_payment'), ('reject_payment'), ('request_clearance'),
+('delete_event'), ('view_events'), ('scan_event_attendance'), ('override_attendance'),
+('create_fee'), ('edit_fee'), ('delete_fee'), ('view_fees'), ('manage_payment_receivers'),
+('verify_payment'), ('reject_payment'), ('manage_collections'), ('request_clearance'),
 ('sign_faculty_clearance'), ('sign_program_clearance'), ('sign_comselec_clearance'), 
 ('reject_clearance'), ('view_clearance_dashboard'), ('create_sanction_rules'),
 ('edit_sanction_rules'), ('delete_sanction_rules'), ('receive_sanction_items'),
 ('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
-('view_faculty_analytics'), ('create_announcement'), ('edit_announcement'), ('delete_announcement');
+('view_faculty_analytics'), ('view_analytics'), ('manage_activity_cards'), ('view_activity_cards'),
+('create_announcement'), ('edit_announcement'), ('delete_announcement'), ('view_announcements'),
+('view_members'), ('view_officers'), ('manage_organization'), ('view_documents');
 
 -- 6. MAP PERMISSIONS TO ROLES
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'Super Admin' AND p.action IN ('manage_academic_terms', 'manage_faculties', 'manage_programs', 'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics', 'manage_elections');
+WHERE r.name = 'Super Admin' AND p.action IN ('manage_academic_terms', 'manage_faculties', 'manage_programs', 'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics', 'manage_elections', 'view_analytics', 'manage_organization', 'view_documents', 'view_activity_cards');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'Students' AND p.action IN ('request_clearance');
+WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards');
 
 -- 7. MAP PERMISSIONS FOR OFFICERS (Governor, Treasurer, etc.)
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name IN ('Governor', 'Vice Governor') 
-AND p.action IN ('create_event', 'edit_event', 'delete_event', 'scan_event_attendance', 'override_attendance', 'create_fee', 'edit_fee', 'delete_fee', 'view_clearance_dashboard', 'reject_clearance', 'manage_payment_receivers', 'create_announcement', 'edit_announcement', 'delete_announcement');
+WHERE r.name IN ('Governor', 'Vice Governor', 'President', 'Vice President') 
+AND p.action IN (
+    'create_event', 'edit_event', 'delete_event', 'view_events', 'scan_event_attendance', 'override_attendance', 
+    'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'view_clearance_dashboard', 'reject_clearance', 
+    'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 'delete_announcement', 
+    'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents'
+);
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Treasurer', 'Assistant Treasurer') 
-AND p.action IN ('create_fee', 'edit_fee', 'delete_fee', 'verify_payment', 'reject_payment', 'manage_payment_receivers', 'create_announcement', 'edit_announcement', 'delete_announcement');
+AND p.action IN (
+    'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'verify_payment', 'reject_payment', 
+    'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 
+    'delete_announcement', 'view_events', 'view_announcements', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'manage_organization'
+);
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Secretary', 'Assistant Secretary') 
-AND p.action IN ('create_event', 'edit_event', 'scan_event_attendance', 'create_announcement', 'edit_announcement', 'delete_announcement');
+AND p.action IN (
+    'create_event', 'edit_event', 'view_events', 'scan_event_attendance', 'create_announcement', 
+    'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization'
+);
 
 -- 8. SUPER ADMIN SEED
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

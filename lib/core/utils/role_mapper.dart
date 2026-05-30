@@ -19,6 +19,12 @@ class RoleMapper {
       case 'program governor':
       case 'governor':
         return 'governor';
+      case 'vice governor':
+        return 'vice_governor';
+      case 'president':
+        return 'president';
+      case 'vice president':
+        return 'vice_president';
       case 'faculty treasurer':
       case 'program treasurer':
       case 'treasurer':

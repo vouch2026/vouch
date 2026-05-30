@@ -34,6 +34,9 @@ import '../features/governor/views/governor_create_event_page.dart';
 import '../features/governor/views/governor_announcements_page.dart';
 import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
+import '../features/governor/views/governor_officers_page.dart';
+import '../features/governor/views/governor_collections_page.dart';
+import '../features/governor/views/governor_settings_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
 import '../features/auth/providers/auth_provider.dart';
@@ -281,7 +284,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.workspaceOfficers,
         name: RouteNames.workspaceOfficers,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Officers'),
+        builder: (context, state) => const GovernorOfficersPage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceEvents,
@@ -316,7 +319,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.workspaceCollections,
         name: RouteNames.workspaceCollections,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Collections'),
+        builder: (context, state) => const GovernorCollectionsPage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceFinanceReports,
@@ -369,7 +372,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.workspaceSettings,
         name: RouteNames.workspaceSettings,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Settings'),
+        builder: (context, state) => const GovernorSettingsPage(),
       ),
     ],
   );

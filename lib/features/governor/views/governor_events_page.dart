@@ -51,7 +51,11 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
       );
     }
 
-    final canCreateEvent = activeRole == 'Governor' || activeRole == 'Secretary';
+    final canCreateEvent = activeRole == 'Governor' || 
+                           activeRole == 'President' || 
+                           activeRole == 'Vice Governor' || 
+                           activeRole == 'Vice President' || 
+                           activeRole == 'Secretary';
     
     final eventsAsync = ref.watch(workspaceEventsProvider);
 

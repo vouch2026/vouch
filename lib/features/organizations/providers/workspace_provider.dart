@@ -67,7 +67,7 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
           roleName: activeMembership!.roleName!,
           hierarchyLevel: activeMembership.hierarchyLevel ?? 0,
           scopeType: org.type,
-          permissions: [], 
+          permissions: activeMembership.permissions, 
         );
       } else {
         // Fallback to basic membership if not an officer

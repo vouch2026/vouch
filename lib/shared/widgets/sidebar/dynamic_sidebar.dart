@@ -6,6 +6,7 @@ import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/permissions/app_permissions.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
 import 'organization_switcher.dart';
@@ -88,41 +89,106 @@ class DynamicSidebar extends ConsumerWidget {
                         label: '${activeRole?.roleName ?? 'Workspace'} Home',
                         path: RoutePaths.dashboard,
                       ),
-                      if (activeRole?.roleName != 'Student' && activeRole?.roleName != 'Students' && activeRole?.roleName != 'Member')
-                        const _SidebarItem(
-                          icon: Icons.people_outline_rounded,
-                          label: 'Members',
-                          path: RoutePaths.workspaceMembers,
-                        ),
-                      const _SidebarItem(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Events',
-                        path: RoutePaths.workspaceEvents,
-                      ),
                       
-                      if (activeRole?.roleName == 'Governor' || 
-                          activeRole?.roleName == 'Treasurer' || 
-                          activeRole?.roleName == 'Student' ||
-                          activeRole?.roleName == 'Students' ||
-                          activeRole?.roleName == 'Member')
-                        const _SidebarItem(
-                          icon: Icons.payments_outlined,
-                          label: 'Finance',
-                          path: RoutePaths.workspaceFees,
-                        ),
-                      
-                      const _SidebarItem(
-                        icon: Icons.campaign_outlined,
-                        label: 'Announcements',
-                        path: RoutePaths.workspaceAnnouncements,
-                      ),
+                      // People Section
+                      if (activeRole?.hasAnyPermission([AppPermissions.viewMembers, AppPermissions.viewOfficers, AppPermissions.assignRoles]) ?? false) ...[
+                        const _SidebarHeader(label: 'PEOPLE'),
+                        if (activeRole?.hasPermission(AppPermissions.viewMembers) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.people_outline_rounded,
+                            label: 'Members',
+                            path: RoutePaths.workspaceMembers,
+                          ),
+                        if (activeRole?.hasPermission(AppPermissions.viewOfficers) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.badge_outlined,
+                            label: 'Officers',
+                            path: RoutePaths.workspaceOfficers,
+                          ),
+                      ],
 
-                      if (activeRole?.roleName != 'Student' && activeRole?.roleName != 'Students' && activeRole?.roleName != 'Member')
+                      // Operations Section
+                      if (activeRole?.hasAnyPermission([
+                        AppPermissions.viewEvents, 
+                        AppPermissions.createEvent,
+                        AppPermissions.manageActivityCards,
+                        AppPermissions.viewActivityCards,
+                        AppPermissions.viewAnnouncements,
+                        AppPermissions.createAnnouncement
+                      ]) ?? false) ...[
+                        const _SidebarHeader(label: 'OPERATIONS'),
+                        if (activeRole?.hasAnyPermission([AppPermissions.viewEvents, AppPermissions.createEvent]) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.calendar_today_outlined,
+                            label: 'Events',
+                            path: RoutePaths.workspaceEvents,
+                          ),
+                        if (activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.how_to_reg_rounded,
+                            label: 'Attendance',
+                            path: RoutePaths.workspaceAttendance,
+                          ),
+                        if (activeRole?.hasAnyPermission([AppPermissions.manageActivityCards, AppPermissions.viewActivityCards]) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.assignment_outlined,
+                            label: 'Activity Cards',
+                            path: RoutePaths.workspaceActivityCards,
+                          ),
+                        if (activeRole?.hasAnyPermission([AppPermissions.viewAnnouncements, AppPermissions.createAnnouncement]) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.campaign_outlined,
+                            label: 'Announcements',
+                            path: RoutePaths.workspaceAnnouncements,
+                          ),
+                        if (activeRole?.hasPermission(AppPermissions.viewDocuments) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.folder_open_rounded,
+                            label: 'Records',
+                            path: RoutePaths.workspaceDocuments,
+                          ),
+                      ],
+                      
+                      // Finance Section
+                      if (activeRole?.hasAnyPermission([
+                        AppPermissions.viewFees, 
+                        AppPermissions.createFee, 
+                        AppPermissions.manageCollections
+                      ]) ?? false) ...[
+                        const _SidebarHeader(label: 'FINANCE'),
+                        if (activeRole?.hasAnyPermission([AppPermissions.viewFees, AppPermissions.createFee]) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.payments_outlined,
+                            label: 'Fees',
+                            path: RoutePaths.workspaceFees,
+                          ),
+                        if (activeRole?.hasPermission(AppPermissions.manageCollections) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.account_balance_wallet_outlined,
+                            label: 'Collections',
+                            path: RoutePaths.workspaceCollections,
+                          ),
+                      ],
+
+                      // Insights Section
+                      if (activeRole?.hasAnyPermission([AppPermissions.viewAnalytics, AppPermissions.viewProgramAnalytics, AppPermissions.viewFacultyAnalytics]) ?? false) ...[
+                        const _SidebarHeader(label: 'INSIGHTS'),
                         const _SidebarItem(
-                          icon: Icons.badge_outlined,
-                          label: 'Activity Cards',
-                          path: RoutePaths.workspaceActivityCards,
+                          icon: Icons.bar_chart_rounded,
+                          label: 'Reports',
+                          path: RoutePaths.dashboard, // Placeholder or specific report path
                         ),
+                      ],
+
+                      // Settings Section
+                      if (activeRole?.hasPermission(AppPermissions.manageOrganization) ?? false) ...[
+                        const _SidebarHeader(label: 'SETTINGS'),
+                        const _SidebarItem(
+                          icon: Icons.settings_outlined,
+                          label: 'Organization Settings',
+                          path: RoutePaths.workspaceSettings,
+                        ),
+                      ],
                     ],
                   ],
                 ),

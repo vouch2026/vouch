@@ -128,7 +128,12 @@ class OrganizationRepository {
         .select('''
           *,
           user:users (*),
-          role:roles (*),
+          role:roles (
+            *,
+            role_permissions (
+              permissions (action)
+            )
+          ),
           term:academic_terms (*)
         ''')
         .eq('organization_id', orgId)
@@ -136,12 +141,35 @@ class OrganizationRepository {
         .order('assigned_at', ascending: false);
     
     return (response as List).map((json) {
+      final roleData = json['role'];
+      final List<String> permissions = [];
+      
+      if (roleData != null) {
+        // Try to handle different possible structures from Supabase
+        final rolePerms = roleData['role_permissions'] as List?;
+        if (rolePerms != null) {
+          for (var rp in rolePerms) {
+            final perm = rp['permissions'];
+            if (perm is Map && perm.containsKey('action')) {
+              permissions.add(perm['action'] as String);
+            } else if (perm is List && perm.isNotEmpty) {
+              // Handle case where it might be returned as a list
+              final action = perm.first['action'];
+              if (action != null) {
+                permissions.add(action as String);
+              }
+            }
+          }
+        }
+      }
+
       return OrganizationMembershipModel.fromJson({
         ...json,
         'user': json['user'],
         'term': json['term'],
-        'role_name': json['role']?['name'],
-        'hierarchy_level': json['role']?['hierarchy_level'],
+        'role_name': roleData?['name'],
+        'hierarchy_level': roleData?['hierarchy_level'],
+        'permissions': permissions,
       });
     }).toList();
   }

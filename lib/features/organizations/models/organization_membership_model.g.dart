@@ -32,6 +32,11 @@ _$OrganizationMembershipModelImpl _$$OrganizationMembershipModelImplFromJson(
       : AcademicTermModel.fromJson(json['term'] as Map<String, dynamic>),
   roleName: json['role_name'] as String?,
   hierarchyLevel: (json['hierarchy_level'] as num?)?.toInt(),
+  permissions:
+      (json['permissions'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$$OrganizationMembershipModelImplToJson(
@@ -50,4 +55,5 @@ Map<String, dynamic> _$$OrganizationMembershipModelImplToJson(
   'term': instance.term,
   'role_name': instance.roleName,
   'hierarchy_level': instance.hierarchyLevel,
+  'permissions': instance.permissions,
 };
