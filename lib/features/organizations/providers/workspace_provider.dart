@@ -62,26 +62,21 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       }
 
       AppRole? role;
-      if (activeMembership?.roleName != null) {
+      if (activeMembership != null && activeMembership.roleName != null) {
         role = AppRole(
-          roleName: activeMembership!.roleName!,
-          hierarchyLevel: activeMembership.hierarchyLevel ?? 0,
+          roleName: activeMembership.roleName!,
+          hierarchyLevel: activeMembership.hierarchyLevel ?? 5,
           scopeType: org.type,
           permissions: activeMembership.permissions, 
         );
       } else {
-        // Fallback to basic membership if not an officer
-        activeMembership = OrganizationMembershipModel(
-          id: '',
-          organizationId: org.id,
-          userId: profile.id!,
-          status: 'active',
-        );
+        // Fallback to basic membership if not found in officers list
+        // This handles users who are members but might not have been returned by getOrganizationOfficers
         role = AppRole(
           roleName: 'Member',
           hierarchyLevel: 5,
           scopeType: org.type,
-          permissions: ['request_clearance'],
+          permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance'],
         );
       }
 
