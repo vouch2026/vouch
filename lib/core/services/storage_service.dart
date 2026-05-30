@@ -100,4 +100,30 @@ class StorageService {
 
     return _client.storage.from(bucket).getPublicUrl(path);
   }
+
+  Future<String> uploadEventHighlight({
+    required File file,
+    required String eventId,
+    required String userId,
+  }) async {
+    final extension = p.extension(file.path);
+    final fileName = 'highlight_${eventId}_${userId}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'highlights/$eventId/$fileName';
+    final bucket = dotenv.get('SUPABASE_HIGHLIGHTS_BUCKET', fallback: 'highlight-pictures');
+
+    await _client.storage.from(bucket).upload(
+          path,
+          file,
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
+
+  Future<List<FileObject>> listFiles({
+    required String bucket,
+    String? folder,
+  }) async {
+    return await _client.storage.from(bucket).list(path: folder);
+  }
 }

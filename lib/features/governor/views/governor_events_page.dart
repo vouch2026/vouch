@@ -13,6 +13,7 @@ import '../widgets/governor_past_event_card.dart';
 import '../widgets/governor_rate_event_card.dart';
 
 import '../../organizations/providers/workspace_provider.dart';
+import '../../events/views/student_events_view.dart';
 
 class GovernorEventsPage extends ConsumerStatefulWidget {
   const GovernorEventsPage({super.key});
@@ -41,6 +42,15 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
     final theme = Theme.of(context);
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole?.roleName;
+    final isStudentOrMember = activeRole == 'Student' || activeRole == 'Member';
+    
+    if (isStudentOrMember) {
+      return const DashboardLayout(
+        title: 'My Events',
+        child: StudentEventsView(),
+      );
+    }
+
     final canCreateEvent = activeRole == 'Governor' || activeRole == 'Secretary';
     
     final eventsAsync = ref.watch(workspaceEventsProvider);
@@ -90,7 +100,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                         ),
                         child: TabBar(
                           controller: _tabController,

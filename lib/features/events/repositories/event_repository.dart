@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event_model.dart';
+import '../models/event_rating_model.dart';
 
 class EventRepository {
   final SupabaseClient _client;
@@ -65,5 +66,38 @@ class EventRepository {
         .from('events')
         .delete()
         .eq('id', id);
+  }
+
+  // --- Ratings ---
+
+  Future<List<EventRatingModel>> getRatingsForEvent(String eventId) async {
+    final response = await _client
+        .from('event_ratings')
+        .select()
+        .eq('event_id', eventId)
+        .order('created_at', ascending: false);
+    
+    return (response as List).map((json) => EventRatingModel.fromJson(json)).toList();
+  }
+
+  Future<void> submitRating(EventRatingModel rating) async {
+    final data = rating.toJson();
+    if (data['id'] == null || (data['id'] as String).isEmpty) {
+      data.remove('id');
+    }
+    
+    await _client.from('event_ratings').upsert(data, onConflict: 'event_id, user_id');
+  }
+
+  Future<EventRatingModel?> getUserRatingForEvent(String eventId, String userId) async {
+    final response = await _client
+        .from('event_ratings')
+        .select()
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    
+    if (response == null) return null;
+    return EventRatingModel.fromJson(response);
   }
 }
