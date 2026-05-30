@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../announcements/models/announcement_model.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
-class GovernorAnnouncementCard extends StatefulWidget {
+class GovernorAnnouncementCard extends ConsumerStatefulWidget {
   final AnnouncementModel announcement;
   final VoidCallback? onDelete;
   final VoidCallback? onPin;
@@ -19,10 +21,10 @@ class GovernorAnnouncementCard extends StatefulWidget {
   });
 
   @override
-  State<GovernorAnnouncementCard> createState() => _GovernorAnnouncementCardState();
+  ConsumerState<GovernorAnnouncementCard> createState() => _GovernorAnnouncementCardState();
 }
 
-class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
+class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementCard> {
   bool _isHovered = false;
 
   Future<void> _launchUrl(String url) async {
@@ -46,7 +48,9 @@ class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const category = 'General'; // Placeholder
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole?.roleName;
+    final canManage = activeRole != 'Student' && activeRole != 'Member';
     
     return Card(
       elevation: 0,
@@ -86,8 +90,10 @@ class _GovernorAnnouncementCardState extends State<GovernorAnnouncementCard> {
                         : '',
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _buildOptionsMenu(),
+                    if (canManage) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildOptionsMenu(),
+                    ],
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),

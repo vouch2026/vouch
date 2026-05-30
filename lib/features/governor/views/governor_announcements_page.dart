@@ -40,6 +40,8 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
     final announcementsAsync = ref.watch(workspaceAnnouncementsProvider);
     final workspace = ref.watch(workspaceProvider);
     final org = workspace.selectedOrganization;
+    final activeRole = workspace.activeRole?.roleName;
+    final canPost = activeRole != 'Student' && activeRole != 'Member';
 
     return DashboardLayout(
       title: 'Organization Announcements',
@@ -69,12 +71,13 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                       title: 'Announcements',
                       subtitle: 'Broadcast important updates and news to your members',
                       actions: [
-                        HeaderActionButton(
-                          icon: Icons.add_comment_rounded,
-                          label: 'Post Announcement',
-                          onPressed: () => _navigateToCreate(context),
-                          isPrimary: true,
-                        ),
+                        if (canPost)
+                          HeaderActionButton(
+                            icon: Icons.add_comment_rounded,
+                            label: 'Post Announcement',
+                            onPressed: () => _navigateToCreate(context),
+                            isPrimary: true,
+                          ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
