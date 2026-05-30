@@ -147,4 +147,17 @@ class FinanceRepository {
         })
         .eq('id', paymentId);
   }
+
+  Future<void> submitStudentPayment(StudentPaymentModel payment) async {
+    final data = payment.toJson();
+    
+    // Remove auto-generated/virtual fields
+    if (data['id'] == null || (data['id'] as String).isEmpty) {
+      data.remove('id');
+    }
+    data.remove('studentName');
+    data.remove('feeName');
+    
+    await _client.from('student_payments').insert(data);
+  }
 }

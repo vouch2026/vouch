@@ -81,4 +81,23 @@ class StorageService {
 
     return _client.storage.from(bucket).getPublicUrl(path);
   }
+
+  Future<String> uploadPaymentReceipt({
+    required File file,
+    required String studentId,
+    required String feeId,
+  }) async {
+    final extension = p.extension(file.path);
+    final fileName = 'receipt_${studentId}_${feeId}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'receipts/$fileName';
+    final bucket = dotenv.get('SUPABASE_RECEIPTS_BUCKET', fallback: 'receipt-pictures');
+
+    await _client.storage.from(bucket).upload(
+          path,
+          file,
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
 }

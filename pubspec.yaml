@@ -53,6 +53,7 @@ dependencies:
 
   # Icons
   cupertino_icons: ^1.0.8
+  ionicons: ^0.2.2
   fl_chart: ^1.2.0
   image_picker: ^1.2.2
   path: ^1.9.1

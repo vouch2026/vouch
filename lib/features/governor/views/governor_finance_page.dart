@@ -9,7 +9,6 @@ import '../../users/widgets/user_management_header.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../finance/models/fee_model.dart';
 import '../../finance/models/student_payment_model.dart';
-import '../../finance/models/payment_receiver_model.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_receiver_card.dart';
@@ -17,6 +16,7 @@ import '../widgets/governor_submission_card.dart';
 import 'governor_add_receiver_page.dart';
 import 'governor_create_fee_page.dart';
 import 'governor_created_fees_page.dart';
+import '../../finance/views/student_proof_of_payment_page.dart';
 
 class GovernorFinancePage extends ConsumerStatefulWidget {
   const GovernorFinancePage({super.key});
@@ -47,9 +47,9 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
   Widget build(BuildContext context) {
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole;
-    final isStudent = activeRole?.roleName == 'Student';
+    final isStudentOrMember = activeRole?.roleName == 'Student' || activeRole?.roleName == 'Member';
 
-    if (isStudent) {
+    if (isStudentOrMember) {
       return const _StudentFinanceView();
     }
 
@@ -490,124 +490,229 @@ class _StudentFinanceView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feesAsync = ref.watch(workspaceFeesProvider);
-    final receiversAsync = ref.watch(paymentReceiversProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final userProfile = ref.watch(userProfileProvider).value;
 
     return DashboardLayout(
       title: 'My Fees & Payments',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            UserManagementHeader(
-              title: 'Organization Fees',
-              subtitle: 'View and settle your organization-related fees',
-              actions: const [],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            Text(
-              'PAYMENT METHODS',
-              style: AppTextStyles.labelMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-                letterSpacing: 0.5,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(workspaceFeesProvider);
+          ref.invalidate(workspaceStudentPaymentsProvider);
+          ref.invalidate(paymentReceiversProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              UserManagementHeader(
+                title: 'Organization Fees',
+                subtitle: 'View and settle your organization-related fees',
+                actions: const [],
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            receiversAsync.when(
-              data: (receivers) => SizedBox(
-                height: 200,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: receivers.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
-                  itemBuilder: (context, index) => GovernorReceiverCard(
-                    receiver: receivers[index],
-                  ),
+              const SizedBox(height: AppSpacing.lg),
+
+              submissionsAsync.when(
+                data: (submissions) {
+                  final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
+                  final totalPaid = mySubmissions
+                      .where((s) => s.status == 'Paid')
+                      .fold<double>(0, (sum, s) => sum + s.amountPaid);
+                  
+                  return _buildSummaryCard(totalPaid, userProfile?.id ?? 'Unknown');
+                },
+                loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              Text(
+                'AVAILABLE FEES',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                  letterSpacing: 0.5,
                 ),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Error loading payment methods: $err'),
-            ),
-
-            const SizedBox(height: AppSpacing.xxl),
-
-            Text(
-              'AVAILABLE FEES',
-              style: AppTextStyles.labelMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            feesAsync.when(
-              data: (fees) {
-                if (fees.isEmpty) {
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.xl),
-                    child: Text('No fees available at the moment.'),
-                  ));
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: fees.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, index) {
-                    final fee = fees[index];
-                    return _StudentFeeCard(fee: fee);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Error loading fees: $err'),
-            ),
-
-            const SizedBox(height: AppSpacing.xxl),
-
-            Text(
-              'MY PAYMENT HISTORY',
-              style: AppTextStyles.labelMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            submissionsAsync.when(
-              data: (submissions) {
-                final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
-                
-                if (mySubmissions.isEmpty) {
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.xl),
-                    child: Text('You haven\'t submitted any payments yet.'),
-                  ));
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: mySubmissions.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, index) {
-                    return GovernorSubmissionCard(
-                      submission: mySubmissions[index],
-                      onViewReceipt: () => _showReceiptPreview(context, mySubmissions[index]),
+              const SizedBox(height: AppSpacing.md),
+              feesAsync.when(
+                data: (fees) {
+                  if (fees.isEmpty) {
+                    return _buildEmptyState(
+                      context,
+                      Icons.receipt_long_outlined,
+                      'No fees available at the moment.',
                     );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Error loading payment history: $err'),
-            ),
-          ],
+                  }
+
+                  return submissionsAsync.when(
+                    data: (submissions) {
+                      final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
+                      
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: fees.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          final fee = fees[index];
+                          final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                          return _StudentFeeCard(fee: fee, submission: submission);
+                        },
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Text('Error loading submissions: $err'),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Text('Error loading fees: $err'),
+              ),
+
+              const SizedBox(height: AppSpacing.xxl),
+
+              Text(
+                'MY PAYMENT HISTORY',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              submissionsAsync.when(
+                data: (submissions) {
+                  final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
+                  
+                  if (mySubmissions.isEmpty) {
+                    return _buildEmptyState(
+                      context,
+                      Icons.history_rounded,
+                      'You haven\'t submitted any payments yet.',
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: mySubmissions.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      return GovernorSubmissionCard(
+                        submission: mySubmissions[index],
+                        onViewReceipt: () => _showReceiptPreview(context, mySubmissions[index]),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Text('Error loading payment history: $err'),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(double totalPaid, String studentId) {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            top: -20,
+            child: CircleAvatar(
+              radius: 80,
+              backgroundColor: Colors.white.withOpacity(0.05),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TOTAL PAID',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white.withOpacity(0.7),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  '₱ ${totalPaid.toStringAsFixed(2)}',
+                  style: AppTextStyles.headlineMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                  ),
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'STUDENT ID',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.white.withOpacity(0.5),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      studentId.toUpperCase(),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, IconData icon, String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary.withOpacity(0.4)),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+          ),
+        ],
       ),
     );
   }
@@ -650,11 +755,22 @@ class _StudentFinanceView extends ConsumerWidget {
 
 class _StudentFeeCard extends StatelessWidget {
   final FeeModel fee;
+  final StudentPaymentModel? submission;
 
-  const _StudentFeeCard({required this.fee});
+  const _StudentFeeCard({required this.fee, this.submission});
 
   @override
   Widget build(BuildContext context) {
+    final status = submission?.status ?? 'To Pay';
+    final isPaid = status == 'Paid';
+    final isPending = status == 'Pending';
+    final isRejected = status == 'Rejected';
+
+    Color statusColor = AppColors.primary;
+    if (isPaid) statusColor = Colors.green;
+    if (isPending) statusColor = Colors.amber;
+    if (isRejected) statusColor = Colors.red;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -663,59 +779,106 @@ class _StudentFeeCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary),
-            ),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    fee.name,
-                    style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Due Date: ${DateFormat.yMMMd().format(fee.dueDate)}',
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
               children: [
-                Text(
-                  '₱${fee.amount.toStringAsFixed(2)}',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.receipt_long_rounded, color: statusColor),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fee.name,
+                        style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Due Date: ${DateFormat.yMMMd().format(fee.dueDate)}',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: () {
-                    // TODO: Implement Payment Submission Dialog
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Payment submission coming soon!'))
-                    );
-                  },
-                  icon: const Icon(Icons.add_card_rounded, size: 16),
-                  label: const Text('Pay Now'),
-                  style: FilledButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₱${fee.amount.toStringAsFixed(2)}',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        status.toUpperCase(),
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+            if (!isPaid && !isPending) ...[
+              const SizedBox(height: AppSpacing.md),
+              const Divider(),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StudentProofOfPaymentPage(fee: fee),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add_card_rounded, size: 18),
+                  label: Text(isRejected ? 'Resubmit Proof' : 'Submit Proof of Payment'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isRejected ? Colors.red : AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+            if (isPending) ...[
+              const SizedBox(height: AppSpacing.md),
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 16, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Awaiting verification from organization officer.',
+                        style: AppTextStyles.bodySmall.copyWith(color: Colors.amber[800], fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
