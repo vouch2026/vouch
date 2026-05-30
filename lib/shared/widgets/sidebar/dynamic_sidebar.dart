@@ -98,7 +98,7 @@ class DynamicSidebar extends ConsumerWidget {
                         label: '${activeRole?.roleName ?? 'Workspace'} Home',
                         path: RoutePaths.dashboard,
                       ),
-                      if (activeRole?.roleName != 'Student')
+                      if (activeRole?.roleName != 'Student' && activeRole?.roleName != 'Students' && activeRole?.roleName != 'Member')
                         const _SidebarItem(
                           icon: Icons.people_outline_rounded,
                           label: 'Members',
@@ -112,7 +112,9 @@ class DynamicSidebar extends ConsumerWidget {
                       
                       if (activeRole?.roleName == 'Governor' || 
                           activeRole?.roleName == 'Treasurer' || 
-                          activeRole?.roleName == 'Student')
+                          activeRole?.roleName == 'Student' ||
+                          activeRole?.roleName == 'Students' ||
+                          activeRole?.roleName == 'Member')
                         const _SidebarItem(
                           icon: Icons.payments_outlined,
                           label: 'Finance',
@@ -125,7 +127,7 @@ class DynamicSidebar extends ConsumerWidget {
                         path: RoutePaths.workspaceAnnouncements,
                       ),
 
-                      if (activeRole?.roleName != 'Student')
+                      if (activeRole?.roleName != 'Student' && activeRole?.roleName != 'Students' && activeRole?.roleName != 'Member')
                         const _SidebarItem(
                           icon: Icons.badge_outlined,
                           label: 'Activity Cards',
