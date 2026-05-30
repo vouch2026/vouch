@@ -5,6 +5,7 @@ class RouteNames {
   static const String register = 'register';
   static const String forgotPassword = 'forgot-password';
   static const String dashboard = 'dashboard';
+  static const String calendar = 'calendar';
   static const String organizations = 'organizations';
   static const String organizationDetails = 'organization-details';
   static const String events = 'events';

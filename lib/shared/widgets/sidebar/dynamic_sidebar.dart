@@ -47,24 +47,14 @@ class DynamicSidebar extends ConsumerWidget {
                       path: RoutePaths.dashboard,
                     ),
                     const _SidebarItem(
-                      icon: Icons.payments_outlined,
-                      label: 'My Fees',
-                      path: RoutePaths.fees,
-                    ),
-                    const _SidebarItem(
-                      icon: Icons.event_outlined,
-                      label: 'My Events',
-                      path: RoutePaths.events,
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Calendar',
+                      path: RoutePaths.calendar,
                     ),
                     const _SidebarItem(
                       icon: Icons.notifications_none_rounded,
                       label: 'Notifications',
                       path: RoutePaths.notifications,
-                    ),
-                    const _SidebarItem(
-                      icon: Icons.badge_outlined,
-                      label: 'Activity Cards',
-                      path: RoutePaths.activityCards,
                     ),
 
                     if (isSuperAdmin) ...[

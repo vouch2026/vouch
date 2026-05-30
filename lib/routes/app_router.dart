@@ -119,6 +119,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DashboardPage(),
       ),
       GoRoute(
+        path: RoutePaths.calendar,
+        name: RouteNames.calendar,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Calendar'),
+      ),
+      GoRoute(
         path: RoutePaths.events,
         name: RouteNames.events,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'My Events'),
