@@ -62,9 +62,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 if (constraints.maxWidth >= 1024) {
                   return _buildDesktopLayout(context);
                 } else if (constraints.maxWidth >= 768) {
-                  return _buildTabletLayout(context);
+                  return _buildTabletLayout(context, constraints);
                 } else {
-                  return _buildMobileLayout(context);
+                  return _buildMobileLayout(context, constraints);
                 }
               },
             ),
@@ -105,25 +105,35 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _buildMobileLayout(BuildContext context) {
+  Widget _buildMobileLayout(BuildContext context, BoxConstraints constraints) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: _buildLoginFormCard(context, isDesktop: false),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: _buildLoginFormCard(context, isDesktop: false),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTabletLayout(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 450),
-          child: _buildLoginFormCard(context, isDesktop: false),
+  Widget _buildTabletLayout(BuildContext context, BoxConstraints constraints) {
+    return SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 450),
+              child: _buildLoginFormCard(context, isDesktop: false),
+            ),
+          ),
         ),
       ),
     );
