@@ -415,7 +415,11 @@ class _OfficersTab extends ConsumerWidget {
           const SizedBox(height: AppSpacing.lg),
           officersAsync.when(
             data: (officers) {
-              final currentTermOfficers = officers.where((o) => o.status == 'active').toList();
+              final activeTerm = activeTermAsync.value;
+              final currentTermOfficers = officers.where((o) => 
+                o.status == 'active' && 
+                (activeTerm == null || o.academicTermId == activeTerm.id)
+              ).toList();
               
               if (currentTermOfficers.isEmpty) {
                 return _buildEmptyState('No active officers assigned for this term.');
@@ -553,7 +557,7 @@ class _GovernanceTab extends ConsumerWidget {
         children: [
           Text('Governance Hierarchy', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
-          _buildHierarchyView(officersAsync),
+          _buildHierarchyView(officersAsync, ref),
           const SizedBox(height: AppSpacing.xl * 2),
           Text('Governance History', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
@@ -563,14 +567,21 @@ class _GovernanceTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildHierarchyView(AsyncValue<List<OrganizationMembershipModel>> officersAsync) {
+  Widget _buildHierarchyView(AsyncValue<List<OrganizationMembershipModel>> officersAsync, WidgetRef ref) {
+    final activeTermAsync = ref.watch(activeTermProvider);
+    
     return officersAsync.when(
       data: (officers) {
-        final activeOfficers = officers.where((o) => o.status == 'active').toList();
+        final activeTerm = activeTermAsync.value;
+        final activeOfficers = officers.where((o) => 
+          o.status == 'active' && 
+          (activeTerm == null || o.academicTermId == activeTerm.id)
+        ).toList();
+        
         // Sort by hierarchy level
         activeOfficers.sort((a, b) => (b.hierarchyLevel ?? 0).compareTo(a.hierarchyLevel ?? 0));
 
-        if (activeOfficers.isEmpty) return const Center(child: Text('No active governance structure.'));
+        if (activeOfficers.isEmpty) return const Center(child: Text('No active governance structure for this term.'));
 
         return Center(
           child: Column(

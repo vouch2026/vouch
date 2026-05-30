@@ -21,23 +21,9 @@ class AssignOfficerDialog extends ConsumerStatefulWidget {
 
 class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
   UserModel? _selectedUser;
-  String? _selectedSimpleRole;
+  Map<String, dynamic>? _selectedRole;
   AcademicTermModel? _selectedTerm;
   bool _isSubmitting = false;
-
-  final List<String> _simpleRoles = [
-    'Governor',
-    'Vice Governor',
-    'Secretary',
-    'Assistant Secretary',
-    'Treasurer',
-    'Assistant Treasurer',
-    'Auditor',
-    'PIO',
-    'Business Manager',
-    'Representative',
-    'Staff',
-  ];
 
   @override
   void initState() {
@@ -70,6 +56,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(organizationMembersProvider(widget.org.id));
     final termsAsync = ref.watch(academicTermsProvider);
+    final rolesAsync = ref.watch(availableRolesProvider);
     
     const royalBlue = Color(0xFF041E42); // Example Royal Blue
     const gold = Color(0xFFC5A059); // Example Gold
@@ -162,18 +149,29 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
               // Role Selection
               Text('Governance Position', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _selectedSimpleRole,
-                decoration: InputDecoration(
-                  hintText: 'Select position',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  prefixIcon: const Icon(Icons.military_tech_rounded, size: 20),
-                ),
-                items: _simpleRoles.map((role) => DropdownMenuItem(
-                  value: role,
-                  child: Text(role),
-                )).toList(),
-                onChanged: (val) => setState(() => _selectedSimpleRole = val),
+              rolesAsync.when(
+                data: (roles) {
+                  final filteredRoles = roles.where((r) {
+                    final name = r['name'].toString().toLowerCase();
+                    return !['super admin', 'students', 'member', 'instructor'].contains(name);
+                  }).toList();
+
+                  return DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedRole,
+                    decoration: InputDecoration(
+                      hintText: 'Select position',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      prefixIcon: const Icon(Icons.military_tech_rounded, size: 20),
+                    ),
+                    items: filteredRoles.map((role) => DropdownMenuItem(
+                      value: role,
+                      child: Text(role['name']),
+                    )).toList(),
+                    onChanged: (val) => setState(() => _selectedRole = val),
+                  );
+                },
+                loading: () => const LinearProgressIndicator(),
+                error: (err, _) => Text('Error loading roles: $err', style: const TextStyle(color: AppColors.error)),
               ),
               
               if (_selectedUser != null && _getEligibilityError(_selectedUser!) != null)
@@ -194,7 +192,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed: _isSubmitting || _selectedUser == null || _selectedSimpleRole == null || _selectedTerm == null || _getEligibilityError(_selectedUser!) != null
+          onPressed: _isSubmitting || _selectedUser == null || _selectedRole == null || _selectedTerm == null || _getEligibilityError(_selectedUser!) != null
               ? null
               : _handleAssign,
           icon: _isSubmitting 
@@ -217,21 +215,10 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
       final currentUser = ref.read(currentUserProvider);
       if (currentUser == null) throw Exception('Authentication required');
 
-      final roles = await ref.read(availableRolesProvider.future);
-      
-      // Find the role ID directly from the system roles (Universal Role Naming)
-      final systemRole = roles.firstWhere(
-        (r) => r['name'].toString().toLowerCase() == _selectedSimpleRole!.toLowerCase(),
-        orElse: () => roles.firstWhere(
-          (r) => r['name'].toString().toLowerCase().contains(_selectedSimpleRole!.toLowerCase()),
-          orElse: () => roles.firstWhere((r) => r['name'] == 'Students'),
-        ),
-      );
-
       await ref.read(organizationRepositoryProvider).assignOfficer(
         userId: _selectedUser!.id!,
         orgId: widget.org.id,
-        roleId: systemRole['id'],
+        roleId: _selectedRole!['id'],
         termId: _selectedTerm!.id,
         assignedBy: currentUser.id!,
       );
@@ -244,7 +231,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully assigned ${_selectedUser!.fullName} as $_selectedSimpleRole for ${_selectedTerm!.academicYear}'),
+            content: Text('Successfully assigned ${_selectedUser!.fullName} as ${_selectedRole!['name']} for ${_selectedTerm!.academicYear}'),
             backgroundColor: AppColors.primary,
           ),
         );

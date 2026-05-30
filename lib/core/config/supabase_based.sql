@@ -609,6 +609,7 @@ CREATE OR REPLACE FUNCTION assign_organization_officer(
 ) RETURNS VOID AS $$
 DECLARE
     v_actual_assigned_by_id UUID;
+    v_actual_user_id UUID;
     v_org_type TEXT;
     v_scope_id UUID;
     v_scope_type public.scope_type;
@@ -617,6 +618,11 @@ BEGIN
     SELECT id INTO v_actual_assigned_by_id 
     FROM public.users 
     WHERE id = p_assigned_by OR auth_id = p_assigned_by
+    LIMIT 1;
+    
+    SELECT id INTO v_actual_user_id 
+    FROM public.users 
+    WHERE id = p_user_id OR auth_id = p_user_id
     LIMIT 1;
 
     -- Fetch Org Info for Scope Mapping
@@ -644,12 +650,12 @@ BEGIN
         status = 'active',
         assigned_at = CURRENT_TIMESTAMP
     WHERE organization_id = p_org_id 
-      AND user_id = p_user_id 
+      AND user_id = v_actual_user_id 
       AND academic_term_id IS NULL;
 
     IF NOT FOUND THEN
         INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
-        VALUES (p_org_id, p_user_id, p_role_id, p_term_id, 'active')
+        VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
         ON CONFLICT (organization_id, user_id, academic_term_id) 
         DO UPDATE SET 
             role_id = EXCLUDED.role_id,
@@ -663,7 +669,7 @@ BEGIN
         p_org_id, 
         'assign_officer', 
         v_actual_assigned_by_id, 
-        p_user_id, 
+        v_actual_user_id, 
         jsonb_build_object(
             'role_id', p_role_id,
             'term_id', p_term_id,
@@ -952,7 +958,8 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Comselec Chair', 60), 
 ('Governor', 50), ('Vice Governor', 45), ('President', 50), ('Vice President', 45), ('Secretary', 40), ('Assistant Secretary', 35),
 ('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), ('PIO', 20),
-('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Member', 5), ('Students', 5);
+('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Member', 5), ('Students', 5)
+ON CONFLICT (name) DO UPDATE SET hierarchy_level = EXCLUDED.hierarchy_level;
 
 -- 5. INSERT PERMISSIONS
 INSERT INTO permissions (action) VALUES
@@ -967,16 +974,19 @@ INSERT INTO permissions (action) VALUES
 ('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
 ('view_faculty_analytics'), ('view_analytics'), ('manage_activity_cards'), ('view_activity_cards'),
 ('create_announcement'), ('edit_announcement'), ('delete_announcement'), ('view_announcements'),
-('view_members'), ('view_officers'), ('manage_organization'), ('view_documents');
+('view_members'), ('view_officers'), ('manage_organization'), ('view_documents')
+ON CONFLICT (action) DO NOTHING;
 
 -- 6. MAP PERMISSIONS TO ROLES
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'Super Admin' AND p.action IN ('manage_academic_terms', 'manage_faculties', 'manage_programs', 'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics', 'manage_elections', 'view_analytics', 'manage_organization', 'view_documents', 'view_activity_cards');
+WHERE r.name = 'Super Admin' AND p.action IN ('manage_academic_terms', 'manage_faculties', 'manage_programs', 'assign_roles', 'revoke_roles', 'view_faculty_analytics', 'view_program_analytics', 'manage_elections', 'view_analytics', 'manage_organization', 'view_documents', 'view_activity_cards')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards');
+WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 7. MAP PERMISSIONS FOR OFFICERS (Governor, Treasurer, etc.)
 INSERT INTO role_permissions (role_id, permission_id)
@@ -987,7 +997,8 @@ AND p.action IN (
     'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'view_clearance_dashboard', 'reject_clearance', 
     'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 'delete_announcement', 
     'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents'
-);
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -996,7 +1007,8 @@ AND p.action IN (
     'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'verify_payment', 'reject_payment', 
     'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 
     'delete_announcement', 'view_events', 'view_announcements', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'manage_organization'
-);
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -1004,7 +1016,8 @@ WHERE r.name IN ('Secretary', 'Assistant Secretary')
 AND p.action IN (
     'create_event', 'edit_event', 'view_events', 'scan_event_attendance', 'create_announcement', 
     'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization'
-);
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 8. SUPER ADMIN SEED
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
