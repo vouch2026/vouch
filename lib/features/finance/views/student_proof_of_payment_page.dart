@@ -9,6 +9,7 @@ import '../models/student_payment_model.dart';
 import '../providers/finance_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/storage_provider.dart';
+import '../../../shared/layouts/responsive_layout.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -182,25 +183,37 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
             _selectedReceiver = receivers.first;
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildPaymentItemChip(),
-                const SizedBox(height: AppSpacing.lg),
-                if (receivers.length > 1) ...[
-                  _buildProviderSelection(receivers),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
-                if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
-                const SizedBox(height: AppSpacing.lg),
-                _buildUploadCard(),
-                const SizedBox(height: AppSpacing.lg),
-                _buildReferenceField(),
-                const SizedBox(height: AppSpacing.xl),
-                _buildSubmitButton(),
-              ],
+          final isMobile = ResponsiveLayout.isMobile(context);
+          final horizontalPadding = isMobile ? AppSpacing.lg : AppSpacing.xl * 2;
+
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(paymentReceiversProvider),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: AppSpacing.lg),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPaymentItemChip(),
+                      const SizedBox(height: AppSpacing.lg),
+                      if (receivers.length > 1) ...[
+                        _buildProviderSelection(receivers),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                      if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildUploadCard(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildReferenceField(),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildSubmitButton(),
+                    ],
+                  ),
+                ),
+              ),
             ),
           );
         },

@@ -86,7 +86,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                   ),
                 ),
 
-                // Receiver References Section
+                // Receiver References Section Header
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Row(
@@ -124,18 +124,37 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                 const SizedBox(height: AppSpacing.md),
                 
                 receiversAsync.when(
-                  data: (receivers) => SizedBox(
-                    height: 210,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      itemCount: receivers.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
-                      itemBuilder: (context, index) => GovernorReceiverCard(
-                        receiver: receivers[index],
-                        onEdit: () {},
-                      ),
-                    ),
+                  data: (receivers) => LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Use grid for all sizes, adjusting columns
+                      int crossAxisCount = 1;
+                      if (constraints.maxWidth > 1400) {
+                        crossAxisCount = 4;
+                      } else if (constraints.maxWidth > 1000) {
+                        crossAxisCount = 3;
+                      } else if (constraints.maxWidth > 700) {
+                        crossAxisCount = 2;
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: AppSpacing.lg,
+                            mainAxisSpacing: AppSpacing.lg,
+                            mainAxisExtent: 210,
+                          ),
+                          itemCount: receivers.length,
+                          itemBuilder: (context, index) => GovernorReceiverCard(
+                            receiver: receivers[index],
+                            onEdit: () {},
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (err, _) => Center(child: Text('Error: $err')),
@@ -244,7 +263,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
         ),
       ),
     );
-  }
+}
 
   Widget _buildSearchField() {
     return TextField(
@@ -337,7 +356,9 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount = 1;
-        if (constraints.maxWidth > 1200) {
+        if (constraints.maxWidth > 1400) {
+          crossAxisCount = 4;
+        } else if (constraints.maxWidth > 1000) {
           crossAxisCount = 3;
         } else if (constraints.maxWidth > 700) {
           crossAxisCount = 2;
@@ -489,6 +510,7 @@ class _StudentFinanceView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final feesAsync = ref.watch(workspaceFeesProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final userProfile = ref.watch(userProfileProvider).value;
@@ -501,118 +523,149 @@ class _StudentFinanceView extends ConsumerWidget {
           ref.invalidate(workspaceStudentPaymentsProvider);
           ref.invalidate(paymentReceiversProvider);
         },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              UserManagementHeader(
-                title: 'Organization Fees',
-                subtitle: 'View and settle your organization-related fees',
-                actions: const [],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              submissionsAsync.when(
-                data: (submissions) {
-                  final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
-                  final totalPaid = mySubmissions
-                      .where((s) => s.status == 'Paid')
-                      .fold<double>(0, (sum, s) => sum + s.amountPaid);
-                  
-                  return _buildSummaryCard(totalPaid, userProfile?.id ?? 'Unknown');
-                },
-                loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              Text(
-                'AVAILABLE FEES',
-                style: AppTextStyles.labelMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              feesAsync.when(
-                data: (fees) {
-                  if (fees.isEmpty) {
-                    return _buildEmptyState(
-                      context,
-                      Icons.receipt_long_outlined,
-                      'No fees available at the moment.',
-                    );
+        child: feesAsync.when(
+          data: (fees) => submissionsAsync.when(
+            data: (submissions) {
+              final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
+              final totalPaid = mySubmissions
+                  .where((s) => s.status == 'Paid')
+                  .fold<double>(0, (sum, s) => sum + s.amountPaid);
+              
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  int crossAxisCount = 1;
+                  if (constraints.maxWidth > 1400) {
+                    crossAxisCount = 4;
+                  } else if (constraints.maxWidth > 1000) {
+                    crossAxisCount = 3;
+                  } else if (constraints.maxWidth > 700) {
+                    crossAxisCount = 2;
                   }
-
-                  return submissionsAsync.when(
-                    data: (submissions) {
-                      final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
+                  return CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              UserManagementHeader(
+                                title: 'Organization Fees',
+                                subtitle: 'View and settle your organization-related fees',
+                                actions: const [],
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 600),
+                                  child: _buildSummaryCard(totalPaid, userProfile?.id ?? 'Unknown'),
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                              Text(
+                                'AVAILABLE FEES',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: fees.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, index) {
-                          final fee = fees[index];
-                          final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
-                          return _StudentFeeCard(fee: fee, submission: submission);
-                        },
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Text('Error loading submissions: $err'),
+                      if (fees.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            child: _buildEmptyState(
+                              context,
+                              Icons.receipt_long_outlined,
+                              'No fees available at the moment.',
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          sliver: SliverGrid(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: AppSpacing.lg,
+                              mainAxisSpacing: AppSpacing.lg,
+                              mainAxisExtent: 240,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final fee = fees[index];
+                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                return _StudentFeeCard(fee: fee, submission: submission);
+                              },
+                              childCount: fees.length,
+                            ),
+                          ),
+                        ),
+
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.md),
+                          child: Text(
+                            'MY PAYMENT HISTORY',
+                            style: AppTextStyles.labelMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      if (mySubmissions.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            child: _buildEmptyState(
+                              context,
+                              Icons.history_rounded,
+                              'You haven\'t submitted any payments yet.',
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          sliver: SliverGrid(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: AppSpacing.lg,
+                              mainAxisSpacing: AppSpacing.lg,
+                              mainAxisExtent: 280,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                return GovernorSubmissionCard(
+                                  submission: mySubmissions[index],
+                                  onViewReceipt: () => _showReceiptPreview(context, mySubmissions[index]),
+                                );
+                              },
+                              childCount: mySubmissions.length,
+                            ),
+                          ),
+                        ),
+                      
+                      const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+                    ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Text('Error loading fees: $err'),
-              ),
-
-              const SizedBox(height: AppSpacing.xxl),
-
-              Text(
-                'MY PAYMENT HISTORY',
-                style: AppTextStyles.labelMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              submissionsAsync.when(
-                data: (submissions) {
-                  final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
-                  
-                  if (mySubmissions.isEmpty) {
-                    return _buildEmptyState(
-                      context,
-                      Icons.history_rounded,
-                      'You haven\'t submitted any payments yet.',
-                    );
-                  }
-
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: mySubmissions.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) {
-                      return GovernorSubmissionCard(
-                        submission: mySubmissions[index],
-                        onViewReceipt: () => _showReceiptPreview(context, mySubmissions[index]),
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Text('Error loading payment history: $err'),
-              ),
-            ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(child: Text('Error: $err')),
           ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
     );

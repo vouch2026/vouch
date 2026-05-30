@@ -32,7 +32,6 @@ class _GovernorReceiverCardState extends State<GovernorReceiverCard> {
         duration: const Duration(milliseconds: 200),
         transform: _isHovered ? Matrix4.translationValues(0, -4, 0) : Matrix4.identity(),
         child: Container(
-          width: 300,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(24),
