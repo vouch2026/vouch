@@ -36,6 +36,7 @@ class ActivityCard {
   final ActivityCardStatus status;
   final double completionPercentage;
   final List<ActivityCardEvent> events;
+  final List<ActivityCardFee> fees;
   final List<ActivityCardSignature> signatures;
 
   const ActivityCard({
@@ -50,6 +51,7 @@ class ActivityCard {
     required this.status,
     required this.completionPercentage,
     required this.events,
+    required this.fees,
     required this.signatures,
   });
 }
@@ -73,6 +75,28 @@ class ActivityCardEvent {
     required this.attendanceStatus,
     this.verifiedBy,
     this.completedAt,
+  });
+}
+
+class ActivityCardFee {
+  final String id;
+  final String feeId;
+  final String title;
+  final String category;
+  final double amount;
+  final bool isPaid;
+  final DateTime? paidAt;
+  final String? referenceNumber;
+
+  const ActivityCardFee({
+    required this.id,
+    required this.feeId,
+    required this.title,
+    required this.category,
+    required this.amount,
+    required this.isPaid,
+    this.paidAt,
+    this.referenceNumber,
   });
 }
 

@@ -181,15 +181,17 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
               columns: const [
                 DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('FEES', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('COMPLETION', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
               rows: [
-                _buildDataRow('Juan Dela Cruz', 'BSIT', 0.75, ActivityCardStatus.partiallySigned),
-                _buildDataRow('Maria Santos', 'BSCS', 1.0, ActivityCardStatus.cleared),
-                _buildDataRow('Michael Chen', 'BSIT', 0.40, ActivityCardStatus.pending),
-                _buildDataRow('Sarah Johnson', 'BSCS', 0.90, ActivityCardStatus.partiallySigned),
+                _buildDataRow('Juan Dela Cruz', 'BSIT', '2/3', '2/2', 0.75, ActivityCardStatus.partiallySigned),
+                _buildDataRow('Maria Santos', 'BSCS', '3/3', '2/2', 1.0, ActivityCardStatus.cleared),
+                _buildDataRow('Michael Chen', 'BSIT', '1/3', '0/1', 0.40, ActivityCardStatus.pending),
+                _buildDataRow('Sarah Johnson', 'BSCS', '3/3', '1/1', 0.90, ActivityCardStatus.partiallySigned),
               ],
             ),
           ),
@@ -198,7 +200,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
     );
   }
 
-  DataRow _buildDataRow(String name, String program, double completion, ActivityCardStatus status) {
+  DataRow _buildDataRow(String name, String program, String events, String fees, double completion, ActivityCardStatus status) {
     return DataRow(
       cells: [
         DataCell(
@@ -215,6 +217,24 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
           ),
         ),
         DataCell(Text(program)),
+        DataCell(
+          Row(
+            children: [
+              const Icon(Icons.event_available_rounded, size: 14, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(events, style: const TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+        DataCell(
+          Row(
+            children: [
+              const Icon(Icons.payments_rounded, size: 14, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(fees, style: const TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
         DataCell(
           Row(
             children: [

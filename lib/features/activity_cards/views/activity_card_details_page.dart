@@ -8,6 +8,7 @@ import '../models/activity_card_models.dart';
 import '../models/activity_card_mock_data.dart';
 import '../widgets/signature_workflow_timeline.dart';
 import '../widgets/activity_card_events_table.dart';
+import '../widgets/activity_card_fees_table.dart';
 
 class ActivityCardDetailsPage extends StatelessWidget {
   final String id;
@@ -44,9 +45,13 @@ class ActivityCardDetailsPage extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xl),
                 _buildProgressSection(context, activityCard),
                 const SizedBox(height: AppSpacing.xxl),
-                SignatureWorkflowTimeline(signatures: activityCard.signatures),
-                const SizedBox(height: AppSpacing.xxl),
                 ActivityCardEventsTable(events: activityCard.events),
+                const SizedBox(height: AppSpacing.xxl),
+                ActivityCardFeesTable(fees: activityCard.fees),
+                const SizedBox(height: AppSpacing.xxl),
+                Center(
+                  child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                ),
                 const SizedBox(height: AppSpacing.xxl),
                 _buildAuditLogsSection(),
                 const SizedBox(height: AppSpacing.xxl),
@@ -121,34 +126,40 @@ class ActivityCardDetailsPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 700;
+          final isCompact = constraints.maxWidth < 900;
           
           if (isCompact) {
             return Column(
               children: [
                 _ProgressWidget(
-                  label: 'Completion',
+                  label: 'Overall Completion',
                   value: '${(card.completionPercentage * 100).toInt()}%',
                   percentage: card.completionPercentage,
                   color: AppColors.primary,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: constraints.maxWidth < 600 ? 1 : 3,
+                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 3,
                   children: [
-                    Expanded(
-                      child: _StatWidget(
-                        label: 'Events',
-                        value: '${card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length}/${card.events.length}',
-                        icon: Icons.event_available_rounded,
-                      ),
+                    _StatWidget(
+                      label: 'Mandatory Events',
+                      value: '${card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length}/${card.events.length}',
+                      icon: Icons.event_available_rounded,
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _StatWidget(
-                        label: 'Signatures',
-                        value: '${card.signatures.where((s) => s.status == SignatureStatus.signed).length}/${card.signatures.length}',
-                        icon: Icons.draw_rounded,
-                      ),
+                    _StatWidget(
+                      label: 'Mandatory Fees',
+                      value: '${card.fees.where((f) => f.isPaid).length}/${card.fees.length}',
+                      icon: Icons.payments_rounded,
+                    ),
+                    _StatWidget(
+                      label: 'Signatures',
+                      value: '${card.signatures.where((s) => s.status == SignatureStatus.signed).length}/${card.signatures.length}',
+                      icon: Icons.draw_rounded,
                     ),
                   ],
                 ),
@@ -159,7 +170,7 @@ class ActivityCardDetailsPage extends StatelessWidget {
           return Row(
             children: [
               _ProgressWidget(
-                label: 'Completion',
+                label: 'Overall Completion',
                 value: '${(card.completionPercentage * 100).toInt()}%',
                 percentage: card.completionPercentage,
                 color: AppColors.primary,
@@ -169,6 +180,12 @@ class ActivityCardDetailsPage extends StatelessWidget {
                 label: 'Mandatory Events',
                 value: '${card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length}/${card.events.length}',
                 icon: Icons.event_available_rounded,
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              _StatWidget(
+                label: 'Mandatory Fees',
+                value: '${card.fees.where((f) => f.isPaid).length}/${card.fees.length}',
+                icon: Icons.payments_rounded,
               ),
               const SizedBox(width: AppSpacing.xl),
               _StatWidget(

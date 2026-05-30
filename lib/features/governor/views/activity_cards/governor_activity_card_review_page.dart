@@ -7,6 +7,7 @@ import '../../../activity_cards/models/activity_card_models.dart';
 import '../../../activity_cards/models/activity_card_mock_data.dart';
 import '../../../activity_cards/widgets/signature_workflow_timeline.dart';
 import '../../../activity_cards/widgets/activity_card_events_table.dart';
+import '../../../activity_cards/widgets/activity_card_fees_table.dart';
 
 class GovernorActivityCardReviewPage extends StatelessWidget {
   final String id;
@@ -19,24 +20,14 @@ class GovernorActivityCardReviewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // For mock, we'll use the same student activity card
-    final activityCard = ActivityCardMockData.studentActivityCards[0];
+    final activityCard = ActivityCardMockData.studentActivityCards.firstWhere(
+      (c) => c.id == id,
+      orElse: () => ActivityCardMockData.studentActivityCards[0],
+    );
     final studentName = 'Juan Dela Cruz';
 
     return DashboardLayout(
       title: 'Review Activity Card',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.close_rounded, color: Colors.red),
-          onPressed: () {},
-          tooltip: 'Reject Card',
-        ),
-        IconButton(
-          icon: const Icon(Icons.draw_rounded, color: AppColors.primary),
-          onPressed: () {},
-          tooltip: 'Apply Signature',
-        ),
-        const SizedBox(width: AppSpacing.sm),
-      ],
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1400),
@@ -46,15 +37,86 @@ class GovernorActivityCardReviewPage extends StatelessWidget {
               children: [
                 _buildStudentInfo(context, studentName, activityCard),
                 const SizedBox(height: AppSpacing.xl),
-                SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 1100;
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
+                          Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        children: [
+                          ActivityCardEventsTable(events: activityCard.events),
+                          const SizedBox(height: AppSpacing.xxl),
+                          ActivityCardFeesTable(fees: activityCard.fees),
+                        ],
+                      );
+                    }
+                  },
+                ),
                 const SizedBox(height: AppSpacing.xxl),
-                ActivityCardEventsTable(events: activityCard.events),
+                Center(
+                  child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                _buildReviewActions(context),
                 const SizedBox(height: AppSpacing.xxl),
                 _buildOfficerActions(context),
                 const SizedBox(height: AppSpacing.xxl),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewActions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Center(
+        child: Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          alignment: WrapAlignment.center,
+          children: [
+            SizedBox(
+              width: 200,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.close_rounded),
+                label: const Text('Reject Card'),
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 200,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.draw_rounded),
+                label: const Text('Apply Signature'),
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -102,6 +164,10 @@ class GovernorActivityCardReviewPage extends StatelessWidget {
   }
 
   Widget _buildQuickCompliance(ActivityCard card) {
+    final paidFees = card.fees.where((f) => f.isPaid).length;
+    final totalFees = card.fees.length;
+    final isFeesMet = paidFees == totalFees && totalFees > 0;
+
     return Row(
       children: [
         _ComplianceItem(
@@ -110,10 +176,10 @@ class GovernorActivityCardReviewPage extends StatelessWidget {
           isMet: card.events.every((e) => e.attendanceStatus == AttendanceStatus.completed),
         ),
         const SizedBox(width: AppSpacing.lg),
-        const _ComplianceItem(
+        _ComplianceItem(
           label: 'Fees',
-          value: 'Paid',
-          isMet: true,
+          value: isFeesMet ? 'Paid' : '$paidFees/$totalFees',
+          isMet: isFeesMet,
         ),
       ],
     );

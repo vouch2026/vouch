@@ -44,6 +44,28 @@ class ActivityCardMockData {
           attendanceStatus: AttendanceStatus.pending,
         ),
       ],
+      fees: [
+        ActivityCardFee(
+          id: 'acf-1',
+          feeId: 'f-1',
+          title: 'Membership Fee',
+          category: 'Mandatory',
+          amount: 150.0,
+          isPaid: true,
+          paidAt: DateTime(2025, 8, 15),
+          referenceNumber: 'REF-12345',
+        ),
+        ActivityCardFee(
+          id: 'acf-2',
+          feeId: 'f-2',
+          title: 'Event Contribution',
+          category: 'Mandatory',
+          amount: 50.0,
+          isPaid: true,
+          paidAt: DateTime(2025, 9, 10),
+          referenceNumber: 'REF-67890',
+        ),
+      ],
       signatures: [
         ActivityCardSignature(
           id: 'acs-1',
@@ -105,6 +127,16 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 10, 12),
           attendanceStatus: AttendanceStatus.absent,
+        ),
+      ],
+      fees: [
+        ActivityCardFee(
+          id: 'acf-usc-1',
+          feeId: 'f-usc-1',
+          title: 'USC Trust Fund',
+          category: 'Mandatory',
+          amount: 100.0,
+          isPaid: false,
         ),
       ],
       signatures: [

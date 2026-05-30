@@ -19,6 +19,8 @@ class ActivityCardOverviewCard extends StatelessWidget {
     final theme = Theme.of(context);
     final completedEvents = activityCard.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
     final totalEvents = activityCard.events.length;
+    final paidFees = activityCard.fees.where((f) => f.isPaid).length;
+    final totalFees = activityCard.fees.length;
     final signedSignatures = activityCard.signatures.where((s) => s.status == SignatureStatus.signed).length;
     final totalSignatures = activityCard.signatures.length;
 
@@ -82,7 +84,14 @@ class ActivityCardOverviewCard extends StatelessWidget {
                 total: totalEvents,
                 icon: Icons.event_available_rounded,
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
+              _ProgressInfo(
+                label: 'Mandatory Fees',
+                current: paidFees,
+                total: totalFees,
+                icon: Icons.payments_rounded,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _ProgressInfo(
                 label: 'Signatures',
                 current: signedSignatures,

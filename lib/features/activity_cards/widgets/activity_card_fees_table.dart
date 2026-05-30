@@ -5,12 +5,12 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../models/activity_card_models.dart';
 import 'package:intl/intl.dart';
 
-class ActivityCardEventsTable extends StatelessWidget {
-  final List<ActivityCardEvent> events;
+class ActivityCardFeesTable extends StatelessWidget {
+  final List<ActivityCardFee> fees;
 
-  const ActivityCardEventsTable({
+  const ActivityCardFeesTable({
     super.key,
-    required this.events,
+    required this.fees,
   });
 
   @override
@@ -21,7 +21,7 @@ class ActivityCardEventsTable extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Text(
-            'MANDATORY EVENTS COMPLIANCE',
+            'MANDATORY FEES COMPLIANCE',
             style: AppTextStyles.labelSmall.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.grey[600],
@@ -52,12 +52,12 @@ class ActivityCardEventsTable extends StatelessWidget {
                       columnSpacing: AppSpacing.lg,
                       headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
                 columns: const [
-                  DataColumn(label: Text('EVENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('DATE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('ATTENDANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('VERIFIED BY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('FEE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('AMOUNT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('PAID DATE / REF', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
                 ],
-                rows: events.map((event) {
+                rows: fees.map((fee) {
                   return DataRow(
                     cells: [
                       DataCell(
@@ -65,14 +65,27 @@ class ActivityCardEventsTable extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(event.title, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
-                            Text(event.category, style: AppTextStyles.labelSmall.copyWith(fontSize: 9)),
+                            Text(fee.title, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                            Text(fee.category, style: AppTextStyles.labelSmall.copyWith(fontSize: 9)),
                           ],
                         ),
                       ),
-                      DataCell(Text(DateFormat('MMM d, yyyy').format(event.date), style: AppTextStyles.labelSmall)),
-                      DataCell(_AttendanceStatusBadge(status: event.attendanceStatus)),
-                      DataCell(Text(event.verifiedBy ?? '—', style: AppTextStyles.labelSmall)),
+                      DataCell(Text('₱${fee.amount.toStringAsFixed(2)}', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold))),
+                      DataCell(_PaymentStatusBadge(isPaid: fee.isPaid)),
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              fee.paidAt != null ? DateFormat('MMM d, yyyy').format(fee.paidAt!) : '—',
+                              style: AppTextStyles.labelSmall,
+                            ),
+                            if (fee.referenceNumber != null)
+                              Text(fee.referenceNumber!, style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
                     ],
                   );
                 }).toList(),
@@ -88,43 +101,16 @@ class ActivityCardEventsTable extends StatelessWidget {
   }
 }
 
-class _AttendanceStatusBadge extends StatelessWidget {
-  final AttendanceStatus status;
+class _PaymentStatusBadge extends StatelessWidget {
+  final bool isPaid;
 
-  const _AttendanceStatusBadge({required this.status});
+  const _PaymentStatusBadge({required this.isPaid});
 
   @override
   Widget build(BuildContext context) {
-    Color color;
-    IconData icon;
-    String label;
-
-    switch (status) {
-      case AttendanceStatus.completed:
-        color = Colors.green;
-        icon = Icons.check_circle_outline_rounded;
-        label = 'Completed';
-        break;
-      case AttendanceStatus.pending:
-        color = Colors.orange;
-        icon = Icons.access_time_rounded;
-        label = 'Pending';
-        break;
-      case AttendanceStatus.absent:
-        color = Colors.red;
-        icon = Icons.cancel_outlined;
-        label = 'Absent';
-        break;
-      case AttendanceStatus.excused:
-        color = Colors.blue;
-        icon = Icons.info_outline_rounded;
-        label = 'Excused';
-        break;
-      default:
-        color = Colors.grey;
-        icon = Icons.help_outline_rounded;
-        label = 'Unknown';
-    }
+    final color = isPaid ? Colors.green : Colors.orange;
+    final icon = isPaid ? Icons.check_circle_outline_rounded : Icons.access_time_rounded;
+    final label = isPaid ? 'Paid' : 'Unpaid';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

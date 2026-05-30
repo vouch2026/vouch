@@ -33,21 +33,28 @@ class SignatureWorkflowTimeline extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        SizedBox(
-          height: 180,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            scrollDirection: Axis.horizontal,
-            itemCount: sortedSignatures.length,
-            separatorBuilder: (context, index) => _WorkflowConnector(
-              isCompleted: sortedSignatures[index].status == SignatureStatus.signed &&
-                  (index + 1 < sortedSignatures.length && 
-                   (sortedSignatures[index + 1].status == SignatureStatus.signed || 
-                    sortedSignatures[index + 1].status == SignatureStatus.pending)),
+        Center(
+          child: SizedBox(
+            height: 180,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(sortedSignatures.length * 2 - 1, (index) {
+                  if (index.isEven) {
+                    return _SignatureCard(signature: sortedSignatures[index ~/ 2]);
+                  }
+                  final signatureIndex = index ~/ 2;
+                  return _WorkflowConnector(
+                    isCompleted: sortedSignatures[signatureIndex].status == SignatureStatus.signed &&
+                        (signatureIndex + 1 < sortedSignatures.length && 
+                         (sortedSignatures[signatureIndex + 1].status == SignatureStatus.signed || 
+                          sortedSignatures[signatureIndex + 1].status == SignatureStatus.pending)),
+                  );
+                }),
+              ),
             ),
-            itemBuilder: (context, index) {
-              return _SignatureCard(signature: sortedSignatures[index]);
-            },
           ),
         ),
       ],
