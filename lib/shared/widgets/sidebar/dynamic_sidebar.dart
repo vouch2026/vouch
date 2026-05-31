@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/permissions/app_permissions.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
+import '../../../../core/providers/sidebar_provider.dart';
 import 'organization_switcher.dart';
 
 class DynamicSidebar extends ConsumerWidget {
@@ -22,20 +23,27 @@ class DynamicSidebar extends ConsumerWidget {
     final selectedOrg = workspace.selectedOrganization;
     final activeRole = workspace.activeRole;
 
-    return Drawer(
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
         borderRadius: BorderRadius.only(
           topRight: Radius.circular(24),
           bottomRight: Radius.circular(24),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 0),
+          ),
+        ],
       ),
       child: Stack(
         children: [
           _buildBackgroundDecorations(),
           Column(
             children: [
-              _buildSidebarHeader(),
+              _buildSidebarHeader(context, ref),
               if (!isSuperAdmin) const OrganizationSwitcher(),
               Expanded(
                 child: ListView(
@@ -262,35 +270,46 @@ class DynamicSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _buildSidebarHeader() {
+  Widget _buildSidebarHeader(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.sm),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Image.asset(
-            'assets/logos/vouch.png',
-            width: 32,
-            height: 32,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          RichText(
-            text: TextSpan(
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
+          Row(
+            children: [
+              Image.asset(
+                'assets/logos/vouch.png',
+                width: 32,
+                height: 32,
               ),
-              children: const [
-                TextSpan(
-                  text: 'Vou',
-                  style: TextStyle(color: AppColors.primary),
+              const SizedBox(width: AppSpacing.sm),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: 'Vou',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
+                    TextSpan(
+                      text: 'ch',
+                      style: TextStyle(color: AppColors.accent),
+                    ),
+                  ],
                 ),
-                TextSpan(
-                  text: 'ch',
-                  style: TextStyle(color: AppColors.accent),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.menu_open_rounded, color: AppColors.primary),
+            tooltip: 'Close Sidebar',
+            onPressed: () {
+              ref.read(sidebarVisibleProvider.notifier).state = false;
+            },
           ),
         ],
       ),
@@ -320,7 +339,7 @@ class _SidebarHeader extends StatelessWidget {
   }
 }
 
-class _SidebarItem extends StatelessWidget {
+class _SidebarItem extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String path;
@@ -332,7 +351,7 @@ class _SidebarItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     bool isSelected = false;
     try {
       isSelected = GoRouterState.of(context).matchedLocation == path;
@@ -371,7 +390,10 @@ class _SidebarItem extends StatelessWidget {
         ),
         onTap: () {
           context.go(path);
-          Navigator.pop(context); // Close drawer
+          // On mobile, we might want to close it after navigation? 
+          // But the user said "only hide if close is pressed".
+          // However, for better UX on small screens, maybe it should close?
+          // Let's stick to the requirement for now.
         },
       ),
     );

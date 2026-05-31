@@ -4,6 +4,8 @@ import '../widgets/sidebar/dynamic_sidebar.dart';
 import '../widgets/navbar/profile_dropdown.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/organizations/providers/workspace_provider.dart';
+import '../../core/providers/sidebar_provider.dart';
+import 'responsive_layout.dart';
 
 class DashboardLayout extends ConsumerWidget {
   final Widget child;
@@ -23,27 +25,79 @@ class DashboardLayout extends ConsumerWidget {
     final selectedOrg = workspace.selectedOrganization;
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
+    final isSidebarVisible = ref.watch(sidebarVisibleProvider);
+    final isDesktop = ResponsiveLayout.isDesktop(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title),
-            if (selectedOrg != null && !isSuperAdmin)
-              Text(
-                '${selectedOrg.name} • ${workspace.activeRole?.roleName ?? 'Member'}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      body: Stack(
+        children: [
+          Row(
+            children: [
+              if (isDesktop && isSidebarVisible)
+                const SizedBox(
+                  width: 280,
+                  child: DynamicSidebar(),
+                ),
+              Expanded(
+                child: Scaffold(
+                  appBar: AppBar(
+                    leading: (!isSidebarVisible || !isDesktop)
+                        ? IconButton(
+                            icon: const Icon(Icons.menu),
+                            onPressed: () => ref
+                                .read(sidebarVisibleProvider.notifier)
+                                .state = true,
+                          )
+                        : null,
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title),
+                        if (selectedOrg != null && !isSuperAdmin)
+                          Text(
+                            '${selectedOrg.name} • ${workspace.activeRole?.roleName ?? 'Member'}',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                      ],
+                    ),
+                    actions: [
+                      if (actions != null) ...actions!,
+                      const ProfileDropdown(),
+                    ],
+                  ),
+                  body: child,
+                ),
               ),
-          ],
-        ),
-        actions: [
-          if (actions != null) ...actions!,
-          const ProfileDropdown(),
+            ],
+          ),
+          
+          // Mobile/Tablet Sidebar Overlay
+          if (!isDesktop && isSidebarVisible)
+            Stack(
+              children: [
+                // Scrim (Optional: can be transparent or semi-transparent)
+                // We don't add an onTap here to prevent closing by tapping outside
+                Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                ),
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 280,
+                      child: DynamicSidebar(),
+                    ),
+                    // Tapping the remaining space still won't close it 
+                    // because we didn't add a GestureDetector with pop logic
+                    Expanded(
+                      child: Container(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
         ],
       ),
-      drawer: const DynamicSidebar(),
-      body: child,
     );
   }
 }

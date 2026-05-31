@@ -76,10 +76,6 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                   // Always navigate to dashboard when switching workspaces to ensure view resets
                   context.go(RoutePaths.dashboard);
                   
-                  // Close the drawer if it's open
-                  if (Scaffold.of(context).isDrawerOpen) {
-                    Navigator.pop(context);
-                  }
                   setState(() => _isSwitching = false);
                 }
               },
