@@ -12,6 +12,8 @@ import '../../../shared/layouts/responsive_layout.dart';
 import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../attendance/providers/attendance_provider.dart';
+import '../../attendance/models/attendance_model.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -267,38 +269,95 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
   }
 
   Widget _buildInfoSidebar() {
-    return Column(
-      children: [
-        _buildInfoCard(
-          icon: Icons.calendar_today_rounded,
-          title: 'Date',
-          content: DateFormat.yMMMMd().format(widget.event.eventDate),
-          color: Colors.blue,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _buildInfoCard(
-          icon: Icons.location_on_rounded,
-          title: 'Location',
-          content: widget.event.location,
-          color: Colors.red,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _buildInfoCard(
-          icon: Icons.access_time_rounded,
-          title: 'Check-in Window',
-          content: '${widget.event.timeInStart} - ${widget.event.timeInEnd}',
-          color: Colors.green,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _buildInfoCard(
-          icon: Icons.logout_rounded,
-          title: 'Check-out Window',
-          content: '${widget.event.timeOutStart} - ${widget.event.timeOutEnd}',
-          color: Colors.orange,
-        ),
-      ],
+    final userAsync = ref.watch(userProfileProvider);
+    final attendanceAsync = ref.watch(userEventAttendanceProvider(widget.event.id!));
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isPast = widget.event.eventDate.isBefore(today);
+
+    return userAsync.when(
+      data: (user) {
+        final isOfficer = user?.role != 'student';
+
+        return Column(
+          children: [
+            _buildInfoCard(
+              icon: Icons.calendar_today_rounded,
+              title: 'Date',
+              content: DateFormat.yMMMMd().format(widget.event.eventDate),
+              color: Colors.blue,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildInfoCard(
+              icon: Icons.location_on_rounded,
+              title: 'Location',
+              content: widget.event.location,
+              color: Colors.red,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (isPast && !isOfficer) ...[
+              attendanceAsync.when(
+                data: (attendance) {
+                  final isAbsent = attendance == null || attendance.status == 'Absent';
+                  
+                  return Column(
+                    children: [
+                      if (isAbsent) ...[
+                        _buildInfoCard(
+                          icon: Icons.cancel_rounded,
+                          title: 'Attendance Status',
+                          content: 'ABSENT',
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      _buildInfoCard(
+                        icon: Icons.login_rounded,
+                        title: 'Time In',
+                        content: attendance?.actualTimeIn != null
+                            ? DateFormat.jm().format(attendance!.actualTimeIn!.toLocal())
+                            : 'No Record',
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _buildInfoCard(
+                        icon: Icons.logout_rounded,
+                        title: 'Time Out',
+                        content: attendance?.actualTimeOut != null
+                            ? DateFormat.jm().format(attendance!.actualTimeOut!.toLocal())
+                            : 'No Record',
+                        color: Colors.orange,
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const Text('Error loading attendance'),
+              ),
+            ] else ...[
+              _buildInfoCard(
+                icon: Icons.access_time_rounded,
+                title: isOfficer ? 'Time In' : 'Check-in Window',
+                content: '${widget.event.timeInStart} - ${widget.event.timeInEnd}',
+                color: Colors.green,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _buildInfoCard(
+                icon: Icons.logout_rounded,
+                title: isOfficer ? 'Time Out' : 'Check-out Window',
+                content: '${widget.event.timeOutStart} - ${widget.event.timeOutEnd}',
+                color: Colors.orange,
+              ),
+            ],
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const Text('Error loading user profile'),
     );
   }
+
 
   Widget _buildInfoCard({
     required IconData icon,

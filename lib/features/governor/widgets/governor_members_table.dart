@@ -16,6 +16,11 @@ class GovernorMembersTable extends ConsumerWidget {
     final theme = Theme.of(context);
     final workspace = ref.watch(workspaceProvider);
     final selectedOrg = workspace.selectedOrganization;
+    final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
+    final canManageMembers = activeRoleName.contains('governor') || 
+                            activeRoleName.contains('president') ||
+                            activeRoleName.contains('vice governor') ||
+                            activeRoleName.contains('vice president');
 
     if (selectedOrg == null) {
       return const Center(child: Text('Please select an organization.'));
@@ -47,13 +52,13 @@ class GovernorMembersTable extends ConsumerWidget {
                       child: DataTable(
                         columnSpacing: AppSpacing.lg,
                         headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
-                        columns: const [
-                          DataColumn(label: Text('Member')),
-                          DataColumn(label: Text('Student ID')),
-                          DataColumn(label: Text('Program & Year')),
-                          DataColumn(label: Text('Joined Date')),
-                          DataColumn(label: Text('Role')),
-                          DataColumn(label: Text('Actions')),
+                        columns: [
+                          const DataColumn(label: Text('Member')),
+                          const DataColumn(label: Text('Student ID')),
+                          const DataColumn(label: Text('Program & Year')),
+                          const DataColumn(label: Text('Joined Date')),
+                          const DataColumn(label: Text('Role')),
+                          if (canManageMembers) const DataColumn(label: Text('Actions')),
                         ],
                         rows: members.map((member) {
                           return DataRow(
@@ -94,9 +99,10 @@ class GovernorMembersTable extends ConsumerWidget {
                                 style: AppTextStyles.bodySmall,
                               )),
                               DataCell(_RoleBadge(role: member.role)),
-                              DataCell(
-                                _buildMemberActions(context, member),
-                              ),
+                              if (canManageMembers)
+                                DataCell(
+                                  _buildMemberActions(context, member),
+                                ),
                             ],
                           );
                         }).toList(),

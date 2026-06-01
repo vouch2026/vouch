@@ -19,8 +19,6 @@ class _GovernorPastEventCardState extends State<GovernorPastEventCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // TODO: Connect to real attendance data
-    const isAttended = false; 
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -55,7 +53,6 @@ class _GovernorPastEventCardState extends State<GovernorPastEventCard> {
                         ),
                       ),
                     ),
-                    const _StatusIndicator(isAttended: isAttended),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -70,35 +67,11 @@ class _GovernorPastEventCardState extends State<GovernorPastEventCard> {
                   ],
                 ),
                 const Spacer(),
-                if (isAttended) ...[
-                  _buildTimeRow(context, Icons.login_rounded, 'Time in:', 'Recorded'),
-                  const SizedBox(height: AppSpacing.xs),
-                  _buildTimeRow(context, Icons.logout_rounded, 'Time out:', 'Recorded'),
-                ] else ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: theme.colorScheme.error.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline_rounded, size: 16, color: theme.colorScheme.error),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          'No attendance record found',
-                          style: AppTextStyles.labelMedium.copyWith(
-                            color: theme.colorScheme.error,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                _buildTimeRow(context, Icons.login_rounded, 'Time in:', widget.event.timeInStart),
+                const SizedBox(height: AppSpacing.xs),
+                _buildTimeRow(context, Icons.logout_rounded, 'Time out:', widget.event.timeOutStart),
                 const SizedBox(height: AppSpacing.lg),
+
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
                   decoration: BoxDecoration(
@@ -159,41 +132,3 @@ class _GovernorPastEventCardState extends State<GovernorPastEventCard> {
   }
 }
 
-class _StatusIndicator extends StatelessWidget {
-  final bool isAttended;
-  const _StatusIndicator({required this.isAttended});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = isAttended ? Colors.green : theme.colorScheme.error;
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            isAttended ? 'ATTENDED' : 'ABSENT',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -4,6 +4,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/advanced_user_filter_panel.dart';
 import '../../users/widgets/user_management_header.dart';
+import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_members_kpi.dart';
 import '../widgets/governor_members_table.dart';
 
@@ -12,6 +13,13 @@ class GovernorMembersPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final workspace = ref.watch(workspaceProvider);
+    final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
+    final canManageMembers = activeRoleName.contains('governor') || 
+                            activeRoleName.contains('president') ||
+                            activeRoleName.contains('vice governor') ||
+                            activeRoleName.contains('vice president');
+
     return DashboardLayout(
       title: 'Organization Members',
       child: LayoutBuilder(
@@ -26,24 +34,28 @@ class GovernorMembersPage extends ConsumerWidget {
               children: [
                 UserManagementHeader(
                   title: 'Members',
-                  subtitle: 'View and manage all members of your organization',
+                  subtitle: canManageMembers 
+                      ? 'View and manage all members of your organization'
+                      : 'View all members of your organization',
                   actions: [
-                    HeaderActionButton(
-                      icon: Icons.person_add_rounded,
-                      label: 'Add Member',
-                      onPressed: () {},
-                      isPrimary: true,
-                    ),
-                    HeaderActionButton(
-                      icon: Icons.file_upload_outlined,
-                      label: 'Import',
-                      onPressed: () {},
-                    ),
-                    HeaderActionButton(
-                      icon: Icons.file_download_outlined,
-                      label: 'Export',
-                      onPressed: () {},
-                    ),
+                    if (canManageMembers) ...[
+                      HeaderActionButton(
+                        icon: Icons.person_add_rounded,
+                        label: 'Add Member',
+                        onPressed: () {},
+                        isPrimary: true,
+                      ),
+                      HeaderActionButton(
+                        icon: Icons.file_upload_outlined,
+                        label: 'Import',
+                        onPressed: () {},
+                      ),
+                      HeaderActionButton(
+                        icon: Icons.file_download_outlined,
+                        label: 'Export',
+                        onPressed: () {},
+                      ),
+                    ],
                   ],
                 ),
                 SizedBox(height: verticalGap),

@@ -21,7 +21,7 @@ class GovernorMembersKpi extends ConsumerWidget {
       data: (members) {
         final totalMembers = members.length;
         final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
-        final pendingMembers = members.where((m) => m.status.toLowerCase() == 'pending').length;
+        final totalOfficers = members.where((m) => m.role != 'Member').length;
         
         // Calculate new members this month
         final now = DateTime.now();
@@ -66,11 +66,11 @@ class GovernorMembersKpi extends ConsumerWidget {
                 ),
                 _buildKpiCard(
                   context,
-                  title: 'Pending Approval',
-                  value: pendingMembers.toString(),
-                  icon: Icons.pending_actions_rounded,
+                  title: 'Total Officers',
+                  value: totalOfficers.toString(),
+                  icon: Icons.badge_rounded,
                   color: Colors.orange,
-                  trend: 'Requires review',
+                  trend: 'Organization leadership',
                 ),
                 _buildKpiCard(
                   context,
