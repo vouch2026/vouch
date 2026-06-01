@@ -22,3 +22,7 @@ final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
   if (user == null) return null;
   return ref.watch(authRepositoryProvider).getUserProfile(user.id);
 });
+
+final userProfileByIdProvider = FutureProvider.family.autoDispose<UserModel?, String>((ref, id) async {
+  return ref.watch(authRepositoryProvider).getUserProfileById(id);
+});

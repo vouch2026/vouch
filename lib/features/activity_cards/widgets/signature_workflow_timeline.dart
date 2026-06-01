@@ -15,6 +15,9 @@ class SignatureWorkflowTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (signatures.isEmpty) {
+      return const SizedBox.shrink();
+    }
     // Sort signatures by order
     final sortedSignatures = [...signatures]..sort((a, b) => a.order.compareTo(b.order));
 

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/layouts/dashboard_layout.dart';
+import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/activity_card_models.dart';
 import '../providers/activity_card_provider.dart';
@@ -22,7 +23,6 @@ class ActivityCardDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activityCardAsync = ref.watch(activityCardDetailsProvider(id));
-    final userProfile = ref.watch(userProfileProvider).value;
 
     return DashboardLayout(
       title: 'Activity Card Details',
@@ -32,51 +32,56 @@ class ActivityCardDetailsPage extends ConsumerWidget {
             return const Center(child: Text('Activity Card not found'));
           }
 
-          final studentName = userProfile?.fullName ?? 'Unknown Student';
-          final studentInfo = '${userProfile?.programName ?? 'Unknown Program'} • ${userProfile?.yearLevel != null ? '${userProfile!.yearLevel}${_getYearSuffix(userProfile.yearLevel!)} Year' : 'Unknown Year'} • Student ID: ${userProfile?.schoolId ?? 'N/A'}';
+          final studentProfileAsync = ref.watch(userProfileByIdProvider(activityCard.studentId));
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1400),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildStudentInfo(context, studentName, studentInfo, activityCard),
-                    const SizedBox(height: AppSpacing.xl),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWide = constraints.maxWidth > 1100;
-                        if (isWide) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
-                              Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
-                            ],
-                          );
-                        } else {
-                          return Column(
-                            children: [
-                              ActivityCardEventsTable(events: activityCard.events),
-                              const SizedBox(height: AppSpacing.xxl),
-                              ActivityCardFeesTable(fees: activityCard.fees),
-                            ],
-                          );
-                        }
-                      },
+          return studentProfileAsync.when(
+            data: (studentProfile) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStudentInfo(context, studentProfile, activityCard),
+                        const SizedBox(height: AppSpacing.xl),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isWide = constraints.maxWidth > 1100;
+                            if (isWide) {
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
+                                  Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
+                                ],
+                              );
+                            } else {
+                              return Column(
+                                children: [
+                                  ActivityCardEventsTable(events: activityCard.events),
+                                  const SizedBox(height: AppSpacing.xxl),
+                                  ActivityCardFeesTable(fees: activityCard.fees),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        Center(
+                          child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        _buildOrganizationInfo(activityCard),
+                        const SizedBox(height: AppSpacing.xxl),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.xxl),
-                    Center(
-                      child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-                    _buildOrganizationInfo(activityCard),
-                    const SizedBox(height: AppSpacing.xxl),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(child: Text('Error loading student info: $err')),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -95,9 +100,11 @@ class ActivityCardDetailsPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildStudentInfo(BuildContext context, String name, String info, ActivityCard card) {
+  Widget _buildStudentInfo(BuildContext context, UserModel? user, ActivityCard card) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 700;
+    final name = user?.fullName ?? 'Unknown Student';
+    final info = '${user?.programName ?? 'Unknown Program'} • ${user?.yearLevel != null ? '${user!.yearLevel}${_getYearSuffix(user.yearLevel!)} Year' : 'Unknown Year'} • Student ID: ${user?.schoolId ?? 'N/A'}';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -112,7 +119,10 @@ class ActivityCardDetailsPage extends ConsumerWidget {
           CircleAvatar(
             radius: 32,
             backgroundColor: AppColors.primary.withOpacity(0.1),
-            child: Text(name[0], style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary)),
+            backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+            child: user?.avatarUrl == null 
+              ? Text(name[0], style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary))
+              : null,
           ),
           SizedBox(width: isCompact ? 0 : AppSpacing.lg, height: isCompact ? AppSpacing.md : 0),
           Expanded(

@@ -25,7 +25,10 @@ class ActivityCardRedirector extends ConsumerWidget {
                 context.go('${RoutePaths.activityCards}/${card.id}');
               }
             });
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const DashboardLayout(
+              title: 'Activity Card',
+              child: Center(child: CircularProgressIndicator()),
+            );
           } else {
             return const DashboardLayout(
               title: 'Activity Card',
@@ -57,9 +60,13 @@ class ActivityCardRedirector extends ConsumerWidget {
           );
         }
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, _) => Scaffold(
-        body: Center(
+      loading: () => const DashboardLayout(
+        title: 'Activity Card',
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, _) => DashboardLayout(
+        title: 'Activity Card',
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
