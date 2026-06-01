@@ -7,7 +7,7 @@ import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
-import '../features/activity_cards/views/activity_cards_dashboard_page.dart';
+import '../features/activity_cards/views/activity_card_redirector.dart';
 import '../features/activity_cards/views/activity_card_details_page.dart';
 import '../features/organizations/views/organizations_page.dart';
 import '../features/organizations/views/organization_details_page.dart';
@@ -144,7 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.activityCards,
         name: RouteNames.activityCards,
-        builder: (context, state) => const ActivityCardsDashboardPage(),
+        builder: (context, state) => const ActivityCardRedirector(),
       ),
       GoRoute(
         path: RoutePaths.activityCardDetails,

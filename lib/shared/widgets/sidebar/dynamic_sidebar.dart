@@ -138,10 +138,12 @@ class DynamicSidebar extends ConsumerWidget {
                             path: RoutePaths.workspaceAttendance,
                           ),
                         if (activeRole?.hasAnyPermission([AppPermissions.manageActivityCards, AppPermissions.viewActivityCards]) ?? false)
-                          const _SidebarItem(
+                          _SidebarItem(
                             icon: Icons.assignment_outlined,
                             label: 'Activity Cards',
-                            path: RoutePaths.workspaceActivityCards,
+                            path: activeRole!.hasPermission(AppPermissions.manageActivityCards)
+                                ? RoutePaths.workspaceActivityCards
+                                : RoutePaths.activityCards,
                           ),
                         if (activeRole?.hasAnyPermission([AppPermissions.viewAnnouncements, AppPermissions.createAnnouncement]) ?? false)
                           const _SidebarItem(
