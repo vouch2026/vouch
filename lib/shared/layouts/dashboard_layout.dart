@@ -76,10 +76,12 @@ class DashboardLayout extends ConsumerWidget {
           if (!isDesktop && isSidebarVisible)
             Stack(
               children: [
-                // Scrim (Optional: can be transparent or semi-transparent)
-                // We don't add an onTap here to prevent closing by tapping outside
-                Container(
-                  color: Colors.black.withValues(alpha: 0.3),
+                // Scrim
+                GestureDetector(
+                  onTap: () => ref.read(sidebarVisibleProvider.notifier).state = false,
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                  ),
                 ),
                 Row(
                   children: [
@@ -87,10 +89,13 @@ class DashboardLayout extends ConsumerWidget {
                       width: 280,
                       child: DynamicSidebar(),
                     ),
-                    // Tapping the remaining space still won't close it 
-                    // because we didn't add a GestureDetector with pop logic
                     Expanded(
-                      child: Container(),
+                      child: GestureDetector(
+                        onTap: () => ref.read(sidebarVisibleProvider.notifier).state = false,
+                        child: Container(
+                          color: Colors.transparent,
+                        ),
+                      ),
                     ),
                   ],
                 ),
