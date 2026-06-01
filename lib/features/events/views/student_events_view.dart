@@ -157,7 +157,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,
             mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: isPast ? 200 : 400, 
+            mainAxisExtent: _tabController.index == 3 ? 340 : (isPast ? 200 : 400), 
           ),
           itemCount: events.length,
           itemBuilder: (context, index) => builder(events[index]),
