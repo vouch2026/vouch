@@ -627,7 +627,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                               crossAxisCount: crossAxisCount,
                               crossAxisSpacing: AppSpacing.lg,
                               mainAxisSpacing: AppSpacing.lg,
-                              mainAxisExtent: 240,
+                              mainAxisExtent: 210,
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
@@ -923,7 +923,12 @@ class _StudentFeeCard extends StatelessWidget {
         side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          top: AppSpacing.lg,
+          bottom: AppSpacing.md,
+        ),
         child: Column(
           children: [
             Row(
