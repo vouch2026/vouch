@@ -87,7 +87,7 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                             style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            'Student', // Placeholder for now
+                            widget.submission.studentIdNumber ?? 'Unknown ID',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),

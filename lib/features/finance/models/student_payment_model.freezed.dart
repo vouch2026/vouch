@@ -46,6 +46,8 @@ mixin _$StudentPaymentModel {
   @JsonKey(includeFromJson: true, includeToJson: false)
   String? get studentName => throw _privateConstructorUsedError;
   @JsonKey(includeFromJson: true, includeToJson: false)
+  String? get studentIdNumber => throw _privateConstructorUsedError;
+  @JsonKey(includeFromJson: true, includeToJson: false)
   String? get feeName => throw _privateConstructorUsedError;
 
   /// Serializes this StudentPaymentModel to a JSON map.
@@ -79,6 +81,8 @@ abstract class $StudentPaymentModelCopyWith<$Res> {
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
     @JsonKey(name: 'received_by_user_id') String? receivedByUserId,
     @JsonKey(includeFromJson: true, includeToJson: false) String? studentName,
+    @JsonKey(includeFromJson: true, includeToJson: false)
+    String? studentIdNumber,
     @JsonKey(includeFromJson: true, includeToJson: false) String? feeName,
   });
 }
@@ -111,6 +115,7 @@ class _$StudentPaymentModelCopyWithImpl<$Res, $Val extends StudentPaymentModel>
     Object? updatedAt = freezed,
     Object? receivedByUserId = freezed,
     Object? studentName = freezed,
+    Object? studentIdNumber = freezed,
     Object? feeName = freezed,
   }) {
     return _then(
@@ -167,6 +172,10 @@ class _$StudentPaymentModelCopyWithImpl<$Res, $Val extends StudentPaymentModel>
                 ? _value.studentName
                 : studentName // ignore: cast_nullable_to_non_nullable
                       as String?,
+            studentIdNumber: freezed == studentIdNumber
+                ? _value.studentIdNumber
+                : studentIdNumber // ignore: cast_nullable_to_non_nullable
+                      as String?,
             feeName: freezed == feeName
                 ? _value.feeName
                 : feeName // ignore: cast_nullable_to_non_nullable
@@ -200,6 +209,8 @@ abstract class _$$StudentPaymentModelImplCopyWith<$Res>
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
     @JsonKey(name: 'received_by_user_id') String? receivedByUserId,
     @JsonKey(includeFromJson: true, includeToJson: false) String? studentName,
+    @JsonKey(includeFromJson: true, includeToJson: false)
+    String? studentIdNumber,
     @JsonKey(includeFromJson: true, includeToJson: false) String? feeName,
   });
 }
@@ -231,6 +242,7 @@ class __$$StudentPaymentModelImplCopyWithImpl<$Res>
     Object? updatedAt = freezed,
     Object? receivedByUserId = freezed,
     Object? studentName = freezed,
+    Object? studentIdNumber = freezed,
     Object? feeName = freezed,
   }) {
     return _then(
@@ -287,6 +299,10 @@ class __$$StudentPaymentModelImplCopyWithImpl<$Res>
             ? _value.studentName
             : studentName // ignore: cast_nullable_to_non_nullable
                   as String?,
+        studentIdNumber: freezed == studentIdNumber
+            ? _value.studentIdNumber
+            : studentIdNumber // ignore: cast_nullable_to_non_nullable
+                  as String?,
         feeName: freezed == feeName
             ? _value.feeName
             : feeName // ignore: cast_nullable_to_non_nullable
@@ -313,6 +329,7 @@ class _$StudentPaymentModelImpl implements _StudentPaymentModel {
     @JsonKey(name: 'updated_at') this.updatedAt,
     @JsonKey(name: 'received_by_user_id') this.receivedByUserId,
     @JsonKey(includeFromJson: true, includeToJson: false) this.studentName,
+    @JsonKey(includeFromJson: true, includeToJson: false) this.studentIdNumber,
     @JsonKey(includeFromJson: true, includeToJson: false) this.feeName,
   });
 
@@ -360,11 +377,14 @@ class _$StudentPaymentModelImpl implements _StudentPaymentModel {
   final String? studentName;
   @override
   @JsonKey(includeFromJson: true, includeToJson: false)
+  final String? studentIdNumber;
+  @override
+  @JsonKey(includeFromJson: true, includeToJson: false)
   final String? feeName;
 
   @override
   String toString() {
-    return 'StudentPaymentModel(id: $id, studentId: $studentId, feeId: $feeId, referenceNumber: $referenceNumber, proofPhotoUrl: $proofPhotoUrl, paymentReceiverId: $paymentReceiverId, rejectionNote: $rejectionNote, status: $status, amountPaid: $amountPaid, paidAt: $paidAt, updatedAt: $updatedAt, receivedByUserId: $receivedByUserId, studentName: $studentName, feeName: $feeName)';
+    return 'StudentPaymentModel(id: $id, studentId: $studentId, feeId: $feeId, referenceNumber: $referenceNumber, proofPhotoUrl: $proofPhotoUrl, paymentReceiverId: $paymentReceiverId, rejectionNote: $rejectionNote, status: $status, amountPaid: $amountPaid, paidAt: $paidAt, updatedAt: $updatedAt, receivedByUserId: $receivedByUserId, studentName: $studentName, studentIdNumber: $studentIdNumber, feeName: $feeName)';
   }
 
   @override
@@ -394,6 +414,8 @@ class _$StudentPaymentModelImpl implements _StudentPaymentModel {
                 other.receivedByUserId == receivedByUserId) &&
             (identical(other.studentName, studentName) ||
                 other.studentName == studentName) &&
+            (identical(other.studentIdNumber, studentIdNumber) ||
+                other.studentIdNumber == studentIdNumber) &&
             (identical(other.feeName, feeName) || other.feeName == feeName));
   }
 
@@ -414,6 +436,7 @@ class _$StudentPaymentModelImpl implements _StudentPaymentModel {
     updatedAt,
     receivedByUserId,
     studentName,
+    studentIdNumber,
     feeName,
   );
 
@@ -450,6 +473,8 @@ abstract class _StudentPaymentModel implements StudentPaymentModel {
     @JsonKey(name: 'received_by_user_id') final String? receivedByUserId,
     @JsonKey(includeFromJson: true, includeToJson: false)
     final String? studentName,
+    @JsonKey(includeFromJson: true, includeToJson: false)
+    final String? studentIdNumber,
     @JsonKey(includeFromJson: true, includeToJson: false) final String? feeName,
   }) = _$StudentPaymentModelImpl;
 
@@ -493,6 +518,9 @@ abstract class _StudentPaymentModel implements StudentPaymentModel {
   @override
   @JsonKey(includeFromJson: true, includeToJson: false)
   String? get studentName;
+  @override
+  @JsonKey(includeFromJson: true, includeToJson: false)
+  String? get studentIdNumber;
   @override
   @JsonKey(includeFromJson: true, includeToJson: false)
   String? get feeName;

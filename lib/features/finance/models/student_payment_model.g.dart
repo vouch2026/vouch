@@ -26,6 +26,7 @@ _$StudentPaymentModelImpl _$$StudentPaymentModelImplFromJson(
       : DateTime.parse(json['updated_at'] as String),
   receivedByUserId: json['received_by_user_id'] as String?,
   studentName: json['studentName'] as String?,
+  studentIdNumber: json['studentIdNumber'] as String?,
   feeName: json['feeName'] as String?,
 );
 

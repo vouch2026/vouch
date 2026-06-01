@@ -117,20 +117,22 @@ class FinanceRepository {
           ),
           student:users!student_payments_student_id_fkey (
             first_name,
-            last_name
+            last_name,
+            student_id_number
           )
         ''')
         .eq('fee.scope_type', scopeType)
         .eq('fee.scope_id', scopeId)
         .order('paid_at', ascending: false);
     
-    return (response as List).map((json) {
+    return (response as List).map<StudentPaymentModel>((json) {
       final model = StudentPaymentModel.fromJson(json);
       final student = json['student'] as Map<String, dynamic>?;
       final fee = json['fee'] as Map<String, dynamic>?;
       
       return model.copyWith(
         studentName: student != null ? '${student['first_name']} ${student['last_name']}' : 'Unknown Student',
+        studentIdNumber: student != null ? student['student_id_number'] : 'Unknown ID',
         feeName: fee != null ? fee['name'] : 'Unknown Fee',
       );
     }).toList();

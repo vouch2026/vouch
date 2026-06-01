@@ -21,6 +21,7 @@ class StudentPaymentModel with _$StudentPaymentModel {
     
     // Virtual fields for display
     @JsonKey(includeFromJson: true, includeToJson: false) String? studentName,
+    @JsonKey(includeFromJson: true, includeToJson: false) String? studentIdNumber,
     @JsonKey(includeFromJson: true, includeToJson: false) String? feeName,
   }) = _StudentPaymentModel;
 

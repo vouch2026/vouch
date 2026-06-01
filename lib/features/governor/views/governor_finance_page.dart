@@ -473,7 +473,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    submission.studentName ?? 'Unknown Student',
+                    '${submission.studentName ?? 'Unknown Student'} • ${submission.studentIdNumber ?? 'No ID'}',
                     style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
@@ -505,11 +505,19 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
   }
 }
 
-class _StudentFinanceView extends ConsumerWidget {
+class _StudentFinanceView extends ConsumerStatefulWidget {
   const _StudentFinanceView();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StudentFinanceView> createState() => _StudentFinanceViewState();
+}
+
+class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
+  String _categoryFilter = 'All'; // All, Mandatory, Non-Mandatory
+  String _statusFilter = 'All';   // All, To Pay, Pending, Paid
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final feesAsync = ref.watch(workspaceFeesProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
@@ -531,6 +539,25 @@ class _StudentFinanceView extends ConsumerWidget {
                   .where((s) => s.status == 'Paid')
                   .fold<double>(0, (sum, s) => sum + s.amountPaid);
               
+              // Apply Filtering
+              final filteredFees = fees.where((fee) {
+                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final status = submission?.status ?? 'To Pay';
+                
+                // Category Filter
+                bool categoryMatch = true;
+                if (_categoryFilter == 'Mandatory') categoryMatch = fee.isMandatory;
+                if (_categoryFilter == 'Non-Mandatory') categoryMatch = !fee.isMandatory;
+                
+                // Status Filter
+                bool statusMatch = true;
+                if (_statusFilter == 'To Pay') statusMatch = status == 'To Pay' || status == 'Rejected';
+                if (_statusFilter == 'Pending') statusMatch = status == 'Pending';
+                if (_statusFilter == 'Paid') statusMatch = status == 'Paid';
+                
+                return categoryMatch && statusMatch;
+              }).toList();
+
               return LayoutBuilder(
                 builder: (context, constraints) {
                   int crossAxisCount = 1;
@@ -559,12 +586,17 @@ class _StudentFinanceView extends ConsumerWidget {
                               Center(
                                 child: ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 600),
-                                  child: _buildSummaryCard(totalPaid, userProfile?.id ?? 'Unknown'),
+                                  child: _buildSummaryCard(totalPaid, userProfile?.schoolId ?? 'Unknown'),
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.xl),
+                              
+                              // Filters Row
+                              _buildFiltersRow(theme),
+                              
+                              const SizedBox(height: AppSpacing.lg),
                               Text(
-                                'AVAILABLE FEES',
+                                'AVAILABLE FEES (${filteredFees.length})',
                                 style: AppTextStyles.labelMedium.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: theme.colorScheme.primary,
@@ -576,14 +608,14 @@ class _StudentFinanceView extends ConsumerWidget {
                         ),
                       ),
                       
-                      if (fees.isEmpty)
+                      if (filteredFees.isEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                             child: _buildEmptyState(
                               context,
                               Icons.receipt_long_outlined,
-                              'No fees available at the moment.',
+                              'No fees match your filters.',
                             ),
                           ),
                         )
@@ -599,11 +631,11 @@ class _StudentFinanceView extends ConsumerWidget {
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final fee = fees[index];
+                                final fee = filteredFees[index];
                                 final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
                                 return _StudentFeeCard(fee: fee, submission: submission);
                               },
-                              childCount: fees.length,
+                              childCount: filteredFees.length,
                             ),
                           ),
                         ),
@@ -667,6 +699,66 @@ class _StudentFinanceView extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('Error: $err')),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFiltersRow(ThemeData theme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterDropdown(
+            label: 'Category',
+            value: _categoryFilter,
+            items: ['All', 'Mandatory', 'Non-Mandatory'],
+            onChanged: (val) => setState(() => _categoryFilter = val!),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          _buildFilterDropdown(
+            label: 'Status',
+            value: _statusFilter,
+            items: ['All', 'To Pay', 'Pending', 'Paid'],
+            onChanged: (val) => setState(() => _statusFilter = val!),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$label: ', style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
+          DropdownButton<String>(
+            value: value,
+            items: items.map((String item) {
+              return DropdownMenuItem<String>(
+                value: item,
+                child: Text(item, style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold)),
+              );
+            }).toList(),
+            onChanged: onChanged,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+            style: AppTextStyles.labelMedium,
+            padding: EdgeInsets.zero,
+            isDense: true,
+          ),
+        ],
       ),
     );
   }
