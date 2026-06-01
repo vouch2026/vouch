@@ -110,10 +110,10 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
           body: TabBarView(
             controller: _tabController,
             children: [
-              _buildTabView(todayEvents, (event) => StudentEventCard(event: event)),
-              _buildTabView(upcomingEvents, (event) => StudentEventCard(event: event)),
-              _buildTabView(pastEvents, (event) => StudentPastEventCard(event: event), isPast: true),
-              _buildTabView(pastEvents, (event) => StudentRateEventCard(event: event)),
+              _buildTabView(todayEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
+              _buildTabView(upcomingEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
+              _buildTabView(pastEvents, (event) => StudentPastEventCard(event: event), mainAxisExtent: 200),
+              _buildTabView(pastEvents, (event) => StudentRateEventCard(event: event), mainAxisExtent: 340),
             ],
           ),
         );
@@ -123,7 +123,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
     );
   }
 
-  Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder, {bool isPast = false}) {
+  Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder, {required double mainAxisExtent}) {
     if (events.isEmpty) {
       return Center(
         child: Column(
@@ -157,7 +157,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,
             mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: _tabController.index == 3 ? 340 : (isPast ? 200 : 400), 
+            mainAxisExtent: mainAxisExtent, 
           ),
           itemCount: events.length,
           itemBuilder: (context, index) => builder(events[index]),

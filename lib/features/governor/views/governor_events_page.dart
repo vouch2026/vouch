@@ -133,10 +133,10 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             body: TabBarView(
               controller: _tabController,
               children: [
-                _buildTabView(todayEvents, (event) => GovernorEventCard(event: event)),
-                _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event)),
-                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event)),
-                _buildTabView([], (event) => GovernorRateEventCard(event: event)), // Ratings still mock/placeholder
+                _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
+                _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
+                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 380),
+                _buildTabView([], (event) => GovernorRateEventCard(event: event), mainAxisExtent: 320), // Ratings still mock/placeholder
               ],
             ),
           );
@@ -147,7 +147,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
     );
   }
 
-  Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder) {
+  Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder, {required double mainAxisExtent}) {
     if (events.isEmpty) {
       return SingleChildScrollView(
         child: Center(
@@ -186,7 +186,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             crossAxisSpacing: AppSpacing.lg,
             mainAxisSpacing: AppSpacing.lg,
             // Dynamic aspect ratio based on width to keep card heights reasonable
-            mainAxisExtent: _tabController.index == 3 ? 320 : 380, 
+            mainAxisExtent: mainAxisExtent, 
           ),
           itemCount: events.length,
           itemBuilder: (context, index) => builder(events[index]),
