@@ -14,15 +14,27 @@ flutter config --enable-web
 flutter config --no-analytics
 flutter precache --web
 
-# 4. Get Dependencies
+# 4. Create .env file from Vercel Environment Variables
+# This prevents the "No file or variants found for asset: .env" error
+echo "Creating .env file..."
+touch .env
+echo "SUPABASE_URL=$SUPABASE_URL" >> .env
+echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+echo "SUPABASE_ID_BUCKET=${SUPABASE_ID_BUCKET:-ids}" >> .env
+echo "SUPABASE_ORG_BUCKET=${SUPABASE_ORG_BUCKET:-org-pictures}" >> .env
+echo "SUPABASE_ANNOUNCEMENTS_BUCKET=${SUPABASE_ANNOUNCEMENTS_BUCKET:-announcement-pictures}" >> .env
+echo "SUPABASE_EVENT_BUCKET=${SUPABASE_EVENT_BUCKET:-event-pictures}" >> .env
+echo "SUPABASE_RECEIPTS_BUCKET=${SUPABASE_RECEIPTS_BUCKET:-receipt-pictures}" >> .env
+echo "SUPABASE_HIGHLIGHTS_BUCKET=${SUPABASE_HIGHLIGHTS_BUCKET:-highlight-pictures}" >> .env
+
+# 5. Get Dependencies
 echo "Getting dependencies..."
 flutter pub get
 
-# 5. Generate Code (Freezed, JSON Serializable, etc.)
+# 6. Generate Code (Freezed, JSON Serializable, etc.)
 echo "Running build_runner..."
 flutter pub run build_runner build --delete-conflicting-outputs
 
-# 6. Build the web project
+# 7. Build the web project
 echo "Building web project..."
-# --no-source-maps reduces memory usage and build time
 flutter build web --release --no-source-maps
