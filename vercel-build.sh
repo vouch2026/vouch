@@ -18,7 +18,11 @@ flutter precache --web
 echo "Getting dependencies..."
 flutter pub get
 
-# 5. Build the web project
+# 5. Generate Code (Freezed, JSON Serializable, etc.)
+echo "Running build_runner..."
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# 6. Build the web project
 echo "Building web project..."
-# Use default renderer (auto) to avoid flag compatibility issues in some environments
-flutter build web --release
+# --no-source-maps reduces memory usage and build time
+flutter build web --release --no-source-maps
