@@ -32,7 +32,11 @@ class ActivityCardDetailsPage extends ConsumerWidget {
             return const Center(child: Text('Activity Card not found'));
           }
 
-          final studentProfileAsync = ref.watch(userProfileByIdProvider(activityCard.studentId));
+          final currentUserProfile = ref.watch(userProfileProvider).value;
+          final isCurrentUser = currentUserProfile?.id == activityCard.studentId;
+          final studentProfileAsync = isCurrentUser 
+            ? AsyncValue.data(currentUserProfile)
+            : ref.watch(userProfileByIdProvider(activityCard.studentId));
 
           return studentProfileAsync.when(
             data: (studentProfile) {

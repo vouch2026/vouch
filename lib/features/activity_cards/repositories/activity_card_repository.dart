@@ -27,30 +27,28 @@ class ActivityCardRepository {
         .eq('user_id', studentId)
         .eq('status', 'active');
     
-    List<ActivityCard> cards = [];
+    final List orgMembers = orgMembersResponse as List;
+    if (orgMembers.isEmpty) return [];
 
-    for (var member in orgMembersResponse as List) {
+    // Collect all unique scope IDs
+    final Set<String> scopeIds = {};
+    for (var member in orgMembers) {
       final org = member['organizations'];
-      final orgId = org['id'];
-      final orgName = org['name'];
-      final orgLogo = org['logo_url'];
       final orgType = org['type'];
-
-      // Determine scope for events/fees
-      String scopeType = 'Institutional';
       String? scopeId = org['campus_id'];
       if (orgType == 'faculty-based') {
-        scopeType = 'Faculty';
         scopeId = org['faculty_id'];
       } else if (orgType == 'program-based') {
-        scopeType = 'Program';
         scopeId = org['program_id'];
       }
+      if (scopeId != null) scopeIds.add(scopeId);
+    }
 
-      if (scopeId == null) continue;
+    if (scopeIds.isEmpty) return [];
 
-      // 3. Fetch events and attendance
-      final eventsResponse = await _client
+    // 3, 4, 5. Fetch all data in bulk parallel requests
+    final List<Future<dynamic>> futures = [
+      _client
           .from('events')
           .select('''
             *,
@@ -60,13 +58,10 @@ class ActivityCardRepository {
               actual_time_out
             )
           ''')
-          .eq('scope_type', scopeType)
-          .eq('scope_id', scopeId)
+          .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
-          .eq('attendance.student_id', studentId);
-
-      // 4. Fetch fees and payments
-      final feesResponse = await _client
+          .eq('attendance.student_id', studentId),
+      _client
           .from('fees')
           .select('''
             *,
@@ -77,13 +72,10 @@ class ActivityCardRepository {
               reference_number
             )
           ''')
-          .eq('scope_type', scopeType)
-          .eq('scope_id', scopeId)
+          .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
-          .eq('payments.student_id', studentId);
-
-      // 5. Fetch clearance request and signatures
-      final clearanceResponse = await _client
+          .eq('payments.student_id', studentId),
+      _client
           .from('activity_card_clearance_requests')
           .select('''
             *,
@@ -93,13 +85,42 @@ class ActivityCardRepository {
             )
           ''')
           .eq('student_id', studentId)
-          .eq('scope_type', scopeType)
-          .eq('scope_id', scopeId)
+          .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
-          .maybeSingle();
+    ];
+
+    final results = await Future.wait(futures);
+
+    final allEvents = results[0] as List;
+    final allFees = results[1] as List;
+    final allClearanceRequests = results[2] as List;
+
+    List<ActivityCard> cards = [];
+
+    for (var member in orgMembers) {
+      final org = member['organizations'];
+      final orgId = org['id'];
+      final orgName = org['name'];
+      final orgLogo = org['logo_url'];
+      final orgType = org['type'];
+
+      // Determine scope for events/fees
+      String? scopeId = org['campus_id'];
+      if (orgType == 'faculty-based') {
+        scopeId = org['faculty_id'];
+      } else if (orgType == 'program-based') {
+        scopeId = org['program_id'];
+      }
+
+      if (scopeId == null) continue;
+
+      // Filter bulk results for this organization's scope
+      final eventsResponse = allEvents.where((e) => e['scope_id'] == scopeId).toList();
+      final feesResponse = allFees.where((f) => f['scope_id'] == scopeId).toList();
+      final clearanceResponse = allClearanceRequests.where((c) => c['scope_id'] == scopeId).firstOrNull;
 
       // Map to models
-      final List<ActivityCardEvent> events = (eventsResponse as List).map((e) {
+      final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = (e['attendance'] as List).firstOrNull;
         return ActivityCardEvent(
           id: e['id'],
@@ -114,7 +135,7 @@ class ActivityCardRepository {
         );
       }).toList();
 
-      final List<ActivityCardFee> fees = (feesResponse as List).map((f) {
+      final List<ActivityCardFee> fees = feesResponse.map((f) {
         final payment = (f['payments'] as List).where((p) => p['status'] == 'Paid').firstOrNull;
         return ActivityCardFee(
           id: f['id'],
@@ -153,7 +174,7 @@ class ActivityCardRepository {
         : 0.0;
 
       cards.add(ActivityCard(
-        id: clearanceResponse?['id'] ?? 'temp-${orgId}',
+        id: clearanceResponse?['id'] ?? 'temp-$orgId',
         studentId: studentId,
         organizationId: orgId,
         organizationName: orgName,

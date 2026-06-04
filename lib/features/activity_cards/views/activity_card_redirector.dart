@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../providers/activity_card_provider.dart';
+import 'activity_card_details_page.dart';
 import '../../../routes/route_paths.dart';
 
 class ActivityCardRedirector extends ConsumerWidget {
@@ -25,10 +26,8 @@ class ActivityCardRedirector extends ConsumerWidget {
                 context.go('${RoutePaths.activityCards}/${card.id}');
               }
             });
-            return const DashboardLayout(
-              title: 'Activity Card',
-              child: Center(child: CircularProgressIndicator()),
-            );
+            // Show the page directly while the redirect is happening
+            return ActivityCardDetailsPage(id: card.id);
           } else {
             return const DashboardLayout(
               title: 'Activity Card',

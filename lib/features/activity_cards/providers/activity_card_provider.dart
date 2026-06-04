@@ -16,7 +16,8 @@ final studentActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) as
   return repository.getStudentActivityCards(userProfile.id!);
 });
 
-final activityCardDetailsProvider = FutureProvider.family<ActivityCard?, String>((ref, id) async {
-  final cards = await ref.watch(studentActivityCardsProvider.future);
-  return cards.where((c) => c.id == id).firstOrNull;
+final activityCardDetailsProvider = Provider.family<AsyncValue<ActivityCard?>, String>((ref, id) {
+  return ref.watch(studentActivityCardsProvider).whenData(
+    (cards) => cards.where((c) => c.id == id).firstOrNull,
+  );
 });
