@@ -4,6 +4,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/time_formatter.dart';
 import '../../events/models/event_model.dart';
+import '../../events/views/student_event_details_page.dart';
 
 class GovernorEventCard extends StatefulWidget {
   final EventModel event;
@@ -28,106 +29,119 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
         transform: _isHovered ? Matrix4.translationValues(0, -4, 0) : Matrix4.identity(),
-        child: Card(
-          elevation: _isHovered ? 8 : 0,
-          clipBehavior: Clip.antiAlias,
-          shadowColor: theme.colorScheme.primary.withOpacity(0.2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: _isHovered ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.5),
-              width: _isHovered ? 1.5 : 1,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StudentEventDetailsPage(event: widget.event),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  Container(
-                    height: 160,
-                    width: double.infinity,
-                    color: theme.colorScheme.surfaceVariant,
-                    child: _buildEventImage(widget.event.imageUrl),
-                  ),
-                  if (widget.event.isMandatory)
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+          child: Card(
+            elevation: _isHovered ? 8 : 0,
+            clipBehavior: Clip.antiAlias,
+            shadowColor: theme.colorScheme.primary.withOpacity(0.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: _isHovered ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.5),
+                width: _isHovered ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
+                  children: [
+                    Container(
+                      height: 160,
+                      width: double.infinity,
+                      color: theme.colorScheme.surfaceVariant,
+                      child: _buildEventImage(widget.event.imageUrl),
+                    ),
+                    if (widget.event.isMandatory)
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'MANDATORY',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.event.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today_outlined, size: 14, color: theme.colorScheme.primary),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              DateFormat.yMMMMd().format(widget.event.eventDate),
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
-                        child: Text(
-                          'MANDATORY',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.event.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 14, color: theme.colorScheme.primary),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            DateFormat.yMMMMd().format(widget.event.eventDate),
-                            style: AppTextStyles.labelMedium.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w600,
+                        const Spacer(),
+                        _buildInfoRow(context, Icons.login_rounded, 'Time in:', TimeFormatter.formatTimeRange(widget.event.timeInStart, widget.event.timeInEnd)),
+                        const SizedBox(height: AppSpacing.xs),
+                        _buildInfoRow(context, Icons.logout_rounded, 'Time out:', TimeFormatter.formatTimeRange(widget.event.timeOutStart, widget.event.timeOutEnd)),
+                        const SizedBox(height: AppSpacing.md),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StudentEventDetailsPage(event: widget.event),
+                              ),
                             ),
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text('View Event Details'),
                           ),
-                        ],
-                      ),
-                      const Spacer(),
-                      _buildInfoRow(context, Icons.login_rounded, 'Time in:', TimeFormatter.formatTimeRange(widget.event.timeInStart, widget.event.timeInEnd)),
-                      const SizedBox(height: AppSpacing.xs),
-                      _buildInfoRow(context, Icons.logout_rounded, 'Time out:', TimeFormatter.formatTimeRange(widget.event.timeOutStart, widget.event.timeOutEnd)),
-                      const SizedBox(height: AppSpacing.md),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () {},
-                          style: FilledButton.styleFrom(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('View Event Details'),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

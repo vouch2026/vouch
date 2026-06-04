@@ -11,6 +11,7 @@ import '../../../core/utils/time_formatter.dart';
 import '../../auth/models/user_model.dart';
 import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
+import '../../events/views/student_event_details_page.dart';
 import '../widgets/welcome_header.dart';
 
 class GovernorDashboardView extends ConsumerWidget {
@@ -62,7 +63,7 @@ class GovernorDashboardView extends ConsumerWidget {
                                   children: [
                                     _buildKpiSection(context, org, activeRole?.roleName, members, events),
                                     const SizedBox(height: AppSpacing.lg),
-                                    _buildUpcomingEvents(org, upcomingEvents),
+                                    _buildUpcomingEvents(context, org, upcomingEvents),
                                   ],
                                 ),
                               ),
@@ -87,7 +88,7 @@ class GovernorDashboardView extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.lg),
                               _buildPendingApprovals(org, members),
                               const SizedBox(height: AppSpacing.lg),
-                              _buildUpcomingEvents(org, upcomingEvents),
+                              _buildUpcomingEvents(context, org, upcomingEvents),
                               const SizedBox(height: AppSpacing.lg),
                               _buildRecentActivity(org, members),
                             ],
@@ -300,7 +301,7 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildUpcomingEvents(dynamic org, List<EventModel> events) {
+  Widget _buildUpcomingEvents(BuildContext context, dynamic org, List<EventModel> events) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -328,9 +329,9 @@ class GovernorDashboardView extends ConsumerWidget {
             ...events.take(3).map((e) => Column(
               children: [
                 _buildEventTile(
-                  e.name, 
+                  context,
+                  e, 
                   '${DateFormat.yMMMd().format(e.eventDate)} • ${TimeFormatter.formatDbTimeTo12Hour(e.timeInStart)}', 
-                  e.location, 
                   e.isMandatory ? 'Mandatory' : 'Optional'
                 ),
                 if (e != events.take(3).last) const Divider(),
@@ -341,9 +342,15 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildEventTile(String title, String date, String loc, String type) {
+  Widget _buildEventTile(BuildContext context, EventModel event, String date, String type) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentEventDetailsPage(event: event),
+        ),
+      ),
       leading: Container(
         width: 48,
         height: 48,
@@ -353,8 +360,8 @@ class GovernorDashboardView extends ConsumerWidget {
         ),
         child: const Icon(Icons.calendar_month_outlined, color: AppColors.primary),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text('$date • $loc'),
+      title: Text(event.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text('$date • ${event.location}'),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
