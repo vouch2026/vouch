@@ -44,11 +44,11 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
         
         final todayEvents = events.where((e) {
           final eDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
-          return eDate.isAtSameMomentAs(today);
+          return eDate.isAtSameMomentAs(today) && !e.isPastTimeout;
         }).toList();
         
         final upcomingEvents = events.where((e) => e.eventDate.isAfter(today)).toList();
-        final pastEvents = events.where((e) => e.eventDate.isBefore(today)).toList();
+        final pastEvents = events.where((e) => e.isPastTimeout).toList();
         
         return NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [

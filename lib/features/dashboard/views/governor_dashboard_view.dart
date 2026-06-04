@@ -47,7 +47,7 @@ class GovernorDashboardView extends ConsumerWidget {
               eventsAsync.when(
                 data: (events) => membersAsync.when(
                   data: (members) {
-                    final upcomingEvents = events.where((e) => e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1)))).toList();
+                    final upcomingEvents = events.where((e) => !e.isPastTimeout).toList();
                     upcomingEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
 
                     return Column(
@@ -224,7 +224,7 @@ class GovernorDashboardView extends ConsumerWidget {
     final totalMembers = members.length;
     final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
     final pendingRequests = members.where((m) => m.status.toLowerCase() == 'pending').length;
-    final upcomingCount = events.where((e) => e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1)))).length;
+    final upcomingCount = events.where((e) => !e.isPastTimeout).length;
 
     return LayoutBuilder(
       builder: (context, constraints) {

@@ -5,6 +5,8 @@ part 'event_model.g.dart';
 
 @freezed
 class EventModel with _$EventModel {
+  const EventModel._();
+
   const factory EventModel({
     String? id,
     required String name,
@@ -27,4 +29,31 @@ class EventModel with _$EventModel {
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
+
+  bool get isPastTimeout {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final eDate = DateTime(eventDate.year, eventDate.month, eventDate.day);
+
+    if (eDate.isBefore(today)) return true;
+    if (eDate.isAfter(today)) return false;
+
+    // Today, check timeout
+    try {
+      final parts = timeOutEnd.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+
+      final timeoutTime = DateTime(
+        eDate.year,
+        eDate.month,
+        eDate.day,
+        hour,
+        minute,
+      );
+      return now.isAfter(timeoutTime);
+    } catch (_) {
+      return false;
+    }
+  }
 }

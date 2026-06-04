@@ -353,7 +353,7 @@ class __$$EventModelImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$EventModelImpl implements _EventModel {
+class _$EventModelImpl extends _EventModel {
   const _$EventModelImpl({
     this.id,
     required this.name,
@@ -373,7 +373,7 @@ class _$EventModelImpl implements _EventModel {
     @JsonKey(name: 'created_at') this.createdAt,
     @JsonKey(name: 'updated_at') this.updatedAt,
     @JsonKey(name: 'created_by_user_id') this.createdByUserId,
-  });
+  }) : super._();
 
   factory _$EventModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$EventModelImplFromJson(json);
@@ -513,7 +513,7 @@ class _$EventModelImpl implements _EventModel {
   }
 }
 
-abstract class _EventModel implements EventModel {
+abstract class _EventModel extends EventModel {
   const factory _EventModel({
     final String? id,
     required final String name,
@@ -534,6 +534,7 @@ abstract class _EventModel implements EventModel {
     @JsonKey(name: 'updated_at') final DateTime? updatedAt,
     @JsonKey(name: 'created_by_user_id') final String? createdByUserId,
   }) = _$EventModelImpl;
+  const _EventModel._() : super._();
 
   factory _EventModel.fromJson(Map<String, dynamic> json) =
       _$EventModelImpl.fromJson;
