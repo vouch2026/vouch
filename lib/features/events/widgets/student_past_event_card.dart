@@ -90,7 +90,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
                           Icons.login_rounded, 
                           'Time in:', 
                           attendance?.actualTimeIn != null
-                              ? DateFormat.jm().format(attendance!.actualTimeIn!.toLocal())
+                              ? DateFormat('h:mm a').format(attendance!.actualTimeIn!.toLocal())
                               : 'No Record',
                         ),
                         const SizedBox(height: AppSpacing.xs),
@@ -99,7 +99,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
                           Icons.logout_rounded, 
                           'Time out:', 
                           attendance?.actualTimeOut != null
-                              ? DateFormat.jm().format(attendance!.actualTimeOut!.toLocal())
+                              ? DateFormat('h:mm a').format(attendance!.actualTimeOut!.toLocal())
                               : 'No Record',
                         ),
                       ],

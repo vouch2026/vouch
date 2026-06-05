@@ -16,6 +16,7 @@ import '../../attendance/providers/attendance_provider.dart';
 import '../../attendance/models/attendance_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/permissions/app_permissions.dart';
+import '../../../core/utils/time_formatter.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
 
@@ -140,6 +141,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole;
     final canScan = activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false;
+    final isOfficer = activeRole != null && activeRole.roleName != 'Member';
     
     final now = DateTime.now();
     final isToday = widget.event.eventDate.year == now.year &&
@@ -184,11 +186,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                           const SizedBox(height: AppSpacing.lg),
                           _buildDescriptionSection(),
                           const SizedBox(height: AppSpacing.xxl),
-                          highlightsAsync.when(
-                            data: (count) => _buildHighlightsSection(count),
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (_, __) => const SizedBox.shrink(),
-                          ),
+                          if (!isOfficer)
+                            highlightsAsync.when(
+                              data: (count) => _buildHighlightsSection(count),
+                              loading: () => const Center(child: CircularProgressIndicator()),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
                         ],
                       ),
                     ),
@@ -352,7 +355,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         icon: Icons.login_rounded,
                         title: 'Time In',
                         content: attendance?.actualTimeIn != null
-                            ? DateFormat.jm().format(attendance!.actualTimeIn!.toLocal())
+                            ? DateFormat('h:mm a').format(attendance!.actualTimeIn!.toLocal())
                             : 'No Record',
                         color: Colors.green,
                       ),
@@ -361,7 +364,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         icon: Icons.logout_rounded,
                         title: 'Time Out',
                         content: attendance?.actualTimeOut != null
-                            ? DateFormat.jm().format(attendance!.actualTimeOut!.toLocal())
+                            ? DateFormat('h:mm a').format(attendance!.actualTimeOut!.toLocal())
                             : 'No Record',
                         color: Colors.orange,
                       ),
@@ -375,14 +378,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
               _buildInfoCard(
                 icon: Icons.access_time_rounded,
                 title: isOfficer ? 'Time In' : 'Check-in Window',
-                content: '${widget.event.timeInStart} - ${widget.event.timeInEnd}',
+                content: TimeFormatter.formatTimeRange(widget.event.timeInStart, widget.event.timeInEnd),
                 color: Colors.green,
               ),
               const SizedBox(height: AppSpacing.md),
               _buildInfoCard(
                 icon: Icons.logout_rounded,
                 title: isOfficer ? 'Time Out' : 'Check-out Window',
-                content: '${widget.event.timeOutStart} - ${widget.event.timeOutEnd}',
+                content: TimeFormatter.formatTimeRange(widget.event.timeOutStart, widget.event.timeOutEnd),
                 color: Colors.orange,
               ),
             ],

@@ -87,7 +87,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
     if (time == null) return 'Not set';
     final now = DateTime.now();
     final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    return DateFormat.jm().format(dt);
+    return DateFormat('h:mm a').format(dt);
   }
 
   String _timeToDbString(TimeOfDay time) {

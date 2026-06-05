@@ -503,9 +503,10 @@ class _OverviewTab extends StatelessWidget {
                       const _InfoRow(label: 'Campus', value: 'DORSU Main Campus'),
                       _InfoRow(label: 'Faculty', value: user.facultyName ?? 'N/A'),
                       _InfoRow(label: 'Program', value: user.programName ?? 'N/A'),
-                      if (user.yearLevel != null) _InfoRow(label: 'Year Level', value: '${user.yearLevel}'),
+                      if (user.yearLevel != null) _InfoRow(label: 'Year Level', value: user.yearLevelDisplay),
                     ],
                   ),
+
                 ],
               ),
             ),

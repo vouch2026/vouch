@@ -54,66 +54,104 @@ class ProfileMenuContent extends ConsumerWidget {
 
             // Profile Card Section
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
               child: Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.05),
+                      AppColors.accent.withValues(alpha: 0.02),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Column(
+                child: Row(
                   children: [
                     Container(
-                      width: 70,
-                      height: 70,
+                      width: 72,
+                      height: 72,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.15),
+                          color: AppColors.primary.withValues(alpha: 0.12),
                           width: 2.5,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
                       ),
                       child: CircleAvatar(
-                        radius: 32,
+                        radius: 34,
                         backgroundColor: Colors.grey.shade100,
                         backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
                             ? NetworkImage(avatarUrl)
                             : const AssetImage('assets/images/my_profile.png') as ImageProvider,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      profile?.fullName ?? 'User',
-                      style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      profile?.email ?? '',
-                      style: AppTextStyles.bodySmall.copyWith(color: Colors.black54),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        profile?.roleDisplay.toUpperCase() ?? 'STUDENT',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile?.fullName ?? 'User',
+                            style: AppTextStyles.titleLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: AppColors.textDark,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            profile?.email ?? '',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              profile?.roleDisplay.toUpperCase() ?? 'STUDENT',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -133,6 +171,16 @@ class ProfileMenuContent extends ConsumerWidget {
                 context.push(RoutePaths.profile);
               },
             ),
+            if (profile?.role == 'student')
+              _buildMenuItem(
+                context,
+                icon: Icons.qr_code_rounded,
+                label: 'My QR Code',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push(RoutePaths.myQrCode);
+                },
+              ),
             _buildMenuItem(
               context,
               icon: Icons.info_outline_rounded,

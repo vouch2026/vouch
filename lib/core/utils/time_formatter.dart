@@ -11,7 +11,7 @@ class TimeFormatter {
       // Handle potential formats (HH:mm:ss or HH:mm)
       final format = dbTime.split(':').length == 3 ? 'HH:mm:ss' : 'HH:mm';
       final dateTime = DateFormat(format).parse(dbTime);
-      return DateFormat.jm().format(dateTime);
+      return DateFormat('h:mm a').format(dateTime);
     } catch (e) {
       return dbTime; // Fallback to original if parsing fails
     }
