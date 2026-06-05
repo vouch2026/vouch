@@ -107,162 +107,163 @@ class QrScannerCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            height: 280,
-            decoration: BoxDecoration(
-              color: _royalBlue.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _royalBlue.withOpacity(0.12)),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned.fill(
-                    child: MobileScanner(
-                      controller: scannerController,
-                      fit: BoxFit.cover,
-                      onDetect: (capture) {
-                        if (isProcessing) return;
-                        for (final barcode in capture.barcodes) {
-                          final rawValue = barcode.rawValue?.trim() ?? '';
-                          if (rawValue.isNotEmpty) {
-                            onCodeDetected(rawValue);
-                            break;
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Container(color: Colors.black.withOpacity(0.12)),
-                  ),
-                  Container(
-                    width: 192,
-                    height: 192,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _gold.withOpacity(0.95),
-                        width: 2,
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        _buildCornerGuide(
-                          alignment: Alignment.topLeft,
-                          border: const Border(
-                            top: BorderSide(color: _royalBlue, width: 3),
-                            left: BorderSide(color: _royalBlue, width: 3),
-                          ),
-                        ),
-                        _buildCornerGuide(
-                          alignment: Alignment.topRight,
-                          border: const Border(
-                            top: BorderSide(color: _royalBlue, width: 3),
-                            right: BorderSide(color: _royalBlue, width: 3),
-                          ),
-                        ),
-                        _buildCornerGuide(
-                          alignment: Alignment.bottomLeft,
-                          border: const Border(
-                            bottom: BorderSide(color: _royalBlue, width: 3),
-                            left: BorderSide(color: _royalBlue, width: 3),
-                          ),
-                        ),
-                        _buildCornerGuide(
-                          alignment: Alignment.bottomRight,
-                          border: const Border(
-                            bottom: BorderSide(color: _royalBlue, width: 3),
-                            right: BorderSide(color: _royalBlue, width: 3),
-                          ),
-                        ),
-                        Center(
-                          child: Icon(
-                            LucideIcons.scan,
-                            color: Colors.white,
-                            size: 62,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        scanModeLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (isProcessing)
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: _royalBlue.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _royalBlue.withOpacity(0.12)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
                     Positioned.fill(
-                      child: Container(
-                        color: Colors.black.withOpacity(0.45),
-                        child: const Center(
-                          child: SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
+                      child: MobileScanner(
+                        controller: scannerController,
+                        fit: BoxFit.cover,
+                        onDetect: (capture) {
+                          if (isProcessing) return;
+                          for (final barcode in capture.barcodes) {
+                            final rawValue = barcode.rawValue?.trim() ?? '';
+                            if (rawValue.isNotEmpty) {
+                              onCodeDetected(rawValue);
+                              break;
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Container(color: Colors.black.withOpacity(0.12)),
+                    ),
+                    Container(
+                      width: 192,
+                      height: 192,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _gold.withOpacity(0.95),
+                          width: 2,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          _buildCornerGuide(
+                            alignment: Alignment.topLeft,
+                            border: const Border(
+                              top: BorderSide(color: _royalBlue, width: 3),
+                              left: BorderSide(color: _royalBlue, width: 3),
+                            ),
+                          ),
+                          _buildCornerGuide(
+                            alignment: Alignment.topRight,
+                            border: const Border(
+                              top: BorderSide(color: _royalBlue, width: 3),
+                              right: BorderSide(color: _royalBlue, width: 3),
+                            ),
+                          ),
+                          _buildCornerGuide(
+                            alignment: Alignment.bottomLeft,
+                            border: const Border(
+                              bottom: BorderSide(color: _royalBlue, width: 3),
+                              left: BorderSide(color: _royalBlue, width: 3),
+                            ),
+                          ),
+                          _buildCornerGuide(
+                            alignment: Alignment.bottomRight,
+                            border: const Border(
+                              bottom: BorderSide(color: _royalBlue, width: 3),
+                              right: BorderSide(color: _royalBlue, width: 3),
+                            ),
+                          ),
+                          Center(
+                            child: Icon(
+                              LucideIcons.scan,
                               color: Colors.white,
+                              size: 62,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          scanModeLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isProcessing)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withOpacity(0.45),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  if (isLocked)
-                    Positioned.fill(
-                      child: Container(
-                        color: Colors.black.withOpacity(0.7),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
+                    if (isLocked)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withOpacity(0.7),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.lock,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
                                 ),
-                                child: Icon(
-                                  LucideIcons.lock,
-                                  color: Colors.white,
-                                  size: 40,
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Scanner Locked',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Scanner Locked',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
