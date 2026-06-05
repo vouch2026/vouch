@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 class MyQrCodePage extends ConsumerWidget {
   const MyQrCodePage({super.key});
@@ -15,6 +16,8 @@ class MyQrCodePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileAsync = ref.watch(userProfileProvider);
+    final workspace = ref.watch(workspaceProvider);
+    final selectedOrg = workspace.selectedOrganization;
 
     return DashboardLayout(
       title: 'My QR Code',
@@ -135,12 +138,12 @@ class MyQrCodePage extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.lg),
                               _buildInfoRow(LucideIcons.graduationCap, 'Faculty', profile.facultyName ?? 'N/A'),
                               _buildInfoRow(LucideIcons.bookOpen, 'Program', profile.programName ?? 'N/A'),
-                              _buildInfoRow(LucideIcons.layers, 'Year Level', '${profile.yearLevel ?? 'N/A'} Year'),
+                              _buildInfoRow(LucideIcons.layers, 'Year Level', '${profile.yearLevelDisplay} Year'),
                             ],
                           ),
                         ),
 
-                        // Footer Instructions
+                        // Footer with Organization & Vouch Logos
                         Container(
                           padding: const EdgeInsets.all(AppSpacing.lg),
                           width: double.infinity,
@@ -148,13 +151,47 @@ class MyQrCodePage extends ConsumerWidget {
                             color: AppColors.accent.withValues(alpha: 0.1),
                             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
                           ),
-                          child: Text(
-                            'Present this QR code to the officer during attendance check-in/out.',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
+                          child: Column(
+                            children: [
+                              Text(
+                                'Present this QR code to the officer during attendance check-in/out.',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (selectedOrg != null) ...[
+                                    if (selectedOrg.logoUrl != null && selectedOrg.logoUrl!.isNotEmpty)
+                                      Image.network(
+                                        selectedOrg.logoUrl!,
+                                        height: 32,
+                                        width: 32,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                                      )
+                                    else
+                                      const Icon(LucideIcons.building, size: 24, color: AppColors.primary),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Container(
+                                      height: 24,
+                                      width: 1,
+                                      color: AppColors.primary.withValues(alpha: 0.2),
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
+                                  ],
+                                  Image.asset(
+                                    'assets/logos/vouch.png',
+                                    height: 32,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ],
