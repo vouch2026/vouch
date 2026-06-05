@@ -37,6 +37,7 @@ class EventScannerScreen extends ConsumerStatefulWidget {
 class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   late MobileScannerController _controller;
   bool _isScanning = true;
+  double _zoomLevel = 0.0;
   List<QrScanUIModel> _recentScans = [];
   bool _isLoadingScans = true;
 
@@ -223,6 +224,13 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
     }
   }
 
+  void _toggleZoom() {
+    setState(() {
+      _zoomLevel = _zoomLevel == 0.0 ? 0.5 : 0.0;
+    });
+    _controller.setZoomScale(_zoomLevel);
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
@@ -396,7 +404,14 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                     Positioned(
                       top: 16,
                       right: 16,
-                      child: _buildScannerStatusIndicator(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _buildScannerStatusIndicator(),
+                          const SizedBox(height: 12),
+                          _buildZoomControl(),
+                        ],
+                      ),
                     ),
                   ],
                 );
@@ -509,7 +524,14 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                   title: 'Camera Preview',
                   subtitle: 'Auto-detecting QR Codes',
                   horizontalPadding: 0,
-                  trailing: _buildScannerStatusIndicator(),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildZoomControl(),
+                      const SizedBox(width: 12),
+                      _buildScannerStatusIndicator(),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -659,6 +681,35 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         delegate: SliverChildBuilderDelegate(
           (context, index) => QrRecentScanCard(scan: _recentScans[index]),
           childCount: _recentScans.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoomControl() {
+    return GestureDetector(
+      onTap: _toggleZoom,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
+            ),
+            child: Text(
+              _zoomLevel == 0.0 ? '1x' : '2x',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
         ),
       ),
     );
