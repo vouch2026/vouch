@@ -280,8 +280,14 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   }
 
   Widget _buildCustomAppBar() {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isSmallScreen = screenWidth < 360;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.05,
+        vertical: 16,
+      ),
       color: Colors.white,
       child: Column(
         children: [
@@ -296,17 +302,17 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: const Icon(
+                    icon: Icon(
                       LucideIcons.arrowLeft,
                       color: primaryColor,
-                      size: 21,
+                      size: isSmallScreen ? 20 : 22,
                     ),
                   ),
                 ),
                 RichText(
                   text: TextSpan(
                     style: GoogleFonts.poppins(
-                      fontSize: 24,
+                      fontSize: isSmallScreen ? 20 : 24,
                       fontWeight: FontWeight.w700,
                     ),
                     children: const [
@@ -352,7 +358,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.poppins(
               color: Colors.black.withOpacity(0.4),
-              fontSize: 12,
+              fontSize: isSmallScreen ? 11 : 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -362,97 +368,126 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   }
 
   Widget _buildMobileView() {
-    return Column(
+    return Stack(
       children: [
-        // Top Half: Scanner
-        Expanded(
-          flex: 4,
+        // Scanner View
+        Positioned.fill(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: MobileScanner(
-                    controller: _controller,
-                    onDetect: _handleScan,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                _buildOverlay(),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: _buildScannerStatusIndicator(),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Calculate a safe scanner size
+                final double minDimension = constraints.maxHeight < constraints.maxWidth 
+                    ? constraints.maxHeight 
+                    : constraints.maxWidth;
+                final double scannerSize = minDimension * 0.7;
+
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: MobileScanner(
+                        controller: _controller,
+                        onDetect: _handleScan,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    _buildOverlay(scannerSize),
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: _buildScannerStatusIndicator(),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
-        // Bottom Half: Info & History
-        Expanded(
-          flex: 5,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 15,
-                  offset: Offset(0, -5),
-                ),
-              ],
-            ),
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                    child: QrCurrentEventCard(
-                      event: widget.event,
-                      isTimeInActive: true,
-                      onRecordTimeIn: () {},
-                      onRecordTimeOut: () {},
+        
+        // Draggable Info Panel
+        DraggableScrollableSheet(
+          initialChildSize: 0.45,
+          minChildSize: 0.25,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 15,
+                    offset: Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: CustomScrollView(
+                controller: scrollController,
+                slivers: [
+                  // Drag Handle
+                  SliverToBoxAdapter(
+                    child: Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 8),
+                        width: 40,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverToBoxAdapter(
-                    child: QrSectionHeader(
-                      title: 'Recent Scans',
-                      subtitle: '${_recentScans.length} latest entries',
-                      horizontalPadding: 0,
-                      trailing: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AttendanceHistoryPage(
-                                eventId: widget.event.id!,
-                                eventName: widget.event.name,
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: QrCurrentEventCard(
+                        event: widget.event,
+                        isTimeInActive: true,
+                        onRecordTimeIn: () {},
+                        onRecordTimeOut: () {},
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverToBoxAdapter(
+                      child: QrSectionHeader(
+                        title: 'Recent Scans',
+                        subtitle: '${_recentScans.length} latest entries',
+                        horizontalPadding: 0,
+                        trailing: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AttendanceHistoryPage(
+                                  eventId: widget.event.id!,
+                                  eventName: widget.event.name,
+                                ),
                               ),
+                            );
+                          },
+                          child: const Text(
+                            'View All',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
                             ),
-                          );
-                        },
-                        child: const Text(
-                          'View All',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                _buildRecentScansList(),
-              ],
-            ),
-          ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  _buildRecentScansList(),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );
@@ -710,15 +745,15 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
     );
   }
 
-  Widget _buildOverlay() {
+  Widget _buildOverlay(double size) {
     return Container(
-      decoration: const ShapeDecoration(
+      decoration: ShapeDecoration(
         shape: QrScannerOverlayShape(
-          borderColor: Colors.white,
+          borderColor: accentColor,
           borderRadius: 24,
-          borderLength: 40,
-          borderWidth: 8,
-          cutOutSize: 260,
+          borderLength: 30,
+          borderWidth: 6,
+          cutOutSize: size,
         ),
       ),
     );
@@ -741,9 +776,12 @@ class _VerificationModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isSmallScreen = screenWidth < 360;
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
@@ -762,7 +800,7 @@ class _VerificationModal extends StatelessWidget {
           children: [
             // Header with accent
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 20),
+              padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 20),
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -779,10 +817,10 @@ class _VerificationModal extends StatelessWidget {
                       color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.qrCode,
                       color: accentColor,
-                      size: 32,
+                      size: isSmallScreen ? 28 : 32,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -790,7 +828,7 @@ class _VerificationModal extends StatelessWidget {
                     'Scan Confirmation',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: isSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                     ),
@@ -800,7 +838,12 @@ class _VerificationModal extends StatelessWidget {
             ),
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                padding: EdgeInsets.fromLTRB(
+                  isSmallScreen ? 16 : 24, 
+                  isSmallScreen ? 16 : 24, 
+                  isSmallScreen ? 16 : 24, 
+                  16,
+                ),
                 child: Column(
                   children: [
                     // Student Profile Info
@@ -808,8 +851,8 @@ class _VerificationModal extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
-                          width: 64,
-                          height: 64,
+                          width: isSmallScreen ? 56 : 64,
+                          height: isSmallScreen ? 56 : 64,
                           decoration: BoxDecoration(
                             color: primaryColor.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(16),
@@ -817,10 +860,10 @@ class _VerificationModal extends StatelessWidget {
                               color: primaryColor.withOpacity(0.1),
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             LucideIcons.user,
                             color: primaryColor,
-                            size: 32,
+                            size: isSmallScreen ? 28 : 32,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -831,7 +874,7 @@ class _VerificationModal extends StatelessWidget {
                               Text(
                                 payload.fullName,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 17,
+                                  fontSize: isSmallScreen ? 15 : 17,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.black87,
                                 ),
@@ -840,7 +883,7 @@ class _VerificationModal extends StatelessWidget {
                               Text(
                                 payload.studentId,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 13,
+                                  fontSize: isSmallScreen ? 12 : 13,
                                   fontWeight: FontWeight.w600,
                                   color: primaryColor,
                                 ),
@@ -850,7 +893,7 @@ class _VerificationModal extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
+                                  fontSize: isSmallScreen ? 11 : 12,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black54,
                                 ),
@@ -860,13 +903,13 @@ class _VerificationModal extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    SizedBox(height: isSmallScreen ? 20 : 28),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Select Attendance Mode',
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
+                          fontSize: isSmallScreen ? 13 : 14,
                           fontWeight: FontWeight.w700,
                           color: Colors.black87,
                         ),
@@ -882,6 +925,7 @@ class _VerificationModal extends StatelessWidget {
                             icon: LucideIcons.logIn,
                             color: const Color(0xFF2E7D32),
                             onTap: () => onAction(true),
+                            isSmallScreen: isSmallScreen,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -891,6 +935,7 @@ class _VerificationModal extends StatelessWidget {
                             icon: LucideIcons.logOut,
                             color: const Color(0xFFC62828),
                             onTap: () => onAction(false),
+                            isSmallScreen: isSmallScreen,
                           ),
                         ),
                       ],
@@ -901,13 +946,18 @@ class _VerificationModal extends StatelessWidget {
             ),
             // Actions
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              padding: EdgeInsets.fromLTRB(
+                isSmallScreen ? 16 : 24, 
+                8, 
+                isSmallScreen ? 16 : 24, 
+                isSmallScreen ? 16 : 24,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: onReject,
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -919,7 +969,7 @@ class _VerificationModal extends StatelessWidget {
                   child: Text(
                     'Reject / Cancel',
                     style: GoogleFonts.poppins(
-                      fontSize: 15,
+                      fontSize: isSmallScreen ? 14 : 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -937,12 +987,13 @@ class _VerificationModal extends StatelessWidget {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    required bool isSmallScreen,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(16),
@@ -950,14 +1001,14 @@ class _VerificationModal extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
+            Icon(icon, color: color, size: isSmallScreen ? 24 : 28),
             const SizedBox(height: 8),
             Text(
               label,
               style: GoogleFonts.poppins(
                 color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: isSmallScreen ? 13 : 14,
               ),
             ),
           ],
@@ -1000,10 +1051,16 @@ class QrScannerOverlayShape extends ShapeBorder {
       ..color = Colors.black.withOpacity(0.6)
       ..style = PaintingStyle.fill;
 
+    // Ensure cutOutRect doesn't exceed the widget's boundaries
+    final double actualSize = cutOutSize > 0 ? cutOutSize : 250.0;
+    final double safeWidth = actualSize > width ? width * 0.8 : actualSize;
+    final double safeHeight = actualSize > height ? height * 0.8 : actualSize;
+    final double safeSize = safeWidth < safeHeight ? safeWidth : safeHeight;
+
     final cutOutRect = Rect.fromCenter(
-      center: Offset(width / 2, height / 2),
-      width: cutOutSize,
-      height: cutOutSize,
+      center: Offset(width / 2, (height / 2) ),
+      width: safeSize,
+      height: safeSize,
     );
 
     canvas.drawPath(

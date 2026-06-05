@@ -117,153 +117,163 @@ class QrScannerCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned.fill(
-                      child: MobileScanner(
-                        controller: scannerController,
-                        fit: BoxFit.cover,
-                        onDetect: (capture) {
-                          if (isProcessing) return;
-                          for (final barcode in capture.barcodes) {
-                            final rawValue = barcode.rawValue?.trim() ?? '';
-                            if (rawValue.isNotEmpty) {
-                              onCodeDetected(rawValue);
-                              break;
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: Container(color: Colors.black.withOpacity(0.12)),
-                    ),
-                    // Scanner Frame
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: accentColor.withOpacity(0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          _buildCornerGuide(
-                            alignment: Alignment.topLeft,
-                            border: const Border(
-                              top: BorderSide(color: accentColor, width: 3.5),
-                              left: BorderSide(color: accentColor, width: 3.5),
-                            ),
-                          ),
-                          _buildCornerGuide(
-                            alignment: Alignment.topRight,
-                            border: const Border(
-                              top: BorderSide(color: accentColor, width: 3.5),
-                              right: BorderSide(color: accentColor, width: 3.5),
-                            ),
-                          ),
-                          _buildCornerGuide(
-                            alignment: Alignment.bottomLeft,
-                            border: const Border(
-                              bottom: BorderSide(color: accentColor, width: 3.5),
-                              left: BorderSide(color: accentColor, width: 3.5),
-                            ),
-                          ),
-                          _buildCornerGuide(
-                            alignment: Alignment.bottomRight,
-                            border: const Border(
-                              bottom: BorderSide(color: accentColor, width: 3.5),
-                              right: BorderSide(color: accentColor, width: 3.5),
-                            ),
-                          ),
-                          const Center(
-                            child: Icon(
-                              LucideIcons.qrCode,
-                              color: Colors.white,
-                              size: 56,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          scanModeLabel,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Calculate a safe scanner frame size
+                    final double minDimension = constraints.maxHeight < constraints.maxWidth 
+                        ? constraints.maxHeight 
+                        : constraints.maxWidth;
+                    final double frameSize = minDimension * 0.7;
+
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned.fill(
+                          child: MobileScanner(
+                            controller: scannerController,
+                            fit: BoxFit.cover,
+                            onDetect: (capture) {
+                              if (isProcessing) return;
+                              for (final barcode in capture.barcodes) {
+                                final rawValue = barcode.rawValue?.trim() ?? '';
+                                if (rawValue.isNotEmpty) {
+                                  onCodeDetected(rawValue);
+                                  break;
+                                }
+                              }
+                            },
                           ),
                         ),
-                      ),
-                    ),
-                    if (isProcessing)
-                      Positioned.fill(
-                        child: Container(
-                          color: Colors.black.withOpacity(0.5),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 32,
-                              height: 32,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
+                        Positioned.fill(
+                          child: Container(color: Colors.black.withOpacity(0.12)),
+                        ),
+                        // Scanner Frame
+                        Container(
+                          width: frameSize,
+                          height: frameSize,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: accentColor.withOpacity(0.5),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              _buildCornerGuide(
+                                alignment: Alignment.topLeft,
+                                border: const Border(
+                                  top: BorderSide(color: accentColor, width: 3.5),
+                                  left: BorderSide(color: accentColor, width: 3.5),
+                                ),
+                              ),
+                              _buildCornerGuide(
+                                alignment: Alignment.topRight,
+                                border: const Border(
+                                  top: BorderSide(color: accentColor, width: 3.5),
+                                  right: BorderSide(color: accentColor, width: 3.5),
+                                ),
+                              ),
+                              _buildCornerGuide(
+                                alignment: Alignment.bottomLeft,
+                                border: const Border(
+                                  bottom: BorderSide(color: accentColor, width: 3.5),
+                                  left: BorderSide(color: accentColor, width: 3.5),
+                                ),
+                              ),
+                              _buildCornerGuide(
+                                alignment: Alignment.bottomRight,
+                                border: const Border(
+                                  bottom: BorderSide(color: accentColor, width: 3.5),
+                                  right: BorderSide(color: accentColor, width: 3.5),
+                                ),
+                              ),
+                              Center(
+                                child: Icon(
+                                  LucideIcons.qrCode,
+                                  color: Colors.white,
+                                  size: frameSize * 0.3, // Proportional icon size
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              scanModeLabel,
+                              style: const TextStyle(
                                 color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    if (isLocked)
-                      Positioned.fill(
-                        child: Container(
-                          color: Colors.black.withOpacity(0.75),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    LucideIcons.lock,
+                        if (isProcessing)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withOpacity(0.5),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 32,
+                                  height: 32,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
                                     color: Colors.white,
-                                    size: 42,
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Scanner Locked',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
+                        if (isLocked)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withOpacity(0.75),
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(18),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.15),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        LucideIcons.lock,
+                                        color: Colors.white,
+                                        size: 42,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Scanner Locked',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
