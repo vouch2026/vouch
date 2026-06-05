@@ -20,6 +20,7 @@ import '../features/programs/views/program_details_page.dart';
 import '../features/users/views/users_page.dart';
 import '../features/users/views/officers_page.dart';
 import '../features/users/views/user_profile_page.dart';
+import '../features/profile/views/my_qr_code_page.dart';
 import '../features/elections/views/comselec_dashboard_page.dart';
 import '../features/elections/views/elections_page.dart';
 import '../features/candidates/views/candidates_page.dart';
@@ -157,7 +158,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.myQrCode,
         name: RouteNames.myQrCode,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'My QR Code'),
+        builder: (context, state) => const MyQrCodePage(),
       ),
       GoRoute(
         path: RoutePaths.aboutUs,
