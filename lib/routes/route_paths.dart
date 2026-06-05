@@ -18,6 +18,7 @@ class RoutePaths {
   static const String activityCards = '/activity-cards';
   static const String activityCardDetails = '/activity-cards/:id';
   static const String profile = '/profile';
+  static const String myQrCode = '/my-qr-code';
   static const String aboutUs = '/about-us';
   static const String help = '/help';
   static const String emailVerification = '/email-verification';

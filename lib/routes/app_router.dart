@@ -155,6 +155,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: RoutePaths.myQrCode,
+        name: RouteNames.myQrCode,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'My QR Code'),
+      ),
+      GoRoute(
         path: RoutePaths.aboutUs,
         name: RouteNames.aboutUs,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'About Us'),
