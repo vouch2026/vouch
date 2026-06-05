@@ -109,7 +109,7 @@ class QrScannerCard extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            height: 235,
+            height: 280,
             decoration: BoxDecoration(
               color: _royalBlue.withOpacity(0.06),
               borderRadius: BorderRadius.circular(12),

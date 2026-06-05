@@ -18,6 +18,7 @@ import '../models/qr_payload.dart';
 import 'qr_current_event_card.dart';
 import 'qr_recent_scan_card.dart';
 import 'qr_scanner_card.dart';
+import '../../../core/utils/time_formatter.dart';
 
 class EventScannerScreen extends ConsumerStatefulWidget {
   final EventModel event;
@@ -65,7 +66,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         final timeOut = data['actual_time_out'];
         final time = timeOut ?? timeIn;
         final formattedTime = time != null 
-            ? DateFormat.jm().format(DateTime.parse(time).toLocal())
+            ? DateFormat('h:mm a').format(DateTime.parse(time).toLocal())
             : '-';
             
         return QrScanUIModel(
@@ -149,7 +150,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         name: payload.fullName,
         studentId: payload.studentId,
         program: payload.program,
-        time: DateFormat.jm().format(DateTime.now()),
+        time: DateFormat('h:mm a').format(DateTime.now()),
         status: 'success',
         type: isTimeIn ? 'Time In' : 'Time Out',
       );
@@ -305,26 +306,29 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
           // Left Side: Scanner
           Expanded(
             flex: isTablet ? 6 : 7,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Camera Preview', style: AppTextStyles.headlineMedium),
-                  const SizedBox(height: 16),
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: QrScannerCard(
-                      scannerController: _controller,
-                      onCodeDetected: (val) => _showActionModal(val),
-                      onRetryTap: () => _resumeScanning(),
-                      isProcessing: !_isScanning,
-                      scanModeLabel: 'Auto-detecting QR Codes',
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Camera Preview', style: AppTextStyles.headlineMedium),
+                    _buildScannerStatusIndicator(),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: QrScannerCard(
+                    scannerController: _controller,
+                    onCodeDetected: (val) => _showActionModal(val),
+                    onRetryTap: () => _resumeScanning(),
+                    isProcessing: !_isScanning,
+                    scanModeLabel: 'Auto-detecting QR Codes',
                   ),
-                  const SizedBox(height: 24),
-                  _buildDesktopInstructions(),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                _buildDesktopInstructions(),
+              ],
             ),
           ),
           const SizedBox(width: 24),
@@ -346,6 +350,13 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -355,11 +366,17 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Session History', style: AppTextStyles.headlineSmall),
-                            IconButton(
-                              icon: Icon(LucideIcons.refreshCw, size: 16),
-                              onPressed: _loadRecentScans,
-                              constraints: const BoxConstraints(),
-                              padding: EdgeInsets.zero,
+                            Row(
+                              children: [
+                                Text('${_recentScans.length}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: Icon(LucideIcons.refreshCw, size: 16, color: AppColors.textGrey),
+                                  onPressed: _loadRecentScans,
+                                  constraints: const BoxConstraints(),
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -367,10 +384,21 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                         Expanded(
                           child: _isLoadingScans 
                             ? const Center(child: CircularProgressIndicator())
-                            : ListView.builder(
-                                itemCount: _recentScans.length,
-                                itemBuilder: (context, index) => QrRecentScanCard(scan: _recentScans[index]),
-                              ),
+                            : _recentScans.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(LucideIcons.history, size: 32, color: AppColors.textGrey.withOpacity(0.2)),
+                                      const SizedBox(height: 8),
+                                      Text('No scans yet', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: _recentScans.length,
+                                  itemBuilder: (context, index) => QrRecentScanCard(scan: _recentScans[index]),
+                                ),
                         ),
                       ],
                     ),

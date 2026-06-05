@@ -352,7 +352,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         icon: Icons.login_rounded,
                         title: 'Time In',
                         content: attendance?.actualTimeIn != null
-                            ? DateFormat.jm().format(attendance!.actualTimeIn!.toLocal())
+                            ? DateFormat('h:mm a').format(attendance!.actualTimeIn!.toLocal())
                             : 'No Record',
                         color: Colors.green,
                       ),
@@ -361,7 +361,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         icon: Icons.logout_rounded,
                         title: 'Time Out',
                         content: attendance?.actualTimeOut != null
-                            ? DateFormat.jm().format(attendance!.actualTimeOut!.toLocal())
+                            ? DateFormat('h:mm a').format(attendance!.actualTimeOut!.toLocal())
                             : 'No Record',
                         color: Colors.orange,
                       ),

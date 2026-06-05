@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../events/models/event_model.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/time_formatter.dart';
 
 class QrCurrentEventCard extends StatelessWidget {
   const QrCurrentEventCard({
@@ -108,7 +109,7 @@ class QrCurrentEventCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Time In: ${event.timeInStart} - ${event.timeInEnd} • Time Out: ${event.timeOutStart} - ${event.timeOutEnd}',
+                  'Time In: ${TimeFormatter.formatTimeRange(event.timeInStart, event.timeInEnd)} • Time Out: ${TimeFormatter.formatTimeRange(event.timeOutStart, event.timeOutEnd)}',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

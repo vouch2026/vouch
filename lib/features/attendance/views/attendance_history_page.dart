@@ -60,7 +60,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         final timeOut = data['actual_time_out'];
         final time = timeOut ?? timeIn;
         final formattedTime = time != null 
-            ? DateFormat.jm().format(DateTime.parse(time).toLocal())
+            ? DateFormat('h:mm a').format(DateTime.parse(time).toLocal())
             : '-';
             
         return QrScanUIModel(
@@ -155,11 +155,11 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                                 onPressed: () => Navigator.pop(context),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                icon: const Icon(
+                                icon: Icon(
                                   LucideIcons.arrowLeft,
                                   color: primaryColor,
+                                  size: 20,
                                 ),
-                              ),
                             ),
                             RichText(
                               text: const TextSpan(
