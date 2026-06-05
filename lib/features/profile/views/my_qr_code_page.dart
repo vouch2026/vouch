@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../../../core/utils/file_saver_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -27,9 +29,26 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
 
   Future<void> _downloadVerificationCard() async {
     try {
+      if (!kIsWeb) {
+        // Handle Mobile Permissions
+        final status = await Permission.photos.request();
+        if (status.isPermanentlyDenied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please enable photo permissions in settings to save the card.')),
+            );
+            openAppSettings();
+          }
+          return;
+        }
+        if (!status.isGranted && !status.isLimited) {
+          return;
+        }
+      }
+
       setState(() => _isCapturing = true);
-      // Give time for the UI to update if needed
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Give time for the UI to update and ensure images are rendered
+      await Future.delayed(const Duration(milliseconds: 300));
 
       final boundary = _cardBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
@@ -46,20 +65,18 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
       }
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
-      final result = await ImageGallerySaverPlus.saveImage(
-        pngBytes,
-        quality: 100,
-        name: "Vouch_QR_${DateTime.now().millisecondsSinceEpoch}.png",
-      );
+      final String fileName = "Vouch_QR_${DateTime.now().millisecondsSinceEpoch}.png";
+
+      final bool isSuccess = await FileSaverUtil.saveFile(pngBytes, fileName);
 
       if (mounted) {
         setState(() => _isCapturing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['isSuccess'] == true 
-              ? 'Verification Card saved to Gallery!' 
-              : 'Failed to save to gallery'),
-            backgroundColor: result['isSuccess'] == true ? AppColors.success : AppColors.error,
+            content: Text(isSuccess 
+              ? (kIsWeb ? 'Verification Card download started!' : 'Verification Card saved to Gallery!') 
+              : 'Failed to save card.'),
+            backgroundColor: isSuccess ? AppColors.success : AppColors.error,
           ),
         );
       }
