@@ -11,12 +11,14 @@ class DashboardLayout extends ConsumerWidget {
   final Widget child;
   final String title;
   final List<Widget>? actions;
+  final Widget? floatingActionButton;
 
   const DashboardLayout({
     super.key,
     required this.child,
     required this.title,
     this.actions,
+    this.floatingActionButton,
   });
 
   @override
@@ -67,6 +69,7 @@ class DashboardLayout extends ConsumerWidget {
                     ],
                   ),
                   body: child,
+                  floatingActionButton: floatingActionButton,
                 ),
               ),
             ],

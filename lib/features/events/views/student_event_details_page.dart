@@ -14,6 +14,10 @@ import '../providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../attendance/providers/attendance_provider.dart';
 import '../../attendance/models/attendance_model.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../../core/permissions/app_permissions.dart';
+
+import '../../attendance/widgets/event_scanner_screen.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -132,9 +136,32 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
   Widget build(BuildContext context) {
     final highlightsAsync = ref.watch(eventHighlightsProvider(widget.event.id!));
     final isMobile = ResponsiveLayout.isMobile(context);
+    
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole;
+    final canScan = activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false;
+    
+    final now = DateTime.now();
+    final isToday = widget.event.eventDate.year == now.year &&
+                    widget.event.eventDate.month == now.month &&
+                    widget.event.eventDate.day == now.day;
 
     return DashboardLayout(
       title: 'Event Details',
+      floatingActionButton: (canScan && isToday) 
+        ? FloatingActionButton.extended(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EventScannerScreen(event: widget.event),
+              ),
+            ),
+            label: const Text('Scan QR'),
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          )
+        : null,
       child: SingleChildScrollView(
         padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
         child: Center(
@@ -278,6 +305,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
   Widget _buildInfoSidebar() {
     final userAsync = ref.watch(userProfileProvider);
     final attendanceAsync = ref.watch(userEventAttendanceProvider(widget.event.id!));
+    final workspace = ref.watch(workspaceProvider);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -285,7 +313,8 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
 
     return userAsync.when(
       data: (user) {
-        final isOfficer = user?.role != 'student';
+        final activeRole = workspace.activeRole;
+        final isOfficer = activeRole != null && activeRole.roleName != 'Member';
 
         return Column(
           children: [
