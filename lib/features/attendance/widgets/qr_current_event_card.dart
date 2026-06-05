@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../events/models/event_model.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/time_formatter.dart';
 
 class QrCurrentEventCard extends StatelessWidget {
@@ -20,19 +20,22 @@ class QrCurrentEventCard extends StatelessWidget {
   final VoidCallback onRecordTimeOut;
   final bool isActive;
 
+  static const Color primaryColor = Color(0xFF003DA5);
+  static const Color accentColor = Color(0xFFFFC107);
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: primaryColor.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -46,13 +49,14 @@ class QrCurrentEventCard extends StatelessWidget {
                   event.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.primary,
+                  style: GoogleFonts.poppins(
+                    color: primaryColor,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -64,7 +68,7 @@ class QrCurrentEventCard extends StatelessWidget {
                               ? const Color(0xFF2E7D32)
                               : const Color(0xFF455A64))
                           .withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   isActive ? 'Active' : 'Closed',
@@ -73,50 +77,7 @@ class QrCurrentEventCard extends StatelessWidget {
                         ? const Color(0xFF2E7D32)
                         : const Color(0xFF455A64),
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                LucideIcons.mapPin,
-                size: 15,
-                color: Colors.black54,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  event.location,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.black54, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(
-                LucideIcons.clock,
-                size: 15,
-                color: Colors.black54,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Time In: ${TimeFormatter.formatTimeRange(event.timeInStart, event.timeInEnd)} • Time Out: ${TimeFormatter.formatTimeRange(event.timeOutStart, event.timeOutEnd)}',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -125,64 +86,119 @@ class QrCurrentEventCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
+              const Icon(
+                LucideIcons.mapPin,
+                size: 15,
+                color: Colors.black54,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  event.location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: Colors.black54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(
+                LucideIcons.clock,
+                size: 15,
+                color: Colors.black54,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Time In: ${TimeFormatter.formatTimeRange(event.timeInStart, event.timeInEnd)} • Time Out: ${TimeFormatter.formatTimeRange(event.timeOutStart, event.timeOutEnd)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
               Expanded(
                 child: isTimeInActive
                     ? ElevatedButton.icon(
                         onPressed: onRecordTimeIn,
-                        icon: Icon(LucideIcons.logIn, size: 17),
+                        icon: const Icon(LucideIcons.logIn, size: 18),
                         label: const Text('Time In'),
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       )
                     : OutlinedButton.icon(
                         onPressed: onRecordTimeIn,
-                        icon: Icon(LucideIcons.logIn, size: 17),
+                        icon: const Icon(LucideIcons.logIn, size: 18),
                         label: const Text('Time In'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
+                          foregroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           side: BorderSide(
-                            color: AppColors.primary.withOpacity(0.35),
+                            color: primaryColor.withOpacity(0.3),
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
-                child: isTimeInActive
-                    ? OutlinedButton.icon(
+                child: !isTimeInActive
+                    ? ElevatedButton.icon(
                         onPressed: onRecordTimeOut,
-                        icon: Icon(LucideIcons.logOut, size: 17),
-                        label: const Text('Time Out'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: BorderSide(
-                            color: AppColors.primary.withOpacity(0.35),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      )
-                    : ElevatedButton.icon(
-                        onPressed: onRecordTimeOut,
-                        icon: Icon(LucideIcons.logOut, size: 17),
+                        icon: const Icon(LucideIcons.logOut, size: 18),
                         label: const Text('Time Out'),
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: onRecordTimeOut,
+                        icon: const Icon(LucideIcons.logOut, size: 18),
+                        label: const Text('Time Out'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(
+                            color: primaryColor.withOpacity(0.3),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
               ),

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -18,7 +20,10 @@ import '../models/qr_payload.dart';
 import 'qr_current_event_card.dart';
 import 'qr_recent_scan_card.dart';
 import 'qr_scanner_card.dart';
+import 'qr_section_header.dart';
+import 'qr_count_chip.dart';
 import '../../../core/utils/time_formatter.dart';
+import '../views/attendance_history_page.dart';
 
 class EventScannerScreen extends ConsumerStatefulWidget {
   final EventModel event;
@@ -35,10 +40,18 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   List<QrScanUIModel> _recentScans = [];
   bool _isLoadingScans = true;
 
+  static const Color primaryColor = Color(0xFF003DA5);
+  static const Color accentColor = Color(0xFFFFC107);
+
   @override
   void initState() {
     super.initState();
-    _controller = MobileScannerController();
+    _controller = MobileScannerController(
+      autoStart: true,
+      facing: CameraFacing.back,
+      detectionSpeed: DetectionSpeed.normal,
+      detectionTimeoutMs: 300,
+    );
     _loadRecentScans();
   }
 
@@ -167,17 +180,21 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
     }
   }
 
-  void _showSuccess(QrScanUIModel scan) {
+  void _showSuccess(QrScanUIModel scan) async {
+    await HapticFeedback.mediumImpact();
+    SystemSound.play(SystemSoundType.click);
+    
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(LucideIcons.checkCircle, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(child: Text('Recorded ${scan.type} for ${scan.name}')),
           ],
         ),
-        backgroundColor: AppColors.success,
+        backgroundColor: const Color(0xFF2E7D32),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -185,11 +202,15 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
     _resumeScanning();
   }
 
-  void _showError(String message) {
+  void _showError(String message) async {
+    await HapticFeedback.heavyImpact();
+    SystemSound.play(SystemSoundType.alert);
+    
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.error,
+        backgroundColor: const Color(0xFFC62828),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -204,31 +225,138 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Attendance Scanner', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(widget.event.name, style: TextStyle(fontSize: 12, color: AppColors.textGrey)),
-          ],
-        ),
+    final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
+
+    return Theme(
+      data: Theme.of(context).copyWith(textTheme: textTheme),
+      child: Scaffold(
         backgroundColor: Colors.white,
-        foregroundColor: AppColors.primary,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(LucideIcons.history),
-            onPressed: () => _loadRecentScans(),
-            tooltip: 'Refresh History',
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Decorative Backgrounds
+              Positioned(
+                top: 80,
+                right: -50,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 200,
+                left: -30,
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(75),
+                  ),
+                ),
+              ),
+              Column(
+                children: [
+                  // Custom AppBar
+                  _buildCustomAppBar(),
+                  Expanded(
+                    child: ResponsiveLayout(
+                      mobile: _buildMobileView(),
+                      tablet: _buildDesktopView(isTablet: true),
+                      desktop: _buildDesktopView(isTablet: false),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomAppBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      color: Colors.white,
+      child: Column(
+        children: [
+          SizedBox(
+            height: 32,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(
+                      LucideIcons.arrowLeft,
+                      color: primaryColor,
+                      size: 21,
+                    ),
+                  ),
+                ),
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    children: const [
+                      TextSpan(
+                        text: 'Attendance ',
+                        style: TextStyle(color: primaryColor),
+                      ),
+                      TextSpan(
+                        text: 'Scanner',
+                        style: TextStyle(color: accentColor),
+                      ),
+                    ],
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: primaryColor.withOpacity(0.12),
+                      ),
+                    ),
+                    child: Text(
+                      '${_recentScans.length}',
+                      style: const TextStyle(
+                        color: primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.event.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              color: Colors.black.withOpacity(0.4),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
-      ),
-      body: ResponsiveLayout(
-        mobile: _buildMobileView(),
-        tablet: _buildDesktopView(isTablet: true),
-        desktop: _buildDesktopView(isTablet: false),
       ),
     );
   }
@@ -239,19 +367,26 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         // Top Half: Scanner
         Expanded(
           flex: 4,
-          child: Stack(
-            children: [
-              MobileScanner(
-                controller: _controller,
-                onDetect: _handleScan,
-              ),
-              _buildOverlay(),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: _buildScannerStatusIndicator(),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: MobileScanner(
+                    controller: _controller,
+                    onDetect: _handleScan,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                _buildOverlay(),
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: _buildScannerStatusIndicator(),
+                ),
+              ],
+            ),
           ),
         ),
         // Bottom Half: Info & History
@@ -259,31 +394,57 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
           flex: 5,
           child: Container(
             decoration: const BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 15,
+                  offset: Offset(0, -5),
+                ),
+              ],
             ),
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
                     child: QrCurrentEventCard(
                       event: widget.event,
-                      isTimeInActive: true, // Not used in this screen anymore but required by widget
-                      onRecordTimeIn: () {}, // Not used
-                      onRecordTimeOut: () {}, // Not used
+                      isTimeInActive: true,
+                      onRecordTimeIn: () {},
+                      onRecordTimeOut: () {},
                     ),
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverToBoxAdapter(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Recent Scans', style: AppTextStyles.headlineSmall),
-                        Text('${_recentScans.length} total', style: AppTextStyles.labelSmall),
-                      ],
+                    child: QrSectionHeader(
+                      title: 'Recent Scans',
+                      subtitle: '${_recentScans.length} latest entries',
+                      horizontalPadding: 0,
+                      trailing: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AttendanceHistoryPage(
+                                eventId: widget.event.id!,
+                                eventName: widget.event.name,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -309,12 +470,11 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Camera Preview', style: AppTextStyles.headlineMedium),
-                    _buildScannerStatusIndicator(),
-                  ],
+                QrSectionHeader(
+                  title: 'Camera Preview',
+                  subtitle: 'Auto-detecting QR Codes',
+                  horizontalPadding: 0,
+                  trailing: _buildScannerStatusIndicator(),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -348,30 +508,37 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.black.withOpacity(0.05)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Session History', style: AppTextStyles.headlineSmall),
+                            Text(
+                              'Session History', 
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
                             Row(
                               children: [
-                                Text('${_recentScans.length}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                QrCountChip(label: 'Total', count: _recentScans.length),
                                 const SizedBox(width: 8),
                                 IconButton(
-                                  icon: Icon(LucideIcons.refreshCw, size: 16, color: AppColors.textGrey),
+                                  icon: const Icon(LucideIcons.refreshCcw, size: 18, color: primaryColor),
                                   onPressed: _loadRecentScans,
                                   constraints: const BoxConstraints(),
                                   padding: EdgeInsets.zero,
@@ -383,15 +550,22 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                         const Divider(height: 24),
                         Expanded(
                           child: _isLoadingScans 
-                            ? const Center(child: CircularProgressIndicator())
+                            ? const Center(child: CircularProgressIndicator(color: primaryColor))
                             : _recentScans.isEmpty
                               ? Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(LucideIcons.history, size: 32, color: AppColors.textGrey.withOpacity(0.2)),
-                                      const SizedBox(height: 8),
-                                      Text('No scans yet', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+                                      Icon(LucideIcons.clock, size: 42, color: primaryColor.withOpacity(0.1)),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'No scans yet', 
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.black.withOpacity(0.3), 
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 )
@@ -414,7 +588,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   Widget _buildRecentScansList() {
     if (_isLoadingScans) {
-      return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+      return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: primaryColor)));
     }
     if (_recentScans.isEmpty) {
       return SliverFillRemaining(
@@ -422,21 +596,35 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.qrCode, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
-              const SizedBox(height: 12),
-              Text('No scans yet this session', style: AppTextStyles.labelLarge),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(LucideIcons.qrCode, size: 48, color: primaryColor.withOpacity(0.2)),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No scans yet this session', 
+                style: GoogleFonts.poppins(
+                  color: Colors.black.withOpacity(0.4),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
       );
     }
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: QrRecentScanCard(scan: _recentScans[index]),
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => QrRecentScanCard(scan: _recentScans[index]),
+          childCount: _recentScans.length,
         ),
-        childCount: _recentScans.length,
       ),
     );
   }
@@ -445,11 +633,13 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: _isScanning ? AppColors.success.withOpacity(0.8) : AppColors.error.withOpacity(0.8),
+            color: _isScanning 
+                ? const Color(0xFF2E7D32).withOpacity(0.85) 
+                : const Color(0xFFC62828).withOpacity(0.85),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -463,7 +653,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
               const SizedBox(width: 8),
               Text(
                 _isScanning ? 'LIVE' : 'PAUSED',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
               ),
             ],
           ),
@@ -474,25 +664,43 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   Widget _buildDesktopInstructions() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.info.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.info.withOpacity(0.1)),
+        color: primaryColor.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primaryColor.withOpacity(0.08)),
       ),
       child: Row(
         children: [
-          Icon(LucideIcons.info, color: AppColors.info),
-          const SizedBox(width: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(LucideIcons.info, color: primaryColor),
+          ),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Operator Instructions', style: AppTextStyles.headlineSmall.copyWith(color: AppColors.info)),
+                Text(
+                  'Operator Instructions', 
+                  style: GoogleFonts.poppins(
+                    color: primaryColor, 
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   '1. Position student QR code in the frame. 2. Verify student info in the popup. 3. Select appropriate attendance action.',
-                  style: AppTextStyles.bodySmall,
+                  style: GoogleFonts.poppins(
+                    color: Colors.black.withOpacity(0.5),
+                    fontSize: 12,
+                    height: 1.5,
+                  ),
                 ),
               ],
             ),
@@ -507,10 +715,10 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       decoration: const ShapeDecoration(
         shape: QrScannerOverlayShape(
           borderColor: Colors.white,
-          borderRadius: 20,
+          borderRadius: 24,
           borderLength: 40,
           borderWidth: 8,
-          cutOutSize: 250,
+          cutOutSize: 260,
         ),
       ),
     );
@@ -528,84 +736,228 @@ class _VerificationModal extends StatelessWidget {
     required this.onReject,
   });
 
+  static const Color primaryColor = Color(0xFF003DA5);
+  static const Color accentColor = Color(0xFFFFC107);
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Header with accent
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryColor, Color(0xFF002D7A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-              child: Icon(LucideIcons.userCheck, color: AppColors.primary, size: 40),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      LucideIcons.qrCode,
+                      color: accentColor,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Scan Confirmation',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Verify Student',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Column(
+                  children: [
+                    // Student Profile Info
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: primaryColor.withOpacity(0.1),
+                            ),
+                          ),
+                          child: const Icon(
+                            LucideIcons.user,
+                            color: primaryColor,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                payload.fullName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                payload.studentId,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              Text(
+                                payload.program,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Select Attendance Mode',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Improved Mode Selector
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildModeOption(
+                            label: 'Time In',
+                            icon: LucideIcons.logIn,
+                            color: const Color(0xFF2E7D32),
+                            onTap: () => onAction(true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildModeOption(
+                            label: 'Time Out',
+                            icon: LucideIcons.logOut,
+                            color: const Color(0xFFC62828),
+                            onTap: () => onAction(false),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
+            // Actions
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: onReject,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    side: BorderSide(
+                      color: Colors.grey.shade300,
+                    ),
+                    foregroundColor: Colors.black87,
+                  ),
+                  child: Text(
+                    'Reject / Cancel',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeOption({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
             const SizedBox(height: 8),
             Text(
-              payload.fullName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              '${payload.studentId} • ${payload.program}',
-              style: TextStyle(color: AppColors.textGrey, fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Select Attendance Action:',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => onAction(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Time In', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => onAction(false),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Time Out', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onReject,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Reject / Cancel'),
+              label,
+              style: GoogleFonts.poppins(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
           ],
@@ -645,7 +997,7 @@ class QrScannerOverlayShape extends ShapeBorder {
     final height = rect.height;
 
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.5)
+      ..color = Colors.black.withOpacity(0.6)
       ..style = PaintingStyle.fill;
 
     final cutOutRect = Rect.fromCenter(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/utils/qr_utils.dart';
 import '../models/qr_scan_ui_model.dart';
 
@@ -7,6 +7,8 @@ class QrRecentScanCard extends StatelessWidget {
   const QrRecentScanCard({super.key, required this.scan});
 
   final QrScanUIModel scan;
+
+  static const Color primaryColor = Color(0xFF003DA5);
 
   @override
   Widget build(BuildContext context) {
@@ -19,31 +21,39 @@ class QrRecentScanCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryColor.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: AppColors.primary.withOpacity(0.12),
+            backgroundColor: primaryColor.withOpacity(0.08),
             child: Text(
               QrUtils.initialsFromName(scan.name),
-              style: const TextStyle(
-                color: AppColors.primary,
+              style: GoogleFonts.poppins(
+                color: primaryColor,
                 fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   scan.name,
-                  style: const TextStyle(
-                    color: AppColors.primary,
+                  style: GoogleFonts.poppins(
+                    color: primaryColor,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -51,7 +61,11 @@ class QrRecentScanCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${scan.studentId} • ${scan.program}',
-                  style: const TextStyle(color: Colors.black54, fontSize: 11),
+                  style: GoogleFonts.poppins(
+                    color: Colors.black54, 
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -63,25 +77,25 @@ class QrRecentScanCard extends StatelessWidget {
             children: [
               Text(
                 scan.time,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   color: Colors.black45,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   scan.badgeLabel,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     color: statusColor,
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),

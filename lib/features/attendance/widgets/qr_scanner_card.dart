@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class QrScannerCard extends StatelessWidget {
   const QrScannerCard({
@@ -21,8 +21,8 @@ class QrScannerCard extends StatelessWidget {
   final String scanModeLabel;
   final bool isLocked;
 
-  static const Color _royalBlue = AppColors.primary;
-  static const Color _gold = Color(0xFFFFC107);
+  static const Color primaryColor = Color(0xFF003DA5);
+  static const Color accentColor = Color(0xFFFFC107);
 
   Widget _buildCornerGuide({
     required Alignment alignment,
@@ -47,13 +47,13 @@ class QrScannerCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _royalBlue.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: primaryColor.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -63,24 +63,24 @@ class QrScannerCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: _royalBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(9),
+                  color: primaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
+                child: const Icon(
                   LucideIcons.scan,
-                  color: _royalBlue,
-                  size: 17,
+                  color: primaryColor,
+                  size: 18,
                 ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Scanner Ready',
-                  style: TextStyle(
-                    color: _royalBlue,
+                  style: GoogleFonts.poppins(
+                    color: primaryColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -93,14 +93,14 @@ class QrScannerCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF2E7D32).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
                   'Live',
                   style: TextStyle(
                     color: Color(0xFF2E7D32),
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -111,12 +111,12 @@ class QrScannerCard extends StatelessWidget {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: _royalBlue.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _royalBlue.withOpacity(0.12)),
+                color: primaryColor.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: primaryColor.withOpacity(0.1)),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -139,15 +139,16 @@ class QrScannerCard extends StatelessWidget {
                     Positioned.fill(
                       child: Container(color: Colors.black.withOpacity(0.12)),
                     ),
+                    // Scanner Frame
                     Container(
-                      width: 192,
-                      height: 192,
+                      width: 200,
+                      height: 200,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: _gold.withOpacity(0.95),
-                          width: 2,
+                          color: accentColor.withOpacity(0.5),
+                          width: 1.5,
                         ),
                       ),
                       child: Stack(
@@ -155,51 +156,51 @@ class QrScannerCard extends StatelessWidget {
                           _buildCornerGuide(
                             alignment: Alignment.topLeft,
                             border: const Border(
-                              top: BorderSide(color: _royalBlue, width: 3),
-                              left: BorderSide(color: _royalBlue, width: 3),
+                              top: BorderSide(color: accentColor, width: 3.5),
+                              left: BorderSide(color: accentColor, width: 3.5),
                             ),
                           ),
                           _buildCornerGuide(
                             alignment: Alignment.topRight,
                             border: const Border(
-                              top: BorderSide(color: _royalBlue, width: 3),
-                              right: BorderSide(color: _royalBlue, width: 3),
+                              top: BorderSide(color: accentColor, width: 3.5),
+                              right: BorderSide(color: accentColor, width: 3.5),
                             ),
                           ),
                           _buildCornerGuide(
                             alignment: Alignment.bottomLeft,
                             border: const Border(
-                              bottom: BorderSide(color: _royalBlue, width: 3),
-                              left: BorderSide(color: _royalBlue, width: 3),
+                              bottom: BorderSide(color: accentColor, width: 3.5),
+                              left: BorderSide(color: accentColor, width: 3.5),
                             ),
                           ),
                           _buildCornerGuide(
                             alignment: Alignment.bottomRight,
                             border: const Border(
-                              bottom: BorderSide(color: _royalBlue, width: 3),
-                              right: BorderSide(color: _royalBlue, width: 3),
+                              bottom: BorderSide(color: accentColor, width: 3.5),
+                              right: BorderSide(color: accentColor, width: 3.5),
                             ),
                           ),
-                          Center(
+                          const Center(
                             child: Icon(
-                              LucideIcons.scan,
+                              LucideIcons.qrCode,
                               color: Colors.white,
-                              size: 62,
+                              size: 56,
                             ),
                           ),
                         ],
                       ),
                     ),
                     Positioned(
-                      top: 10,
-                      right: 10,
+                      top: 12,
+                      right: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
-                          vertical: 5,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.black.withOpacity(0.6),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -215,13 +216,13 @@ class QrScannerCard extends StatelessWidget {
                     if (isProcessing)
                       Positioned.fill(
                         child: Container(
-                          color: Colors.black.withOpacity(0.45),
+                          color: Colors.black.withOpacity(0.5),
                           child: const Center(
                             child: SizedBox(
-                              width: 28,
-                              height: 28,
+                              width: 32,
+                              height: 32,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
+                                strokeWidth: 3,
                                 color: Colors.white,
                               ),
                             ),
@@ -231,27 +232,27 @@ class QrScannerCard extends StatelessWidget {
                     if (isLocked)
                       Positioned.fill(
                         child: Container(
-                          color: Colors.black.withOpacity(0.7),
+                          color: Colors.black.withOpacity(0.75),
                           child: Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(18),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withOpacity(0.15),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     LucideIcons.lock,
                                     color: Colors.white,
-                                    size: 40,
+                                    size: 42,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
+                                Text(
                                   'Scanner Locked',
-                                  style: TextStyle(
+                                  style: GoogleFonts.poppins(
                                     color: Colors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -267,14 +268,22 @@ class QrScannerCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Tip: Hold the device steady and keep good lighting for faster detection.',
-            style: TextStyle(
-              color: Colors.black.withOpacity(0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Icon(LucideIcons.lightbulb, size: 14, color: accentColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Tip: Hold the device steady and keep good lighting.',
+                  style: GoogleFonts.poppins(
+                    color: Colors.black.withOpacity(0.5),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
