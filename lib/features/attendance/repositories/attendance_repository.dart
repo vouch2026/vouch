@@ -53,4 +53,15 @@ class AttendanceRepository {
       }).eq('id', existing['id']);
     }
   }
+
+  Future<List<Map<String, dynamic>>> getRecentScansForEvent(String eventId) async {
+    final response = await _client
+        .from('student_attendance')
+        .select('*, student:users(*, program:programs(*))')
+        .eq('event_id', eventId)
+        .order('updated_at', ascending: false)
+        .limit(20);
+    
+    return List<Map<String, dynamic>>.from(response);
+  }
 }
