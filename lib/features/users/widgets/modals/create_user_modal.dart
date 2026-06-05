@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,6 +40,8 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
   
   XFile? _idFrontImage;
   XFile? _idBackImage;
+  Uint8List? _idFrontBytes;
+  Uint8List? _idBackBytes;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -482,6 +484,8 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
     required XFile? image,
     required VoidCallback onTap,
   }) {
+    final bytes = label == 'ID Front' ? _idFrontBytes : _idBackBytes;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -491,11 +495,11 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
           borderRadius: BorderRadius.circular(12),
           color: AppColors.background,
         ),
-        child: image != null
+        child: bytes != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(11),
-                child: Image.file(
-                  File(image.path),
+                child: Image.memory(
+                  bytes,
                   fit: BoxFit.cover,
                   width: double.infinity,
                 ),
@@ -518,11 +522,14 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
   Future<void> _pickImage(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      final bytes = await image.readAsBytes();
       setState(() {
         if (isFront) {
           _idFrontImage = image;
+          _idFrontBytes = bytes;
         } else {
           _idBackImage = image;
+          _idBackBytes = bytes;
         }
       });
     }
@@ -562,8 +569,8 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
         role: _selectedRole,
         position: _selectedRole == 'faculty' ? _position : null,
-        idFront: _idFrontImage != null ? File(_idFrontImage!.path) : null,
-        idBack: _idBackImage != null ? File(_idBackImage!.path) : null,
+        idFront: _idFrontImage,
+        idBack: _idBackImage,
       );
 
       if (success && mounted) {

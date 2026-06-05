@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/providers/storage_provider.dart';
@@ -21,8 +21,8 @@ class UserController extends AsyncNotifier<void> {
     required int yearLevel,
     required String role,
     String? position,
-    File? idFront,
-    File? idBack,
+    XFile? idFront,
+    XFile? idBack,
   }) async {
     state = const AsyncLoading();
     

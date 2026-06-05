@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/organization_repository.dart';
 import '../providers/organization_provider.dart';
@@ -20,8 +20,8 @@ class OrganizationController extends AsyncNotifier<void> {
     String? campusId,
     String? facultyId,
     List<String> programIds = const [],
-    File? logo,
-    File? banner,
+    XFile? logo,
+    XFile? banner,
   }) async {
     state = const AsyncLoading();
     

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,7 +27,8 @@ class StudentProofOfPaymentPage extends ConsumerStatefulWidget {
 }
 
 class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymentPage> {
-  File? _uploadedFile;
+  XFile? _uploadedFile;
+  Uint8List? _uploadedFileBytes;
   final TextEditingController _referenceController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   bool _isSubmitting = false;
@@ -50,8 +51,8 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
 
       if (pickedFile == null) return;
 
-      final File file = File(pickedFile.path);
-      final int fileSize = await file.length();
+      final Uint8List bytes = await pickedFile.readAsBytes();
+      final int fileSize = bytes.length;
 
       // 10MB limit
       if (fileSize > 10 * 1024 * 1024) {
@@ -66,7 +67,8 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
       }
 
       setState(() {
-        _uploadedFile = file;
+        _uploadedFile = pickedFile;
+        _uploadedFileBytes = bytes;
       });
     } catch (e) {
       if (!mounted) return;
@@ -442,14 +444,14 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
                 ),
                 borderRadius: BorderRadius.circular(12),
                 color: const Color(0xFFF7FAFF),
-                image: _uploadedFile != null
+                image: _uploadedFileBytes != null
                     ? DecorationImage(
-                        image: FileImage(_uploadedFile!),
+                        image: MemoryImage(_uploadedFileBytes!),
                         fit: BoxFit.cover,
                       )
                     : null,
               ),
-              child: _uploadedFile == null
+              child: _uploadedFileBytes == null
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

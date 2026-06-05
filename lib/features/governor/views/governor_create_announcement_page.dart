@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,7 +32,8 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   late final TextEditingController _linkController;
   
   String _selectedType = 'General';
-  File? _announcementImage;
+  XFile? _announcementImage;
+  Uint8List? _announcementImageBytes;
   final _picker = ImagePicker();
   bool _isLoading = false;
 
@@ -58,7 +59,11 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      setState(() => _announcementImage = File(pickedFile.path));
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _announcementImage = pickedFile;
+        _announcementImageBytes = bytes;
+      });
     }
   }
 
@@ -168,13 +173,13 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.grey[300]!),
-                        image: _announcementImage != null
-                            ? DecorationImage(image: FileImage(_announcementImage!), fit: BoxFit.cover)
+                        image: _announcementImageBytes != null
+                            ? DecorationImage(image: MemoryImage(_announcementImageBytes!), fit: BoxFit.cover)
                             : (widget.initialData?.imageUrl != null
                                 ? DecorationImage(image: NetworkImage(widget.initialData!.imageUrl!), fit: BoxFit.cover)
                                 : null),
                       ),
-                      child: _announcementImage == null && widget.initialData?.imageUrl == null
+                      child: _announcementImageBytes == null && widget.initialData?.imageUrl == null
                           ? const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [

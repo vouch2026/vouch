@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../providers/auth_provider.dart';
@@ -37,8 +37,8 @@ class AuthController extends AsyncNotifier<void> {
     required String facultyId,
     required String programId,
     required int yearLevel,
-    File? idFront,
-    File? idBack,
+    XFile? idFront,
+    XFile? idBack,
   }) async {
     state = const AsyncLoading();
     

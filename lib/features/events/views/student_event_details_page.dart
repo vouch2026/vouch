@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -28,7 +28,8 @@ class StudentEventDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPage> {
-  final List<File> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
+  final Map<String, Uint8List> _selectedImagesBytes = {};
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
 
@@ -48,21 +49,22 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       );
 
       if (images.isNotEmpty) {
-        setState(() {
-          for (var image in images) {
-            if (_selectedImages.length < remainingSlots) {
-              final file = File(image.path);
-              final fileSize = file.lengthSync();
-              if (fileSize <= 5 * 1024 * 1024) {
-                _selectedImages.add(file);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Image ${image.name} exceeds 5MB limit.')),
-                );
-              }
+        for (var image in images) {
+          if (_selectedImages.length < remainingSlots) {
+            final bytes = await image.readAsBytes();
+            final fileSize = bytes.length;
+            if (fileSize <= 5 * 1024 * 1024) {
+              setState(() {
+                _selectedImages.add(image);
+                _selectedImagesBytes[image.path] = bytes;
+              });
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Image ${image.name} exceeds 5MB limit.')),
+              );
             }
           }
-        });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -74,8 +76,10 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
   }
 
   void _removeImage(int index) {
+    final image = _selectedImages[index];
     setState(() {
       _selectedImages.removeAt(index);
+      _selectedImagesBytes.remove(image.path);
     });
   }
 
@@ -107,7 +111,10 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Highlights uploaded successfully!')),
         );
-        _selectedImages.clear();
+        setState(() {
+          _selectedImages.clear();
+          _selectedImagesBytes.clear();
+        });
         ref.invalidate(eventHighlightsProvider(widget.event.id!));
       }
     } catch (e) {
@@ -447,7 +454,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.file(_selectedImages[index], width: 150, height: 150, fit: BoxFit.cover),
+                        child: Image.memory(_selectedImagesBytes[_selectedImages[index].path]!, width: 150, height: 150, fit: BoxFit.cover),
                       ),
                       Positioned(
                         top: 4,

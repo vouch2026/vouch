@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -270,8 +269,8 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
         campusId: _selectedCampusId,
         facultyId: _selectedFacultyId,
         programIds: _selectedProgramIds,
-        logo: _logoImage != null ? File(_logoImage!.path) : null,
-        banner: _bannerImage != null ? File(_bannerImage!.path) : null,
+        logo: _logoImage,
+        banner: _bannerImage,
       );
 
       if (success && mounted) {

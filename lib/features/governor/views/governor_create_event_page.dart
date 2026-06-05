@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +36,8 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   TimeOfDay? _timeOutStart;
   TimeOfDay? _timeOutEnd;
   
-  File? _eventImage;
+  XFile? _eventImage;
+  Uint8List? _eventImageBytes;
   final _picker = ImagePicker();
   
   bool _isMandatory = true;
@@ -54,7 +55,11 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      setState(() => _eventImage = File(pickedFile.path));
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _eventImage = pickedFile;
+        _eventImageBytes = bytes;
+      });
     }
   }
 
@@ -189,11 +194,11 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.grey[300]!),
-                    image: _eventImage != null
-                        ? DecorationImage(image: FileImage(_eventImage!), fit: BoxFit.cover)
+                    image: _eventImageBytes != null
+                        ? DecorationImage(image: MemoryImage(_eventImageBytes!), fit: BoxFit.cover)
                         : null,
                   ),
-                  child: _eventImage == null
+                  child: _eventImageBytes == null
                       ? const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
