@@ -220,7 +220,9 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   void _resumeScanning() {
     if (mounted) {
       setState(() => _isScanning = true);
-      _controller.start();
+      _controller.start().then((_) {
+        _controller.setZoomScale(_zoomLevel);
+      });
     }
   }
 
