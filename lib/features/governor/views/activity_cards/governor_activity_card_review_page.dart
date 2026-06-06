@@ -96,22 +96,24 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
               return const Center(child: Text('Activity Card not found for this student in your organization.'));
             }
 
-            // Improved signature slot detection
+            // Robust signature slot detection based on current viewer's role
             final mySignatureSlot = activityCard.signatures.where((s) {
-              final roleName = s.roleName.toLowerCase();
-              final myRoleName = activeRole?.roleName.toLowerCase();
+              final requiredRoleName = s.roleName.toLowerCase().trim();
+              final currentViewerRoleName = activeRole?.roleName.toLowerCase().trim();
               
-              // Direct match
-              if (roleName == myRoleName) return true;
+              if (currentViewerRoleName == null) return false;
+
+              // Direct match (e.g. Secretary matches Secretary slot)
+              if (requiredRoleName == currentViewerRoleName) return true;
               
-              // Governor/President overlap (Heads of organizations)
-              if ((myRoleName == 'governor' || myRoleName == 'president') && 
-                  (roleName == 'governor' || roleName == 'president')) {
+              // Governor/President overlap
+              if ((currentViewerRoleName == 'governor' || currentViewerRoleName == 'president') && 
+                  (requiredRoleName == 'governor' || requiredRoleName == 'president')) {
                 return true;
               }
 
-              // Super Admin can sign any slot (optional, but helpful for debugging)
-              if (myRoleName == 'super admin') return true;
+              // Super Admin can sign anything
+              if (currentViewerRoleName == 'super admin') return true;
 
               return false;
             }).firstOrNull;

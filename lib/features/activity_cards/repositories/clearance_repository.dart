@@ -128,11 +128,12 @@ class ClearanceRepository {
     // 1. Get signature details to check the role and scope
     final sigResponse = await _client
         .from('activity_card_clearance_signatures')
-        .select('*, role:roles(name)')
+        .select('*, roles(name)')
         .eq('id', signatureId)
         .single();
     
-    final roleName = sigResponse['role']['name'];
+    final roleData = sigResponse['roles'];
+    final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
     final scopeId = sigResponse['required_scope_id'];
     final requestId = sigResponse['clearance_request_id'];
 

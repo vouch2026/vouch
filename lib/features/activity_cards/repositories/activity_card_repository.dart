@@ -89,9 +89,9 @@ class ActivityCardRepository {
           .from('activity_card_clearance_requests')
           .select('''
             *,
-            signatures:activity_card_clearance_signatures (
+            activity_card_clearance_signatures (
               *,
-              role:roles (name)
+              roles (name)
             )
           ''')
           .eq('student_id', studentId)
@@ -125,7 +125,7 @@ class ActivityCardRepository {
 
       if (scopeId == null) continue;
 
-      // Filter bulk results for this organization's scope
+      // Filter bulk results for this organization
       final eventsResponse = allEvents.where((e) => e['scope_id'] == scopeId).toList();
       final feesResponse = allFees.where((f) => f['scope_id'] == scopeId).toList();
       final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == scopeId).toList();
@@ -171,12 +171,16 @@ class ActivityCardRepository {
       }).toList();
 
       final List<ActivityCardSignature> signatures = [];
-      if (clearanceResponse != null && clearanceResponse['signatures'] != null) {
-        for (var i = 0; i < (clearanceResponse['signatures'] as List).length; i++) {
-          final s = clearanceResponse['signatures'][i];
+      if (clearanceResponse != null && clearanceResponse['activity_card_clearance_signatures'] != null) {
+        final sigList = clearanceResponse['activity_card_clearance_signatures'] as List;
+        for (var i = 0; i < sigList.length; i++) {
+          final s = sigList[i];
+          final roleData = s['roles'];
+          final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
+          
           signatures.add(ActivityCardSignature(
             id: s['id'],
-            roleName: s['role']['name'],
+            roleName: roleName,
             signedByUserId: s['signed_by_user_id'],
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
@@ -336,9 +340,9 @@ class ActivityCardRepository {
           .from('activity_card_clearance_requests')
           .select('''
             *,
-            signatures:activity_card_clearance_signatures (
+            activity_card_clearance_signatures (
               *,
-              role:roles (name)
+              roles (name)
             )
           ''')
           .filter('student_id', 'in', studentIds)
@@ -403,13 +407,16 @@ class ActivityCardRepository {
       }).toList();
 
       final List<ActivityCardSignature> signatures = [];
-      if (studentClearance != null && studentClearance['signatures'] != null) {
-        final sigList = studentClearance['signatures'] as List;
+      if (studentClearance != null && studentClearance['activity_card_clearance_signatures'] != null) {
+        final sigList = studentClearance['activity_card_clearance_signatures'] as List;
         for (var i = 0; i < sigList.length; i++) {
           final s = sigList[i];
+          final roleData = s['roles'];
+          final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
+
           signatures.add(ActivityCardSignature(
             id: s['id'],
-            roleName: s['role']['name'],
+            roleName: roleName,
             signedByUserId: s['signed_by_user_id'],
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
