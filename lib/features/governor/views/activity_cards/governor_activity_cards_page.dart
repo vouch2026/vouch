@@ -37,6 +37,9 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1200;
+    final horizontalPadding = isLargeScreen ? AppSpacing.md : AppSpacing.lg;
 
     return DashboardLayout(
       title: 'Organization Activity Cards',
@@ -47,7 +50,10 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: AppSpacing.lg,
+                  ),
                   child: UserManagementHeader(
                     title: 'Activity Cards',
                     subtitle: 'Manage student clearances, signatures, and compliance',
@@ -61,7 +67,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   child: Container(
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
@@ -91,7 +97,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
         body: TabBarView(
           controller: _tabController,
           children: [
-            _buildClearanceList(context),
+            _buildClearanceList(context, horizontalPadding),
             const ComplianceAnalyticsDashboard(),
           ],
         ),
@@ -99,19 +105,19 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
     );
   }
 
-  Widget _buildClearanceList(BuildContext context) {
+  Widget _buildClearanceList(BuildContext context, double horizontalPadding) {
     return Column(
       children: [
-        _buildFilters(),
+        _buildFilters(horizontalPadding),
         const SizedBox(height: AppSpacing.lg),
-        Expanded(child: _buildStudentsTable()),
+        Expanded(child: _buildStudentsTable(horizontalPadding)),
       ],
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(double horizontalPadding) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 600;
@@ -161,41 +167,47 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
     );
   }
 
-  Widget _buildStudentsTable() {
+  Widget _buildStudentsTable(double horizontalPadding) {
     return Card(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+      margin: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, AppSpacing.lg),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.shade200),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 800),
-            child: DataTable(
-              columnSpacing: AppSpacing.lg,
-              headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
-              columns: const [
-                DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('FEES', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('COMPLETION', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-              rows: [
-                _buildDataRow('Juan Dela Cruz', 'BSIT', '2/3', '2/2', 0.75, ActivityCardStatus.partiallySigned),
-                _buildDataRow('Maria Santos', 'BSCS', '3/3', '2/2', 1.0, ActivityCardStatus.cleared),
-                _buildDataRow('Michael Chen', 'BSIT', '1/3', '0/1', 0.40, ActivityCardStatus.pending),
-                _buildDataRow('Sarah Johnson', 'BSCS', '3/3', '1/1', 0.90, ActivityCardStatus.partiallySigned),
-              ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth > 800 ? constraints.maxWidth : 800,
+                ),
+                child: DataTable(
+                  columnSpacing: AppSpacing.lg,
+                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                  columns: const [
+                    DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('FEES', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('COMPLETION', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                  rows: [
+                    _buildDataRow('Juan Dela Cruz', 'BSIT', '2/3', '2/2', 0.75, ActivityCardStatus.partiallySigned),
+                    _buildDataRow('Maria Santos', 'BSCS', '3/3', '2/2', 1.0, ActivityCardStatus.cleared),
+                    _buildDataRow('Michael Chen', 'BSIT', '1/3', '0/1', 0.40, ActivityCardStatus.pending),
+                    _buildDataRow('Sarah Johnson', 'BSCS', '3/3', '1/1', 0.90, ActivityCardStatus.partiallySigned),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
