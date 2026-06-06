@@ -47,6 +47,9 @@ class ActivityCardRepository {
 
     if (scopeIds.isEmpty) return [];
 
+    // Collect all organization IDs for clearance requests
+    final List<String> orgIds = orgMembers.map((m) => m['organization_id'] as String).toList();
+
     // 3, 4, 5. Fetch all data in bulk parallel requests
     final List<Future<dynamic>> futures = [
       _client
@@ -92,7 +95,7 @@ class ActivityCardRepository {
             )
           ''')
           .eq('student_id', studentId)
-          .filter('scope_id', 'in', scopeIds.toList())
+          .filter('organization_id', 'in', orgIds)
           .eq('academic_term_id', termId)
     ];
 
@@ -126,7 +129,7 @@ class ActivityCardRepository {
       final eventsResponse = allEvents.where((e) => e['scope_id'] == scopeId).toList();
       final feesResponse = allFees.where((f) => f['scope_id'] == scopeId).toList();
       final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == scopeId).toList();
-      final clearanceResponse = allClearanceRequests.where((c) => c['scope_id'] == scopeId).firstOrNull;
+      final clearanceResponse = allClearanceRequests.where((c) => c['organization_id'] == orgId).firstOrNull;
 
       // Map to models
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
@@ -339,7 +342,7 @@ class ActivityCardRepository {
             )
           ''')
           .filter('student_id', 'in', studentIds)
-          .eq('scope_id', scopeId)
+          .eq('organization_id', organizationId)
           .eq('academic_term_id', termId)
     ];
 

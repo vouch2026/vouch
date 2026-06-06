@@ -14,47 +14,32 @@ class ClearanceRepository {
 
     if (scopeType == 'Faculty') {
       // Check if student has a Program clearance cleared for this term
-      // We find the program_id associated with this student and faculty
-      final studentResponse = await _client
-          .from('users')
-          .select('program_id')
-          .eq('id', studentId)
-          .single();
-      
-      final programId = studentResponse['program_id'];
-      if (programId == null) return true; // No program assigned, maybe irregular
-
       final clearanceResponse = await _client
           .from('activity_card_clearance_requests')
           .select('status')
           .eq('student_id', studentId)
-          .eq('scope_id', programId)
+          .eq('scope_type', 'Program')
           .eq('academic_term_id', termId)
+          .eq('status', 'Cleared')
+          .limit(1)
           .maybeSingle();
       
-      return clearanceResponse != null && clearanceResponse['status'] == 'Cleared';
+      return clearanceResponse != null;
     }
 
     if (scopeType == 'Institutional') {
       // Check if student has a Faculty clearance cleared for this term
-      final studentResponse = await _client
-          .from('users')
-          .select('faculty_id')
-          .eq('id', studentId)
-          .single();
-      
-      final facultyId = studentResponse['faculty_id'];
-      if (facultyId == null) return true;
-
       final clearanceResponse = await _client
           .from('activity_card_clearance_requests')
           .select('status')
           .eq('student_id', studentId)
-          .eq('scope_id', facultyId)
+          .eq('scope_type', 'Faculty')
           .eq('academic_term_id', termId)
+          .eq('status', 'Cleared')
+          .limit(1)
           .maybeSingle();
       
-      return clearanceResponse != null && clearanceResponse['status'] == 'Cleared';
+      return clearanceResponse != null;
     }
 
     return false;
@@ -63,6 +48,7 @@ class ClearanceRepository {
   /// Submits a clearance request for a student.
   Future<void> requestClearance({
     required String studentId,
+    required String organizationId,
     required String scopeId,
     required String scopeType,
     required String termId,
@@ -72,9 +58,27 @@ class ClearanceRepository {
       throw Exception('You must clear the lower hierarchy organization first.');
     }
 
+    // Check if a request already exists
+    final existingRequest = await _client
+        .from('activity_card_clearance_requests')
+        .select('id, status')
+        .eq('student_id', studentId)
+        .eq('organization_id', organizationId)
+        .eq('academic_term_id', termId)
+        .maybeSingle();
+
+    if (existingRequest != null) {
+      if (existingRequest['status'] == 'Pending' || existingRequest['status'] == 'Cleared') {
+        throw Exception('A clearance request already exists for this organization.');
+      }
+      // If Rejected, we delete the old one to reset the signature workflow
+      await _client.from('activity_card_clearance_requests').delete().eq('id', existingRequest['id']);
+    }
+
     // Create the request
     final response = await _client.from('activity_card_clearance_requests').insert({
       'student_id': studentId,
+      'organization_id': organizationId,
       'scope_id': scopeId,
       'scope_type': scopeType,
       'academic_term_id': termId,
@@ -84,16 +88,11 @@ class ClearanceRepository {
     final requestId = response['id'];
 
     // Identify required signatures based on roles and settings
-    // This part would typically be handled by a database function or more complex logic
-    // For now, we'll manually add Secretary, Treasurer, and Governor slots.
-    // We also check if Adviser is required.
-    
     final orgResponse = await _client
         .from('organizations')
         .select('requires_adviser_signature')
-        .or('program_id.eq.$scopeId,faculty_id.eq.$scopeId,campus_id.eq.$scopeId')
-        .limit(1)
-        .maybeSingle();
+        .eq('id', organizationId)
+        .single();
     
     final bool requiresAdviser = orgResponse?['requires_adviser_signature'] ?? false;
 

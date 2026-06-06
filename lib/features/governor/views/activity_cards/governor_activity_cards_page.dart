@@ -108,6 +108,10 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
               data: (cards) {
                 final query = _searchController.text.toLowerCase();
                 final filteredCards = cards.where((card) {
+                  // Only display students who have actually requested for clearance
+                  final hasRequested = !card.id.startsWith('temp-');
+                  if (!hasRequested) return false;
+
                   final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
                   final matchesStatus = _selectedStatus == 'All' || 
                       card.status.name.toLowerCase() == _selectedStatus.toLowerCase().replaceAll(' ', '');

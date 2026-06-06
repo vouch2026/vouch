@@ -35,14 +35,17 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
 
   Future<void> _handleRequestClearance(ActivityCard card) async {
     final term = ref.read(activeTermProvider).value;
-    if (term == null) return;
+    final currentUserProfile = ref.read(userProfileProvider).value;
+    if (term == null || currentUserProfile == null) return;
 
     setState(() => _isRequesting = true);
     try {
       final repo = ref.read(clearanceRepositoryProvider);
       await repo.requestClearance(
         studentId: card.studentId,
-        scopeId: card.organizationId,
+        organizationId: card.organizationId,
+        scopeId: card.organizationType == 'campus-based' ? currentUserProfile!.campusId! 
+                : (card.organizationType == 'faculty-based' ? currentUserProfile!.facultyId! : currentUserProfile!.programId!),
         scopeType: card.organizationType == 'campus-based' ? 'Institutional' 
                   : (card.organizationType == 'faculty-based' ? 'Faculty' : 'Program'),
         termId: term.id,
