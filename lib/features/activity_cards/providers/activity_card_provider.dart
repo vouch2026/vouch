@@ -3,8 +3,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/activity_card_models.dart';
 import '../repositories/activity_card_repository.dart';
-
-import '../../organizations/providers/managed_organization_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 final activityCardRepositoryProvider = Provider<ActivityCardRepository>((ref) {
   return ActivityCardRepository(SupabaseConfig.client);
@@ -19,11 +18,12 @@ final studentActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) as
 });
 
 final organizationActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) async {
-  final managedOrg = ref.watch(managedOrganizationProvider).value;
-  if (managedOrg == null || managedOrg.id == null) return [];
+  final workspace = ref.watch(workspaceProvider);
+  final selectedOrg = workspace.selectedOrganization;
+  if (selectedOrg == null || selectedOrg.id == null) return [];
 
   final repository = ref.watch(activityCardRepositoryProvider);
-  return repository.getOrganizationActivityCards(managedOrg.id);
+  return repository.getOrganizationActivityCards(selectedOrg.id);
 });
 
 final activityCardDetailsProvider = Provider.family<AsyncValue<ActivityCard?>, String>((ref, id) {
@@ -33,9 +33,10 @@ final activityCardDetailsProvider = Provider.family<AsyncValue<ActivityCard?>, S
 });
 
 final reviewActivityCardProvider = FutureProvider.family<ActivityCard?, String>((ref, studentId) async {
-  final managedOrg = ref.watch(managedOrganizationProvider).value;
-  if (managedOrg == null || managedOrg.id == null) return null;
+  final workspace = ref.watch(workspaceProvider);
+  final selectedOrg = workspace.selectedOrganization;
+  if (selectedOrg == null || selectedOrg.id == null) return null;
 
   final repository = ref.watch(activityCardRepositoryProvider);
-  return repository.getStudentActivityCardForOrganization(studentId, managedOrg.id!);
+  return repository.getStudentActivityCardForOrganization(studentId, selectedOrg.id!);
 });
