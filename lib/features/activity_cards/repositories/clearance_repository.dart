@@ -184,4 +184,32 @@ class ClearanceRepository {
       }).eq('id', requestId);
     }
   }
+
+  /// Rejects a clearance slot.
+  Future<void> rejectClearance({
+    required String signatureId,
+    required String userId,
+    required String remarks,
+  }) async {
+    await _client.from('activity_card_clearance_signatures').update({
+      'status': 'Rejected',
+      'signed_by_user_id': userId,
+      'signed_at': DateTime.now().toIso8601String(),
+      'remarks': remarks,
+    }).eq('id', signatureId);
+
+    // Get the request ID
+    final signatureResponse = await _client
+        .from('activity_card_clearance_signatures')
+        .select('clearance_request_id')
+        .eq('id', signatureId)
+        .single();
+    
+    final requestId = signatureResponse['clearance_request_id'];
+
+    // Mark the entire request as Rejected
+    await _client.from('activity_card_clearance_requests').update({
+      'status': 'Rejected',
+    }).eq('id', requestId);
+  }
 }

@@ -444,4 +444,9 @@ class ActivityCardRepository {
 
     return cards;
   }
+
+  Future<ActivityCard?> getStudentActivityCardForOrganization(String studentId, String organizationId) async {
+    final cards = await getOrganizationActivityCards(organizationId);
+    return cards.where((c) => c.studentId == studentId).firstOrNull;
+  }
 }

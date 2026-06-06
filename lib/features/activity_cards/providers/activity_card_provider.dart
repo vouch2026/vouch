@@ -31,3 +31,11 @@ final activityCardDetailsProvider = Provider.family<AsyncValue<ActivityCard?>, S
     (cards) => cards.where((c) => c.id == id).firstOrNull,
   );
 });
+
+final reviewActivityCardProvider = FutureProvider.family<ActivityCard?, String>((ref, studentId) async {
+  final managedOrg = ref.watch(managedOrganizationProvider).value;
+  if (managedOrg == null || managedOrg.id == null) return null;
+
+  final repository = ref.watch(activityCardRepositoryProvider);
+  return repository.getStudentActivityCardForOrganization(studentId, managedOrg.id!);
+});

@@ -13,7 +13,12 @@ import '../widgets/signature_workflow_timeline.dart';
 import '../widgets/activity_card_events_table.dart';
 import '../widgets/activity_card_fees_table.dart';
 
-class ActivityCardDetailsPage extends ConsumerWidget {
+import '../../../core/config/supabase_config.dart';
+import '../../academic_structure/providers/term_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../providers/clearance_provider.dart';
+
+class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
 
   const ActivityCardDetailsPage({
@@ -22,8 +27,44 @@ class ActivityCardDetailsPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activityCardAsync = ref.watch(activityCardDetailsProvider(id));
+  ConsumerState<ActivityCardDetailsPage> createState() => _ActivityCardDetailsPageState();
+}
+
+class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPage> {
+  bool _isRequesting = false;
+
+  Future<void> _handleRequestClearance(ActivityCard card) async {
+    final term = ref.read(activeTermProvider).value;
+    if (term == null) return;
+
+    setState(() => _isRequesting = true);
+    try {
+      final repo = ref.read(clearanceRepositoryProvider);
+      await repo.requestClearance(
+        studentId: card.studentId,
+        scopeId: card.organizationId,
+        scopeType: card.organizationType == 'campus-based' ? 'Institutional' 
+                  : (card.organizationType == 'faculty-based' ? 'Faculty' : 'Program'),
+        termId: term.id,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clearance request submitted successfully.')));
+        ref.invalidate(activityCardDetailsProvider(widget.id));
+        ref.invalidate(studentActivityCardsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activityCardAsync = ref.watch(activityCardDetailsProvider(widget.id));
     final allCardsAsync = ref.watch(studentActivityCardsProvider);
 
     return DashboardLayout(
@@ -61,6 +102,9 @@ class ActivityCardDetailsPage extends ConsumerWidget {
             ? AsyncValue.data(currentUserProfile)
             : ref.watch(userProfileByIdProvider(activityCard.studentId));
 
+          final isNotStarted = activityCard.id.startsWith('temp-');
+          final isRejected = activityCard.status == ActivityCardStatus.rejected;
+
           return studentProfileAsync.when(
             data: (studentProfile) {
               return Stack(
@@ -74,6 +118,25 @@ class ActivityCardDetailsPage extends ConsumerWidget {
                           children: [
                             _buildStudentInfo(context, studentProfile, activityCard),
                             const SizedBox(height: AppSpacing.xl),
+                            if (isCurrentUser && (isNotStarted || isRejected)) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 300,
+                                    child: FilledButton.icon(
+                                      onPressed: _isRequesting ? null : () => _handleRequestClearance(activityCard),
+                                      icon: _isRequesting 
+                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                        : const Icon(Icons.send_rounded),
+                                      label: Text(_isRequesting ? 'Submitting...' : (isRejected ? 'Resubmit Clearance Request' : 'Request Clearance')),
+                                      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                            ],
                             LayoutBuilder(
                               builder: (context, constraints) {
                                 final isWide = constraints.maxWidth > 1100;
