@@ -3,12 +3,19 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../activity_cards/models/activity_card_models.dart';
 
 class ComplianceAnalyticsDashboard extends StatelessWidget {
-  const ComplianceAnalyticsDashboard({super.key});
+  final List<ActivityCard> cards;
+
+  const ComplianceAnalyticsDashboard({super.key, required this.cards});
 
   @override
   Widget build(BuildContext context) {
+    if (cards.isEmpty) {
+      return const Center(child: Text('No data available for analytics'));
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -16,14 +23,26 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
         children: [
           _buildKpiGrid(),
           const SizedBox(height: AppSpacing.xl),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: _buildComplianceChart()),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(flex: 2, child: _buildStatusDistribution()),
-            ],
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 800;
+            if (isMobile) {
+              return Column(
+                children: [
+                  _buildComplianceChart(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildStatusDistribution(),
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: _buildComplianceChart()),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(flex: 2, child: _buildStatusDistribution()),
+              ],
+            );
+          }),
           const SizedBox(height: AppSpacing.xl),
           _buildParticipationInsights(),
         ],
@@ -32,44 +51,51 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
   }
 
   Widget _buildKpiGrid() {
+    final overallCompliance = cards.isEmpty ? 0.0 : cards.map((c) => c.completionPercentage).reduce((a, b) => a + b) / cards.length;
+    final pendingSignatures = cards.fold(0, (sum, c) => sum + c.signatures.where((s) => s.status == SignatureStatus.pending).length);
+    final totalEvents = cards.fold(0, (sum, c) => sum + c.events.length);
+    final attendedEvents = cards.fold(0, (sum, c) => sum + c.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length);
+    final attendanceRate = totalEvents == 0 ? 0.0 : attendedEvents / totalEvents;
+    final rejectedCards = cards.where((c) => c.status == ActivityCardStatus.rejected).length;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : 2;
+        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 600 ? 2 : 1);
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: AppSpacing.lg,
           mainAxisSpacing: AppSpacing.lg,
-          childAspectRatio: 2.5,
+          childAspectRatio: constraints.maxWidth > 600 ? 2.5 : 3.5,
           children: [
             _KpiCard(
               title: 'Overall Compliance',
-              value: '84.2%',
+              value: '${(overallCompliance * 100).toStringAsFixed(1)}%',
               icon: Icons.verified_user_rounded,
               color: Colors.green,
-              trend: '+2.4%',
+              trend: 'Based on ${cards.length} students',
             ),
             _KpiCard(
               title: 'Pending Signatures',
-              value: '156',
+              value: '$pendingSignatures',
               icon: Icons.pending_actions_rounded,
               color: Colors.orange,
-              trend: '-12',
+              trend: 'Action required',
             ),
             _KpiCard(
               title: 'Attendance Rate',
-              value: '91%',
+              value: '${(attendanceRate * 100).toStringAsFixed(1)}%',
               icon: Icons.event_available_rounded,
               color: Colors.blue,
-              trend: '+5%',
+              trend: '$attendedEvents/$totalEvents scans',
             ),
             _KpiCard(
               title: 'Rejected Cards',
-              value: '12',
+              value: '$rejectedCards',
               icon: Icons.assignment_return_rounded,
               color: Colors.red,
-              trend: 'Requires Action',
+              trend: 'Requires review',
             ),
           ],
         );
@@ -78,6 +104,17 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
   }
 
   Widget _buildComplianceChart() {
+    // Group students by completion ranges
+    final ranges = [0, 0, 0, 0, 0]; // 0-20, 21-40, 41-60, 61-80, 81-100
+    for (var card in cards) {
+      final p = card.completionPercentage * 100;
+      if (p <= 20) ranges[0]++;
+      else if (p <= 40) ranges[1]++;
+      else if (p <= 60) ranges[2]++;
+      else if (p <= 80) ranges[3]++;
+      else ranges[4]++;
+    }
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -88,12 +125,12 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Clearance Completion Trend', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+          Text('Compliance Distribution', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.xxl),
           SizedBox(
             height: 250,
-            child: LineChart(
-              LineChartData(
+            child: BarChart(
+              BarChartData(
                 gridData: FlGridData(show: false),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -101,9 +138,9 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                        if (value.toInt() < days.length) {
-                          return Text(days[value.toInt()], style: const TextStyle(fontSize: 10, color: Colors.grey));
+                        const labels = ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'];
+                        if (value.toInt() < labels.length) {
+                          return Text(labels[value.toInt()], style: const TextStyle(fontSize: 10, color: Colors.grey));
                         }
                         return const Text('');
                       },
@@ -113,27 +150,17 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
                   topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
                 borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 20),
-                      FlSpot(1, 35),
-                      FlSpot(2, 28),
-                      FlSpot(3, 50),
-                      FlSpot(4, 65),
-                      FlSpot(5, 80),
-                      FlSpot(6, 84),
-                    ],
-                    isCurved: true,
-                    color: AppColors.primary,
-                    barWidth: 4,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.primary.withOpacity(0.1),
+                barGroups: List.generate(ranges.length, (i) => BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: ranges[i].toDouble(),
+                      color: AppColors.primary,
+                      width: 30,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                     ),
-                  ),
-                ],
+                  ],
+                )),
               ),
             ),
           ),
@@ -143,6 +170,12 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
   }
 
   Widget _buildStatusDistribution() {
+    final cleared = cards.where((c) => c.status == ActivityCardStatus.cleared).length;
+    final partiallySigned = cards.where((c) => c.status == ActivityCardStatus.partiallySigned).length;
+    final pending = cards.where((c) => c.status == ActivityCardStatus.pending).length;
+    final rejected = cards.where((c) => c.status == ActivityCardStatus.rejected).length;
+    final total = cards.length;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -162,25 +195,39 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
                 sectionsSpace: 4,
                 centerSpaceRadius: 40,
                 sections: [
-                  PieChartSectionData(value: 65, color: Colors.green, title: '65%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: 20, color: AppColors.primary, title: '20%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: 10, color: Colors.orange, title: '10%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: 5, color: Colors.red, title: '5%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  if (cleared > 0) PieChartSectionData(value: cleared.toDouble(), color: Colors.green, title: '${(cleared/total*100).toInt()}%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  if (partiallySigned > 0) PieChartSectionData(value: partiallySigned.toDouble(), color: AppColors.primary, title: '${(partiallySigned/total*100).toInt()}%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  if (pending > 0) PieChartSectionData(value: pending.toDouble(), color: Colors.orange, title: '${(pending/total*100).toInt()}%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  if (rejected > 0) PieChartSectionData(value: rejected.toDouble(), color: Colors.red, title: '${(rejected/total*100).toInt()}%', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          _StatusLegendItem(label: 'Cleared', color: Colors.green),
-          _StatusLegendItem(label: 'Partially Signed', color: AppColors.primary),
-          _StatusLegendItem(label: 'Pending Requirements', color: Colors.orange),
-          _StatusLegendItem(label: 'Rejected', color: Colors.red),
+          _StatusLegendItem(label: 'Cleared ($cleared)', color: Colors.green),
+          _StatusLegendItem(label: 'Partially Signed ($partiallySigned)', color: AppColors.primary),
+          _StatusLegendItem(label: 'Pending ($pending)', color: Colors.orange),
+          _StatusLegendItem(label: 'Rejected ($rejected)', color: Colors.red),
         ],
       ),
     );
   }
 
   Widget _buildParticipationInsights() {
+    // Map event names to their attendance rates
+    final eventStats = <String, List<bool>>{};
+    for (var card in cards) {
+      for (var event in card.events) {
+        eventStats.putIfAbsent(event.title, () => []).add(event.attendanceStatus == AttendanceStatus.completed);
+      }
+    }
+
+    final insights = eventStats.entries.map((e) {
+      final total = e.value.length;
+      final attended = e.value.where((v) => v).length;
+      return {'label': e.key, 'rate': attended / total};
+    }).toList();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -194,16 +241,29 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
         children: [
           Text('Event Participation Insights', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
-          _ParticipationRow(label: 'General Assembly', rate: 0.95, color: Colors.blue),
-          const Divider(height: 24),
-          _ParticipationRow(label: 'Leadership Seminar', rate: 0.82, color: Colors.purple),
-          const Divider(height: 24),
-          _ParticipationRow(label: 'Tech Workshop', rate: 0.88, color: Colors.orange),
-          const Divider(height: 24),
-          _ParticipationRow(label: 'Community Service', rate: 0.76, color: Colors.green),
+          if (insights.isEmpty) 
+            const Text('No event data available')
+          else
+            ...insights.map((insight) => Column(
+              children: [
+                _ParticipationRow(
+                  label: insight['label'] as String, 
+                  rate: insight['rate'] as double, 
+                  color: _getRateColor(insight['rate'] as double)
+                ),
+                if (insight != insights.last) const Divider(height: 24),
+              ],
+            )),
         ],
       ),
     );
+  }
+
+  Color _getRateColor(double rate) {
+    if (rate >= 0.9) return Colors.green;
+    if (rate >= 0.7) return Colors.blue;
+    if (rate >= 0.5) return Colors.orange;
+    return Colors.red;
   }
 }
 

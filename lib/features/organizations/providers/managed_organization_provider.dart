@@ -10,13 +10,14 @@ final managedOrganizationProvider = FutureProvider.autoDispose<OrganizationModel
 
   final client = SupabaseConfig.client;
   
-  // Find the organization where this user is an active officer
+  // Find the organizations where this user is an active officer
   final response = await client
       .from('organization_members')
       .select('organizations (*)')
       .eq('user_id', userProfile.id!)
       .not('role_id', 'is', null)
       .eq('status', 'active')
+      .limit(1)
       .maybeSingle();
 
   if (response == null || response['organizations'] == null) return null;

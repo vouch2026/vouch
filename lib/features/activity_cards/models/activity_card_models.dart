@@ -25,6 +25,8 @@ enum SignatureStatus {
 class ActivityCard {
   final String id;
   final String studentId;
+  final String? studentName;
+  final String? studentProgram;
   final String organizationId;
   final String organizationName;
   final String? organizationLogo;
@@ -40,6 +42,8 @@ class ActivityCard {
   const ActivityCard({
     required this.id,
     required this.studentId,
+    this.studentName,
+    this.studentProgram,
     required this.organizationId,
     required this.organizationName,
     this.organizationLogo,

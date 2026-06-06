@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/layouts/dashboard_layout.dart';
 import '../../../users/widgets/user_management_header.dart';
 import '../../../activity_cards/models/activity_card_models.dart';
+import '../../../activity_cards/providers/activity_card_provider.dart';
 import '../../widgets/activity_cards/compliance_analytics_dashboard.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../routes/route_paths.dart';
 
-class GovernorActivityCardsPage extends StatefulWidget {
+class GovernorActivityCardsPage extends ConsumerStatefulWidget {
   const GovernorActivityCardsPage({super.key});
 
   @override
-  State<GovernorActivityCardsPage> createState() => _GovernorActivityCardsPageState();
+  ConsumerState<GovernorActivityCardsPage> createState() => _GovernorActivityCardsPageState();
 }
 
-class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> with SingleTickerProviderStateMixin {
+class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCardsPage> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   String _selectedStatus = 'All';
   late TabController _tabController;
@@ -25,6 +27,9 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _searchController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -40,6 +45,8 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 1200;
     final horizontalPadding = isLargeScreen ? AppSpacing.md : AppSpacing.lg;
+
+    final cardsAsync = ref.watch(organizationActivityCardsProvider);
 
     return DashboardLayout(
       title: 'Organization Activity Cards',
@@ -97,20 +104,38 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
         body: TabBarView(
           controller: _tabController,
           children: [
-            _buildClearanceList(context, horizontalPadding),
-            const ComplianceAnalyticsDashboard(),
+            cardsAsync.when(
+              data: (cards) {
+                final query = _searchController.text.toLowerCase();
+                final filteredCards = cards.where((card) {
+                  final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
+                  final matchesStatus = _selectedStatus == 'All' || 
+                      card.status.name.toLowerCase() == _selectedStatus.toLowerCase().replaceAll(' ', '');
+                  return matchesSearch && matchesStatus;
+                }).toList();
+                
+                return _buildClearanceList(context, horizontalPadding, filteredCards);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+            ),
+            cardsAsync.when(
+              data: (cards) => ComplianceAnalyticsDashboard(cards: cards),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildClearanceList(BuildContext context, double horizontalPadding) {
+  Widget _buildClearanceList(BuildContext context, double horizontalPadding, List<ActivityCard> cards) {
     return Column(
       children: [
         _buildFilters(horizontalPadding),
         const SizedBox(height: AppSpacing.lg),
-        Expanded(child: _buildStudentsTable(horizontalPadding)),
+        Expanded(child: _buildStudentsTable(horizontalPadding, cards)),
       ],
     );
   }
@@ -167,7 +192,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
     );
   }
 
-  Widget _buildStudentsTable(double horizontalPadding) {
+  Widget _buildStudentsTable(double horizontalPadding, List<ActivityCard> cards) {
     return Card(
       margin: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, AppSpacing.lg),
       elevation: 0,
@@ -197,12 +222,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
                     DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
-                  rows: [
-                    _buildDataRow('Juan Dela Cruz', 'BSIT', '2/3', '2/2', 0.75, ActivityCardStatus.partiallySigned),
-                    _buildDataRow('Maria Santos', 'BSCS', '3/3', '2/2', 1.0, ActivityCardStatus.cleared),
-                    _buildDataRow('Michael Chen', 'BSIT', '1/3', '0/1', 0.40, ActivityCardStatus.pending),
-                    _buildDataRow('Sarah Johnson', 'BSCS', '3/3', '1/1', 0.90, ActivityCardStatus.partiallySigned),
-                  ],
+                  rows: cards.map((card) => _buildDataRow(card)).toList(),
                 ),
               ),
             ),
@@ -212,7 +232,18 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
     );
   }
 
-  DataRow _buildDataRow(String name, String program, String events, String fees, double completion, ActivityCardStatus status) {
+  DataRow _buildDataRow(ActivityCard card) {
+    final name = card.studentName ?? 'Unknown Student';
+    final program = card.studentProgram ?? 'N/A';
+    
+    final totalEvents = card.events.length;
+    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
+    final eventsDisplay = '$completedEvents/$totalEvents';
+    
+    final totalFees = card.fees.length;
+    final paidFees = card.fees.where((f) => f.isPaid).length;
+    final feesDisplay = '$paidFees/$totalFees';
+
     return DataRow(
       cells: [
         DataCell(
@@ -234,7 +265,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
             children: [
               const Icon(Icons.event_available_rounded, size: 14, color: Colors.grey),
               const SizedBox(width: 4),
-              Text(events, style: const TextStyle(fontSize: 11)),
+              Text(eventsDisplay, style: const TextStyle(fontSize: 11)),
             ],
           ),
         ),
@@ -243,7 +274,7 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
             children: [
               const Icon(Icons.payments_rounded, size: 14, color: Colors.grey),
               const SizedBox(width: 4),
-              Text(fees, style: const TextStyle(fontSize: 11)),
+              Text(feesDisplay, style: const TextStyle(fontSize: 11)),
             ],
           ),
         ),
@@ -253,22 +284,22 @@ class _GovernorActivityCardsPageState extends State<GovernorActivityCardsPage> w
               SizedBox(
                 width: 60,
                 child: LinearProgressIndicator(
-                  value: completion,
+                  value: card.completionPercentage,
                   backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(_getCompletionColor(completion)),
+                  valueColor: AlwaysStoppedAnimation<Color>(_getCompletionColor(card.completionPercentage)),
                   minHeight: 4,
                 ),
               ),
               const SizedBox(width: 8),
-              Text('${(completion * 100).toInt()}%', style: TextStyle(fontSize: 11, color: _getCompletionColor(completion), fontWeight: FontWeight.bold)),
+              Text('${(card.completionPercentage * 100).toInt()}%', style: TextStyle(fontSize: 11, color: _getCompletionColor(card.completionPercentage), fontWeight: FontWeight.bold)),
             ],
           ),
         ),
-        DataCell(_buildStatusBadge(status)),
+        DataCell(_buildStatusBadge(card.status)),
         DataCell(
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onPressed: () => context.push('${RoutePaths.workspaceActivityCards}/student-123'),
+            onPressed: () => context.push('${RoutePaths.workspaceActivityCards}/${card.studentId}'),
           ),
         ),
       ],
