@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../../../core/enums/attendance_mode.dart';
 
 part 'event_model.freezed.dart';
 part 'event_model.g.dart';
@@ -29,6 +30,46 @@ class EventModel with _$EventModel {
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
+
+  DateTime _parseTime(String timeStr, DateTime date) {
+    final parts = timeStr.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  AttendanceMode get currentAttendanceMode {
+    final now = DateTime.now();
+    
+    // Check if it's the correct date
+    final today = DateTime(now.year, now.month, now.day);
+    final eDate = DateTime(eventDate.year, eventDate.month, eventDate.day);
+    
+    if (!today.isAtSameMomentAs(eDate)) {
+      return AttendanceMode.closed;
+    }
+
+    try {
+      final timeInStartDT = _parseTime(timeInStart, eDate);
+      final timeInEndDT = _parseTime(timeInEnd, eDate);
+      final timeOutStartDT = _parseTime(timeOutStart, eDate);
+      final timeOutEndDT = _parseTime(timeOutEnd, eDate);
+
+      if ((now.isAfter(timeInStartDT) || now.isAtSameMomentAs(timeInStartDT)) && 
+          (now.isBefore(timeInEndDT) || now.isAtSameMomentAs(timeInEndDT))) {
+        return AttendanceMode.timeIn;
+      }
+      
+      if ((now.isAfter(timeOutStartDT) || now.isAtSameMomentAs(timeOutStartDT)) && 
+          (now.isBefore(timeOutEndDT) || now.isAtSameMomentAs(timeOutEndDT))) {
+        return AttendanceMode.timeOut;
+      }
+    } catch (_) {
+      // If parsing fails, fall back to closed
+    }
+
+    return AttendanceMode.closed;
+  }
 
   bool get isPastTimeout {
     final now = DateTime.now();

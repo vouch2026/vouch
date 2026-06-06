@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,11 +7,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
+import '../../../core/enums/attendance_mode.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../events/models/event_model.dart';
-import '../repositories/attendance_repository.dart';
 import '../providers/attendance_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/qr_scan_ui_model.dart';
@@ -22,7 +19,6 @@ import 'qr_recent_scan_card.dart';
 import 'qr_scanner_card.dart';
 import 'qr_section_header.dart';
 import 'qr_count_chip.dart';
-import '../../../core/utils/time_formatter.dart';
 import '../views/attendance_history_page.dart';
 
 class EventScannerScreen extends ConsumerStatefulWidget {
@@ -109,19 +105,25 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   Future<void> _handleScan(BarcodeCapture capture) async {
     if (!_isScanning) return;
 
+    final mode = widget.event.currentAttendanceMode;
+    if (mode == AttendanceMode.closed) {
+      _showError('Scanning is currently closed for this event.');
+      return;
+    }
+
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
       final String? rawValue = barcode.rawValue;
       if (rawValue != null) {
         setState(() => _isScanning = false);
         _controller.stop();
-        _showActionModal(rawValue);
+        _showActionModal(rawValue, mode);
         break;
       }
     }
   }
 
-  void _showActionModal(String rawValue) {
+  void _showActionModal(String rawValue, AttendanceMode mode) {
     final payload = QrPayload.fromRawValue(rawValue);
 
     showDialog(
@@ -129,9 +131,10 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       barrierDismissible: false,
       builder: (context) => _VerificationModal(
         payload: payload,
-        onAction: (isTimeIn) async {
+        mode: mode,
+        onConfirm: () async {
           Navigator.pop(context);
-          await _processAttendance(payload, isTimeIn);
+          await _processAttendance(payload, mode == AttendanceMode.timeIn);
         },
         onReject: () {
           Navigator.pop(context);
@@ -462,9 +465,6 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                       child: QrCurrentEventCard(
                         event: widget.event,
-                        isTimeInActive: true,
-                        onRecordTimeIn: () {},
-                        onRecordTimeOut: () {},
                       ),
                     ),
                   ),
@@ -539,10 +539,17 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                 Expanded(
                   child: QrScannerCard(
                     scannerController: _controller,
-                    onCodeDetected: (val) => _showActionModal(val),
+                    onCodeDetected: (val) {
+                      final mode = widget.event.currentAttendanceMode;
+                      if (mode == AttendanceMode.closed) {
+                        _showError('Scanning is currently closed for this event.');
+                        return;
+                      }
+                      _showActionModal(val, mode);
+                    },
                     onRetryTap: () => _resumeScanning(),
                     isProcessing: !_isScanning,
-                    scanModeLabel: 'Auto-detecting QR Codes',
+                    scanModeLabel: 'Mode: ${widget.event.currentAttendanceMode.label}',
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -558,9 +565,6 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
               children: [
                 QrCurrentEventCard(
                   event: widget.event,
-                  isTimeInActive: true,
-                  onRecordTimeIn: () {},
-                  onRecordTimeOut: () {},
                 ),
                 const SizedBox(height: 24),
                 Expanded(
@@ -718,6 +722,9 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   }
 
   Widget _buildScannerStatusIndicator() {
+    final mode = widget.event.currentAttendanceMode;
+    final isClosed = mode == AttendanceMode.closed;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -725,9 +732,11 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: _isScanning 
-                ? const Color(0xFF2E7D32).withOpacity(0.85) 
-                : const Color(0xFFC62828).withOpacity(0.85),
+            color: isClosed
+                ? const Color(0xFFC62828).withOpacity(0.85)
+                : _isScanning
+                    ? const Color(0xFF2E7D32).withOpacity(0.85)
+                    : const Color(0xFFC62828).withOpacity(0.85),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -740,8 +749,17 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                _isScanning ? 'LIVE' : 'PAUSED',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                isClosed
+                    ? 'CLOSED'
+                    : _isScanning
+                        ? 'LIVE: ${mode.label.toUpperCase()}'
+                        : 'PAUSED',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
               ),
             ],
           ),
@@ -815,12 +833,14 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
 class _VerificationModal extends StatelessWidget {
   final QrPayload payload;
-  final Function(bool) onAction;
+  final AttendanceMode mode;
+  final VoidCallback onConfirm;
   final VoidCallback onReject;
 
   const _VerificationModal({
     required this.payload,
-    required this.onAction,
+    required this.mode,
+    required this.onConfirm,
     required this.onReject,
   });
 
@@ -957,41 +977,45 @@ class _VerificationModal extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: isSmallScreen ? 20 : 28),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Select Attendance Mode',
-                        style: GoogleFonts.poppins(
-                          fontSize: isSmallScreen ? 13 : 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: (mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828)).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: (mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828)).withOpacity(0.2),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Improved Mode Selector
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildModeOption(
-                            label: 'Time In',
-                            icon: LucideIcons.logIn,
-                            color: const Color(0xFF2E7D32),
-                            onTap: () => onAction(true),
-                            isSmallScreen: isSmallScreen,
+                      child: Row(
+                        children: [
+                          Icon(
+                            mode == AttendanceMode.timeIn ? LucideIcons.logIn : LucideIcons.logOut,
+                            color: mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildModeOption(
-                            label: 'Time Out',
-                            icon: LucideIcons.logOut,
-                            color: const Color(0xFFC62828),
-                            onTap: () => onAction(false),
-                            isSmallScreen: isSmallScreen,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Recording ${mode.label}',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    color: mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                                  ),
+                                ),
+                                Text(
+                                  'Automatically determined by system time',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1005,63 +1029,55 @@ class _VerificationModal extends StatelessWidget {
                 isSmallScreen ? 16 : 24, 
                 isSmallScreen ? 16 : 24,
               ),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: onReject,
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onConfirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Confirm Attendance',
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 14 : 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                    side: BorderSide(
-                      color: Colors.grey.shade300,
-                    ),
-                    foregroundColor: Colors.black87,
                   ),
-                  child: Text(
-                    'Reject / Cancel',
-                    style: GoogleFonts.poppins(
-                      fontSize: isSmallScreen ? 14 : 15,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: onReject,
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        side: BorderSide(
+                          color: Colors.grey.shade300,
+                        ),
+                        foregroundColor: Colors.black87,
+                      ),
+                      child: Text(
+                        'Reject / Cancel',
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 14 : 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModeOption({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    required bool isSmallScreen,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: isSmallScreen ? 24 : 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: isSmallScreen ? 13 : 14,
+                ],
               ),
             ),
           ],
