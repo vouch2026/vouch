@@ -216,6 +216,7 @@ type VARCHAR(50) DEFAULT 'campus-based',
 campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
 faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
 program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
+requires_adviser_signature BOOLEAN DEFAULT false,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -232,6 +233,7 @@ status VARCHAR(20) DEFAULT 'active', -- active, expired, pending, removed, archi
 assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+auto_sign_clearance BOOLEAN DEFAULT false,
 UNIQUE(organization_id, user_id, academic_term_id)
 );
 

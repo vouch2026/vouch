@@ -15,7 +15,7 @@ final studentActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) as
   if (userProfile == null || userProfile.id == null) return [];
   
   final repository = ref.watch(activityCardRepositoryProvider);
-  return repository.getStudentActivityCards(userProfile.id!);
+  return repository.getStudentActivityCards(userProfile.id as String);
 });
 
 final organizationActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) async {

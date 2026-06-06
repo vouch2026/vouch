@@ -40,6 +40,8 @@ mixin _$OrganizationModel {
   @JsonKey(name: 'program_id')
   String? get programId => throw _privateConstructorUsedError;
   int get memberCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'requires_adviser_signature')
+  bool get requiresAdviserSignature => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
@@ -75,6 +77,7 @@ abstract class $OrganizationModelCopyWith<$Res> {
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,
     int memberCount,
+    @JsonKey(name: 'requires_adviser_signature') bool requiresAdviserSignature,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
@@ -108,6 +111,7 @@ class _$OrganizationModelCopyWithImpl<$Res, $Val extends OrganizationModel>
     Object? facultyId = freezed,
     Object? programId = freezed,
     Object? memberCount = null,
+    Object? requiresAdviserSignature = null,
     Object? createdAt = freezed,
   }) {
     return _then(
@@ -168,6 +172,10 @@ class _$OrganizationModelCopyWithImpl<$Res, $Val extends OrganizationModel>
                 ? _value.memberCount
                 : memberCount // ignore: cast_nullable_to_non_nullable
                       as int,
+            requiresAdviserSignature: null == requiresAdviserSignature
+                ? _value.requiresAdviserSignature
+                : requiresAdviserSignature // ignore: cast_nullable_to_non_nullable
+                      as bool,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -202,6 +210,7 @@ abstract class _$$OrganizationModelImplCopyWith<$Res>
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,
     int memberCount,
+    @JsonKey(name: 'requires_adviser_signature') bool requiresAdviserSignature,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
@@ -234,6 +243,7 @@ class __$$OrganizationModelImplCopyWithImpl<$Res>
     Object? facultyId = freezed,
     Object? programId = freezed,
     Object? memberCount = null,
+    Object? requiresAdviserSignature = null,
     Object? createdAt = freezed,
   }) {
     return _then(
@@ -294,6 +304,10 @@ class __$$OrganizationModelImplCopyWithImpl<$Res>
             ? _value.memberCount
             : memberCount // ignore: cast_nullable_to_non_nullable
                   as int,
+        requiresAdviserSignature: null == requiresAdviserSignature
+            ? _value.requiresAdviserSignature
+            : requiresAdviserSignature // ignore: cast_nullable_to_non_nullable
+                  as bool,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -321,6 +335,8 @@ class _$OrganizationModelImpl implements _OrganizationModel {
     @JsonKey(name: 'faculty_id') this.facultyId,
     @JsonKey(name: 'program_id') this.programId,
     this.memberCount = 0,
+    @JsonKey(name: 'requires_adviser_signature')
+    this.requiresAdviserSignature = false,
     @JsonKey(name: 'created_at') this.createdAt,
   });
 
@@ -364,12 +380,15 @@ class _$OrganizationModelImpl implements _OrganizationModel {
   @JsonKey()
   final int memberCount;
   @override
+  @JsonKey(name: 'requires_adviser_signature')
+  final bool requiresAdviserSignature;
+  @override
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
 
   @override
   String toString() {
-    return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, createdAt: $createdAt)';
+    return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, requiresAdviserSignature: $requiresAdviserSignature, createdAt: $createdAt)';
   }
 
   @override
@@ -399,6 +418,11 @@ class _$OrganizationModelImpl implements _OrganizationModel {
                 other.programId == programId) &&
             (identical(other.memberCount, memberCount) ||
                 other.memberCount == memberCount) &&
+            (identical(
+                  other.requiresAdviserSignature,
+                  requiresAdviserSignature,
+                ) ||
+                other.requiresAdviserSignature == requiresAdviserSignature) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -421,6 +445,7 @@ class _$OrganizationModelImpl implements _OrganizationModel {
     facultyId,
     programId,
     memberCount,
+    requiresAdviserSignature,
     createdAt,
   );
 
@@ -457,6 +482,8 @@ abstract class _OrganizationModel implements OrganizationModel {
     @JsonKey(name: 'faculty_id') final String? facultyId,
     @JsonKey(name: 'program_id') final String? programId,
     final int memberCount,
+    @JsonKey(name: 'requires_adviser_signature')
+    final bool requiresAdviserSignature,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
   }) = _$OrganizationModelImpl;
 
@@ -496,6 +523,9 @@ abstract class _OrganizationModel implements OrganizationModel {
   String? get programId;
   @override
   int get memberCount;
+  @override
+  @JsonKey(name: 'requires_adviser_signature')
+  bool get requiresAdviserSignature;
   @override
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;

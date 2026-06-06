@@ -23,6 +23,8 @@ _$OrganizationModelImpl _$$OrganizationModelImplFromJson(
   facultyId: json['faculty_id'] as String?,
   programId: json['program_id'] as String?,
   memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+  requiresAdviserSignature:
+      json['requires_adviser_signature'] as bool? ?? false,
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
@@ -45,5 +47,6 @@ Map<String, dynamic> _$$OrganizationModelImplToJson(
   'faculty_id': instance.facultyId,
   'program_id': instance.programId,
   'memberCount': instance.memberCount,
+  'requires_adviser_signature': instance.requiresAdviserSignature,
   'created_at': instance.createdAt?.toIso8601String(),
 };

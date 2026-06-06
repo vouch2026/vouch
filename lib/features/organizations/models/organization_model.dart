@@ -20,6 +20,7 @@ class OrganizationModel with _$OrganizationModel {
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,
     @Default(0) int memberCount,
+    @JsonKey(name: 'requires_adviser_signature') @Default(false) bool requiresAdviserSignature,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _OrganizationModel;
 

@@ -17,6 +17,7 @@ class OrganizationMembershipModel with _$OrganizationMembershipModel {
     @JsonKey(name: 'assigned_at') DateTime? assignedAt,
     @JsonKey(name: 'expired_at') DateTime? expiredAt,
     @JsonKey(name: 'joined_at') DateTime? joinedAt,
+    @JsonKey(name: 'auto_sign_clearance') @Default(false) bool autoSignClearance,
     
     // Join fields for UI
     UserModel? user,

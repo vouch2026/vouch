@@ -37,6 +37,7 @@ class ActivityCard {
   final double completionPercentage;
   final List<ActivityCardEvent> events;
   final List<ActivityCardFee> fees;
+  final List<ActivityCardSanction> sanctions;
   final List<ActivityCardSignature> signatures;
 
   const ActivityCard({
@@ -54,7 +55,22 @@ class ActivityCard {
     required this.completionPercentage,
     required this.events,
     required this.fees,
+    required this.sanctions,
     required this.signatures,
+  });
+}
+
+class ActivityCardSanction {
+  final String id;
+  final String description;
+  final bool isFulfilled;
+  final DateTime? fulfilledAt;
+
+  const ActivityCardSanction({
+    required this.id,
+    required this.description,
+    required this.isFulfilled,
+    this.fulfilledAt,
   });
 }
 

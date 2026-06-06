@@ -77,6 +77,12 @@ class ActivityCardRepository {
           .eq('academic_term_id', termId)
           .eq('payments.student_id', studentId),
       _client
+          .from('student_sanction_records')
+          .select()
+          .filter('scope_id', 'in', scopeIds.toList())
+          .eq('academic_term_id', termId)
+          .eq('student_id', studentId),
+      _client
           .from('activity_card_clearance_requests')
           .select('''
             *,
@@ -94,7 +100,8 @@ class ActivityCardRepository {
 
     final allEvents = results[0] as List;
     final allFees = results[1] as List;
-    final allClearanceRequests = results[2] as List;
+    final allSanctions = results[2] as List;
+    final allClearanceRequests = results[3] as List;
 
     List<ActivityCard> cards = [];
 
@@ -118,6 +125,7 @@ class ActivityCardRepository {
       // Filter bulk results for this organization's scope
       final eventsResponse = allEvents.where((e) => e['scope_id'] == scopeId).toList();
       final feesResponse = allFees.where((f) => f['scope_id'] == scopeId).toList();
+      final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == scopeId).toList();
       final clearanceResponse = allClearanceRequests.where((c) => c['scope_id'] == scopeId).firstOrNull;
 
       // Map to models
@@ -150,6 +158,15 @@ class ActivityCardRepository {
         );
       }).toList();
 
+      final List<ActivityCardSanction> sanctions = sanctionsResponse.map((s) {
+        return ActivityCardSanction(
+          id: s['id'],
+          description: s['required_item'],
+          isFulfilled: s['status'] == 'Item Received',
+          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
+        );
+      }).toList();
+
       final List<ActivityCardSignature> signatures = [];
       if (clearanceResponse != null && clearanceResponse['signatures'] != null) {
         for (var i = 0; i < (clearanceResponse['signatures'] as List).length; i++) {
@@ -169,9 +186,10 @@ class ActivityCardRepository {
       // Calculate completion
       final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
       final paidFees = fees.where((f) => f.isPaid).length;
-      final totalItems = events.length + fees.length;
+      final fulfilledSanctions = sanctions.where((s) => s.isFulfilled).length;
+      final totalItems = events.length + fees.length + sanctions.length;
       final completionPercentage = totalItems > 0 
-        ? (completedEvents + paidFees) / totalItems 
+        ? (completedEvents + paidFees + fulfilledSanctions) / totalItems 
         : 0.0;
 
       cards.add(ActivityCard(
@@ -187,6 +205,7 @@ class ActivityCardRepository {
         completionPercentage: completionPercentage,
         events: events,
         fees: fees,
+        sanctions: sanctions,
         signatures: signatures,
       ));
     }
@@ -305,6 +324,12 @@ class ActivityCardRepository {
           .filter('fee_id', 'in', feesResponse.map((f) => f['id']).toList())
           .eq('status', 'Paid'),
       _client
+          .from('student_sanction_records')
+          .select()
+          .filter('student_id', 'in', studentIds)
+          .eq('scope_id', scopeId)
+          .eq('academic_term_id', termId),
+      _client
           .from('activity_card_clearance_requests')
           .select('''
             *,
@@ -321,7 +346,8 @@ class ActivityCardRepository {
     final bulkResults = await Future.wait(futures);
     final allAttendance = bulkResults[0] as List;
     final allPayments = bulkResults[1] as List;
-    final allClearances = bulkResults[2] as List;
+    final allSanctions = bulkResults[2] as List;
+    final allClearances = bulkResults[3] as List;
 
     // 6. Assemble the ActivityCard objects for each student
     List<ActivityCard> cards = [];
@@ -334,6 +360,7 @@ class ActivityCardRepository {
 
       final studentAttendance = allAttendance.where((a) => a['student_id'] == studentId).toList();
       final studentPayments = allPayments.where((p) => p['student_id'] == studentId).toList();
+      final studentSanctions = allSanctions.where((s) => s['student_id'] == studentId).toList();
       final studentClearance = allClearances.where((c) => c['student_id'] == studentId).firstOrNull;
 
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
@@ -363,6 +390,15 @@ class ActivityCardRepository {
         );
       }).toList();
 
+      final List<ActivityCardSanction> sanctions = studentSanctions.map((s) {
+        return ActivityCardSanction(
+          id: s['id'],
+          description: s['required_item'],
+          isFulfilled: s['status'] == 'Item Received',
+          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
+        );
+      }).toList();
+
       final List<ActivityCardSignature> signatures = [];
       if (studentClearance != null && studentClearance['signatures'] != null) {
         final sigList = studentClearance['signatures'] as List;
@@ -382,8 +418,9 @@ class ActivityCardRepository {
 
       final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
       final paidFees = fees.where((f) => f.isPaid).length;
-      final totalItems = events.length + fees.length;
-      final completionPercentage = totalItems > 0 ? (completedEvents + paidFees) / totalItems : 0.0;
+      final fulfilledSanctions = sanctions.where((s) => s.isFulfilled).length;
+      final totalItems = events.length + fees.length + sanctions.length;
+      final completionPercentage = totalItems > 0 ? (completedEvents + paidFees + fulfilledSanctions) / totalItems : 0.0;
 
       cards.add(ActivityCard(
         id: studentClearance?['id'] ?? 'temp-$studentId',
@@ -400,6 +437,7 @@ class ActivityCardRepository {
         completionPercentage: completionPercentage,
         events: events,
         fees: fees,
+        sanctions: sanctions,
         signatures: signatures,
       ));
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -23,6 +24,7 @@ class ActivityCardDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activityCardAsync = ref.watch(activityCardDetailsProvider(id));
+    final allCardsAsync = ref.watch(studentActivityCardsProvider);
 
     return DashboardLayout(
       title: 'Activity Card Details',
@@ -30,6 +32,27 @@ class ActivityCardDetailsPage extends ConsumerWidget {
         data: (activityCard) {
           if (activityCard == null) {
             return const Center(child: Text('Activity Card not found'));
+          }
+
+          // Hierarchy Check
+          bool isLocked = false;
+          String lockReason = '';
+          
+          if (allCardsAsync.hasValue) {
+            final allCards = allCardsAsync.value!;
+            if (activityCard.organizationType == 'faculty-based') {
+              final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
+              if (programCard != null && programCard.status != ActivityCardStatus.cleared) {
+                isLocked = true;
+                lockReason = 'You must clear your Program Activity Card (e.g. ${programCard.organizationName}) first.';
+              }
+            } else if (activityCard.organizationType == 'campus-based') {
+              final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
+              if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared) {
+                isLocked = true;
+                lockReason = 'You must clear your Faculty Activity Card (e.g. ${facultyCard.organizationName}) first.';
+              }
+            }
           }
 
           final currentUserProfile = ref.watch(userProfileProvider).value;
@@ -40,48 +63,94 @@ class ActivityCardDetailsPage extends ConsumerWidget {
 
           return studentProfileAsync.when(
             data: (studentProfile) {
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1400),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStudentInfo(context, studentProfile, activityCard),
-                        const SizedBox(height: AppSpacing.xl),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isWide = constraints.maxWidth > 1100;
-                            if (isWide) {
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
-                                  Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
-                                ],
-                              );
-                            } else {
-                              return Column(
-                                children: [
-                                  ActivityCardEventsTable(events: activityCard.events),
-                                  const SizedBox(height: AppSpacing.xxl),
-                                  ActivityCardFeesTable(fees: activityCard.fees),
-                                ],
-                              );
-                            }
-                          },
+              return Stack(
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1400),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildStudentInfo(context, studentProfile, activityCard),
+                            const SizedBox(height: AppSpacing.xl),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isWide = constraints.maxWidth > 1100;
+                                if (isWide) {
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
+                                      Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
+                                    ],
+                                  );
+                                } else {
+                                  return Column(
+                                    children: [
+                                      ActivityCardEventsTable(events: activityCard.events),
+                                      const SizedBox(height: AppSpacing.xxl),
+                                      ActivityCardFeesTable(fees: activityCard.fees),
+                                      if (activityCard.sanctions.isNotEmpty) ...[
+                                        const SizedBox(height: AppSpacing.xxl),
+                                        _buildSanctionsTable(activityCard.sanctions),
+                                      ],
+                                    ],
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.xxl),
+                            Center(
+                              child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                            ),
+                            const SizedBox(height: AppSpacing.xxl),
+                            _buildOrganizationInfo(activityCard),
+                            const SizedBox(height: AppSpacing.xxl),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        Center(
-                          child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
-                        ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        _buildOrganizationInfo(activityCard),
-                        const SizedBox(height: AppSpacing.xxl),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  if (isLocked)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.white.withOpacity(0.9),
+                        child: Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 400),
+                            padding: const EdgeInsets.all(AppSpacing.xxl),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 40),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.lock_rounded, size: 80, color: AppColors.error),
+                                const SizedBox(height: AppSpacing.xl),
+                                Text('CARD LOCKED', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.error)),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  lockReason,
+                                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: AppSpacing.xl),
+                                OutlinedButton(
+                                  onPressed: () => context.pop(),
+                                  child: const Text('Back to Dashboard'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -159,6 +228,10 @@ class ActivityCardDetailsPage extends ConsumerWidget {
     final totalFees = card.fees.length;
     final isFeesMet = paidFees == totalFees && totalFees > 0;
 
+    final fulfilledSanctions = card.sanctions.where((s) => s.isFulfilled).length;
+    final totalSanctions = card.sanctions.length;
+    final isSanctionsMet = fulfilledSanctions == totalSanctions;
+
     return Row(
       children: [
         _ComplianceItem(
@@ -172,6 +245,14 @@ class ActivityCardDetailsPage extends ConsumerWidget {
           value: isFeesMet ? 'Paid' : '$paidFees/$totalFees',
           isMet: isFeesMet,
         ),
+        if (totalSanctions > 0) ...[
+          const SizedBox(width: AppSpacing.lg),
+          _ComplianceItem(
+            label: 'Sanctions',
+            value: isSanctionsMet ? 'Fulfilled' : '$fulfilledSanctions/$totalSanctions',
+            isMet: isSanctionsMet,
+          ),
+        ],
       ],
     );
   }
@@ -216,6 +297,33 @@ class ActivityCardDetailsPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSanctionsTable(List<ActivityCardSanction> sanctions) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ABSENCE SANCTIONS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[600], letterSpacing: 1.2)),
+            const SizedBox(height: AppSpacing.lg),
+            ...sanctions.map((s) => ListTile(
+              leading: Icon(s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
+                           color: s.isFulfilled ? AppColors.success : AppColors.warning),
+              title: Text(s.description, style: const TextStyle(fontWeight: FontWeight.bold)),
+              trailing: Text(s.isFulfilled ? 'Fulfilled' : 'Pending', 
+                            style: TextStyle(color: s.isFulfilled ? AppColors.success : AppColors.warning, fontWeight: FontWeight.bold)),
+            )),
+          ],
+        ),
       ),
     );
   }

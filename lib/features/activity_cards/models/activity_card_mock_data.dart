@@ -66,6 +66,7 @@ class ActivityCardMockData {
           referenceNumber: 'REF-67890',
         ),
       ],
+      sanctions: [],
       signatures: [
         ActivityCardSignature(
           id: 'acs-1',
@@ -139,6 +140,7 @@ class ActivityCardMockData {
           isPaid: false,
         ),
       ],
+      sanctions: [],
       signatures: [
         ActivityCardSignature(
           id: 'acs-usc-1',

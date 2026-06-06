@@ -24,6 +24,7 @@ _$OrganizationMembershipModelImpl _$$OrganizationMembershipModelImplFromJson(
   joinedAt: json['joined_at'] == null
       ? null
       : DateTime.parse(json['joined_at'] as String),
+  autoSignClearance: json['auto_sign_clearance'] as bool? ?? false,
   user: json['user'] == null
       ? null
       : UserModel.fromJson(json['user'] as Map<String, dynamic>),
@@ -51,6 +52,7 @@ Map<String, dynamic> _$$OrganizationMembershipModelImplToJson(
   'assigned_at': instance.assignedAt?.toIso8601String(),
   'expired_at': instance.expiredAt?.toIso8601String(),
   'joined_at': instance.joinedAt?.toIso8601String(),
+  'auto_sign_clearance': instance.autoSignClearance,
   'user': instance.user,
   'term': instance.term,
   'role_name': instance.roleName,
