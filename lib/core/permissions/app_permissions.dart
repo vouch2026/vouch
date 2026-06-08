@@ -43,4 +43,11 @@ class AppPermissions {
   static const String manageAcademicTerms = 'manage_academic_terms';
   static const String manageFaculties = 'manage_faculties';
   static const String managePrograms = 'manage_programs';
+
+  // Sanctions
+  static const String viewSanctions = 'view_sanctions';
+  static const String createSanctionRules = 'create_sanction_rules';
+  static const String editSanctionRules = 'edit_sanction_rules';
+  static const String deleteSanctionRules = 'delete_sanction_rules';
+  static const String receiveSanctionItems = 'receive_sanction_items';
 }

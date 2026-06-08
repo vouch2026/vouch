@@ -402,7 +402,8 @@ required_item VARCHAR(255) NOT NULL,
 status sanction_status DEFAULT 'Pending Item',
 received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, 
 received_at TIMESTAMP WITH TIME ZONE,
-updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+UNIQUE(student_id, scope_id, academic_term_id)
 );
 
 CREATE TRIGGER update_sanctions_updated_at BEFORE UPDATE ON student_sanction_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -1046,7 +1047,9 @@ INSERT INTO permissions (action) VALUES
 ('sign_faculty_clearance'), ('sign_program_clearance'), ('sign_comselec_clearance'), 
 ('reject_clearance'), ('view_clearance_dashboard'), ('create_sanction_rules'),
 ('edit_sanction_rules'), ('delete_sanction_rules'), ('receive_sanction_items'),
-('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
+('view_sanctions'),
+('manage_elections'),
+ ('view_election_analytics'), ('view_program_analytics'),
 ('view_faculty_analytics'), ('view_analytics'), ('manage_activity_cards'), ('view_activity_cards'),
 ('create_announcement'), ('edit_announcement'), ('delete_announcement'), ('view_announcements'),
 ('view_members'), ('view_officers'), ('manage_organization'), ('view_documents')
@@ -1060,7 +1063,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards')
+WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 7. MAP PERMISSIONS FOR OFFICERS (Governor, Treasurer, etc.)
@@ -1071,7 +1074,8 @@ AND p.action IN (
     'create_event', 'edit_event', 'delete_event', 'view_events', 'scan_event_attendance', 'override_attendance', 
     'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'view_clearance_dashboard', 'reject_clearance', 
     'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 'delete_announcement', 
-    'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents'
+    'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents',
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
@@ -1090,7 +1094,8 @@ SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Secretary', 'Assistant Secretary') 
 AND p.action IN (
     'create_event', 'edit_event', 'view_events', 'scan_event_attendance', 'create_announcement', 
-    'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization'
+    'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization',
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

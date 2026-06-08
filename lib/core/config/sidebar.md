@@ -14,6 +14,7 @@ This document outlines the visibility requirements for the Organization Workspac
 - **Finance**: Requires `view_fees`, `create_fee`, OR `manage_collections`.
 - **Announcements**: Standard for all members (Requires `view_announcements`).
 - **Activity Cards**: Available to all members (Requires `view_activity_cards` for personal view OR `manage_activity_cards` for officer management).
+- **Sanctions**: Requires `view_sanctions` for personal view OR `create_sanction_rules` / `receive_sanction_items` for officer management.
 
 ---
 
@@ -21,19 +22,19 @@ This document outlines the visibility requirements for the Organization Workspac
 
 ### Governor / President
 - **Permissions**: Full workspace management.
-- **Visible Items**: Dashboard, Members, Officers, Events, Activity Cards (Manage), Announcements, Fees, Collections, Reports, Organization Settings.
+- **Visible Items**: Dashboard, Members, Officers, Events, Activity Cards (Manage), Announcements, Sanctions (Manage), Fees, Collections, Reports, Organization Settings.
 
 ### Treasurer
 - **Permissions**: `view_fees`, `create_fee`, `manage_collections`, `manage_activity_cards`, `view_analytics`.
 - **Visible Items**: Dashboard, Finance (Fees, Collections, Financial Reports), Activity Cards (Manage), Insights (Collection Analytics), Finance Settings.
 
 ### Secretary
-- **Permissions**: `view_members`, `view_events`, `scan_event_attendance`, `view_announcements`, `manage_activity_cards`, `view_documents`.
-- **Visible Items**: Dashboard, Members, Events, Attendance, Activity Cards (Manage), Announcements, Records (Documents, Meeting Minutes), Insights (Participation Reports), Secretary Settings.
+- **Permissions**: `view_members`, `view_events`, `scan_event_attendance`, `view_announcements`, `manage_activity_cards`, `create_sanction_rules`, `receive_sanction_items`, `view_documents`.
+- **Visible Items**: Dashboard, Members, Events, Attendance, Activity Cards (Manage), Announcements, Sanctions (Manage), Records (Documents, Meeting Minutes), Insights (Participation Reports), Secretary Settings.
 
 ### Member / Student
-- **Permissions**: `view_events`, `view_announcements`, `view_fees`, `view_activity_cards`.
-- **Visible Items**: Dashboard, Events, Activity Cards (Personal), Announcements, My Records (Attendance, Fees).
+- **Permissions**: `view_events`, `view_announcements`, `view_fees`, `view_activity_cards`, `view_sanctions`.
+- **Visible Items**: Dashboard, Events, Activity Cards (Personal), Announcements, Sanctions (Personal), My Records (Attendance, Fees).
 
 ---
 

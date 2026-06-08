@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import 'package:vouch_v2/shared/widgets/loading_overlay.dart';
 import '../repositories/sanction_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/permissions/app_permissions.dart';
+import '../providers/sanction_provider.dart';
 
 class SanctionRulesPage extends ConsumerStatefulWidget {
   const SanctionRulesPage({super.key});
@@ -122,28 +123,31 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    final canManageRules = activeRole?.hasPermission(AppPermissions.createSanctionRules) ?? false;
+    final canSync = activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false;
+
     return LoadingOverlay(
       isLoading: _isSyncing,
-      child: DashboardLayout(
-        title: 'Sanction Rules Configuration',
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Absence Sanctions', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      const Text('Define items students must donate based on their number of absences.', style: TextStyle(color: AppColors.textGrey)),
-                    ],
-                  ),
-                  Row(
-                    children: [
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Absence Sanctions', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    const Text('Define items students must donate based on their number of absences.', style: TextStyle(color: AppColors.textGrey)),
+                  ],
+                ),
+                Row(
+                  children: [
+                    if (canSync)
                       OutlinedButton.icon(
                         onPressed: () async {
                           final workspace = ref.read(workspaceProvider);
@@ -163,7 +167,8 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                               scopeType = 'Program';
                             }
                             
-                            await SanctionRepository(_client).generateSanctionsForTerm(term.id, scopeId!, scopeType);
+                            await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, scopeId!, scopeType);
+                            ref.invalidate(workspaceSanctionsProvider);
                             
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sanction records synchronized successfully.')));
@@ -181,6 +186,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                         icon: const Icon(Icons.sync_rounded),
                         label: const Text('Sync Sanctions'),
                       ),
+                    if (canManageRules) ...[
                       const SizedBox(width: AppSpacing.md),
                       FilledButton.icon(
                         onPressed: _showAddRuleDialog,
@@ -188,68 +194,68 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                         label: const Text('Add Rule'),
                       ),
                     ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Expanded(
-                child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _fetchRules(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    final rules = snapshot.data ?? [];
-                    if (rules.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.rule_folder_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
-                            const SizedBox(height: AppSpacing.md),
-                            const Text('No sanction rules defined yet.', style: TextStyle(color: AppColors.textGrey)),
-                          ],
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _fetchRules(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  final rules = snapshot.data ?? [];
+                  if (rules.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.rule_folder_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
+                          const SizedBox(height: AppSpacing.md),
+                          const Text('No sanction rules defined yet.', style: TextStyle(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    itemCount: rules.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      final rule = rules[index];
+                      return Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: AppColors.border),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            child: Text(rule['absence_count'].toString(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text('${rule['absence_count']} Absences', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(rule['item_description']),
+                          trailing: canManageRules ? IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                            onPressed: () async {
+                              await _client.from('sanction_rules').delete().eq('id', rule['id']);
+                              setState(() {});
+                            },
+                          ) : null,
                         ),
                       );
-                    }
-
-                    return ListView.separated(
-                      itemCount: rules.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final rule = rules[index];
-                        return Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: AppColors.border),
-                          ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.primary.withOpacity(0.1),
-                              child: Text(rule['absence_count'].toString(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                            ),
-                            title: Text('${rule['absence_count']} Absences', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text(rule['item_description']),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
-                              onPressed: () async {
-                                await _client.from('sanction_rules').delete().eq('id', rule['id']);
-                                setState(() {});
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                    },
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

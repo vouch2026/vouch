@@ -1,9 +1,56 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/sanction_model.dart';
 
 class SanctionRepository {
   final SupabaseClient _client;
 
   SanctionRepository(this._client);
+
+  /// Fetches all sanction records for a specific workspace (scope) and term.
+  Future<List<SanctionModel>> getWorkspaceSanctions(String scopeId, String termId) async {
+    final response = await _client
+        .from('student_sanction_records')
+        .select('''
+          *,
+          student:users!student_id (first_name, last_name),
+          received_by:users!received_by_user_id (first_name, last_name)
+        ''')
+        .eq('scope_id', scopeId)
+        .eq('academic_term_id', termId)
+        .order('updated_at', ascending: false);
+    
+    return (response as List).map((json) {
+      final student = json['student'];
+      final receivedBy = json['received_by'];
+      return SanctionModel.fromJson({
+        ...json,
+        'student_name': student != null ? '${student['first_name']} ${student['last_name']}' : 'Unknown Student',
+        'received_by_name': receivedBy != null ? '${receivedBy['first_name']} ${receivedBy['last_name']}' : null,
+      });
+    }).toList();
+  }
+
+  /// Fetches personal sanction records for a student in a specific workspace and term.
+  Future<List<SanctionModel>> getMySanctions(String studentId, String scopeId, String termId) async {
+    final response = await _client
+        .from('student_sanction_records')
+        .select('''
+          *,
+          received_by:users!received_by_user_id (first_name, last_name)
+        ''')
+        .eq('student_id', studentId)
+        .eq('scope_id', scopeId)
+        .eq('academic_term_id', termId)
+        .order('updated_at', ascending: false);
+    
+    return (response as List).map((json) {
+      final receivedBy = json['received_by'];
+      return SanctionModel.fromJson({
+        ...json,
+        'received_by_name': receivedBy != null ? '${receivedBy['first_name']} ${receivedBy['last_name']}' : null,
+      });
+    }).toList();
+  }
 
   /// Auto-generates sanction records for students with absences in mandatory events.
   Future<void> generateSanctionsForTerm(String termId, String scopeId, String scopeType) async {
@@ -69,11 +116,11 @@ class SanctionRepository {
 
     if (sanctionRecords.isNotEmpty) {
       // Upsert to avoid duplicates for the same student/scope/term
-      // Note: The schema doesn't have a unique constraint on (student_id, scope_id, academic_term_id) 
-      // but we should probably avoid duplicate pending sanctions.
-      for (var record in sanctionRecords) {
-         await _client.from('student_sanction_records').upsert(record, onConflict: 'student_id, scope_id, academic_term_id');
-      }
+      // Using student_id, scope_id, academic_term_id as the conflict target
+      await _client.from('student_sanction_records').upsert(
+        sanctionRecords, 
+        onConflict: 'student_id, scope_id, academic_term_id'
+      );
     }
   }
 

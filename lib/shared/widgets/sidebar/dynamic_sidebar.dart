@@ -122,7 +122,10 @@ class DynamicSidebar extends ConsumerWidget {
                         AppPermissions.manageActivityCards,
                         AppPermissions.viewActivityCards,
                         AppPermissions.viewAnnouncements,
-                        AppPermissions.createAnnouncement
+                        AppPermissions.createAnnouncement,
+                        AppPermissions.viewSanctions,
+                        AppPermissions.createSanctionRules,
+                        AppPermissions.receiveSanctionItems
                       ]) ?? false) ...[
                         const _SidebarHeader(label: 'OPERATIONS'),
                         if (activeRole?.hasAnyPermission([AppPermissions.viewEvents, AppPermissions.createEvent]) ?? false)
@@ -150,6 +153,12 @@ class DynamicSidebar extends ConsumerWidget {
                             icon: Icons.campaign_outlined,
                             label: 'Announcements',
                             path: RoutePaths.workspaceAnnouncements,
+                          ),
+                        if (activeRole?.hasAnyPermission([AppPermissions.viewSanctions, AppPermissions.createSanctionRules, AppPermissions.receiveSanctionItems]) ?? false)
+                          const _SidebarItem(
+                            icon: Icons.gavel_rounded,
+                            label: 'Sanctions',
+                            path: RoutePaths.workspaceSanctions,
                           ),
                         if (activeRole?.hasPermission(AppPermissions.viewDocuments) ?? false)
                           const _SidebarItem(

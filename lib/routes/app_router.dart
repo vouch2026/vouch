@@ -41,6 +41,7 @@ import '../features/governor/views/governor_collections_page.dart';
 import '../features/governor/views/governor_settings_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
+import '../features/sanctions/views/sanction_redirector.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 
@@ -351,7 +352,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.workspaceSanctions,
         name: RouteNames.workspaceSanctions,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Sanctions'),
+        builder: (context, state) => const SanctionRedirector(),
       ),
       GoRoute(
         path: RoutePaths.workspaceParticipation,

@@ -76,7 +76,7 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
           roleName: 'Member',
           hierarchyLevel: 5,
           scopeType: org.type,
-          permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance'],
+          permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
         );
       }
 
