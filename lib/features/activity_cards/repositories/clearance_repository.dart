@@ -13,7 +13,7 @@ class ClearanceRepository {
     }
 
     if (scopeType == 'Faculty') {
-      // Check if student has a Program clearance cleared for this term
+      // 1. Check if student has a Program clearance cleared for this term
       final clearanceResponse = await _client
           .from('activity_card_clearance_requests')
           .select('status')
@@ -24,11 +24,25 @@ class ClearanceRepository {
           .limit(1)
           .maybeSingle();
       
-      return clearanceResponse != null;
+      if (clearanceResponse != null) return true;
+
+      // 2. Check if student is an officer of any program-based organization for this term
+      // Officers are exempt from needing a clearance card for their own level
+      final officerResponse = await _client
+          .from('organization_members')
+          .select('id, roles!inner(hierarchy_level), organizations!inner(type)')
+          .eq('user_id', studentId)
+          .eq('academic_term_id', termId)
+          .eq('organizations.type', 'program-based')
+          .gt('roles.hierarchy_level', 5)
+          .limit(1)
+          .maybeSingle();
+
+      return officerResponse != null;
     }
 
     if (scopeType == 'Institutional') {
-      // Check if student has a Faculty clearance cleared for this term
+      // 1. Check if student has a Faculty clearance cleared for this term
       final clearanceResponse = await _client
           .from('activity_card_clearance_requests')
           .select('status')
@@ -39,7 +53,20 @@ class ClearanceRepository {
           .limit(1)
           .maybeSingle();
       
-      return clearanceResponse != null;
+      if (clearanceResponse != null) return true;
+
+      // 2. Check if student is an officer of any faculty-based organization for this term
+      final officerResponse = await _client
+          .from('organization_members')
+          .select('id, roles!inner(hierarchy_level), organizations!inner(type)')
+          .eq('user_id', studentId)
+          .eq('academic_term_id', termId)
+          .eq('organizations.type', 'faculty-based')
+          .gt('roles.hierarchy_level', 5)
+          .limit(1)
+          .maybeSingle();
+
+      return officerResponse != null;
     }
 
     return false;

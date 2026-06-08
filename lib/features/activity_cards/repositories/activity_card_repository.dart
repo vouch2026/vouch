@@ -24,7 +24,7 @@ class ActivityCardRepository {
     // 2. Get student's organizations
     final orgMembersResponse = await _client
         .from('organization_members')
-        .select('organization_id, organizations(*)')
+        .select('organization_id, organizations(*), roles(hierarchy_level)')
         .eq('user_id', studentId)
         .eq('status', 'active');
     
@@ -114,6 +114,10 @@ class ActivityCardRepository {
       final orgName = org['name'];
       final orgLogo = org['logo_url'];
       final orgType = org['type'];
+
+      final roleData = member['roles'];
+      final hierarchyLevel = roleData?['hierarchy_level'] ?? 5;
+      final isOfficer = (hierarchyLevel as num) > 5;
 
       // Determine scope for events/fees
       String? scopeId = org['campus_id'];
@@ -209,6 +213,7 @@ class ActivityCardRepository {
         academicYear: academicYear,
         semester: semester,
         status: _mapClearanceStatus(clearanceResponse?['status']),
+        isOfficer: isOfficer,
         completionPercentage: completionPercentage,
         events: events,
         fees: fees,
@@ -288,6 +293,7 @@ class ActivityCardRepository {
         .from('organization_members')
         .select('''
           user_id,
+          roles(hierarchy_level),
           student:users (
             id,
             first_name,
@@ -364,6 +370,10 @@ class ActivityCardRepository {
       final studentId = student['id'];
       final studentName = '${student['first_name']} ${student['last_name']}';
       final programName = student['program']?['name'] ?? 'N/A';
+
+      final roleData = member['roles'];
+      final hierarchyLevel = roleData?['hierarchy_level'] ?? 5;
+      final isOfficer = (hierarchyLevel as num) > 5;
 
       final studentAttendance = allAttendance.where((a) => a['student_id'] == studentId).toList();
       final studentPayments = allPayments.where((p) => p['student_id'] == studentId).toList();
@@ -444,6 +454,7 @@ class ActivityCardRepository {
         academicYear: academicYear,
         semester: semester,
         status: _mapClearanceStatus(studentClearance?['status']),
+        isOfficer: isOfficer,
         completionPercentage: completionPercentage,
         events: events,
         fees: fees,

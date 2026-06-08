@@ -34,6 +34,7 @@ class ActivityCard {
   final String academicYear;
   final String semester;
   final ActivityCardStatus status;
+  final bool isOfficer;
   final double completionPercentage;
   final List<ActivityCardEvent> events;
   final List<ActivityCardFee> fees;
@@ -52,6 +53,7 @@ class ActivityCard {
     required this.academicYear,
     required this.semester,
     required this.status,
+    this.isOfficer = false,
     required this.completionPercentage,
     required this.events,
     required this.fees,

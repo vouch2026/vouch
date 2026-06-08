@@ -86,13 +86,15 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
             final allCards = allCardsAsync.value!;
             if (activityCard.organizationType == 'faculty-based') {
               final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
-              if (programCard != null && programCard.status != ActivityCardStatus.cleared) {
+              // Officers are exempt from needing a clearance card for their own level
+              if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
                 isLocked = true;
                 lockReason = 'You must clear your Program Activity Card (e.g. ${programCard.organizationName}) first.';
               }
             } else if (activityCard.organizationType == 'campus-based') {
               final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
-              if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared) {
+              // Officers are exempt from needing a clearance card for their own level
+              if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
                 isLocked = true;
                 lockReason = 'You must clear your Faculty Activity Card (e.g. ${facultyCard.organizationName}) first.';
               }
