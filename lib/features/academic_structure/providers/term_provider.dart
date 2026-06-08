@@ -17,6 +17,7 @@ final activeTermProvider = FutureProvider<AcademicTermModel?>((ref) async {
       .from('academic_terms')
       .select()
       .eq('is_active', true)
+      .limit(1)
       .maybeSingle();
   
   if (response == null) return null;

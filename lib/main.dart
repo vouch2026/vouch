@@ -30,7 +30,7 @@ class VouchApp extends ConsumerWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp.router(
-          title: 'VOUCH',
+          title: 'Vouch App',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           routerConfig: router,

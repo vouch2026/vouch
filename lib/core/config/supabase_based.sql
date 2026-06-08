@@ -216,6 +216,7 @@ type VARCHAR(50) DEFAULT 'campus-based',
 campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
 faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
 program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
+requires_adviser_signature BOOLEAN DEFAULT false,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -232,6 +233,7 @@ status VARCHAR(20) DEFAULT 'active', -- active, expired, pending, removed, archi
 assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+auto_sign_clearance BOOLEAN DEFAULT false,
 UNIQUE(organization_id, user_id, academic_term_id)
 );
 
@@ -400,7 +402,8 @@ required_item VARCHAR(255) NOT NULL,
 status sanction_status DEFAULT 'Pending Item',
 received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, 
 received_at TIMESTAMP WITH TIME ZONE,
-updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+UNIQUE(student_id, scope_id, academic_term_id)
 );
 
 CREATE TRIGGER update_sanctions_updated_at BEFORE UPDATE ON student_sanction_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -413,6 +416,7 @@ CREATE INDEX idx_student_sanctions_student_id ON student_sanction_records(studen
 CREATE TABLE activity_card_clearance_requests (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,
 academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT, 
@@ -427,6 +431,7 @@ BEFORE UPDATE ON activity_card_clearance_requests
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_clearance_requests_student_id ON activity_card_clearance_requests(student_id);
+ALTER TABLE activity_card_clearance_requests ADD CONSTRAINT unique_student_clearance_per_term UNIQUE (student_id, organization_id, academic_term_id);
 
 CREATE TABLE activity_card_clearance_signatures (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -465,6 +470,10 @@ ALTER TABLE student_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_sanction_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_card_clearance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_card_clearance_signatures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_receiver ENABLE ROW LEVEL SECURITY;
+ALTER TABLE governance_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_ratings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sanction_rules ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
 -- HELPER FUNCTIONS FOR RBAC
@@ -481,6 +490,11 @@ AND ur.is_active = true
 );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.get_my_id()
+RETURNS UUID AS $$
+    SELECT id FROM public.users WHERE auth_id = auth.uid();
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.has_scope_permission(
     p_action TEXT,
@@ -595,6 +609,68 @@ USING (public.has_scope_permission('delete_fee', fees.scope_type, fees.scope_id)
 CREATE POLICY "Payment receivers are viewable by everyone" ON payment_receiver FOR SELECT USING (true);
 CREATE POLICY "Officers can manage payment receivers" ON payment_receiver FOR ALL TO authenticated
 USING (public.has_scope_permission('manage_payment_receivers', payment_receiver.scope_type, payment_receiver.scope_id));
+
+-- Attendance
+CREATE POLICY "Students can view their own attendance" ON student_attendance FOR SELECT 
+USING (student_id = public.get_my_id());
+CREATE POLICY "Officers can view attendance in their scope" ON student_attendance FOR SELECT 
+USING (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('view_events', e.scope_type, e.scope_id)));
+CREATE POLICY "Officers can scan attendance" ON student_attendance FOR INSERT TO authenticated
+WITH CHECK (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('scan_event_attendance', e.scope_type, e.scope_id)));
+CREATE POLICY "Officers can override attendance" ON student_attendance FOR UPDATE TO authenticated
+USING (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('override_attendance', e.scope_type, e.scope_id)));
+
+-- Payments
+CREATE POLICY "Students can view their own payments" ON student_payments FOR SELECT 
+USING (student_id = public.get_my_id());
+CREATE POLICY "Officers can view payments in their scope" ON student_payments FOR SELECT 
+USING (EXISTS (SELECT 1 FROM fees f WHERE f.id = fee_id AND public.has_scope_permission('view_fees', f.scope_type, f.scope_id)));
+CREATE POLICY "Students can submit payments" ON student_payments FOR INSERT TO authenticated
+WITH CHECK (student_id = public.get_my_id());
+CREATE POLICY "Officers can verify payments" ON student_payments FOR UPDATE TO authenticated
+USING (EXISTS (SELECT 1 FROM fees f WHERE f.id = fee_id AND public.has_scope_permission('verify_payment', f.scope_type, f.scope_id)));
+
+-- Sanction Records
+CREATE POLICY "Students can view their own sanctions" ON student_sanction_records FOR SELECT 
+USING (student_id = public.get_my_id());
+CREATE POLICY "Officers can view sanctions in their scope" ON student_sanction_records FOR SELECT 
+USING (public.has_scope_permission('view_activity_cards', scope_type, scope_id));
+CREATE POLICY "Officers can manage sanctions" ON student_sanction_records FOR ALL TO authenticated
+USING (public.has_scope_permission('receive_sanction_items', scope_type, scope_id));
+
+-- Clearance Requests
+CREATE POLICY "Students can view their own clearance requests" ON activity_card_clearance_requests FOR SELECT 
+USING (student_id = public.get_my_id());
+CREATE POLICY "Officers can view clearance requests for their organization" ON activity_card_clearance_requests FOR SELECT 
+USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = activity_card_clearance_requests.organization_id AND om.role_id IS NOT NULL));
+CREATE POLICY "Students can request clearance" ON activity_card_clearance_requests FOR INSERT TO authenticated
+WITH CHECK (student_id = public.get_my_id());
+CREATE POLICY "Officers can update clearance status" ON activity_card_clearance_requests FOR UPDATE TO authenticated
+USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = activity_card_clearance_requests.organization_id AND om.role_id IS NOT NULL));
+
+-- Clearance Signatures
+CREATE POLICY "Users can view signatures for their own requests" ON activity_card_clearance_signatures FOR SELECT 
+USING (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND (r.student_id = public.get_my_id() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = r.organization_id AND om.role_id IS NOT NULL))));
+CREATE POLICY "Students can insert signatures for their own requests" ON activity_card_clearance_signatures FOR INSERT TO authenticated
+WITH CHECK (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id()));
+CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
+USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id = required_role_id AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)));
+
+-- Ratings
+CREATE POLICY "Ratings are viewable by everyone" ON event_ratings FOR SELECT USING (true);
+CREATE POLICY "Users can rate events" ON event_ratings FOR INSERT TO authenticated
+WITH CHECK (user_id = public.get_my_id());
+CREATE POLICY "Users can update their own ratings" ON event_ratings FOR UPDATE TO authenticated
+USING (user_id = public.get_my_id());
+
+-- Sanction Rules
+CREATE POLICY "Sanction rules are viewable by everyone" ON sanction_rules FOR SELECT USING (true);
+CREATE POLICY "Officers can manage sanction rules" ON sanction_rules FOR ALL TO authenticated
+USING (public.has_scope_permission('create_sanction_rules', scope_type, scope_id));
+
+-- Audit Logs
+CREATE POLICY "Audit logs are viewable by officers" ON governance_audit_logs FOR SELECT TO authenticated
+USING (public.is_super_admin() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL));
 
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES
@@ -971,7 +1047,9 @@ INSERT INTO permissions (action) VALUES
 ('sign_faculty_clearance'), ('sign_program_clearance'), ('sign_comselec_clearance'), 
 ('reject_clearance'), ('view_clearance_dashboard'), ('create_sanction_rules'),
 ('edit_sanction_rules'), ('delete_sanction_rules'), ('receive_sanction_items'),
-('manage_elections'), ('view_election_analytics'), ('view_program_analytics'),
+('view_sanctions'),
+('manage_elections'),
+ ('view_election_analytics'), ('view_program_analytics'),
 ('view_faculty_analytics'), ('view_analytics'), ('manage_activity_cards'), ('view_activity_cards'),
 ('create_announcement'), ('edit_announcement'), ('delete_announcement'), ('view_announcements'),
 ('view_members'), ('view_officers'), ('manage_organization'), ('view_documents')
@@ -985,7 +1063,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards')
+WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 7. MAP PERMISSIONS FOR OFFICERS (Governor, Treasurer, etc.)
@@ -996,7 +1074,8 @@ AND p.action IN (
     'create_event', 'edit_event', 'delete_event', 'view_events', 'scan_event_attendance', 'override_attendance', 
     'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'view_clearance_dashboard', 'reject_clearance', 
     'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 'delete_announcement', 
-    'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents'
+    'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents',
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
@@ -1015,7 +1094,8 @@ SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Secretary', 'Assistant Secretary') 
 AND p.action IN (
     'create_event', 'edit_event', 'view_events', 'scan_event_attendance', 'create_announcement', 
-    'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization'
+    'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization',
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

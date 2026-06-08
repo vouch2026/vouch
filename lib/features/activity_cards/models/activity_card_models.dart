@@ -25,6 +25,8 @@ enum SignatureStatus {
 class ActivityCard {
   final String id;
   final String studentId;
+  final String? studentName;
+  final String? studentProgram;
   final String organizationId;
   final String organizationName;
   final String? organizationLogo;
@@ -32,14 +34,18 @@ class ActivityCard {
   final String academicYear;
   final String semester;
   final ActivityCardStatus status;
+  final bool isOfficer;
   final double completionPercentage;
   final List<ActivityCardEvent> events;
   final List<ActivityCardFee> fees;
+  final List<ActivityCardSanction> sanctions;
   final List<ActivityCardSignature> signatures;
 
   const ActivityCard({
     required this.id,
     required this.studentId,
+    this.studentName,
+    this.studentProgram,
     required this.organizationId,
     required this.organizationName,
     this.organizationLogo,
@@ -47,10 +53,26 @@ class ActivityCard {
     required this.academicYear,
     required this.semester,
     required this.status,
+    this.isOfficer = false,
     required this.completionPercentage,
     required this.events,
     required this.fees,
+    required this.sanctions,
     required this.signatures,
+  });
+}
+
+class ActivityCardSanction {
+  final String id;
+  final String description;
+  final bool isFulfilled;
+  final DateTime? fulfilledAt;
+
+  const ActivityCardSanction({
+    required this.id,
+    required this.description,
+    required this.isFulfilled,
+    this.fulfilledAt,
   });
 }
 

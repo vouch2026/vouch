@@ -3,6 +3,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/activity_card_models.dart';
 import '../repositories/activity_card_repository.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 final activityCardRepositoryProvider = Provider<ActivityCardRepository>((ref) {
   return ActivityCardRepository(SupabaseConfig.client);
@@ -13,11 +14,29 @@ final studentActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) as
   if (userProfile == null || userProfile.id == null) return [];
   
   final repository = ref.watch(activityCardRepositoryProvider);
-  return repository.getStudentActivityCards(userProfile.id!);
+  return repository.getStudentActivityCards(userProfile.id as String);
+});
+
+final organizationActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) async {
+  final workspace = ref.watch(workspaceProvider);
+  final selectedOrg = workspace.selectedOrganization;
+  if (selectedOrg == null || selectedOrg.id == null) return [];
+
+  final repository = ref.watch(activityCardRepositoryProvider);
+  return repository.getOrganizationActivityCards(selectedOrg.id);
 });
 
 final activityCardDetailsProvider = Provider.family<AsyncValue<ActivityCard?>, String>((ref, id) {
   return ref.watch(studentActivityCardsProvider).whenData(
     (cards) => cards.where((c) => c.id == id).firstOrNull,
   );
+});
+
+final reviewActivityCardProvider = FutureProvider.family<ActivityCard?, String>((ref, studentId) async {
+  final workspace = ref.watch(workspaceProvider);
+  final selectedOrg = workspace.selectedOrganization;
+  if (selectedOrg == null || selectedOrg.id == null) return null;
+
+  final repository = ref.watch(activityCardRepositoryProvider);
+  return repository.getStudentActivityCardForOrganization(studentId, selectedOrg.id!);
 });

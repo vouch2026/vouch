@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -12,7 +13,12 @@ import '../widgets/signature_workflow_timeline.dart';
 import '../widgets/activity_card_events_table.dart';
 import '../widgets/activity_card_fees_table.dart';
 
-class ActivityCardDetailsPage extends ConsumerWidget {
+import '../../../core/config/supabase_config.dart';
+import '../../academic_structure/providers/term_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../providers/clearance_provider.dart';
+
+class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
 
   const ActivityCardDetailsPage({
@@ -21,8 +27,48 @@ class ActivityCardDetailsPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activityCardAsync = ref.watch(activityCardDetailsProvider(id));
+  ConsumerState<ActivityCardDetailsPage> createState() => _ActivityCardDetailsPageState();
+}
+
+class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPage> {
+  bool _isRequesting = false;
+
+  Future<void> _handleRequestClearance(ActivityCard card) async {
+    final term = ref.read(activeTermProvider).value;
+    final currentUserProfile = ref.read(userProfileProvider).value;
+    if (term == null || currentUserProfile == null) return;
+
+    setState(() => _isRequesting = true);
+    try {
+      final repo = ref.read(clearanceRepositoryProvider);
+      await repo.requestClearance(
+        studentId: card.studentId,
+        organizationId: card.organizationId,
+        scopeId: card.organizationType == 'campus-based' ? currentUserProfile!.campusId! 
+                : (card.organizationType == 'faculty-based' ? currentUserProfile!.facultyId! : currentUserProfile!.programId!),
+        scopeType: card.organizationType == 'campus-based' ? 'Institutional' 
+                  : (card.organizationType == 'faculty-based' ? 'Faculty' : 'Program'),
+        termId: term.id,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clearance request submitted successfully.')));
+        ref.invalidate(activityCardDetailsProvider(widget.id));
+        ref.invalidate(studentActivityCardsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activityCardAsync = ref.watch(activityCardDetailsProvider(widget.id));
+    final allCardsAsync = ref.watch(studentActivityCardsProvider);
 
     return DashboardLayout(
       title: 'Activity Card Details',
@@ -32,56 +78,147 @@ class ActivityCardDetailsPage extends ConsumerWidget {
             return const Center(child: Text('Activity Card not found'));
           }
 
+          // Hierarchy Check
+          bool isLocked = false;
+          String lockReason = '';
+          
+          if (allCardsAsync.hasValue) {
+            final allCards = allCardsAsync.value!;
+            if (activityCard.organizationType == 'faculty-based') {
+              final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
+              // Officers are exempt from needing a clearance card for their own level
+              if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
+                isLocked = true;
+                lockReason = 'You must clear your Program Activity Card (e.g. ${programCard.organizationName}) first.';
+              }
+            } else if (activityCard.organizationType == 'campus-based') {
+              final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
+              // Officers are exempt from needing a clearance card for their own level
+              if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
+                isLocked = true;
+                lockReason = 'You must clear your Faculty Activity Card (e.g. ${facultyCard.organizationName}) first.';
+              }
+            }
+          }
+
           final currentUserProfile = ref.watch(userProfileProvider).value;
           final isCurrentUser = currentUserProfile?.id == activityCard.studentId;
           final studentProfileAsync = isCurrentUser 
             ? AsyncValue.data(currentUserProfile)
             : ref.watch(userProfileByIdProvider(activityCard.studentId));
 
+          final isNotStarted = activityCard.id.startsWith('temp-');
+          final isRejected = activityCard.status == ActivityCardStatus.rejected;
+
           return studentProfileAsync.when(
             data: (studentProfile) {
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1400),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStudentInfo(context, studentProfile, activityCard),
-                        const SizedBox(height: AppSpacing.xl),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isWide = constraints.maxWidth > 1100;
-                            if (isWide) {
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
-                                  Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
-                                ],
-                              );
-                            } else {
-                              return Column(
-                                children: [
-                                  ActivityCardEventsTable(events: activityCard.events),
-                                  const SizedBox(height: AppSpacing.xxl),
-                                  ActivityCardFeesTable(fees: activityCard.fees),
-                                ],
-                              );
-                            }
-                          },
+              return Stack(
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1400),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildStudentInfo(context, studentProfile, activityCard),
+                            const SizedBox(height: AppSpacing.xl),
+                            if (isCurrentUser && (isNotStarted || isRejected)) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 300,
+                                    child: FilledButton.icon(
+                                      onPressed: _isRequesting ? null : () => _handleRequestClearance(activityCard),
+                                      icon: _isRequesting 
+                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                        : const Icon(Icons.send_rounded),
+                                      label: Text(_isRequesting ? 'Submitting...' : (isRejected ? 'Resubmit Clearance Request' : 'Request Clearance')),
+                                      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                            ],
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isWide = constraints.maxWidth > 1100;
+                                if (isWide) {
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
+                                      Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
+                                    ],
+                                  );
+                                } else {
+                                  return Column(
+                                    children: [
+                                      ActivityCardEventsTable(events: activityCard.events),
+                                      const SizedBox(height: AppSpacing.xxl),
+                                      ActivityCardFeesTable(fees: activityCard.fees),
+                                      if (activityCard.sanctions.isNotEmpty) ...[
+                                        const SizedBox(height: AppSpacing.xxl),
+                                        _buildSanctionsTable(activityCard.sanctions),
+                                      ],
+                                    ],
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.xxl),
+                            Center(
+                              child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                            ),
+                            const SizedBox(height: AppSpacing.xxl),
+                            _buildOrganizationInfo(activityCard),
+                            const SizedBox(height: AppSpacing.xxl),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        Center(
-                          child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
-                        ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        _buildOrganizationInfo(activityCard),
-                        const SizedBox(height: AppSpacing.xxl),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  if (isLocked)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.white.withOpacity(0.9),
+                        child: Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 400),
+                            padding: const EdgeInsets.all(AppSpacing.xxl),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 40),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.lock_rounded, size: 80, color: AppColors.error),
+                                const SizedBox(height: AppSpacing.xl),
+                                Text('CARD LOCKED', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.error)),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  lockReason,
+                                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: AppSpacing.xl),
+                                OutlinedButton(
+                                  onPressed: () => context.pop(),
+                                  child: const Text('Back to Dashboard'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -159,6 +296,10 @@ class ActivityCardDetailsPage extends ConsumerWidget {
     final totalFees = card.fees.length;
     final isFeesMet = paidFees == totalFees && totalFees > 0;
 
+    final fulfilledSanctions = card.sanctions.where((s) => s.isFulfilled).length;
+    final totalSanctions = card.sanctions.length;
+    final isSanctionsMet = fulfilledSanctions == totalSanctions;
+
     return Row(
       children: [
         _ComplianceItem(
@@ -172,6 +313,14 @@ class ActivityCardDetailsPage extends ConsumerWidget {
           value: isFeesMet ? 'Paid' : '$paidFees/$totalFees',
           isMet: isFeesMet,
         ),
+        if (totalSanctions > 0) ...[
+          const SizedBox(width: AppSpacing.lg),
+          _ComplianceItem(
+            label: 'Sanctions',
+            value: isSanctionsMet ? 'Fulfilled' : '$fulfilledSanctions/$totalSanctions',
+            isMet: isSanctionsMet,
+          ),
+        ],
       ],
     );
   }
@@ -216,6 +365,33 @@ class ActivityCardDetailsPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSanctionsTable(List<ActivityCardSanction> sanctions) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ABSENCE SANCTIONS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[600], letterSpacing: 1.2)),
+            const SizedBox(height: AppSpacing.lg),
+            ...sanctions.map((s) => ListTile(
+              leading: Icon(s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
+                           color: s.isFulfilled ? AppColors.success : AppColors.warning),
+              title: Text(s.description, style: const TextStyle(fontWeight: FontWeight.bold)),
+              trailing: Text(s.isFulfilled ? 'Fulfilled' : 'Pending', 
+                            style: TextStyle(color: s.isFulfilled ? AppColors.success : AppColors.warning, fontWeight: FontWeight.bold)),
+            )),
+          ],
+        ),
       ),
     );
   }

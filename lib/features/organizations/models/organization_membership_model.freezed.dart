@@ -38,7 +38,9 @@ mixin _$OrganizationMembershipModel {
   @JsonKey(name: 'expired_at')
   DateTime? get expiredAt => throw _privateConstructorUsedError;
   @JsonKey(name: 'joined_at')
-  DateTime? get joinedAt => throw _privateConstructorUsedError; // Join fields for UI
+  DateTime? get joinedAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'auto_sign_clearance')
+  bool get autoSignClearance => throw _privateConstructorUsedError; // Join fields for UI
   UserModel? get user => throw _privateConstructorUsedError;
   AcademicTermModel? get term => throw _privateConstructorUsedError;
   @JsonKey(name: 'role_name')
@@ -78,6 +80,7 @@ abstract class $OrganizationMembershipModelCopyWith<$Res> {
     @JsonKey(name: 'assigned_at') DateTime? assignedAt,
     @JsonKey(name: 'expired_at') DateTime? expiredAt,
     @JsonKey(name: 'joined_at') DateTime? joinedAt,
+    @JsonKey(name: 'auto_sign_clearance') bool autoSignClearance,
     UserModel? user,
     AcademicTermModel? term,
     @JsonKey(name: 'role_name') String? roleName,
@@ -116,6 +119,7 @@ class _$OrganizationMembershipModelCopyWithImpl<
     Object? assignedAt = freezed,
     Object? expiredAt = freezed,
     Object? joinedAt = freezed,
+    Object? autoSignClearance = null,
     Object? user = freezed,
     Object? term = freezed,
     Object? roleName = freezed,
@@ -160,6 +164,10 @@ class _$OrganizationMembershipModelCopyWithImpl<
                 ? _value.joinedAt
                 : joinedAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            autoSignClearance: null == autoSignClearance
+                ? _value.autoSignClearance
+                : autoSignClearance // ignore: cast_nullable_to_non_nullable
+                      as bool,
             user: freezed == user
                 ? _value.user
                 : user // ignore: cast_nullable_to_non_nullable
@@ -233,6 +241,7 @@ abstract class _$$OrganizationMembershipModelImplCopyWith<$Res>
     @JsonKey(name: 'assigned_at') DateTime? assignedAt,
     @JsonKey(name: 'expired_at') DateTime? expiredAt,
     @JsonKey(name: 'joined_at') DateTime? joinedAt,
+    @JsonKey(name: 'auto_sign_clearance') bool autoSignClearance,
     UserModel? user,
     AcademicTermModel? term,
     @JsonKey(name: 'role_name') String? roleName,
@@ -273,6 +282,7 @@ class __$$OrganizationMembershipModelImplCopyWithImpl<$Res>
     Object? assignedAt = freezed,
     Object? expiredAt = freezed,
     Object? joinedAt = freezed,
+    Object? autoSignClearance = null,
     Object? user = freezed,
     Object? term = freezed,
     Object? roleName = freezed,
@@ -317,6 +327,10 @@ class __$$OrganizationMembershipModelImplCopyWithImpl<$Res>
             ? _value.joinedAt
             : joinedAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        autoSignClearance: null == autoSignClearance
+            ? _value.autoSignClearance
+            : autoSignClearance // ignore: cast_nullable_to_non_nullable
+                  as bool,
         user: freezed == user
             ? _value.user
             : user // ignore: cast_nullable_to_non_nullable
@@ -356,6 +370,7 @@ class _$OrganizationMembershipModelImpl
     @JsonKey(name: 'assigned_at') this.assignedAt,
     @JsonKey(name: 'expired_at') this.expiredAt,
     @JsonKey(name: 'joined_at') this.joinedAt,
+    @JsonKey(name: 'auto_sign_clearance') this.autoSignClearance = false,
     this.user,
     this.term,
     @JsonKey(name: 'role_name') this.roleName,
@@ -393,6 +408,9 @@ class _$OrganizationMembershipModelImpl
   @override
   @JsonKey(name: 'joined_at')
   final DateTime? joinedAt;
+  @override
+  @JsonKey(name: 'auto_sign_clearance')
+  final bool autoSignClearance;
   // Join fields for UI
   @override
   final UserModel? user;
@@ -415,7 +433,7 @@ class _$OrganizationMembershipModelImpl
 
   @override
   String toString() {
-    return 'OrganizationMembershipModel(id: $id, organizationId: $organizationId, userId: $userId, roleId: $roleId, academicTermId: $academicTermId, status: $status, assignedAt: $assignedAt, expiredAt: $expiredAt, joinedAt: $joinedAt, user: $user, term: $term, roleName: $roleName, hierarchyLevel: $hierarchyLevel, permissions: $permissions)';
+    return 'OrganizationMembershipModel(id: $id, organizationId: $organizationId, userId: $userId, roleId: $roleId, academicTermId: $academicTermId, status: $status, assignedAt: $assignedAt, expiredAt: $expiredAt, joinedAt: $joinedAt, autoSignClearance: $autoSignClearance, user: $user, term: $term, roleName: $roleName, hierarchyLevel: $hierarchyLevel, permissions: $permissions)';
   }
 
   @override
@@ -437,6 +455,8 @@ class _$OrganizationMembershipModelImpl
                 other.expiredAt == expiredAt) &&
             (identical(other.joinedAt, joinedAt) ||
                 other.joinedAt == joinedAt) &&
+            (identical(other.autoSignClearance, autoSignClearance) ||
+                other.autoSignClearance == autoSignClearance) &&
             (identical(other.user, user) || other.user == user) &&
             (identical(other.term, term) || other.term == term) &&
             (identical(other.roleName, roleName) ||
@@ -462,6 +482,7 @@ class _$OrganizationMembershipModelImpl
     assignedAt,
     expiredAt,
     joinedAt,
+    autoSignClearance,
     user,
     term,
     roleName,
@@ -498,6 +519,7 @@ abstract class _OrganizationMembershipModel
     @JsonKey(name: 'assigned_at') final DateTime? assignedAt,
     @JsonKey(name: 'expired_at') final DateTime? expiredAt,
     @JsonKey(name: 'joined_at') final DateTime? joinedAt,
+    @JsonKey(name: 'auto_sign_clearance') final bool autoSignClearance,
     final UserModel? user,
     final AcademicTermModel? term,
     @JsonKey(name: 'role_name') final String? roleName,
@@ -532,7 +554,10 @@ abstract class _OrganizationMembershipModel
   DateTime? get expiredAt;
   @override
   @JsonKey(name: 'joined_at')
-  DateTime? get joinedAt; // Join fields for UI
+  DateTime? get joinedAt;
+  @override
+  @JsonKey(name: 'auto_sign_clearance')
+  bool get autoSignClearance; // Join fields for UI
   @override
   UserModel? get user;
   @override

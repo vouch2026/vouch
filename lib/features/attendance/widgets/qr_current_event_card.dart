@@ -3,21 +3,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../events/models/event_model.dart';
 import '../../../core/utils/time_formatter.dart';
+import '../../../core/enums/attendance_mode.dart';
 
 class QrCurrentEventCard extends StatelessWidget {
   const QrCurrentEventCard({
     super.key,
     required this.event,
-    required this.isTimeInActive,
-    required this.onRecordTimeIn,
-    required this.onRecordTimeOut,
     this.isActive = true,
   });
 
   final EventModel event;
-  final bool isTimeInActive;
-  final VoidCallback onRecordTimeIn;
-  final VoidCallback onRecordTimeOut;
   final bool isActive;
 
   static const Color primaryColor = Color(0xFF003DA5);
@@ -25,6 +20,9 @@ class QrCurrentEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mode = event.currentAttendanceMode;
+    final isClosed = mode == AttendanceMode.closed;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -64,18 +62,18 @@ class QrCurrentEventCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color:
-                      (isActive
-                              ? const Color(0xFF2E7D32)
-                              : const Color(0xFF455A64))
+                      (isClosed
+                              ? const Color(0xFFC62828)
+                              : const Color(0xFF2E7D32))
                           .withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  isActive ? 'Active' : 'Closed',
+                  isClosed ? 'Closed' : 'Active',
                   style: TextStyle(
-                    color: isActive
-                        ? const Color(0xFF2E7D32)
-                        : const Color(0xFF455A64),
+                    color: isClosed
+                        ? const Color(0xFFC62828)
+                        : const Color(0xFF2E7D32),
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                   ),
@@ -131,78 +129,33 @@ class QrCurrentEventCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: isTimeInActive
-                    ? ElevatedButton.icon(
-                        onPressed: onRecordTimeIn,
-                        icon: const Icon(LucideIcons.logIn, size: 18),
-                        label: const Text('Time In'),
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    : OutlinedButton.icon(
-                        onPressed: onRecordTimeIn,
-                        icon: const Icon(LucideIcons.logIn, size: 18),
-                        label: const Text('Time In'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(
-                            color: primaryColor.withOpacity(0.3),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: (isClosed ? Colors.grey : (mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828))).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: (isClosed ? Colors.grey : (mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828))).withOpacity(0.2),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: !isTimeInActive
-                    ? ElevatedButton.icon(
-                        onPressed: onRecordTimeOut,
-                        icon: const Icon(LucideIcons.logOut, size: 18),
-                        label: const Text('Time Out'),
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    : OutlinedButton.icon(
-                        onPressed: onRecordTimeOut,
-                        icon: const Icon(LucideIcons.logOut, size: 18),
-                        label: const Text('Time Out'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(
-                            color: primaryColor.withOpacity(0.3),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-              ),
-            ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isClosed ? LucideIcons.calendarOff : (mode == AttendanceMode.timeIn ? LucideIcons.logIn : LucideIcons.logOut),
+                  size: 20,
+                  color: isClosed ? Colors.grey : (mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828)),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  isClosed ? 'Scanning Closed' : 'Mode: ${mode.label}',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    color: isClosed ? Colors.grey : (mode == AttendanceMode.timeIn ? const Color(0xFF2E7D32) : const Color(0xFFC62828)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
