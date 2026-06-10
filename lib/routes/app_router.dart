@@ -68,7 +68,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     refreshListenable: notifier,
     redirect: (context, state) {
-      final auth = ref.read(authStateProvider).value;
+      final authAsync = ref.read(authStateProvider);
+      
+      // Wait for auth to initialize
+      if (authAsync.isLoading) return null;
+
+      final auth = authAsync.value;
       final loggingIn = state.matchedLocation == RoutePaths.login ||
           state.matchedLocation == RoutePaths.register ||
           state.matchedLocation == RoutePaths.forgotPassword ||
@@ -93,8 +98,13 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Redirect if accessing workspace routes without a selected organization
       final workspace = ref.read(workspaceProvider);
-      if (state.matchedLocation.startsWith('/workspace') && workspace.selectedOrganization == null) {
-        return RoutePaths.dashboard;
+      if (state.matchedLocation.startsWith('/workspace')) {
+        // Wait for workspace to initialize from persistence
+        if (!workspace.isInitialized) return null;
+
+        if (workspace.selectedOrganization == null) {
+          return RoutePaths.dashboard;
+        }
       }
 
       return null;
