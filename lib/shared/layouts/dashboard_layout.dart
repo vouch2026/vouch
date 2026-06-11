@@ -50,11 +50,22 @@ class DashboardLayout extends ConsumerWidget {
         children: [
           Row(
             children: [
-              if (isDesktop && isSidebarVisible)
-                const SizedBox(
-                  width: 280,
-                  child: DynamicSidebar(),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOut,
+                width: (isDesktop && isSidebarVisible) ? 280.0 : 0.0,
+                child: ClipRect(
+                  child: OverflowBox(
+                    minWidth: 280.0,
+                    maxWidth: 280.0,
+                    alignment: Alignment.topLeft,
+                    child: const SizedBox(
+                      width: 280.0,
+                      child: DynamicSidebar(),
+                    ),
+                  ),
                 ),
+              ),
               Expanded(
                 child: Scaffold(
                   appBar: PreferredSize(
@@ -182,33 +193,35 @@ class DashboardLayout extends ConsumerWidget {
           ),
           
           // Mobile/Tablet Sidebar Overlay
-          if (!isDesktop && isSidebarVisible)
-            Stack(
-              children: [
-                // Scrim
-                GestureDetector(
-                  onTap: () => ref.read(sidebarVisibleProvider.notifier).state = false,
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.3),
-                  ),
-                ),
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 280,
-                      child: DynamicSidebar(),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => ref.read(sidebarVisibleProvider.notifier).state = false,
-                        child: Container(
-                          color: Colors.transparent,
-                        ),
+          if (!isDesktop)
+            IgnorePointer(
+              ignoring: !isSidebarVisible,
+              child: Stack(
+                children: [
+                  // Scrim
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOut,
+                    opacity: isSidebarVisible ? 1.0 : 0.0,
+                    child: GestureDetector(
+                      onTap: () => ref.read(sidebarVisibleProvider.notifier).state = false,
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.3),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  // Sliding Sidebar
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutBack,
+                    left: isSidebarVisible ? 0.0 : -280.0,
+                    top: 0,
+                    bottom: 0,
+                    width: 280,
+                    child: const DynamicSidebar(),
+                  ),
+                ],
+              ),
             ),
         ],
       ),
