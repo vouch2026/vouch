@@ -202,15 +202,15 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                                       ActivityCardEventsTable(events: activityCard.events),
                                       const SizedBox(height: AppSpacing.xxl),
                                       ActivityCardFeesTable(fees: activityCard.fees),
-                                      if (activityCard.sanctions.isNotEmpty) ...[
-                                        const SizedBox(height: AppSpacing.xxl),
-                                        _buildSanctionsTable(activityCard.sanctions),
-                                      ],
                                     ],
                                   );
                                 }
                               },
                             ),
+                            if (activityCard.sanctions.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xxl),
+                              _buildSanctionsTable(activityCard.sanctions),
+                            ],
                             const SizedBox(height: AppSpacing.xxl),
                             Center(
                               child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
