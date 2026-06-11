@@ -101,6 +101,62 @@ class ManageAccountPage extends ConsumerWidget {
     );
   }
 
+  Future<void> _showYearLevelDialog(BuildContext context, WidgetRef ref, dynamic profile) async {
+    int? selectedYear = profile.yearLevel;
+
+    return showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Update Year Level'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [1, 2, 3, 4, 5].map((year) => RadioListTile<int>(
+              title: Text('$year${_getYearSuffix(year)} Year'),
+              value: year,
+              groupValue: selectedYear,
+              onChanged: (val) => setState(() => selectedYear = val),
+              activeColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
+            )).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedYear == null ? null : () async {
+                final success = await ref.read(profileControllerProvider.notifier).updateYearLevel(selectedYear!);
+                if (success && context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Year level updated successfully'), backgroundColor: AppColors.success),
+                  );
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getYearSuffix(int year) {
+    if (year >= 11 && year <= 13) return 'th';
+    switch (year % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
+
   Future<void> _pickAndUploadImage(WidgetRef ref) async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
@@ -171,7 +227,8 @@ class ManageAccountPage extends ConsumerWidget {
                         label: 'Year Level',
                         value: profile.yearLevelDisplay,
                         icon: LucideIcons.layers,
-                        canEdit: false,
+                        canEdit: profile.role == 'student',
+                        onEdit: () => _showYearLevelDialog(context, ref, profile),
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.xl),

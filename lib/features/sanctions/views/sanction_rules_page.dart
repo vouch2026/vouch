@@ -169,6 +169,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                             
                             await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, scopeId!, scopeType);
                             ref.invalidate(workspaceSanctionsProvider);
+                            ref.invalidate(mySanctionsProvider);
                             
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sanction records synchronized successfully.')));

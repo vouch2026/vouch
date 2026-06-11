@@ -16,94 +16,114 @@ class MySanctionsPage extends ConsumerWidget {
 
     return DashboardLayout(
       title: 'My Sanctions',
-      child: sanctionsAsync.when(
-        data: (sanctions) {
-          if (sanctions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      child: RefreshIndicator(
+        onRefresh: () => ref.refresh(mySanctionsProvider.future),
+        child: sanctionsAsync.when(
+          data: (sanctions) {
+            if (sanctions.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
-                  const SizedBox(height: AppSpacing.md),
-                  const Text('Great job! You have no sanctions.', style: TextStyle(color: AppColors.textGrey)),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
+                          const SizedBox(height: AppSpacing.md),
+                          const Text('Great job! You have no sanctions.', style: TextStyle(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
-              ),
-            );
-          }
+              );
+            }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            itemCount: sanctions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-            itemBuilder: (context, index) {
-              final sanction = sanctions[index];
-              final isReceived = sanction.status == 'Item Received';
+            return ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              itemCount: sanctions.length,
+              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+              itemBuilder: (context, index) {
+                final sanction = sanctions[index];
+                final isReceived = sanction.status == 'Item Received';
 
-              return Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: isReceived ? AppColors.success.withOpacity(0.2) : AppColors.border),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${sanction.totalAbsences} Absences', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-                              Text('Workspace: ${sanction.scopeType}', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
-                            ],
-                          ),
-                          _StatusBadge(status: sanction.status),
-                        ],
-                      ),
-                      const Divider(height: AppSpacing.xl),
-                      Row(
-                        children: [
-                          const Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textGrey),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Requirement: ${sanction.requiredItem}',
-                              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: isReceived ? AppColors.success.withOpacity(0.2) : AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${sanction.totalAbsences} Absences', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+                                Text('Workspace: ${sanction.scopeType}', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                      if (isReceived) ...[
-                        const SizedBox(height: AppSpacing.sm),
+                            _StatusBadge(status: sanction.status),
+                          ],
+                        ),
+                        const Divider(height: AppSpacing.xl),
                         Row(
                           children: [
-                            const Icon(Icons.check_circle_outline_rounded, size: 16, color: AppColors.success),
+                            const Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textGrey),
                             const SizedBox(width: 8),
-                            Text(
-                              'Cleared by ${sanction.receivedByName} on ${DateFormat('MMM dd, yyyy').format(sanction.receivedAt!)}',
-                              style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
+                            Expanded(
+                              child: Text(
+                                'Requirement: ${sanction.requiredItem}',
+                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                              ),
                             ),
                           ],
                         ),
-                      ] else ...[
-                        const SizedBox(height: AppSpacing.md),
-                        const Text(
-                          'Please donate the required item to an officer to clear this sanction.',
-                          style: TextStyle(color: AppColors.warning, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
+                        if (isReceived) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle_outline_rounded, size: 16, color: AppColors.success),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Cleared by ${sanction.receivedByName} on ${DateFormat('MMM dd, yyyy').format(sanction.receivedAt!)}',
+                                style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          const SizedBox(height: AppSpacing.md),
+                          const Text(
+                            'Please donate the required item to an officer to clear this sanction.',
+                            style: TextStyle(color: AppColors.warning, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error: $err')),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: Center(child: Text('Error: $err')),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

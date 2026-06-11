@@ -57,6 +57,26 @@ class ProfileController extends AsyncNotifier<void> {
     }
   }
 
+  Future<bool> updateYearLevel(int yearLevel) async {
+    state = const AsyncLoading();
+    try {
+      final profile = await ref.read(userProfileProvider.future);
+      if (profile == null) return false;
+
+      await ref.read(profileRepositoryProvider).updateProfile(
+        userId: profile.id!,
+        data: {'year': yearLevel},
+      );
+
+      ref.invalidate(userProfileProvider);
+      state = const AsyncData(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
   Future<bool> updatePassword(String newPassword) async {
     state = const AsyncLoading();
     try {

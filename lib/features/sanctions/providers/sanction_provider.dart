@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../academic_structure/providers/term_provider.dart';
@@ -31,22 +32,17 @@ final workspaceSanctionsProvider = FutureProvider<List<SanctionModel>>((ref) asy
 });
 
 final mySanctionsProvider = FutureProvider<List<SanctionModel>>((ref) async {
-  final userProfile = ref.watch(userProfileProvider).value;
-  final workspace = ref.watch(workspaceProvider);
-  final term = ref.watch(activeTermProvider).value;
-  final org = workspace.selectedOrganization;
+  final userProfile = await ref.watch(userProfileProvider.future);
+  final term = await ref.watch(activeTermProvider.future);
 
-  if (userProfile == null || userProfile.id == null || org == null || term == null) return [];
-
-  String? scopeId = org.campusId;
-  if (org.type == 'faculty-based') {
-    scopeId = org.facultyId;
-  } else if (org.type == 'program-based') {
-    scopeId = org.programId;
+  if (userProfile == null || userProfile.id == null || term == null) {
+    debugPrint('mySanctionsProvider: Missing dependencies. profile: ${userProfile?.id}, term: ${term?.id}');
+    return [];
   }
 
-  if (scopeId == null) return [];
+  debugPrint('mySanctionsProvider: Fetching all sanctions for student ${userProfile.id}, term ${term.id}');
 
   final repository = ref.watch(sanctionRepositoryProvider);
-  return repository.getMySanctions(userProfile.id!, scopeId, term.id);
+  // Fetching all sanctions for the student in the current term, regardless of workspace
+  return repository.getMySanctions(userProfile.id!, termId: term.id);
 });

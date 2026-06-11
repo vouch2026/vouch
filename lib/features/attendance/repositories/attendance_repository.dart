@@ -26,17 +26,34 @@ class AttendanceRepository {
   }) async {
     final now = DateTime.now().toIso8601String();
     
+    // Validate if studentId is a UUID. If not, it's likely a School ID string.
+    String actualStudentUuid = studentId;
+    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    
+    if (!uuidRegex.hasMatch(studentId)) {
+      final userResponse = await _client
+          .from('users')
+          .select('id')
+          .eq('student_id_number', studentId)
+          .maybeSingle();
+      
+      if (userResponse == null) {
+        throw Exception('Student with ID $studentId not found in the database.');
+      }
+      actualStudentUuid = userResponse['id'];
+    }
+
     final existing = await _client
         .from('student_attendance')
         .select()
         .eq('event_id', eventId)
-        .eq('student_id', studentId)
+        .eq('student_id', actualStudentUuid)
         .maybeSingle();
 
     if (existing == null) {
       await _client.from('student_attendance').insert({
         'event_id': eventId,
-        'student_id': studentId,
+        'student_id': actualStudentUuid,
         'scanned_by_user_id': scannedByUserId,
         'actual_time_in': isTimeIn ? now : null,
         'actual_time_out': isTimeIn ? null : now,
