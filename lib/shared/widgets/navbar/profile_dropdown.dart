@@ -115,8 +115,9 @@ class ProfileDropdown extends ConsumerWidget {
       data: (profile) {
         final avatarUrl = profile?.avatarUrl;
 
+        final isMobile = MediaQuery.sizeOf(context).width < 768;
         return Padding(
-          padding: const EdgeInsets.only(right: AppSpacing.md),
+          padding: EdgeInsets.only(right: isMobile ? 4.0 : AppSpacing.md),
           child: InkWell(
             onTap: () => _showProfileMenu(context),
             borderRadius: BorderRadius.circular(30),
