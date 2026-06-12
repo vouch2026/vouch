@@ -51,6 +51,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          borderRadius: BorderRadius.circular(24),
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentEventDetailsPage(event: widget.event))),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
