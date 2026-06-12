@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -21,6 +22,7 @@ class DynamicSidebar extends ConsumerStatefulWidget {
 
 class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
   late ScrollController _scrollController;
+  String _projectVersion = 'Version Loading...';
 
   @override
   void initState() {
@@ -28,6 +30,24 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
     final initialOffset = ref.read(sidebarScrollOffsetProvider);
     _scrollController = ScrollController(initialScrollOffset: initialOffset);
     _scrollController.addListener(_onScroll);
+    _loadProjectVersion();
+  }
+
+  Future<void> _loadProjectVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _projectVersion = 'Version ${packageInfo.version}+${packageInfo.buildNumber}';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _projectVersion = 'Version 1.0.0';
+        });
+      }
+    }
   }
 
   void _onScroll() {
@@ -258,12 +278,12 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '© ${DateTime.now().year} Vouch. All rights reserved.',
+                      '© ${DateTime.now().year} Jeslito G. Geverola. All rights reserved.',
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version 2.0.0 (Beta)',
+                      _projectVersion,
                       style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.grey.shade400,
                         fontSize: 10,

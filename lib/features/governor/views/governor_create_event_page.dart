@@ -176,6 +176,13 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   Widget build(BuildContext context) {
     return DashboardLayout(
       title: 'Create New Event',
+      onBack: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/workspace/events');
+        }
+      },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Form(
@@ -183,6 +190,39 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/workspace/events');
+                      }
+                    },
+                    child: Text(
+                      'Events',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create Event',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
               _buildSectionTitle('Event Visuals'),
               const SizedBox(height: AppSpacing.md),
               GestureDetector(

@@ -13,6 +13,7 @@ class DashboardLayout extends ConsumerWidget {
   final String title;
   final List<Widget>? actions;
   final Widget? floatingActionButton;
+  final VoidCallback? onBack;
 
   const DashboardLayout({
     super.key,
@@ -20,6 +21,7 @@ class DashboardLayout extends ConsumerWidget {
     required this.title,
     this.actions,
     this.floatingActionButton,
+    this.onBack,
   });
 
   @override
@@ -99,10 +101,12 @@ class DashboardLayout extends ConsumerWidget {
                           elevation: 0,
                           scrolledUnderElevation: 0,
                           toolbarHeight: containerHeight,
-                          leadingWidth: (!isSidebarVisible || !isDesktop) 
-                              ? (isMobile ? 52.0 : 60.0) 
-                              : 0.0,
-                          leading: (!isSidebarVisible || !isDesktop)
+                          leadingWidth: onBack != null
+                              ? (isMobile ? 52.0 : 60.0)
+                              : ((!isSidebarVisible || !isDesktop)
+                                  ? (isMobile ? 52.0 : 60.0)
+                                  : 0.0),
+                          leading: onBack != null
                               ? Center(
                                   child: Padding(
                                     padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
@@ -121,20 +125,48 @@ class DashboardLayout extends ConsumerWidget {
                                           ),
                                         ),
                                         child: Icon(
-                                          Icons.menu_rounded,
+                                          Icons.arrow_back_rounded,
                                           color: AppColors.primary,
                                           size: isMobile ? 18 : 20,
                                         ),
                                       ),
-                                      onPressed: () => ref
-                                          .read(sidebarVisibleProvider.notifier)
-                                          .state = true,
+                                      onPressed: onBack,
                                     ),
                                   ),
                                 )
-                              : null,
-                          titleSpacing: (!isSidebarVisible || !isDesktop) 
-                              ? (isMobile ? 4.0 : 8.0) 
+                              : ((!isSidebarVisible || !isDesktop)
+                                  ? Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
+                                        child: IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: Container(
+                                            width: isMobile ? 34 : 38,
+                                            height: isMobile ? 34 : 38,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.accent.withValues(alpha: 0.15),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: AppColors.primary.withValues(alpha: 0.1),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.menu_rounded,
+                                              color: AppColors.primary,
+                                              size: isMobile ? 18 : 20,
+                                            ),
+                                          ),
+                                          onPressed: () => ref
+                                              .read(sidebarVisibleProvider.notifier)
+                                              .state = true,
+                                        ),
+                                      ),
+                                    )
+                                  : null),
+                          titleSpacing: (onBack != null || !isSidebarVisible || !isDesktop)
+                              ? (isMobile ? 4.0 : 8.0)
                               : (isMobile ? 12.0 : 16.0),
                           title: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

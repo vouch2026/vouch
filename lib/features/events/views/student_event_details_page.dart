@@ -150,6 +150,11 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
 
     return DashboardLayout(
       title: 'Event Details',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
       floatingActionButton: (canScan && isToday) 
         ? FloatingActionButton.extended(
             onPressed: () => Navigator.push(
@@ -172,6 +177,41 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Text(
+                        'Events',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.event.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
                 _buildResponsiveHero(),
                 const SizedBox(height: AppSpacing.xl),
                 Row(
