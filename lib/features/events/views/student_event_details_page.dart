@@ -146,9 +146,11 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     final isOfficer = activeRole != null && activeRole.roleName != 'Member';
     
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final isToday = widget.event.eventDate.year == now.year &&
                     widget.event.eventDate.month == now.month &&
                     widget.event.eventDate.day == now.day;
+    final isUpcoming = widget.event.eventDate.isAfter(today);
 
     return DashboardLayout(
       title: 'Event Details',
@@ -250,7 +252,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                             const SizedBox(height: AppSpacing.lg),
                             _buildDescriptionSection(),
                             const SizedBox(height: AppSpacing.xxl),
-                            if (!isOfficer)
+                            if (!isOfficer && !isUpcoming)
                               highlightsAsync.when(
                                 data: (count) => _buildHighlightsSection(count),
                                 loading: () => const Center(child: CircularProgressIndicator()),
