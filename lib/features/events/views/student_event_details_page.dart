@@ -19,6 +19,8 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
+import '../../attendance/views/attendance_history_page.dart';
+import 'event_highlights_gallery_page.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -254,6 +256,9 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                                 loading: () => const Center(child: CircularProgressIndicator()),
                                 error: (_, __) => const SizedBox.shrink(),
                               ),
+                            if (isOfficer && widget.event.isPastTimeout) ...[
+                              _buildOfficerPastEventActions(context),
+                            ],
                           ],
                         ),
                       ),
@@ -690,6 +695,111 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildOfficerPastEventActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Officer Management Actions',
+          style: AppTextStyles.titleLarge.copyWith(
+            fontWeight: FontWeight.bold, 
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Access past records, uploaded photos, and full attendance sheets for this event.',
+          style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useVerticalLayout = constraints.maxWidth < 600;
+            
+            final highlightsButton = SizedBox(
+              height: 54,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EventHighlightsGalleryPage(
+                      eventId: widget.event.id!,
+                      eventName: widget.event.name,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.photo_library_rounded),
+                label: Text(
+                  'View Uploaded Highlights',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            );
+
+            final attendanceButton = SizedBox(
+              height: 54,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AttendanceHistoryPage(
+                      eventId: widget.event.id!,
+                      eventName: widget.event.name,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.analytics_rounded),
+                label: Text(
+                  'View Attendance Report',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            );
+
+            if (useVerticalLayout) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  highlightsButton,
+                  const SizedBox(height: AppSpacing.md),
+                  attendanceButton,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: highlightsButton),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: attendanceButton),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
