@@ -163,10 +163,18 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                 builder: (context) => EventScannerScreen(event: widget.event),
               ),
             ),
-            label: const Text('Scan QR'),
+            label: Text(
+              'Scan QR',
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
             icon: const Icon(Icons.qr_code_scanner_rounded),
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            backgroundColor: AppColors.accent,
+            foregroundColor: AppColors.primary,
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           )
         : null,
       child: SingleChildScrollView(
@@ -448,9 +456,16 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -597,13 +612,20 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             child: ElevatedButton(
               onPressed: _isUploading ? null : _uploadHighlights,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.primary,
+                elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _isUploading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Upload Event Highlights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? const CircularProgressIndicator(color: AppColors.primary)
+                  : Text(
+                      'Upload Event Highlights', 
+                      style: AppTextStyles.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
             ),
           ),
         ],

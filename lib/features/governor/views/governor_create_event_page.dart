@@ -52,6 +52,24 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
     super.dispose();
   }
 
+  Widget _buildPrefixIcon(IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10, right: 8),
+      child: Center(
+        widthFactor: 1,
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -185,46 +203,66 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        context.go('/workspace/events');
-                      }
-                    },
-                    child: Text(
-                      'Events',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/workspace/events');
+                        }
+                      },
+                      child: Text(
+                        'Events',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Create Event',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Create Event',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _buildSectionTitle('Event Visuals'),
-              const SizedBox(height: AppSpacing.md),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Event Visuals'),
+                        const SizedBox(height: AppSpacing.md),
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
@@ -256,38 +294,40 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Event Name',
                   hintText: 'e.g., General Assembly 2026',
-                  prefixIcon: Icon(Icons.event),
+                  prefixIcon: _buildPrefixIcon(Icons.event),
                 ),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _locationController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Location',
                   hintText: 'e.g., University Social Hall',
-                  prefixIcon: Icon(Icons.location_on),
+                  prefixIcon: _buildPrefixIcon(Icons.location_on),
                 ),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _shortDescriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Short Description',
                   hintText: 'A brief summary of the event',
+                  prefixIcon: _buildPrefixIcon(Icons.description_outlined),
                 ),
                 maxLength: 255,
               ),
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _fullDescriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Full Description',
                   hintText: 'Detailed information about the event',
+                  prefixIcon: _buildPrefixIcon(Icons.notes_rounded),
                 ),
                 maxLines: 5,
               ),
@@ -295,13 +335,51 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
               const SizedBox(height: AppSpacing.xl),
               _buildSectionTitle('Date & Schedule'),
               const SizedBox(height: AppSpacing.md),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Event Date'),
-                subtitle: Text(_selectedDate == null ? 'Not selected' : DateFormat.yMMMMd().format(_selectedDate!)),
-                trailing: ElevatedButton(
-                  onPressed: _selectDate,
-                  child: const Text('Select Date'),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    _buildPrefixIcon(Icons.calendar_month_rounded),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Event Date', 
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textGrey, 
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _selectedDate == null 
+                                ? 'Not selected' 
+                                : DateFormat.yMMMMd().format(_selectedDate!),
+                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _selectDate,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Select Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
               ),
               const Divider(),
@@ -332,19 +410,45 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
               const SizedBox(height: AppSpacing.xxl),
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 52,
                 child: FilledButton(
                   onPressed: _isLoading ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.primary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                   child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Create Event', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          ),
+                        )
+                      : Text(
+                          'Create Event', 
+                          style: AppTextStyles.titleLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -360,7 +464,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
         Row(
           children: [
@@ -370,12 +474,21 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
                   final t = await _selectTime('$label (Start)');
                   onPicked(t, null);
                 },
-                icon: const Icon(Icons.access_time, size: 16),
-                label: Text(start == null ? 'Start Time' : _formatTimeOfDay(start)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                  foregroundColor: AppColors.primary,
+                ),
+                icon: const Icon(Icons.access_time_rounded, size: 16),
+                label: Text(
+                  start == null ? 'Start Time' : _formatTimeOfDay(start),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            const Text('to'),
+            Text('to', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: OutlinedButton.icon(
@@ -383,8 +496,17 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
                   final t = await _selectTime('$label (End)');
                   onPicked(null, t);
                 },
-                icon: const Icon(Icons.access_time, size: 16),
-                label: Text(end == null ? 'End Time' : _formatTimeOfDay(end)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                  foregroundColor: AppColors.primary,
+                ),
+                icon: const Icon(Icons.access_time_rounded, size: 16),
+                label: Text(
+                  end == null ? 'End Time' : _formatTimeOfDay(end),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],

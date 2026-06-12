@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../events/models/event_model.dart';
@@ -28,21 +29,31 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform: _isHovered ? Matrix4.translationValues(0, -4, 0) : Matrix4.identity(),
-        child: Card(
-          elevation: _isHovered ? 8 : 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: _isHovered ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.5),
-              width: _isHovered ? 1.5 : 1,
-            ),
+        curve: Curves.easeInOut,
+        transform: _isHovered ? Matrix4.translationValues(0, -6, 0) : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isHovered 
+                ? AppColors.primary.withValues(alpha: 0.3) 
+                : AppColors.primary.withValues(alpha: 0.1),
+            width: _isHovered ? 1.5 : 1,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _isHovered ? 0.12 : 0.06),
+              blurRadius: _isHovered ? 20 : 12,
+              offset: Offset(0, _isHovered ? 8 : 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -108,12 +119,24 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
                 const SizedBox(height: AppSpacing.lg),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.tonalIcon(
+                  height: 48,
+                  child: FilledButton.icon(
                     onPressed: () {},
                     icon: const Icon(Icons.comment_outlined, size: 16),
-                    label: const Text('View All Comments'),
+                    label: Text(
+                      'View All Comments',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
                     style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -121,8 +144,7 @@ class _GovernorRateEventCardState extends State<GovernorRateEventCard> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   List<Widget> _buildRatingBreakdown(Map<String, int> breakdown) {

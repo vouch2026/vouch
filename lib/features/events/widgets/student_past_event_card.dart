@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../events/models/event_model.dart';
@@ -29,87 +30,96 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform: _isHovered ? Matrix4.translationValues(0, -4, 0) : Matrix4.identity(),
+        curve: Curves.easeInOut,
+        transform: _isHovered ? Matrix4.translationValues(0, -6, 0) : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isHovered 
+                ? AppColors.primary.withValues(alpha: 0.3) 
+                : AppColors.primary.withValues(alpha: 0.1),
+            width: _isHovered ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _isHovered ? 0.12 : 0.06),
+              blurRadius: _isHovered ? 20 : 12,
+              offset: Offset(0, _isHovered ? 8 : 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentEventDetailsPage(event: widget.event))),
-          child: Card(
-            elevation: _isHovered ? 8 : 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: _isHovered ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.5),
-                width: _isHovered ? 1.5 : 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.event.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.titleMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.event.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
-                      attendanceAsync.when(
-                        data: (attendance) {
-                          final isAbsent = attendance == null || attendance.status == 'Absent';
-                          if (!isAbsent) return const SizedBox.shrink();
-                          return _StatusBadge(label: 'ABSENT', color: theme.colorScheme.error);
-                        },
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[600]),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        DateFormat.yMMMMd().format(widget.event.eventDate),
-                        style: AppTextStyles.labelMedium.copyWith(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  attendanceAsync.when(
-                    data: (attendance) => Column(
-                      children: [
-                        _buildTimeRow(
-                          context, 
-                          Icons.login_rounded, 
-                          'Time in:', 
-                          attendance?.actualTimeIn != null
-                              ? DateFormat('h:mm a').format(attendance!.actualTimeIn!.toLocal())
-                              : 'No Record',
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        _buildTimeRow(
-                          context, 
-                          Icons.logout_rounded, 
-                          'Time out:', 
-                          attendance?.actualTimeOut != null
-                              ? DateFormat('h:mm a').format(attendance!.actualTimeOut!.toLocal())
-                              : 'No Record',
-                        ),
-                      ],
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const Text('Error loading attendance'),
+                    attendanceAsync.when(
+                      data: (attendance) {
+                        final isAbsent = attendance == null || attendance.status == 'Absent';
+                        if (!isAbsent) return const SizedBox.shrink();
+                        return _StatusBadge(label: 'ABSENT', color: theme.colorScheme.error);
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      DateFormat.yMMMMd().format(widget.event.eventDate),
+                      style: AppTextStyles.labelMedium.copyWith(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                attendanceAsync.when(
+                  data: (attendance) => Column(
+                    children: [
+                      _buildTimeRow(
+                        context, 
+                        Icons.login_rounded, 
+                        'Time in:', 
+                        attendance?.actualTimeIn != null
+                            ? DateFormat('h:mm a').format(attendance!.actualTimeIn!.toLocal())
+                            : 'No Record',
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      _buildTimeRow(
+                        context, 
+                        Icons.logout_rounded, 
+                        'Time out:', 
+                        attendance?.actualTimeOut != null
+                            ? DateFormat('h:mm a').format(attendance!.actualTimeOut!.toLocal())
+                            : 'No Record',
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-              ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => const Text('Error loading attendance'),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+              ],
             ),
           ),
         ),
