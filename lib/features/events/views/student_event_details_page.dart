@@ -227,20 +227,35 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                   children: [
                     Expanded(
                       flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildTitleSection(),
-                          const SizedBox(height: AppSpacing.lg),
-                          _buildDescriptionSection(),
-                          const SizedBox(height: AppSpacing.xxl),
-                          if (!isOfficer)
-                            highlightsAsync.when(
-                              data: (count) => _buildHighlightsSection(count),
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (_, __) => const SizedBox.shrink(),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             ),
-                        ],
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTitleSection(),
+                            const SizedBox(height: AppSpacing.lg),
+                            _buildDescriptionSection(),
+                            const SizedBox(height: AppSpacing.xxl),
+                            if (!isOfficer)
+                              highlightsAsync.when(
+                                data: (count) => _buildHighlightsSection(count),
+                                loading: () => const Center(child: CircularProgressIndicator()),
+                                error: (_, __) => const SizedBox.shrink(),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                     if (!isMobile) ...[
@@ -270,12 +285,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       width: double.infinity,
       height: 300,
       decoration: BoxDecoration(
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -284,8 +301,29 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         child: widget.event.imageUrl != null
             ? Image.network(widget.event.imageUrl!, fit: BoxFit.cover)
             : Container(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                child: const Icon(Icons.image_outlined, size: 64, color: AppColors.primary),
+                color: AppColors.primary.withValues(alpha: 0.05),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.image_outlined, size: 32, color: AppColors.primary),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'No banner image available',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
       ),
     );
@@ -336,18 +374,18 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         if (widget.event.shortDescription != null) ...[
           Text(
             widget.event.shortDescription!,
-            style: AppTextStyles.titleMedium.copyWith(color: Colors.grey[700], fontStyle: FontStyle.italic),
+            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
         Text(
           'About this Event',
-          style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+          style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           widget.event.fullDescription ?? 'No description available for this event.',
-          style: AppTextStyles.bodyLarge.copyWith(height: 1.6),
+          style: AppTextStyles.bodyLarge.copyWith(height: 1.6, color: AppColors.textDark),
         ),
       ],
     );
@@ -510,13 +548,17 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
           children: [
             Text(
               'Event Highlights',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
             ),
             if (!isLimitReached && _selectedImages.length < remainingSlots)
               TextButton.icon(
                 onPressed: _isUploading ? null : () => _pickImages(remainingSlots),
-                icon: const Icon(Icons.add_a_photo_rounded),
+                icon: const Icon(Icons.add_a_photo_rounded, size: 16),
                 label: const Text('Add Photos'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
           ],
         ),
@@ -566,18 +608,37 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             onTap: () => _pickImages(remainingSlots),
             child: Container(
               width: double.infinity,
-              height: 120,
+              height: 160,
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[200]!, style: BorderStyle.solid),
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate_outlined, color: Colors.grey[400], size: 48),
-                  const SizedBox(height: 8),
-                  Text('No photos selected', style: TextStyle(color: Colors.grey[500])),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add_photo_alternate_rounded, color: AppColors.primary, size: 24),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'No photos selected', 
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap to upload event highlights', 
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                  ),
                 ],
               ),
             ),
