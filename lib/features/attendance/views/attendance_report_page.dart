@@ -11,7 +11,9 @@ import '../widgets/qr_recent_scan_card.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-
+import 'dart:typed_data';
+import 'package:excel/excel.dart' as excel_lib;
+import '../../../core/utils/file_saver_helper.dart';
 
 class AttendanceReportPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -27,6 +29,7 @@ class AttendanceReportPage extends ConsumerStatefulWidget {
 
 class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
   final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _rawAttendanceData = [];
   List<QrScanUIModel> _allScans = [];
   List<QrScanUIModel> _filteredScans = [];
   int _totalStudentsCount = 0;
@@ -102,6 +105,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
 
       if (mounted) {
         setState(() {
+          _rawAttendanceData = rawScans;
           _allScans = scans;
           _isLoading = false;
           _applyFilters();
@@ -132,6 +136,103 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         return matchesQuery && matchesMode && matchesProgram;
       }).toList();
     });
+  }
+
+  String _formatTimeString(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final dt = DateTime(2026, 1, 1, hour, minute);
+      return DateFormat('h:mm a').format(dt);
+    } catch (_) {
+      return timeStr;
+    }
+  }
+
+  Future<void> _downloadExcelReport() async {
+    try {
+      final excel = excel_lib.Excel.createExcel();
+      final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+      final sheet = excel[defaultSheet];
+
+      // Headers (Metadata)
+      sheet.appendRow([
+        excel_lib.TextCellValue('Name of event'),
+        excel_lib.TextCellValue(widget.event.name),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Date'),
+        excel_lib.TextCellValue(DateFormat('yyyy-MM-dd').format(widget.event.eventDate)),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Time in'),
+        excel_lib.TextCellValue('${_formatTimeString(widget.event.timeInStart)} - ${_formatTimeString(widget.event.timeInEnd)}'),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Time out'),
+        excel_lib.TextCellValue('${_formatTimeString(widget.event.timeOutStart)} - ${_formatTimeString(widget.event.timeOutEnd)}'),
+      ]);
+      sheet.appendRow([]); // space row
+
+      // Table Column Headers
+      sheet.appendRow([
+        excel_lib.TextCellValue('Student ID No.'),
+        excel_lib.TextCellValue('Student Name'),
+        excel_lib.TextCellValue('Time in'),
+        excel_lib.TextCellValue('Time out'),
+      ]);
+
+      // Data Rows
+      for (final data in _rawAttendanceData) {
+        final student = data['student'] as Map<String, dynamic>?;
+        final firstName = student?['first_name'] ?? 'Unknown';
+        final lastName = student?['last_name'] ?? 'Student';
+        final studentId = student?['student_id_number'] ?? '-';
+        
+        final timeInRaw = data['actual_time_in'];
+        final timeOutRaw = data['actual_time_out'];
+        
+        final formattedTimeIn = timeInRaw != null
+            ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
+            : '-';
+        final formattedTimeOut = timeOutRaw != null
+            ? DateFormat('h:mm a').format(DateTime.parse(timeOutRaw).toLocal())
+            : '-';
+
+        sheet.appendRow([
+          excel_lib.TextCellValue(studentId),
+          excel_lib.TextCellValue('$firstName $lastName'),
+          excel_lib.TextCellValue(formattedTimeIn),
+          excel_lib.TextCellValue(formattedTimeOut),
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception("Failed to encode excel");
+
+      final String fileName = "${widget.event.name.replaceAll(RegExp(r'[^\w\s\-]'), '_')}_Attendance_Report.xlsx";
+      
+      final isSuccess = await FileSaverUtil.saveFile(Uint8List.fromList(bytes), fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isSuccess ? 'Attendance report downloaded successfully!' : 'Failed to download report.'),
+            backgroundColor: isSuccess ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -218,24 +319,53 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Title Section
+                      // Title Section with Download Button
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 18.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              'Attendance Report',
-                              style: AppTextStyles.headlineMedium.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Attendance Report',
+                                    style: AppTextStyles.headlineMedium.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Attendance summary and statistics for ${widget.event.name}',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Attendance summary and statistics for ${widget.event.name}',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: Colors.grey[600],
+                            const SizedBox(width: 16),
+                            FilledButton.icon(
+                              onPressed: _downloadExcelReport,
+                              icon: const Icon(LucideIcons.download, size: 16),
+                              label: Text(
+                                isMobile ? 'Export' : 'Download Excel',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+                                ),
                               ),
                             ),
                           ],
