@@ -68,14 +68,29 @@
       object-fit: contain;
       animation: pulse 2s infinite ease-in-out;
     }
-    .spinner {
-      margin-top: 28px;
-      width: 26px;
-      height: 26px;
-      border: 3px solid #f1f5f9;
-      border-top-color: #003DA5; /* Royal Blue */
+    .flickr-loader {
+      position: relative;
+      width: 60px;
+      height: 20px;
+      margin-top: 32px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .flickr-ball {
+      position: absolute;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: flickr-orbit 1.6s infinite ease-in-out;
+    }
+    .flickr-blue {
+      background-color: #003DA5; /* Royal Blue */
+      animation-delay: 0s;
+    }
+    .flickr-gold {
+      background-color: #FFC107; /* Gold */
+      animation-delay: -0.8s; /* 180 degrees out of phase */
     }
     .splash-footer {
       padding-bottom: 40px;
@@ -93,9 +108,14 @@
     }
     .footer-name {
       font-size: 14px;
-      color: #0f172a;
       font-weight: 600;
       letter-spacing: 0.5px;
+    }
+    .first-name {
+      color: #FFC107; /* Gold */
+    }
+    .last-name {
+      color: #003DA5; /* Royal Blue */
     }
     @keyframes pulse {
       0%, 100% {
@@ -107,9 +127,22 @@
         opacity: 1;
       }
     }
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
+    @keyframes flickr-orbit {
+      0%, 100% {
+        transform: translateX(-16px) scale(1);
+        z-index: 2;
+      }
+      25% {
+        transform: translateX(0px) scale(1.25);
+        z-index: 2;
+      }
+      50% {
+        transform: translateX(16px) scale(1);
+        z-index: 1;
+      }
+      75% {
+        transform: translateX(0px) scale(0.75);
+        z-index: 1;
       }
     }
   </style>
@@ -119,11 +152,16 @@
     <div class="splash-content">
       <!-- Standard Flutter asset path is assets/assets/logos/vouch.png, fallback handles debug/release differences -->
       <img src="assets/assets/logos/vouch.png" onerror="this.onerror=null; this.src='assets/logos/vouch.png';" class="logo-img" alt="Vouch Logo">
-      <div class="spinner"></div>
+      <div class="flickr-loader">
+        <div class="flickr-ball flickr-blue"></div>
+        <div class="flickr-ball flickr-gold"></div>
+      </div>
     </div>
     <div class="splash-footer">
       <div class="footer-label">Created By</div>
-      <div class="footer-name">Jeslito G. Geverola</div>
+      <div class="footer-name">
+        <span class="first-name">Jeslito</span> <span class="last-name">G. Geverola</span>
+      </div>
     </div>
   </div>
   <!--
