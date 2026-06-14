@@ -13,13 +13,12 @@ import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../attendance/providers/attendance_provider.dart';
-import '../../attendance/models/attendance_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
-import '../../attendance/views/attendance_history_page.dart';
+import '../../attendance/views/attendance_report_page.dart';
 import 'event_highlights_gallery_page.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
@@ -757,9 +756,8 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AttendanceHistoryPage(
-                      eventId: widget.event.id!,
-                      eventName: widget.event.name,
+                    builder: (_) => AttendanceReportPage(
+                      event: widget.event,
                     ),
                   ),
                 ),

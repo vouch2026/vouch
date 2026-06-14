@@ -81,4 +81,28 @@ class AttendanceRepository {
     
     return List<Map<String, dynamic>>.from(response);
   }
+
+  Future<List<Map<String, dynamic>>> getAllAttendanceForEvent(String eventId) async {
+    final response = await _client
+        .from('student_attendance')
+        .select('*, student:users!student_attendance_student_id_fkey(*, program:programs!users_program_id_fkey(*))')
+        .eq('event_id', eventId)
+        .order('updated_at', ascending: false);
+    
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<int> getStudentsCountForScope(String scopeType, String scopeId) async {
+    var query = _client.from('users').select('id');
+    if (scopeType == 'Institutional') {
+      query = query.eq('campus_id', scopeId);
+    } else if (scopeType == 'Faculty') {
+      query = query.eq('faculty_id', scopeId);
+    } else if (scopeType == 'Program') {
+      query = query.eq('program_id', scopeId);
+    }
+    
+    final response = await query;
+    return (response as List).length;
+  }
 }

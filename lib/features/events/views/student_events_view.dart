@@ -5,7 +5,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/event_model.dart';
 import '../providers/event_provider.dart';
-import 'student_event_details_page.dart';
 import '../widgets/student_past_event_card.dart';
 import '../widgets/student_event_card.dart';
 
