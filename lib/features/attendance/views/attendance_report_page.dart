@@ -183,7 +183,67 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                 color: Colors.white,
                                 child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // Breadcrumb Row
+                                    Row(
+                                      children: [
+                                        Icon(Icons.event_note_rounded, size: 14, color: Colors.grey[500]),
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (Navigator.canPop(context)) {
+                                              Navigator.pop(context);
+                                            }
+                                            if (Navigator.canPop(context)) {
+                                              Navigator.pop(context);
+                                            }
+                                          },
+                                          child: Text(
+                                            'Events',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.grey[600],
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (Navigator.canPop(context)) {
+                                              Navigator.pop(context);
+                                            }
+                                          },
+                                          child: Text(
+                                            widget.event.name,
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.grey[600],
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'Attendance Report',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.poppins(
+                                              color: primaryColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
                                     SizedBox(
                                       height: 32,
                                       child: Stack(
@@ -224,14 +284,17 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      widget.event.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.black.withValues(alpha: 0.4),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        widget.event.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.black.withValues(alpha: 0.4),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -394,35 +457,38 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                 SizedBox(
                   width: 120,
                   height: 120,
-                  child: PieChart(
-                    PieChartData(
-                      sectionsSpace: 3,
-                      centerSpaceRadius: 30,
-                      sections: [
-                        PieChartSectionData(
-                          value: presentCount > 0 ? presentCount.toDouble() : 0.001,
-                          color: Colors.green,
-                          title: presentPercent > 0 ? '$presentPercent%' : '',
-                          radius: 20,
-                          titleStyle: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      PieChart(
+                        PieChartData(
+                          sectionsSpace: 3,
+                          centerSpaceRadius: 32,
+                          sections: [
+                            PieChartSectionData(
+                              value: presentCount > 0 ? presentCount.toDouble() : 0.001,
+                              color: Colors.green,
+                              title: '',
+                              radius: 18,
+                            ),
+                            PieChartSectionData(
+                              value: absentCount > 0 ? absentCount.toDouble() : 0.001,
+                              color: Colors.red,
+                              title: '',
+                              radius: 18,
+                            ),
+                          ],
                         ),
-                        PieChartSectionData(
-                          value: absentCount > 0 ? absentCount.toDouble() : 0.001,
-                          color: Colors.red,
-                          title: absentPercent > 0 ? '$absentPercent%' : '',
-                          radius: 20,
-                          titleStyle: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                      ),
+                      Text(
+                        '$presentPercent%',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: primaryColor,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 20),

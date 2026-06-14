@@ -90,8 +90,28 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
             // Breadcrumbs / Header
             Row(
               children: [
-                Icon(Icons.image_outlined, size: 14, color: Colors.grey[500]),
-                const SizedBox(width: 8),
+                Icon(Icons.event_note_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(
+                    'Events',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 6),
                 InkWell(
                   onTap: () {
                     if (Navigator.canPop(context)) {
@@ -99,19 +119,19 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
                     }
                   },
                   child: Text(
-                    'Event Details',
+                    eventName,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Member Uploaded Highlights',
+                    'Highlights Gallery',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodySmall.copyWith(
