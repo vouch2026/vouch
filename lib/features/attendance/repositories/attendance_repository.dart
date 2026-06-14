@@ -82,27 +82,72 @@ class AttendanceRepository {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<List<Map<String, dynamic>>> getAllAttendanceForEvent(String eventId) async {
+  Future<List<Map<String, dynamic>>> getAllAttendanceForEvent(
+    String eventId,
+    String scopeType,
+    String scopeId,
+  ) async {
+    String orgField;
+    String orgType;
+    if (scopeType == 'Institutional') {
+      orgField = 'campus_id';
+      orgType = 'campus-based';
+    } else if (scopeType == 'Faculty') {
+      orgField = 'faculty_id';
+      orgType = 'faculty-based';
+    } else {
+      orgField = 'program_id';
+      orgType = 'program-based';
+    }
+
     final response = await _client
         .from('student_attendance')
-        .select('*, student:users!student_attendance_student_id_fkey(*, program:programs!users_program_id_fkey(*))')
+        .select('''
+          *,
+          student:users!student_attendance_student_id_fkey!inner(
+            *,
+            program:programs!users_program_id_fkey(*, faculty:faculties(*)),
+            organization_members!inner(
+              status,
+              role:roles!inner(name),
+              organization:organizations!inner(type, $orgField)
+            )
+          )
+        ''')
         .eq('event_id', eventId)
+        .eq('student.account_status', 'active')
+        .eq('student.organization_members.status', 'active')
+        .eq('student.organization_members.role.name', 'Member')
+        .eq('student.organization_members.organization.type', orgType)
+        .eq('student.organization_members.organization.$orgField', scopeId)
         .order('updated_at', ascending: false);
     
     return List<Map<String, dynamic>>.from(response);
   }
 
   Future<int> getStudentsCountForScope(String scopeType, String scopeId) async {
-    var query = _client.from('users').select('id');
+    String orgField;
+    String orgType;
     if (scopeType == 'Institutional') {
-      query = query.eq('campus_id', scopeId);
+      orgField = 'campus_id';
+      orgType = 'campus-based';
     } else if (scopeType == 'Faculty') {
-      query = query.eq('faculty_id', scopeId);
-    } else if (scopeType == 'Program') {
-      query = query.eq('program_id', scopeId);
+      orgField = 'faculty_id';
+      orgType = 'faculty-based';
+    } else {
+      orgField = 'program_id';
+      orgType = 'program-based';
     }
-    
-    final response = await query;
+
+    final response = await _client
+        .from('organization_members')
+        .select('id, user:users!inner(account_status), role:roles!inner(name), organization:organizations!inner(type, $orgField)')
+        .eq('status', 'active')
+        .eq('user.account_status', 'active')
+        .eq('role.name', 'Member')
+        .eq('organization.type', orgType)
+        .eq('organization.$orgField', scopeId);
+
     return (response as List).length;
   }
 }

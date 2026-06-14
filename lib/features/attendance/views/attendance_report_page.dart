@@ -72,7 +72,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
       
       // Load both the attendance logs and the total student count in the scope in parallel
       final results = await Future.wait([
-        repository.getAllAttendanceForEvent(widget.event.id!),
+        repository.getAllAttendanceForEvent(widget.event.id!, widget.event.scopeType, widget.event.scopeId),
         repository.getStudentsCountForScope(widget.event.scopeType, widget.event.scopeId),
       ]);
 
@@ -177,8 +177,11 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
 
       // Table Column Headers
       sheet.appendRow([
-        excel_lib.TextCellValue('Student ID No.'),
+        excel_lib.TextCellValue('Student ID'),
         excel_lib.TextCellValue('Student Name'),
+        excel_lib.TextCellValue('Faculty'),
+        excel_lib.TextCellValue('Program'),
+        excel_lib.TextCellValue('Year Level'),
         excel_lib.TextCellValue('Time in'),
         excel_lib.TextCellValue('Time out'),
       ]);
@@ -189,6 +192,12 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         final firstName = student?['first_name'] ?? 'Unknown';
         final lastName = student?['last_name'] ?? 'Student';
         final studentId = student?['student_id_number'] ?? '-';
+        
+        final programData = student?['program'] as Map<String, dynamic>?;
+        final programName = programData?['name'] ?? 'N/A';
+        final facultyData = programData?['faculty'] as Map<String, dynamic>?;
+        final facultyName = facultyData?['name'] ?? 'N/A';
+        final yearLevel = student?['year']?.toString() ?? '-';
         
         final timeInRaw = data['actual_time_in'];
         final timeOutRaw = data['actual_time_out'];
@@ -203,6 +212,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         sheet.appendRow([
           excel_lib.TextCellValue(studentId),
           excel_lib.TextCellValue('$firstName $lastName'),
+          excel_lib.TextCellValue(facultyName),
+          excel_lib.TextCellValue(programName),
+          excel_lib.TextCellValue(yearLevel),
           excel_lib.TextCellValue(formattedTimeIn),
           excel_lib.TextCellValue(formattedTimeOut),
         ]);
