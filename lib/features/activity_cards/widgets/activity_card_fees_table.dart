@@ -20,12 +20,15 @@ class ActivityCardFeesTable extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Text(
-            'MANDATORY FEES COMPLIANCE',
-            style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-              letterSpacing: 1.2,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              'MANDATORY FEES COMPLIANCE',
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textGrey,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ),
@@ -35,67 +38,113 @@ class ActivityCardFeesTable extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.grey.shade100),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth,
-                    ),
-                    child: DataTable(
-                      columnSpacing: AppSpacing.lg,
-                      headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
-                columns: const [
-                  DataColumn(label: Text('FEE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('AMOUNT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('PAID DATE / REF', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                ],
-                rows: fees.map((fee) {
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(fee.title, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
-                            Text(fee.category, style: AppTextStyles.labelSmall.copyWith(fontSize: 9)),
-                          ],
-                        ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.grey.shade100),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: constraints.maxWidth,
                       ),
-                      DataCell(Text('₱${fee.amount.toStringAsFixed(2)}', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold))),
-                      DataCell(_PaymentStatusBadge(isPaid: fee.isPaid)),
-                      DataCell(
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              fee.paidAt != null ? DateFormat('MMM d, yyyy').format(fee.paidAt!) : '—',
-                              style: AppTextStyles.labelSmall,
+                      child: DataTable(
+                        columnSpacing: AppSpacing.lg,
+                        headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.04)),
+                        columns: [
+                          DataColumn(
+                            label: Text(
+                              'FEE', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
                             ),
-                            if (fee.referenceNumber != null)
-                              Text(fee.referenceNumber!, style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: Colors.grey)),
-                          ],
-                        ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'AMOUNT', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'STATUS', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'PAID DATE / REF', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                        rows: fees.map((fee) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(fee.title, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                    Text(fee.category, style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: AppColors.textGrey)),
+                                  ],
+                                ),
+                              ),
+                              DataCell(Text('₱${fee.amount.toStringAsFixed(2)}', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark))),
+                              DataCell(_PaymentStatusBadge(isPaid: fee.isPaid)),
+                              DataCell(
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      fee.paidAt != null ? DateFormat('MMM d, yyyy').format(fee.paidAt!) : '—',
+                                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDark),
+                                    ),
+                                    if (fee.referenceNumber != null)
+                                      Text(fee.referenceNumber!, style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: AppColors.textGrey)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
                       ),
-                    ],
+                    ),
                   );
-                }).toList(),
+                },
               ),
             ),
-          );
-        },
-      ),
-    ),
-  ),
+          ),
+        ),
       ],
     );
   }
@@ -108,15 +157,16 @@ class _PaymentStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPaid ? Colors.green : Colors.orange;
+    final color = isPaid ? AppColors.success : AppColors.warning;
     final icon = isPaid ? Icons.check_circle_outline_rounded : Icons.access_time_rounded;
     final label = isPaid ? 'Paid' : 'Unpaid';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -125,7 +175,7 @@ class _PaymentStatusBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+            style: AppTextStyles.labelSmall.copyWith(color: color, fontWeight: FontWeight.bold, fontSize: 10),
           ),
         ],
       ),

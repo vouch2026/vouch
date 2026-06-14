@@ -19,6 +19,8 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
+import '../../attendance/views/attendance_history_page.dart';
+import 'event_highlights_gallery_page.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -144,12 +146,19 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     final isOfficer = activeRole != null && activeRole.roleName != 'Member';
     
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final isToday = widget.event.eventDate.year == now.year &&
                     widget.event.eventDate.month == now.month &&
                     widget.event.eventDate.day == now.day;
+    final isUpcoming = widget.event.eventDate.isAfter(today);
 
     return DashboardLayout(
       title: 'Event Details',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
       floatingActionButton: (canScan && isToday) 
         ? FloatingActionButton.extended(
             onPressed: () => Navigator.push(
@@ -158,10 +167,18 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                 builder: (context) => EventScannerScreen(event: widget.event),
               ),
             ),
-            label: const Text('Scan QR'),
+            label: Text(
+              'Scan QR',
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
             icon: const Icon(Icons.qr_code_scanner_rounded),
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            backgroundColor: AppColors.accent,
+            foregroundColor: AppColors.primary,
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           )
         : null,
       child: SingleChildScrollView(
@@ -172,6 +189,41 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Text(
+                        'Events',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.event.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
                 _buildResponsiveHero(),
                 const SizedBox(height: AppSpacing.xl),
                 Row(
@@ -179,20 +231,38 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                   children: [
                     Expanded(
                       flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildTitleSection(),
-                          const SizedBox(height: AppSpacing.lg),
-                          _buildDescriptionSection(),
-                          const SizedBox(height: AppSpacing.xxl),
-                          if (!isOfficer)
-                            highlightsAsync.when(
-                              data: (count) => _buildHighlightsSection(count),
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (_, __) => const SizedBox.shrink(),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             ),
-                        ],
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTitleSection(),
+                            const SizedBox(height: AppSpacing.lg),
+                            _buildDescriptionSection(),
+                            const SizedBox(height: AppSpacing.xxl),
+                            if (!isOfficer && !isUpcoming)
+                              highlightsAsync.when(
+                                data: (count) => _buildHighlightsSection(count),
+                                loading: () => const Center(child: CircularProgressIndicator()),
+                                error: (_, __) => const SizedBox.shrink(),
+                              ),
+                            if (isOfficer && widget.event.isPastTimeout) ...[
+                              _buildOfficerPastEventActions(context),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                     if (!isMobile) ...[
@@ -222,12 +292,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       width: double.infinity,
       height: 300,
       decoration: BoxDecoration(
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -236,8 +308,29 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         child: widget.event.imageUrl != null
             ? Image.network(widget.event.imageUrl!, fit: BoxFit.cover)
             : Container(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                child: const Icon(Icons.image_outlined, size: 64, color: AppColors.primary),
+                color: AppColors.primary.withValues(alpha: 0.05),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.image_outlined, size: 32, color: AppColors.primary),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'No banner image available',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
       ),
     );
@@ -288,18 +381,18 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         if (widget.event.shortDescription != null) ...[
           Text(
             widget.event.shortDescription!,
-            style: AppTextStyles.titleMedium.copyWith(color: Colors.grey[700], fontStyle: FontStyle.italic),
+            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
         Text(
           'About this Event',
-          style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+          style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           widget.event.fullDescription ?? 'No description available for this event.',
-          style: AppTextStyles.bodyLarge.copyWith(height: 1.6),
+          style: AppTextStyles.bodyLarge.copyWith(height: 1.6, color: AppColors.textDark),
         ),
       ],
     );
@@ -408,9 +501,16 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -455,13 +555,17 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
           children: [
             Text(
               'Event Highlights',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
             ),
             if (!isLimitReached && _selectedImages.length < remainingSlots)
               TextButton.icon(
                 onPressed: _isUploading ? null : () => _pickImages(remainingSlots),
-                icon: const Icon(Icons.add_a_photo_rounded),
+                icon: const Icon(Icons.add_a_photo_rounded, size: 16),
                 label: const Text('Add Photos'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
           ],
         ),
@@ -511,18 +615,37 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             onTap: () => _pickImages(remainingSlots),
             child: Container(
               width: double.infinity,
-              height: 120,
+              height: 160,
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[200]!, style: BorderStyle.solid),
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate_outlined, color: Colors.grey[400], size: 48),
-                  const SizedBox(height: 8),
-                  Text('No photos selected', style: TextStyle(color: Colors.grey[500])),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add_photo_alternate_rounded, color: AppColors.primary, size: 24),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'No photos selected', 
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap to upload event highlights', 
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                  ),
                 ],
               ),
             ),
@@ -557,16 +680,128 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             child: ElevatedButton(
               onPressed: _isUploading ? null : _uploadHighlights,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.primary,
+                elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _isUploading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Upload Event Highlights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? const CircularProgressIndicator(color: AppColors.primary)
+                  : Text(
+                      'Upload Event Highlights', 
+                      style: AppTextStyles.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildOfficerPastEventActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Officer Management Actions',
+          style: AppTextStyles.titleLarge.copyWith(
+            fontWeight: FontWeight.bold, 
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Access past records, uploaded photos, and full attendance sheets for this event.',
+          style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useVerticalLayout = constraints.maxWidth < 600;
+            
+            final highlightsButton = SizedBox(
+              height: 54,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EventHighlightsGalleryPage(
+                      eventId: widget.event.id!,
+                      eventName: widget.event.name,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.photo_library_rounded),
+                label: Text(
+                  'View Uploaded Highlights',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            );
+
+            final attendanceButton = SizedBox(
+              height: 54,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AttendanceHistoryPage(
+                      eventId: widget.event.id!,
+                      eventName: widget.event.name,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.analytics_rounded),
+                label: Text(
+                  'View Attendance Report',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            );
+
+            if (useVerticalLayout) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  highlightsButton,
+                  const SizedBox(height: AppSpacing.md),
+                  attendanceButton,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: highlightsButton),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: attendanceButton),
+              ],
+            );
+          },
+        ),
       ],
     );
   }

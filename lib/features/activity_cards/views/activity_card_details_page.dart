@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,9 +14,7 @@ import '../widgets/signature_workflow_timeline.dart';
 import '../widgets/activity_card_events_table.dart';
 import '../widgets/activity_card_fees_table.dart';
 
-import '../../../core/config/supabase_config.dart';
 import '../../academic_structure/providers/term_provider.dart';
-import '../../organizations/providers/workspace_provider.dart';
 import '../providers/clearance_provider.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
@@ -63,6 +62,37 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
     } finally {
       if (mounted) setState(() => _isRequesting = false);
     }
+  }
+
+  Widget _buildBackgroundDecorations() {
+    return Stack(
+      children: [
+        Positioned(
+          top: 60,
+          right: -80,
+          child: Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(140),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 120,
+          left: -60,
+          child: Container(
+            width: 240,
+            height: 240,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(120),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -114,10 +144,12 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
             data: (studentProfile) {
               return Stack(
                 children: [
+                  Positioned.fill(child: _buildBackgroundDecorations()),
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1400),
                       child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -128,14 +160,25 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                                 child: Center(
                                   child: SizedBox(
-                                    width: 300,
-                                    child: FilledButton.icon(
+                                    width: 320,
+                                    height: 52,
+                                    child: ElevatedButton.icon(
                                       onPressed: _isRequesting ? null : () => _handleRequestClearance(activityCard),
                                       icon: _isRequesting 
-                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
                                         : const Icon(Icons.send_rounded),
-                                      label: Text(_isRequesting ? 'Submitting...' : (isRejected ? 'Resubmit Clearance Request' : 'Request Clearance')),
-                                      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20)),
+                                      label: Text(
+                                        _isRequesting ? 'Submitting...' : (isRejected ? 'Resubmit Clearance' : 'Request Clearance'),
+                                        style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.accent,
+                                        foregroundColor: AppColors.primary,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -159,15 +202,15 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                                       ActivityCardEventsTable(events: activityCard.events),
                                       const SizedBox(height: AppSpacing.xxl),
                                       ActivityCardFeesTable(fees: activityCard.fees),
-                                      if (activityCard.sanctions.isNotEmpty) ...[
-                                        const SizedBox(height: AppSpacing.xxl),
-                                        _buildSanctionsTable(activityCard.sanctions),
-                                      ],
                                     ],
                                   );
                                 }
                               },
                             ),
+                            if (activityCard.sanctions.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xxl),
+                              _buildSanctionsTable(activityCard.sanctions),
+                            ],
                             const SizedBox(height: AppSpacing.xxl),
                             Center(
                               child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
@@ -182,37 +225,75 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                   ),
                   if (isLocked)
                     Positioned.fill(
-                      child: Container(
-                        color: Colors.white.withOpacity(0.9),
-                        child: Center(
+                      child: ClipRRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
                           child: Container(
-                            constraints: const BoxConstraints(maxWidth: 400),
-                            padding: const EdgeInsets.all(AppSpacing.xxl),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 40),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.lock_rounded, size: 80, color: AppColors.error),
-                                const SizedBox(height: AppSpacing.xl),
-                                Text('CARD LOCKED', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.error)),
-                                const SizedBox(height: AppSpacing.md),
-                                Text(
-                                  lockReason,
-                                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
-                                  textAlign: TextAlign.center,
+                            color: AppColors.white.withValues(alpha: 0.85),
+                            child: Center(
+                              child: Container(
+                                constraints: const BoxConstraints(maxWidth: 420),
+                                padding: const EdgeInsets.all(AppSpacing.xxl),
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(28),
+                                  border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.12),
+                                      blurRadius: 32,
+                                      offset: const Offset(0, 12),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: AppSpacing.xl),
-                                OutlinedButton(
-                                  onPressed: () => context.pop(),
-                                  child: const Text('Back to Dashboard'),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.error.withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.lock_rounded, size: 64, color: AppColors.error),
+                                    ),
+                                    const SizedBox(height: AppSpacing.xl),
+                                    Text(
+                                      'CARD LOCKED', 
+                                      style: AppTextStyles.displaySmall.copyWith(
+                                        fontWeight: FontWeight.bold, 
+                                        color: AppColors.error,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      lockReason,
+                                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: AppSpacing.xl),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 48,
+                                      child: OutlinedButton(
+                                        onPressed: () => context.pop(),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.primary,
+                                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Back to Dashboard',
+                                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -248,41 +329,87 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
     final info = '${user?.programName ?? 'Unknown Program'} • ${user?.yearLevel != null ? '${user!.yearLevel}${_getYearSuffix(user.yearLevel!)} Year' : 'Unknown Year'} • Student ID: ${user?.schoolId ?? 'N/A'}';
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-      ),
-      child: Flex(
-        direction: isCompact ? Axis.vertical : Axis.horizontal,
-        crossAxisAlignment: isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
-            backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-            child: user?.avatarUrl == null 
-              ? Text(name[0], style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary))
-              : null,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-          SizedBox(width: isCompact ? 0 : AppSpacing.lg, height: isCompact ? AppSpacing.md : 0),
-          Expanded(
-            flex: isCompact ? 0 : 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: AppTextStyles.headlineLarge.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(
-                  info,
-                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
-                ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.white,
+                AppColors.primary.withValues(alpha: 0.02),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          SizedBox(height: isCompact ? AppSpacing.lg : 0),
-          _buildQuickCompliance(card),
-        ],
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Flex(
+            direction: isCompact ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accent,
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 36,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                  child: user?.avatarUrl == null 
+                    ? Text(name[0], style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary))
+                    : null,
+                ),
+              ),
+              SizedBox(width: isCompact ? 0 : AppSpacing.xl, height: isCompact ? AppSpacing.md : 0),
+              Expanded(
+                flex: isCompact ? 0 : 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name, 
+                      style: AppTextStyles.headlineLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      info,
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isCompact ? AppSpacing.lg : 0),
+              _buildQuickCompliance(card),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -300,27 +427,26 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
     final totalSanctions = card.sanctions.length;
     final isSanctionsMet = fulfilledSanctions == totalSanctions;
 
-    return Row(
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.sm,
       children: [
         _ComplianceItem(
           label: 'Events',
           value: '$completedEvents/$totalEvents',
           isMet: isEventsMet,
         ),
-        const SizedBox(width: AppSpacing.lg),
         _ComplianceItem(
           label: 'Fees',
           value: isFeesMet ? 'Paid' : '$paidFees/$totalFees',
           isMet: isFeesMet,
         ),
-        if (totalSanctions > 0) ...[
-          const SizedBox(width: AppSpacing.lg),
+        if (totalSanctions > 0)
           _ComplianceItem(
             label: 'Sanctions',
             value: isSanctionsMet ? 'Fulfilled' : '$fulfilledSanctions/$totalSanctions',
             isMet: isSanctionsMet,
           ),
-        ],
       ],
     );
   }
@@ -331,35 +457,83 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'ORGANIZATION DETAILS',
-            style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-              letterSpacing: 1.2,
+          Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              'ORGANIZATION DETAILS',
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textGrey,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.xl),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+              boxShadow: [
+                 BoxShadow(
+                   color: Colors.black.withValues(alpha: 0.08),
+                   blurRadius: 16,
+                   offset: const Offset(0, 6),
+                 ),
+              ],
             ),
             child: Row(
               children: [
-                if (card.organizationLogo != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.md),
-                    child: Image.network(card.organizationLogo!, width: 40, height: 40),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
                   ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(card.organizationName, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-                    Text('${card.academicYear} • ${card.semester}', style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
-                  ],
+                  child: card.organizationLogo != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            card.organizationLogo!, 
+                            width: 44, 
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                          ),
+                        )
+                      : const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.organizationName, 
+                        style: AppTextStyles.headlineSmall.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textGrey),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${card.academicYear} • ${card.semester}', 
+                            style: AppTextStyles.labelMedium.copyWith(color: AppColors.textGrey),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -370,28 +544,85 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
   }
 
   Widget _buildSanctionsTable(List<ActivityCardSanction> sanctions) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ABSENCE SANCTIONS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[600], letterSpacing: 1.2)),
-            const SizedBox(height: AppSpacing.lg),
-            ...sanctions.map((s) => ListTile(
-              leading: Icon(s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
-                           color: s.isFulfilled ? AppColors.success : AppColors.warning),
-              title: Text(s.description, style: const TextStyle(fontWeight: FontWeight.bold)),
-              trailing: Text(s.isFulfilled ? 'Fulfilled' : 'Pending', 
-                            style: TextStyle(color: s.isFulfilled ? AppColors.success : AppColors.warning, fontWeight: FontWeight.bold)),
-            )),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              'ABSENCE SANCTIONS', 
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.bold, 
+                color: AppColors.textGrey, 
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              children: sanctions.map((s) {
+                final statusColor = s.isFulfilled ? AppColors.success : AppColors.warning;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.1), width: 1),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
+                        color: statusColor,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      s.description, 
+                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        s.isFulfilled ? 'Fulfilled' : 'Pending', 
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -410,30 +641,57 @@ class _ComplianceItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(label, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: isMet ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
+    final statusColor = isMet ? AppColors.success : AppColors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textGrey,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
           ),
-          child: Row(
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(isMet ? Icons.check_circle_rounded : Icons.error_rounded, 
-                   size: 12, color: isMet ? Colors.green : Colors.red),
-              const SizedBox(width: 4),
-              Text(value, style: TextStyle(
-                color: isMet ? Colors.green : Colors.red,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              )),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isMet ? Icons.check_circle_rounded : Icons.warning_amber_rounded, 
+                  size: 14, 
+                  color: statusColor,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                value,
+                style: AppTextStyles.titleSmall.copyWith(
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

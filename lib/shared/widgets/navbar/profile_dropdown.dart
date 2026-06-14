@@ -115,47 +115,40 @@ class ProfileDropdown extends ConsumerWidget {
       data: (profile) {
         final avatarUrl = profile?.avatarUrl;
 
+        final isMobile = MediaQuery.sizeOf(context).width < 768;
         return Padding(
-          padding: const EdgeInsets.only(right: AppSpacing.md),
+          padding: EdgeInsets.only(right: isMobile ? 4.0 : AppSpacing.md),
           child: InkWell(
             onTap: () => _showProfileMenu(context),
             borderRadius: BorderRadius.circular(30),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
+                shape: BoxShape.circle,
                 color: AppColors.accent.withValues(alpha: 0.15),
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   width: 1,
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.white, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
-                        ),
-                      ],
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.white, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
                     ),
-                    child: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Colors.grey.shade100,
-                      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                          ? NetworkImage(avatarUrl)
-                          : const AssetImage('assets/images/my_profile.png') as ImageProvider,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.expand_more_rounded, size: 18, color: AppColors.primary),
-                  const SizedBox(width: 2),
-                ],
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Colors.grey.shade100,
+                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? NetworkImage(avatarUrl)
+                      : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+                ),
               ),
             ),
           ),

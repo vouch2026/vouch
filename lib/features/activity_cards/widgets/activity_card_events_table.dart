@@ -20,12 +20,15 @@ class ActivityCardEventsTable extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Text(
-            'MANDATORY EVENTS COMPLIANCE',
-            style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-              letterSpacing: 1.2,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              'MANDATORY EVENTS COMPLIANCE',
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textGrey,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ),
@@ -35,54 +38,100 @@ class ActivityCardEventsTable extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.grey.shade100),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth,
-                    ),
-                    child: DataTable(
-                      columnSpacing: AppSpacing.lg,
-                      headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
-                columns: const [
-                  DataColumn(label: Text('EVENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('DATE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('ATTENDANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('VERIFIED BY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                ],
-                rows: events.map((event) {
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(event.title, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
-                            Text(event.category, style: AppTextStyles.labelSmall.copyWith(fontSize: 9)),
-                          ],
-                        ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.grey.shade100),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: constraints.maxWidth,
                       ),
-                      DataCell(Text(DateFormat('MMM d, yyyy').format(event.date), style: AppTextStyles.labelSmall)),
-                      DataCell(_AttendanceStatusBadge(status: event.attendanceStatus)),
-                      DataCell(Text(event.verifiedBy ?? '—', style: AppTextStyles.labelSmall)),
-                    ],
+                      child: DataTable(
+                        columnSpacing: AppSpacing.lg,
+                        headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.04)),
+                        columns: [
+                          DataColumn(
+                            label: Text(
+                              'EVENT', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'DATE', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'ATTENDANCE', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'VERIFIED BY', 
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                        rows: events.map((event) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(event.title, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                    Text(event.category, style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: AppColors.textGrey)),
+                                  ],
+                                ),
+                              ),
+                              DataCell(Text(DateFormat('MMM d, yyyy').format(event.date), style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDark))),
+                              DataCell(_AttendanceStatusBadge(status: event.attendanceStatus)),
+                              DataCell(Text(event.verifiedBy ?? '—', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDark))),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   );
-                }).toList(),
+                },
               ),
             ),
-          );
-        },
-      ),
-    ),
-  ),
+          ),
+        ),
       ],
     );
   }
@@ -101,36 +150,37 @@ class _AttendanceStatusBadge extends StatelessWidget {
 
     switch (status) {
       case AttendanceStatus.completed:
-        color = Colors.green;
+        color = AppColors.success;
         icon = Icons.check_circle_outline_rounded;
         label = 'Completed';
         break;
       case AttendanceStatus.pending:
-        color = Colors.orange;
+        color = AppColors.warning;
         icon = Icons.access_time_rounded;
         label = 'Pending';
         break;
       case AttendanceStatus.absent:
-        color = Colors.red;
+        color = AppColors.error;
         icon = Icons.cancel_outlined;
         label = 'Absent';
         break;
       case AttendanceStatus.excused:
-        color = Colors.blue;
+        color = AppColors.info;
         icon = Icons.info_outline_rounded;
         label = 'Excused';
         break;
       default:
-        color = Colors.grey;
+        color = AppColors.textGrey;
         icon = Icons.help_outline_rounded;
         label = 'Unknown';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -139,7 +189,7 @@ class _AttendanceStatusBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+            style: AppTextStyles.labelSmall.copyWith(color: color, fontWeight: FontWeight.bold, fontSize: 10),
           ),
         ],
       ),

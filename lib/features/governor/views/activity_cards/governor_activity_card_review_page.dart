@@ -13,6 +13,7 @@ import '../../../activity_cards/widgets/activity_card_events_table.dart';
 import '../../../activity_cards/widgets/activity_card_fees_table.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../organizations/providers/workspace_provider.dart';
+import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
 
@@ -84,6 +85,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   @override
   Widget build(BuildContext context) {
     final activityCardAsync = ref.watch(reviewActivityCardProvider(widget.id));
+    final studentProfileAsync = ref.watch(userProfileByIdProvider(widget.id));
     final activeRole = ref.watch(workspaceProvider).activeRole;
 
     return LoadingOverlay(
@@ -118,64 +120,70 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
               return false;
             }).firstOrNull;
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1400),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildStudentInfo(context, activityCard),
-                      const SizedBox(height: AppSpacing.xl),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isWide = constraints.maxWidth > 1100;
-                          if (isWide) {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
-                                const SizedBox(width: AppSpacing.xl),
-                                Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
-                              ],
-                            );
-                          } else {
-                            return Column(
-                              children: [
-                                ActivityCardEventsTable(events: activityCard.events),
-                                const SizedBox(height: AppSpacing.xxl),
-                                ActivityCardFeesTable(fees: activityCard.fees),
-                              ],
-                            );
-                          }
-                        },
-                      ),
-                      if (activityCard.sanctions.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xxl),
-                        _buildSanctionsTable(activityCard.sanctions),
-                      ],
-                      const SizedBox(height: AppSpacing.xxl),
-                      Center(
-                        child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[
-                        _buildOfficerActions(context),
-                        const SizedBox(height: AppSpacing.xxl),
-                        _buildReviewActions(context, activityCard, mySignatureSlot.id),
-                      ] else if (mySignatureSlot != null)
-                        Center(
-                          child: Text(
-                            'You have already ${mySignatureSlot.status == SignatureStatus.signed ? 'signed' : 'rejected'} this card.',
-                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
+            return studentProfileAsync.when(
+              data: (studentProfile) {
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1400),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStudentInfo(context, activityCard, studentProfile),
+                          const SizedBox(height: AppSpacing.xl),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isWide = constraints.maxWidth > 1100;
+                              if (isWide) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
+                                    const SizedBox(width: AppSpacing.xl),
+                                    Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
+                                  ],
+                                );
+                              } else {
+                                return Column(
+                                  children: [
+                                    ActivityCardEventsTable(events: activityCard.events),
+                                    const SizedBox(height: AppSpacing.xxl),
+                                    ActivityCardFeesTable(fees: activityCard.fees),
+                                  ],
+                                );
+                              }
+                            },
                           ),
-                        ),
-                      const SizedBox(height: AppSpacing.xxl),
-                    ],
+                          if (activityCard.sanctions.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.xxl),
+                            _buildSanctionsTable(activityCard.sanctions),
+                          ],
+                          const SizedBox(height: AppSpacing.xxl),
+                          Center(
+                            child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                          if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[
+                            _buildOfficerActions(context),
+                            const SizedBox(height: AppSpacing.xxl),
+                            _buildReviewActions(context, activityCard, mySignatureSlot.id),
+                          ] else if (mySignatureSlot != null)
+                            Center(
+                              child: Text(
+                                'You have already ${mySignatureSlot.status == SignatureStatus.signed ? 'signed' : 'rejected'} this card.',
+                                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
+                              ),
+                            ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error loading student profile: $err')),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -188,38 +196,42 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   Widget _buildReviewActions(BuildContext context, ActivityCard card, String signatureId) {
     return Center(
       child: Wrap(
-        spacing: AppSpacing.md,
+        spacing: AppSpacing.xl,
         runSpacing: AppSpacing.md,
         alignment: WrapAlignment.center,
         children: [
           SizedBox(
-            width: 200,
-            child: ElevatedButton.icon(
+            width: 220,
+            height: 52,
+            child: OutlinedButton.icon(
               icon: const Icon(Icons.close_rounded),
-              label: const Text('Reject Card'),
+              label: Text(
+                'Reject Card',
+                style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.error),
+              ),
               onPressed: () => _handleSignature(card, signatureId, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
           SizedBox(
-            width: 200,
+            width: 220,
+            height: 52,
             child: ElevatedButton.icon(
               icon: const Icon(Icons.draw_rounded),
-              label: const Text('Apply Signature'),
+              label: Text(
+                'Apply Signature',
+                style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
               onPressed: () => _handleSignature(card, signatureId, false),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.primary,
                 elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -228,45 +240,109 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
     );
   }
 
-  Widget _buildStudentInfo(BuildContext context, ActivityCard card) {
+  Widget _buildStudentInfo(BuildContext context, ActivityCard card, UserModel? studentProfile) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 700;
-    final name = card.studentName ?? 'Unknown Student';
+    final name = studentProfile?.fullName ?? card.studentName ?? 'Unknown Student';
+    final programInfo = studentProfile?.programName ?? card.studentProgram ?? 'N/A';
+    final yearDisplay = studentProfile?.yearLevel != null ? ' • ${studentProfile!.yearLevelDisplay} Year' : '';
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Flex(
-        direction: isCompact ? Axis.vertical : Axis.horizontal,
-        crossAxisAlignment: isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
-            child: Text(name[0], style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-          SizedBox(width: isCompact ? 0 : AppSpacing.lg, height: isCompact ? AppSpacing.md : 0),
-          Expanded(
-            flex: isCompact ? 0 : 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: AppTextStyles.headlineLarge.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(
-                  '${card.studentProgram ?? 'N/A'} • Student ID: ${widget.id}',
-                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
-                ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.white,
+                AppColors.primary.withValues(alpha: 0.02),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          SizedBox(height: isCompact ? AppSpacing.lg : 0),
-          _buildQuickCompliance(card),
-        ],
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Flex(
+            direction: isCompact ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accent,
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 36,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  backgroundImage: studentProfile?.avatarUrl != null ? NetworkImage(studentProfile!.avatarUrl!) : null,
+                  child: studentProfile?.avatarUrl == null 
+                    ? Text(name[0], style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary))
+                    : null,
+                ),
+              ),
+              SizedBox(width: isCompact ? 0 : AppSpacing.xl, height: isCompact ? AppSpacing.md : 0),
+              Expanded(
+                flex: isCompact ? 0 : 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name, 
+                      style: AppTextStyles.headlineLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$programInfo$yearDisplay',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: AppSpacing.md,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        Text(
+                          'Student ID: ${studentProfile?.schoolId ?? 'N/A'}',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'User ID (Sanctions Basis): ${studentProfile?.id ?? widget.id}',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isCompact ? AppSpacing.lg : 0),
+              _buildQuickCompliance(card),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -284,54 +360,110 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
     final totalSanctions = card.sanctions.length;
     final isSanctionsMet = fulfilledSanctions == totalSanctions;
 
-    return Row(
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.sm,
       children: [
         _ComplianceItem(
           label: 'Events',
           value: '$completedEvents/$totalEvents',
           isMet: isEventsMet,
         ),
-        const SizedBox(width: AppSpacing.lg),
         _ComplianceItem(
           label: 'Fees',
           value: isFeesMet ? 'Paid' : '$paidFees/$totalFees',
           isMet: isFeesMet,
         ),
-        if (totalSanctions > 0) ...[
-          const SizedBox(width: AppSpacing.lg),
+        if (totalSanctions > 0)
           _ComplianceItem(
             label: 'Sanctions',
             value: isSanctionsMet ? 'Fulfilled' : '$fulfilledSanctions/$totalSanctions',
             isMet: isSanctionsMet,
           ),
-        ],
       ],
     );
   }
 
   Widget _buildSanctionsTable(List<ActivityCardSanction> sanctions) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ABSENCE SANCTIONS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[600], letterSpacing: 1.2)),
-            const SizedBox(height: AppSpacing.lg),
-            ...sanctions.map((s) => ListTile(
-              leading: Icon(s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
-                           color: s.isFulfilled ? AppColors.success : AppColors.warning),
-              title: Text(s.description, style: const TextStyle(fontWeight: FontWeight.bold)),
-              trailing: Text(s.isFulfilled ? 'Fulfilled' : 'Pending', 
-                            style: TextStyle(color: s.isFulfilled ? AppColors.success : AppColors.warning, fontWeight: FontWeight.bold)),
-            )),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              'ABSENCE SANCTIONS', 
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.bold, 
+                color: AppColors.textGrey, 
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              children: sanctions.map((s) {
+                final statusColor = s.isFulfilled ? AppColors.success : AppColors.warning;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.1), width: 1),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
+                        color: statusColor,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      s.description, 
+                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        s.isFulfilled ? 'Fulfilled' : 'Pending', 
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -342,23 +474,54 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'OFFICER NOTES & REASONS',
-            style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-              letterSpacing: 1.2,
+          Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              'OFFICER NOTES & REASONS',
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textGrey,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _notesController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Add a note or reason for rejection...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              fillColor: Colors.grey.shade50,
-              filled: true,
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: TextField(
+              controller: _notesController,
+              maxLines: 3,
+              style: AppTextStyles.bodyMedium,
+              decoration: InputDecoration(
+                hintText: 'Add a note or reason for rejection...',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey.withValues(alpha: 0.6)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.15)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.15)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+                fillColor: AppColors.background,
+                filled: true,
+              ),
             ),
           ),
         ],
@@ -380,30 +543,57 @@ class _ComplianceItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(label, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: isMet ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
+    final statusColor = isMet ? AppColors.success : AppColors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textGrey,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
           ),
-          child: Row(
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(isMet ? Icons.check_circle_rounded : Icons.error_rounded, 
-                   size: 12, color: isMet ? Colors.green : Colors.red),
-              const SizedBox(width: 4),
-              Text(value, style: TextStyle(
-                color: isMet ? Colors.green : Colors.red,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              )),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isMet ? Icons.check_circle_rounded : Icons.warning_amber_rounded, 
+                  size: 14, 
+                  color: statusColor,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                value,
+                style: AppTextStyles.titleSmall.copyWith(
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

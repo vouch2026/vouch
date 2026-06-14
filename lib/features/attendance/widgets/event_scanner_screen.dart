@@ -157,7 +157,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       
       await repository.recordAttendance(
         eventId: widget.event.id!,
-        studentId: payload.studentId,
+        studentId: payload.databaseId ?? payload.studentId,
         scannedByUserId: officer.id!,
         isTimeIn: isTimeIn,
       );

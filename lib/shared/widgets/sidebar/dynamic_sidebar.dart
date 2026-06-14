@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -12,11 +13,58 @@ import '../../../../features/organizations/providers/workspace_provider.dart';
 import '../../../../core/providers/sidebar_provider.dart';
 import 'organization_switcher.dart';
 
-class DynamicSidebar extends ConsumerWidget {
+class DynamicSidebar extends ConsumerStatefulWidget {
   const DynamicSidebar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DynamicSidebar> createState() => _DynamicSidebarState();
+}
+
+class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
+  late ScrollController _scrollController;
+  String _projectVersion = 'Version Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    final initialOffset = ref.read(sidebarScrollOffsetProvider);
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
+    _scrollController.addListener(_onScroll);
+    _loadProjectVersion();
+  }
+
+  Future<void> _loadProjectVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _projectVersion = 'Version ${packageInfo.version}+${packageInfo.buildNumber}';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _projectVersion = 'Version 1.0.0';
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      ref.read(sidebarScrollOffsetProvider.notifier).state = _scrollController.offset;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final workspace = ref.watch(workspaceProvider);
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
@@ -43,10 +91,11 @@ class DynamicSidebar extends ConsumerWidget {
           _buildBackgroundDecorations(),
           Column(
             children: [
-              _buildSidebarHeader(context, ref),
+              _buildSidebarHeader(context),
               if (!isSuperAdmin) const OrganizationSwitcher(),
               Expanded(
                 child: ListView(
+                  controller: _scrollController,
                   padding: EdgeInsets.zero,
                   children: [
                     const _SidebarHeader(label: 'PERSONAL HUB'),
@@ -229,12 +278,12 @@ class DynamicSidebar extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '© ${DateTime.now().year} Vouch. All rights reserved.',
+                      '© ${DateTime.now().year} Jeslito G. Geverola. All rights reserved.',
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version 2.0.0 (Beta)',
+                      _projectVersion,
                       style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.grey.shade400,
                         fontSize: 10,
@@ -281,7 +330,7 @@ class DynamicSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _buildSidebarHeader(BuildContext context, WidgetRef ref) {
+  Widget _buildSidebarHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.sm),
       child: Row(
@@ -365,47 +414,86 @@ class _SidebarItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     bool isSelected = false;
     try {
-      isSelected = GoRouterState.of(context).matchedLocation == path;
+      final currentLoc = GoRouterState.of(context).matchedLocation;
+      isSelected = currentLoc == path || 
+          (path != '/' && currentLoc.startsWith('$path/'));
     } catch (_) {
       // Fallback or ignore if GoRouterState is not available
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        selected: isSelected,
-        selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
-        leading: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.08),
+                    AppColors.accent.withValues(alpha: 0.02),
+                  ],
+                )
+              : null,
+          border: Border.all(
             color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.1)
-                : AppColors.accent.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: isSelected ? AppColors.primary : Colors.grey.shade700,
+                ? AppColors.primary.withValues(alpha: 0.12)
+                : Colors.transparent,
+            width: 1,
           ),
         ),
-        title: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: isSelected ? AppColors.primary : Colors.black87,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          ),
+        child: Stack(
+          children: [
+            if (isSelected)
+              Positioned(
+                left: 0,
+                top: 10,
+                bottom: 10,
+                width: 4,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(4),
+                      bottomRight: Radius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              selected: isSelected,
+              selectedTileColor: Colors.transparent,
+              leading: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.15)
+                      : AppColors.accent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 16,
+                  color: isSelected ? AppColors.primary : Colors.grey.shade700,
+                ),
+              ),
+              title: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: isSelected ? AppColors.primary : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+              onTap: () {
+                context.go(path);
+              },
+            ),
+          ],
         ),
-        onTap: () {
-          context.go(path);
-          // On mobile, we might want to close it after navigation? 
-          // But the user said "only hide if close is pressed".
-          // However, for better UX on small screens, maybe it should close?
-          // Let's stick to the requirement for now.
-        },
       ),
     );
   }

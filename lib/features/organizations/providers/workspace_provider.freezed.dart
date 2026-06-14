@@ -23,6 +23,7 @@ mixin _$WorkspaceState {
       throw _privateConstructorUsedError;
   AppRole? get activeRole => throw _privateConstructorUsedError;
   bool get isLoading => throw _privateConstructorUsedError;
+  bool get isInitialized => throw _privateConstructorUsedError;
 
   /// Create a copy of WorkspaceState
   /// with the given fields replaced by the non-null parameter values.
@@ -43,6 +44,7 @@ abstract class $WorkspaceStateCopyWith<$Res> {
     OrganizationMembershipModel? activeMembership,
     AppRole? activeRole,
     bool isLoading,
+    bool isInitialized,
   });
 
   $OrganizationModelCopyWith<$Res>? get selectedOrganization;
@@ -68,6 +70,7 @@ class _$WorkspaceStateCopyWithImpl<$Res, $Val extends WorkspaceState>
     Object? activeMembership = freezed,
     Object? activeRole = freezed,
     Object? isLoading = null,
+    Object? isInitialized = null,
   }) {
     return _then(
       _value.copyWith(
@@ -86,6 +89,10 @@ class _$WorkspaceStateCopyWithImpl<$Res, $Val extends WorkspaceState>
             isLoading: null == isLoading
                 ? _value.isLoading
                 : isLoading // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            isInitialized: null == isInitialized
+                ? _value.isInitialized
+                : isInitialized // ignore: cast_nullable_to_non_nullable
                       as bool,
           )
           as $Val,
@@ -140,6 +147,7 @@ abstract class _$$WorkspaceStateImplCopyWith<$Res>
     OrganizationMembershipModel? activeMembership,
     AppRole? activeRole,
     bool isLoading,
+    bool isInitialized,
   });
 
   @override
@@ -166,6 +174,7 @@ class __$$WorkspaceStateImplCopyWithImpl<$Res>
     Object? activeMembership = freezed,
     Object? activeRole = freezed,
     Object? isLoading = null,
+    Object? isInitialized = null,
   }) {
     return _then(
       _$WorkspaceStateImpl(
@@ -185,6 +194,10 @@ class __$$WorkspaceStateImplCopyWithImpl<$Res>
             ? _value.isLoading
             : isLoading // ignore: cast_nullable_to_non_nullable
                   as bool,
+        isInitialized: null == isInitialized
+            ? _value.isInitialized
+            : isInitialized // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -192,12 +205,15 @@ class __$$WorkspaceStateImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$WorkspaceStateImpl implements _WorkspaceState {
+class _$WorkspaceStateImpl
+    with DiagnosticableTreeMixin
+    implements _WorkspaceState {
   const _$WorkspaceStateImpl({
     this.selectedOrganization,
     this.activeMembership,
     this.activeRole,
     this.isLoading = false,
+    this.isInitialized = false,
   });
 
   @override
@@ -209,10 +225,25 @@ class _$WorkspaceStateImpl implements _WorkspaceState {
   @override
   @JsonKey()
   final bool isLoading;
+  @override
+  @JsonKey()
+  final bool isInitialized;
 
   @override
-  String toString() {
-    return 'WorkspaceState(selectedOrganization: $selectedOrganization, activeMembership: $activeMembership, activeRole: $activeRole, isLoading: $isLoading)';
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
+    return 'WorkspaceState(selectedOrganization: $selectedOrganization, activeMembership: $activeMembership, activeRole: $activeRole, isLoading: $isLoading, isInitialized: $isInitialized)';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty('type', 'WorkspaceState'))
+      ..add(DiagnosticsProperty('selectedOrganization', selectedOrganization))
+      ..add(DiagnosticsProperty('activeMembership', activeMembership))
+      ..add(DiagnosticsProperty('activeRole', activeRole))
+      ..add(DiagnosticsProperty('isLoading', isLoading))
+      ..add(DiagnosticsProperty('isInitialized', isInitialized));
   }
 
   @override
@@ -227,7 +258,9 @@ class _$WorkspaceStateImpl implements _WorkspaceState {
             (identical(other.activeRole, activeRole) ||
                 other.activeRole == activeRole) &&
             (identical(other.isLoading, isLoading) ||
-                other.isLoading == isLoading));
+                other.isLoading == isLoading) &&
+            (identical(other.isInitialized, isInitialized) ||
+                other.isInitialized == isInitialized));
   }
 
   @override
@@ -237,6 +270,7 @@ class _$WorkspaceStateImpl implements _WorkspaceState {
     activeMembership,
     activeRole,
     isLoading,
+    isInitialized,
   );
 
   /// Create a copy of WorkspaceState
@@ -257,6 +291,7 @@ abstract class _WorkspaceState implements WorkspaceState {
     final OrganizationMembershipModel? activeMembership,
     final AppRole? activeRole,
     final bool isLoading,
+    final bool isInitialized,
   }) = _$WorkspaceStateImpl;
 
   @override
@@ -267,6 +302,8 @@ abstract class _WorkspaceState implements WorkspaceState {
   AppRole? get activeRole;
   @override
   bool get isLoading;
+  @override
+  bool get isInitialized;
 
   /// Create a copy of WorkspaceState
   /// with the given fields replaced by the non-null parameter values.

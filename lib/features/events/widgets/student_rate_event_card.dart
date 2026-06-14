@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/event_model.dart';
@@ -21,6 +22,7 @@ class _StudentRateEventCardState extends ConsumerState<StudentRateEventCard> {
   int _selectedRating = 0;
   final _commentController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isHovered = false;
 
   @override
   void dispose() {
@@ -75,22 +77,36 @@ class _StudentRateEventCardState extends ConsumerState<StudentRateEventCard> {
     final userRatingAsync = ref.watch(userEventRatingProvider(widget.event.id!));
     final allRatingsAsync = ref.watch(eventRatingsProvider(widget.event.id!));
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(
-          left: AppSpacing.lg,
-          right: AppSpacing.lg,
-          top: AppSpacing.lg,
-          bottom: AppSpacing.md,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        transform: _isHovered ? Matrix4.translationValues(0, -6, 0) : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isHovered 
+                ? AppColors.primary.withValues(alpha: 0.3) 
+                : AppColors.primary.withValues(alpha: 0.1),
+            width: _isHovered ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _isHovered ? 0.12 : 0.06),
+              blurRadius: _isHovered ? 20 : 12,
+              offset: Offset(0, _isHovered ? 8 : 4),
+            ),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -147,10 +163,11 @@ class _StudentRateEventCardState extends ConsumerState<StudentRateEventCard> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Text('Error: $err'),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildRatingForm() {
@@ -197,14 +214,30 @@ class _StudentRateEventCardState extends ConsumerState<StudentRateEventCard> {
         const SizedBox(height: AppSpacing.sm),
         SizedBox(
           width: double.infinity,
+          height: 48,
           child: FilledButton(
             onPressed: _isSubmitting ? null : _submitRating,
             style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             child: _isSubmitting
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Submit Feedback'),
+                ? const SizedBox(
+                    height: 20, 
+                    width: 20, 
+                    child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                  )
+                : Text(
+                    'Submit Feedback',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
           ),
         ),
       ],

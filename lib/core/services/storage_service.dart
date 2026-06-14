@@ -133,5 +133,9 @@ class StorageService {
   }) async {
     return await _client.storage.from(bucket).list(path: folder);
   }
+
+  String getPublicUrl(String bucket, String path) {
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
 }
 

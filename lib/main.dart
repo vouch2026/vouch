@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_router.dart';
 import 'core/config/supabase_config.dart';
@@ -9,6 +10,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await SupabaseConfig.initialize();
+  await Hive.initFlutter();
+  await Hive.openBox('settings');
   
   runApp(
     const ProviderScope(
@@ -30,7 +33,7 @@ class VouchApp extends ConsumerWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp.router(
-          title: 'Vouch App',
+          title: 'Vouch',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           routerConfig: router,

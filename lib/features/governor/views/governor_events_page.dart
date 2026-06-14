@@ -135,7 +135,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
               children: [
                 _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
                 _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
-                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 380),
+                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 200),
                 _buildTabView([], (event) => GovernorRateEventCard(event: event), mainAxisExtent: 320), // Ratings still mock/placeholder
               ],
             ),
@@ -171,11 +171,13 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
     
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate dynamic cross axis count
+        // Calculate dynamic cross axis count matching student_events_view.dart
         int crossAxisCount = 1;
         if (constraints.maxWidth > 1200) {
+          crossAxisCount = 4;
+        } else if (constraints.maxWidth > 900) {
           crossAxisCount = 3;
-        } else if (constraints.maxWidth > 700) {
+        } else if (constraints.maxWidth > 600) {
           crossAxisCount = 2;
         }
 

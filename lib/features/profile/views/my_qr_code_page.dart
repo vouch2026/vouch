@@ -103,6 +103,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
           if (profile == null) return const Center(child: Text('User not found'));
 
           final qrData = jsonEncode({
+            'id': profile.id,
             'studentId': profile.schoolId,
             'fullName': profile.fullName,
             'program': profile.programName ?? 'N/A',

@@ -520,9 +520,9 @@ BEGIN
         AND p.action = p_action
         AND om.status = 'active'
         AND (
-            (o.type = 'campus-based' AND p_scope_type = 'Institutional' AND o.campus_id = p_scope_id) OR
-            (o.type = 'faculty-based' AND p_scope_type = 'Faculty' AND o.faculty_id = p_scope_id) OR
-            (o.type = 'program-based' AND p_scope_type = 'Program' AND o.program_id = p_scope_id)
+            (o.type = 'campus-based' AND p_scope_type::text = 'Institutional' AND o.campus_id = p_scope_id) OR
+            (o.type = 'faculty-based' AND p_scope_type::text = 'Faculty' AND o.faculty_id = p_scope_id) OR
+            (o.type = 'program-based' AND p_scope_type::text = 'Program' AND o.program_id = p_scope_id)
         )
     ) THEN RETURN TRUE; END IF;
 
@@ -1123,5 +1123,8 @@ SELECT u.id, r.id, 'Institutional', '00000000-0000-0000-0000-000000000000'
 FROM public.users u CROSS JOIN public.roles r
 WHERE u.email = 'vouch.app.admin@gmail.com' AND r.name = 'Super Admin'
 AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id);
+
+UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
+;
 
 UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
