@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -307,7 +308,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                       onRefresh: _loadScans,
                       color: primaryColor,
                       child: _isLoading
-                          ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                          ? const Center(child: FlickrLoader())
                           : _filteredScans.isEmpty
                               ? _buildEmptyState()
                               : ListView.builder(

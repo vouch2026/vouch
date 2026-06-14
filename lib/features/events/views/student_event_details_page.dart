@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -251,7 +252,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         if (!isOfficer && !isUpcoming)
                           highlightsAsync.when(
                             data: (count) => _buildHighlightsSection(count),
-                            loading: () => const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(child: FlickrLoader()),
                             error: (_, __) => const SizedBox.shrink(),
                           ),
                         if (isOfficer && widget.event.isPastTimeout) ...[
@@ -458,7 +459,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: FlickrLoader()),
                 error: (_, __) => const Text('Error loading attendance'),
               ),
             ] else ...[
@@ -479,7 +480,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
           ],
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (_, __) => const Text('Error loading user profile'),
     );
   }
@@ -680,7 +681,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _isUploading
-                  ? const CircularProgressIndicator(color: AppColors.primary)
+                  ? const FlickrLoader()
                   : Text(
                       'Upload Event Highlights', 
                       style: AppTextStyles.titleLarge.copyWith(

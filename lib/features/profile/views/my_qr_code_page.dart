@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -344,7 +345,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: FlickrLoader()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );

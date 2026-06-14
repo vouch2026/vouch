@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -178,7 +179,7 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
                       child: _isLoading 
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
                         : const Text('Save Reference'),
                     ),
                   ),

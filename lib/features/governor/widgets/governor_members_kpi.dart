@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -86,7 +87,7 @@ class GovernorMembersKpi extends ConsumerWidget {
           },
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (_, __) => const SizedBox.shrink(),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -139,7 +140,7 @@ class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: _isSubmitting 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(width: 20, height: 20, child: FlickrLoader())
                       : const Text('Create'),
                 ),
               ],
@@ -191,7 +192,7 @@ class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
                     );
                   },
                 ),
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: FlickrLoader()),
                 error: (err, _) => Text('Error: $err'),
               ),
             ),

@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -156,7 +157,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                       );
                     },
                   ),
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => const Center(child: FlickrLoader()),
                   error: (err, _) => Center(child: Text('Error: $err')),
                 ),
 
@@ -258,7 +259,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
               _buildSubmissionList(submissions, 'Rejected'),
             ],
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: FlickrLoader()),
           error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
@@ -455,7 +456,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                       fit: BoxFit.contain,
                       loadingBuilder: (context, child, progress) {
                         if (progress == null) return child;
-                        return const Center(child: CircularProgressIndicator(color: Colors.white));
+                        return const Center(child: FlickrLoader());
                       },
                       errorBuilder: (context, error, stackTrace) => _buildImageError(),
                     )
@@ -693,10 +694,10 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: FlickrLoader()),
             error: (err, _) => Center(child: Text('Error: $err')),
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: FlickrLoader()),
           error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),

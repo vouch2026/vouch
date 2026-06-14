@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -232,7 +233,7 @@ class ProfileMenuContent extends ConsumerWidget {
       },
       loading: () => const SizedBox(
         height: 300,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: FlickrLoader()),
       ),
       error: (err, _) => Center(child: Text('Error: $err')),
     );

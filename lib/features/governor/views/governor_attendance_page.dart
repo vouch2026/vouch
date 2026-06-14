@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -455,7 +456,7 @@ class _GovernorAttendancePageState extends ConsumerState<GovernorAttendancePage>
         loading: () => const Center(
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.xxl),
-            child: CircularProgressIndicator(color: AppColors.primary),
+            child: FlickrLoader(),
           ),
         ),
         error: (err, stack) => Center(

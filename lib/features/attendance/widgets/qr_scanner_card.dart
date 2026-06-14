@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -229,10 +230,7 @@ class QrScannerCard extends StatelessWidget {
                                 child: SizedBox(
                                   width: 32,
                                   height: 32,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    color: Colors.white,
-                                  ),
+                                  child: FlickrLoader(),
                                 ),
                               ),
                             ),

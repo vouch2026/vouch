@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -261,7 +262,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         }
       },
       child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: FlickrLoader())
           : SingleChildScrollView(
               padding: EdgeInsets.symmetric(vertical: isMobile ? 16.0 : 24.0),
               child: Column(

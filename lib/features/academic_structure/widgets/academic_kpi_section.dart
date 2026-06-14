@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -79,7 +80,7 @@ class AcademicKpiSection extends ConsumerWidget {
           );
         },
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (e, s) => Center(child: Text('Error loading stats: $e')),
     );
   }

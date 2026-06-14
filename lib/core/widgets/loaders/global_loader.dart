@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'flickr_loader.dart';
 
 class GlobalLoader extends StatelessWidget {
   final bool isSkeleton;
@@ -40,8 +41,9 @@ class GlobalLoader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                const FlickrLoader(
+                  size: 12,
+                  distance: 16,
                 ),
               ],
             ),

@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -175,7 +176,7 @@ class _ChangeEmailPageState extends ConsumerState<ChangeEmailPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: authState.isLoading
-                    ? const CircularProgressIndicator()
+                    ? const FlickrLoader()
                     : Text('Verify and Update', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
               ),
             ),

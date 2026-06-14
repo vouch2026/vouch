@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -156,7 +157,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: FlickrLoader()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );

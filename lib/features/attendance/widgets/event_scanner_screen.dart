@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -613,7 +614,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                         const Divider(height: 24),
                         Expanded(
                           child: _isLoadingScans 
-                            ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                            ? const Center(child: FlickrLoader())
                             : _recentScans.isEmpty
                               ? Center(
                                   child: Column(
@@ -651,7 +652,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   Widget _buildRecentScansList() {
     if (_isLoadingScans) {
-      return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: primaryColor)));
+      return const SliverFillRemaining(child: Center(child: FlickrLoader()));
     }
     if (_recentScans.isEmpty) {
       return SliverFillRemaining(

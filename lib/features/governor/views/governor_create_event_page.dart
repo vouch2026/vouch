@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -359,10 +360,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
+                  child: FlickrLoader(),
                 )
               : Text(
                   'Create Event', 

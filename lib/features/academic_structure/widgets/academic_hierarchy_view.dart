@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -97,7 +98,7 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
                 );
               },
             ),
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: CircularProgressIndicator())),
+            loading: () => const Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: FlickrLoader())),
             error: (e, s) => Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: Text('Error: $e'))),
           ),
         ],
@@ -225,7 +226,7 @@ class _CampusNode extends ConsumerWidget {
                         ],
                       );
                     },
-                    loading: () => const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                    loading: () => const SizedBox(width: 20, height: 20, child: FlickrLoader()),
                     error: (e, s) => const Icon(Icons.error_outline, color: Colors.red, size: 20),
                   ),
                 ],
@@ -379,7 +380,7 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
                           ],
                         );
                       },
-                      loading: () => const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      loading: () => const SizedBox(width: 16, height: 16, child: FlickrLoader()),
                       error: (e, s) => const Icon(Icons.error_outline, size: 16),
                     ),
                   ],
@@ -396,7 +397,7 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
                         ...programs.map((p) => _ProgramNode(program: p)).toList(),
                       ],
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(child: FlickrLoader()),
                     error: (e, s) => Text('Error: $e'),
                   ),
                 ),

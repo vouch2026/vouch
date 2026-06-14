@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -245,11 +246,11 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => const Center(child: FlickrLoader()),
                   error: (err, _) => Center(child: Text('Error: $err')),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: FlickrLoader()),
               error: (err, _) => Center(child: Text('Error: $err')),
             ),
           ],
@@ -346,7 +347,7 @@ class _HighlightCardState extends State<_HighlightCard> {
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
-                          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                          return const Center(child: FlickrLoader());
                         },
                         errorBuilder: (_, __, ___) => const Center(
                           child: Icon(Icons.broken_image_outlined, color: Colors.grey),
@@ -486,7 +487,7 @@ class _FullScreenGalleryOverlayState extends State<_FullScreenGalleryOverlay> {
                         fit: BoxFit.contain,
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
-                          return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+                          return const Center(child: FlickrLoader());
                         },
                         errorBuilder: (_, __, ___) => const Center(
                           child: Icon(Icons.broken_image_outlined, color: Colors.white, size: 64),

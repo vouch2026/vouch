@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -160,7 +161,7 @@ class _StudentRateEventCardState extends ConsumerState<StudentRateEventCard> {
                 }
                 return _buildRatingForm();
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: FlickrLoader()),
               error: (err, _) => Text('Error: $err'),
             ),
               ],
@@ -229,7 +230,7 @@ class _StudentRateEventCardState extends ConsumerState<StudentRateEventCard> {
                 ? const SizedBox(
                     height: 20, 
                     width: 20, 
-                    child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                    child: FlickrLoader(),
                   )
                 : Text(
                     'Submit Feedback',

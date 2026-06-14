@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -137,7 +138,7 @@ class GovernorMembersTable extends ConsumerWidget {
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.xl),
-          child: CircularProgressIndicator(),
+          child: FlickrLoader(),
         ),
       ),
       error: (error, _) => Center(
