@@ -190,8 +190,197 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
     }
   }
 
+  List<Widget> _buildLeftFormFields() {
+    return [
+      _buildSectionTitle('Event Visuals'),
+      const SizedBox(height: AppSpacing.md),
+      GestureDetector(
+        onTap: _pickImage,
+        child: Container(
+          width: double.infinity,
+          height: 200,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[300]!),
+            image: _eventImageBytes != null
+                ? DecorationImage(image: MemoryImage(_eventImageBytes!), fit: BoxFit.cover)
+                : null,
+          ),
+          child: _eventImageBytes == null
+              ? const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey),
+                    SizedBox(height: 8),
+                    Text('Click to upload event banner', style: TextStyle(color: Colors.grey)),
+                  ],
+                )
+              : null,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.xl),
+      
+      _buildSectionTitle('General Information'),
+      const SizedBox(height: AppSpacing.md),
+      TextFormField(
+        controller: _nameController,
+        decoration: InputDecoration(
+          labelText: 'Event Name',
+          hintText: 'e.g., General Assembly 2026',
+          prefixIcon: _buildPrefixIcon(Icons.event),
+        ),
+        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+      ),
+      const SizedBox(height: AppSpacing.md),
+      TextFormField(
+        controller: _locationController,
+        decoration: InputDecoration(
+          labelText: 'Location',
+          hintText: 'e.g., University Social Hall',
+          prefixIcon: _buildPrefixIcon(Icons.location_on),
+        ),
+        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+      ),
+      const SizedBox(height: AppSpacing.md),
+      TextFormField(
+        controller: _shortDescriptionController,
+        decoration: InputDecoration(
+          labelText: 'Short Description',
+          hintText: 'A brief summary of the event',
+          prefixIcon: _buildPrefixIcon(Icons.description_outlined),
+        ),
+        maxLength: 255,
+      ),
+      const SizedBox(height: AppSpacing.md),
+      TextFormField(
+        controller: _fullDescriptionController,
+        decoration: InputDecoration(
+          labelText: 'Full Description',
+          hintText: 'Detailed information about the event',
+          prefixIcon: _buildPrefixIcon(Icons.notes_rounded),
+        ),
+        maxLines: 5,
+      ),
+    ];
+  }
+
+  List<Widget> _buildRightFormFields() {
+    return [
+      _buildSectionTitle('Date & Schedule'),
+      const SizedBox(height: AppSpacing.md),
+      Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            _buildPrefixIcon(Icons.calendar_month_rounded),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Event Date', 
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textGrey, 
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _selectedDate == null 
+                        ? 'Not selected' 
+                        : DateFormat.yMMMMd().format(_selectedDate!),
+                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _selectDate,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Select Date', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+      const Divider(height: AppSpacing.lg),
+      _buildTimeRow('Time In Window', _timeInStart, _timeInEnd, (start, end) {
+        setState(() {
+          if (start != null) _timeInStart = start;
+          if (end != null) _timeInEnd = end;
+        });
+      }),
+      const Divider(height: AppSpacing.lg),
+      _buildTimeRow('Time Out Window', _timeOutStart, _timeOutEnd, (start, end) {
+        setState(() {
+          if (start != null) _timeOutStart = start;
+          if (end != null) _timeOutEnd = end;
+        });
+      }),
+      
+      const SizedBox(height: AppSpacing.xl),
+      _buildSectionTitle('Event Settings'),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Mandatory Attendance'),
+        subtitle: const Text('If enabled, this event will be required for all members'),
+        value: _isMandatory,
+        onChanged: (v) => setState(() => _isMandatory = v),
+      ),
+      
+      const SizedBox(height: AppSpacing.xxl),
+      SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: FilledButton(
+          onPressed: _isLoading ? null : _submit,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: AppColors.primary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: _isLoading 
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                )
+              : Text(
+                  'Create Event', 
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 900;
+
     return DashboardLayout(
       title: 'Create New Event',
       onBack: () {
@@ -203,252 +392,93 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/workspace/events');
-                        }
-                      },
-                      child: Text(
-                        'Events',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/workspace/events');
+                    }
+                  },
+                  child: Text(
+                    'Events',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Create Event',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
                   ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle('Event Visuals'),
-                        const SizedBox(height: AppSpacing.md),
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  width: double.infinity,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[300]!),
-                    image: _eventImageBytes != null
-                        ? DecorationImage(image: MemoryImage(_eventImageBytes!), fit: BoxFit.cover)
-                        : null,
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                Text(
+                  'Create Event',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
                   ),
-                  child: _eventImageBytes == null
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text('Click to upload event banner', style: TextStyle(color: Colors.grey)),
-                          ],
-                        )
-                      : null,
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.xl),
-              
-              _buildSectionTitle('General Information'),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Event Name',
-                  hintText: 'e.g., General Assembly 2026',
-                  prefixIcon: _buildPrefixIcon(Icons.event),
-                ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _locationController,
-                decoration: InputDecoration(
-                  labelText: 'Location',
-                  hintText: 'e.g., University Social Hall',
-                  prefixIcon: _buildPrefixIcon(Icons.location_on),
-                ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _shortDescriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Short Description',
-                  hintText: 'A brief summary of the event',
-                  prefixIcon: _buildPrefixIcon(Icons.description_outlined),
-                ),
-                maxLength: 255,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _fullDescriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Full Description',
-                  hintText: 'Detailed information about the event',
-                  prefixIcon: _buildPrefixIcon(Icons.notes_rounded),
-                ),
-                maxLines: 5,
-              ),
-              
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle('Date & Schedule'),
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    _buildPrefixIcon(Icons.calendar_month_rounded),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
+              child: Form(
+                key: _formKey,
+                child: !isMobile 
+                    ? Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Event Date', 
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textGrey, 
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: _buildLeftFormFields(),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _selectedDate == null 
-                                ? 'Not selected' 
-                                : DateFormat.yMMMMd().format(_selectedDate!),
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          const SizedBox(width: AppSpacing.xl),
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: _buildRightFormFields(),
+                            ),
                           ),
                         ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ..._buildLeftFormFields(),
+                          const SizedBox(height: AppSpacing.xl),
+                          ..._buildRightFormFields(),
+                        ],
                       ),
-                    ),
-                    ElevatedButton(
-                      onPressed: _selectDate,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.primary,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text('Select Date', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
               ),
-              const Divider(),
-              _buildTimeRow('Time In Window', _timeInStart, _timeInEnd, (start, end) {
-                setState(() {
-                  if (start != null) _timeInStart = start;
-                  if (end != null) _timeInEnd = end;
-                });
-              }),
-              const Divider(),
-              _buildTimeRow('Time Out Window', _timeOutStart, _timeOutEnd, (start, end) {
-                setState(() {
-                  if (start != null) _timeOutStart = start;
-                  if (end != null) _timeOutEnd = end;
-                });
-              }),
-              
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle('Event Settings'),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Mandatory Attendance'),
-                subtitle: const Text('If enabled, this event will be required for all members'),
-                value: _isMandatory,
-                onChanged: (v) => setState(() => _isMandatory = v),
-              ),
-              
-              const SizedBox(height: AppSpacing.xxl),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  onPressed: _isLoading ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: _isLoading 
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                          ),
-                        )
-                      : Text(
-                          'Create Event', 
-                          style: AppTextStyles.titleLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
+    );
   }
 
   Widget _buildSectionTitle(String title) {

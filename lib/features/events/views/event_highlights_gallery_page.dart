@@ -84,180 +84,175 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
       },
       child: SingleChildScrollView(
         padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Breadcrumbs / Header
+            Row(
               children: [
-                // Breadcrumbs / Header
-                Row(
-                  children: [
-                    Icon(Icons.event_note_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Text(
-                        'Events',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                Icon(Icons.event_note_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(
+                    'Events',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Text(
-                        eventName,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Highlights Gallery',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                
-                Text(
-                  'Highlights Gallery',
-                  style: AppTextStyles.headlineMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Moments shared by members for $eventName',
-                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-
-                highlightsAsync.when(
-                  data: (highlights) {
-                    if (highlights.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 64),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.05),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.no_photography_rounded,
-                                  size: 64,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                              Text(
-                                'No highlights uploaded yet',
-                                style: AppTextStyles.titleMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Members haven\'t shared any photos for this event.',
-                                style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
                     }
+                  },
+                  child: Text(
+                    eventName,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Highlights Gallery',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
+            Text(
+              'Highlights Gallery',
+              style: AppTextStyles.headlineMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Moments shared by members for $eventName',
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: AppSpacing.xl),
 
-                    return usersAsync.when(
-                      data: (users) {
-                        return LayoutBuilder(
-                          builder: (context, constraints) {
-                            int crossAxisCount = 2;
-                            if (constraints.maxWidth > 1200) {
-                              crossAxisCount = 5;
-                            } else if (constraints.maxWidth > 900) {
-                              crossAxisCount = 4;
-                            } else if (constraints.maxWidth > 600) {
-                              crossAxisCount = 3;
-                            }
+            highlightsAsync.when(
+              data: (highlights) {
+                if (highlights.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 64),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.no_photography_rounded,
+                              size: 64,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            'No highlights uploaded yet',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Members haven\'t shared any photos for this event.',
+                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
-                            return GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: AppSpacing.lg,
-                                mainAxisSpacing: AppSpacing.lg,
-                                childAspectRatio: 0.82,
+                return usersAsync.when(
+                  data: (users) {
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        int crossAxisCount = 2;
+                        if (constraints.maxWidth > 1200) {
+                          crossAxisCount = 5;
+                        } else if (constraints.maxWidth > 900) {
+                          crossAxisCount = 4;
+                        } else if (constraints.maxWidth > 600) {
+                          crossAxisCount = 3;
+                        }
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: AppSpacing.lg,
+                            mainAxisSpacing: AppSpacing.lg,
+                            childAspectRatio: 0.82,
+                          ),
+                          itemCount: highlights.length,
+                          itemBuilder: (context, index) {
+                            final highlight = highlights[index];
+                            final userId = highlight['userId'] as String?;
+                            final uploader = users.firstWhere(
+                              (u) => u.id == userId,
+                              orElse: () => UserModel(
+                                authId: '',
+                                email: '',
+                                schoolId: '',
+                                firstName: 'Unknown',
+                                lastName: 'Member',
                               ),
-                              itemCount: highlights.length,
-                              itemBuilder: (context, index) {
-                                final highlight = highlights[index];
-                                final userId = highlight['userId'] as String?;
-                                final uploader = users.firstWhere(
-                                  (u) => u.id == userId,
-                                  orElse: () => UserModel(
-                                    authId: '',
-                                    email: '',
-                                    schoolId: '',
-                                    firstName: 'Unknown',
-                                    lastName: 'Member',
-                                  ),
-                                );
+                            );
 
-                                return _HighlightCard(
-                                  highlight: highlight,
-                                  uploader: uploader,
-                                  onTap: () => _openGalleryOverlay(context, highlights, users, index),
-                                );
-                              },
+                            return _HighlightCard(
+                              highlight: highlight,
+                              uploader: uploader,
+                              onTap: () => _openGalleryOverlay(context, highlights, users, index),
                             );
                           },
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(child: Text('Error: $err')),
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (err, _) => Center(child: Text('Error: $err')),
-                ),
-              ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
             ),
-          ),
+          ],
         ),
       ),
     );

@@ -182,105 +182,100 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         : null,
       child: SingleChildScrollView(
         padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Text(
-                        'Events',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(
+                    'Events',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.event.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                _buildResponsiveHero(),
-                const SizedBox(height: AppSpacing.xl),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTitleSection(),
-                            const SizedBox(height: AppSpacing.lg),
-                            _buildDescriptionSection(),
-                            const SizedBox(height: AppSpacing.xxl),
-                            if (!isOfficer && !isUpcoming)
-                              highlightsAsync.when(
-                                data: (count) => _buildHighlightsSection(count),
-                                loading: () => const Center(child: CircularProgressIndicator()),
-                                error: (_, __) => const SizedBox.shrink(),
-                              ),
-                            if (isOfficer && widget.event.isPastTimeout) ...[
-                              _buildOfficerPastEventActions(context),
-                            ],
-                          ],
-                        ),
-                      ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.event.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
                     ),
-                    if (!isMobile) ...[
-                      const SizedBox(width: AppSpacing.xxl),
-                      Expanded(
-                        flex: 1,
-                        child: _buildInfoSidebar(),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-                if (isMobile) ...[
-                  const SizedBox(height: AppSpacing.xxl),
-                  _buildInfoSidebar(),
-                ],
-                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            _buildResponsiveHero(),
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTitleSection(),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildDescriptionSection(),
+                        const SizedBox(height: AppSpacing.xxl),
+                        if (!isOfficer && !isUpcoming)
+                          highlightsAsync.when(
+                            data: (count) => _buildHighlightsSection(count),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        if (isOfficer && widget.event.isPastTimeout) ...[
+                          _buildOfficerPastEventActions(context),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isMobile) ...[
+                  const SizedBox(width: AppSpacing.xxl),
+                  Expanded(
+                    flex: 1,
+                    child: _buildInfoSidebar(),
+                  ),
+                ],
+              ],
+            ),
+            if (isMobile) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              _buildInfoSidebar(),
+            ],
+            const SizedBox(height: AppSpacing.xxl),
+          ],
         ),
       ),
     );
