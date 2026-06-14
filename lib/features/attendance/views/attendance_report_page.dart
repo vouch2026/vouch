@@ -8,6 +8,10 @@ import '../../events/models/event_model.dart';
 import '../providers/attendance_provider.dart';
 import '../models/qr_scan_ui_model.dart';
 import '../widgets/qr_recent_scan_card.dart';
+import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+
 
 class AttendanceReportPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -135,261 +139,184 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
     final presentCount = _allScans.length;
     final absentCount = _totalStudentsCount > presentCount ? _totalStudentsCount - presentCount : 0;
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
-    return Theme(
-      data: Theme.of(context).copyWith(textTheme: textTheme),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: _isLoading 
-              ? const Center(child: CircularProgressIndicator(color: primaryColor))
-              : Stack(
-                  children: [
-                    // Decorative Backgrounds
-                    Positioned(
-                      top: 100,
-                      right: -50,
-                      child: Container(
-                        width: 200,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(100),
+    return DashboardLayout(
+      title: 'Attendance Report',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 16.0 : 24.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Breadcrumbs / Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () {
+                                if (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                                if (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: Text(
+                                'Events',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () {
+                                if (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: Text(
+                                widget.event.name,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Attendance Report',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    Positioned(
-                      bottom: 260,
-                      left: -30,
-                      child: Container(
-                        width: 150,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(75),
+                      const SizedBox(height: 16),
+
+                      // Title Section
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Attendance Report',
+                              style: AppTextStyles.headlineMedium.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Attendance summary and statistics for ${widget.event.name}',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    
-                    CustomScrollView(
-                      slivers: [
-                        // Custom Header
-                        SliverToBoxAdapter(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Custom AppBar
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      const SizedBox(height: 24),
+
+                      // Analytics KPI and Chart Card
+                      _buildAnalyticsSection(presentCount, absentCount),
+                      const SizedBox(height: 24),
+
+                      // Search and Filter Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Attendance Logs',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Search bar
+                            Container(
+                              decoration: BoxDecoration(
                                 color: Colors.white,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Breadcrumb Row
-                                    Row(
-                                      children: [
-                                        Icon(Icons.event_note_rounded, size: 14, color: Colors.grey[500]),
-                                        const SizedBox(width: 6),
-                                        GestureDetector(
-                                          onTap: () {
-                                            if (Navigator.canPop(context)) {
-                                              Navigator.pop(context);
-                                            }
-                                            if (Navigator.canPop(context)) {
-                                              Navigator.pop(context);
-                                            }
-                                          },
-                                          child: Text(
-                                            'Events',
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.grey[600],
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                                        const SizedBox(width: 6),
-                                        GestureDetector(
-                                          onTap: () {
-                                            if (Navigator.canPop(context)) {
-                                              Navigator.pop(context);
-                                            }
-                                          },
-                                          child: Text(
-                                            widget.event.name,
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.grey[600],
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            'Attendance Report',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.poppins(
-                                              color: primaryColor,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      height: 32,
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: IconButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(),
-                                              icon: const Icon(
-                                                LucideIcons.arrowLeft,
-                                                color: primaryColor,
-                                                size: 21,
-                                              ),
-                                            ),
-                                          ),
-                                          RichText(
-                                            text: TextSpan(
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                              children: const [
-                                                TextSpan(
-                                                  text: 'Attendance ',
-                                                  style: TextStyle(color: primaryColor),
-                                                ),
-                                                TextSpan(
-                                                  text: 'Report',
-                                                  style: TextStyle(color: accentColor),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Align(
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        widget.event.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.black.withValues(alpha: 0.4),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.02),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Search by student name, ID or program...',
+                                  hintStyle: GoogleFonts.poppins(
+                                    color: Colors.grey[400],
+                                    fontSize: 13,
+                                  ),
+                                  prefixIcon: const Icon(LucideIcons.search, size: 20, color: Colors.grey),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.black87,
                                 ),
                               ),
-                              
-                              // Charts & Statistics Section
-                              _buildAnalyticsSection(presentCount, absentCount),
-                              
-                              const SizedBox(height: 16),
-
-                              // Search Bar
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 18),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.06),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                    decoration: InputDecoration(
-                                      hintText: 'Search student name or ID...',
-                                      hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.35), fontSize: 13),
-                                      prefixIcon: const Icon(LucideIcons.search, size: 19, color: primaryColor),
-                                      suffixIcon: _searchController.text.isNotEmpty 
-                                        ? IconButton(
-                                            icon: const Icon(LucideIcons.xCircle, size: 18, color: Colors.black26),
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              _applyFilters();
-                                            },
-                                          )
-                                        : null,
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: const BorderSide(color: primaryColor, width: 1.5),
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 18),
-
-                              // Filters Section
-                              _buildFilterSection(),
-
-                              const SizedBox(height: 12),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        
-                        // Scans list
-                        _filteredScans.isEmpty
-                            ? SliverFillRemaining(
-                                hasScrollBody: false,
-                                child: _buildEmptyState(),
-                              )
-                            : SliverPadding(
-                                padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
-                                sliver: SliverList(
-                                  delegate: SliverChildBuilderDelegate(
-                                    (context, index) {
-                                      return QrRecentScanCard(scan: _filteredScans[index]);
-                                    },
-                                    childCount: _filteredScans.length,
-                                  ),
-                                ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Filter chips and dropdowns
+                      _buildFilterSection(),
+                      const SizedBox(height: 16),
+
+                      // Scans List
+                      _filteredScans.isEmpty
+                          ? _buildEmptyState()
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                              child: Column(
+                                children: _filteredScans.map((scan) => QrRecentScanCard(scan: scan)).toList(),
                               ),
-                      ],
-                    ),
-                  ],
+                            ),
+                    ],
+                  ),
                 ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 
