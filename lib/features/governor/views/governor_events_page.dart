@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
@@ -57,6 +58,8 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                            activeRole == 'Secretary';
     
     final eventsAsync = ref.watch(workspaceEventsProvider);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
 
     return DashboardLayout(
       title: 'Organization Events',
@@ -73,68 +76,88 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
           final upcomingEvents = events.where((e) => e.eventDate.isAfter(today)).toList();
           final pastEvents = events.where((e) => e.isPastTimeout).toList();
           
-          return NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: UserManagementHeader(
-                        title: 'Events',
-                        subtitle: 'Manage organization events, attendance, and feedback',
-                        actions: [
-                          if (canCreateEvent)
-                            HeaderActionButton(
-                              icon: Icons.add_rounded,
-                              label: 'Create Event',
-                              onPressed: () => context.push(RoutePaths.workspaceCreateEvent),
-                              isPrimary: true,
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                  vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                ),
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Events',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          UserManagementHeader(
+                            title: 'Events',
+                            subtitle: 'Manage organization events, attendance, and feedback',
+                            actions: [
+                              if (canCreateEvent)
+                                HeaderActionButton(
+                                  icon: Icons.add_rounded,
+                                  label: 'Create Event',
+                                  onPressed: () => context.push(RoutePaths.workspaceCreateEvent),
+                                  isPrimary: true,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                             ),
+                            child: TabBar(
+                              controller: _tabController,
+                              isScrollable: true,
+                              tabAlignment: TabAlignment.start,
+                              labelColor: theme.colorScheme.primary,
+                              unselectedLabelColor: Colors.grey[600],
+                              dividerColor: Colors.transparent,
+                              indicatorColor: theme.colorScheme.primary,
+                              indicatorWeight: 3,
+                              labelStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                              tabs: const [
+                                Tab(text: 'Today'),
+                                Tab(text: 'Upcoming'),
+                                Tab(text: 'Past'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
                         ],
                       ),
                     ),
-                    
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                        ),
-                        child: TabBar(
-                          controller: _tabController,
-                          isScrollable: true,
-                          tabAlignment: TabAlignment.start,
-                          labelColor: theme.colorScheme.primary,
-                          unselectedLabelColor: Colors.grey[600],
-                          dividerColor: Colors.transparent,
-                          indicatorColor: theme.colorScheme.primary,
-                          indicatorWeight: 3,
-                          labelStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
-                          tabs: const [
-                            Tab(text: 'Today'),
-                            Tab(text: 'Upcoming'),
-                            Tab(text: 'Past'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
                   ],
+                  body: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
+                      _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
+                      _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 200),
+                    ],
+                  ),
                 ),
               ),
-            ],
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
-                _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
-                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 200),
-              ],
             ),
           );
         },
@@ -179,7 +202,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,
