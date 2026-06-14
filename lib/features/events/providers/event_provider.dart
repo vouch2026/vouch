@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/event_model.dart';
-import '../models/event_rating_model.dart';
 import '../repositories/event_repository.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
@@ -33,16 +32,6 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
 
 final eventProvider = FutureProvider.family<EventModel?, String>((ref, id) async {
   return ref.watch(eventRepositoryProvider).getEventById(id);
-});
-
-final eventRatingsProvider = FutureProvider.family<List<EventRatingModel>, String>((ref, eventId) async {
-  return ref.watch(eventRepositoryProvider).getRatingsForEvent(eventId);
-});
-
-final userEventRatingProvider = FutureProvider.family<EventRatingModel?, String>((ref, eventId) async {
-  final user = ref.watch(userProfileProvider).value;
-  if (user == null || user.id == null) return null;
-  return ref.watch(eventRepositoryProvider).getUserRatingForEvent(eventId, user.id!);
 });
 
 final eventHighlightsProvider = FutureProvider.family<int, String>((ref, eventId) async {
