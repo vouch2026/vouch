@@ -17,7 +17,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 
 class GovernorCreateEventPage extends ConsumerStatefulWidget {
-  const GovernorCreateEventPage({super.key});
+  final EventModel? eventToEdit;
+  const GovernorCreateEventPage({super.key, this.eventToEdit});
 
   @override
   ConsumerState<GovernorCreateEventPage> createState() => _GovernorCreateEventPageState();
@@ -67,6 +68,40 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   
   bool _isMandatory = true;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.eventToEdit != null) {
+      final event = widget.eventToEdit!;
+      _nameController.text = event.name;
+      _shortDescriptionController.text = event.shortDescription ?? '';
+      _fullDescriptionController.text = event.fullDescription ?? '';
+      _locationController.text = event.location;
+      _selectedDate = event.eventDate;
+      _isMandatory = event.isMandatory;
+      
+      _timeInStart = _parseDbTimeString(event.timeInStart);
+      _timeInEnd = _parseDbTimeString(event.timeInEnd);
+      _timeOutStart = _parseDbTimeString(event.timeOutStart);
+      _timeOutEnd = _parseDbTimeString(event.timeOutEnd);
+      
+      _createMultipleSessions = false;
+    }
+  }
+
+  TimeOfDay? _parseDbTimeString(String timeStr) {
+    if (timeStr == '00:00:00') return null;
+    final parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      final hour = int.tryParse(parts[0]);
+      final minute = int.tryParse(parts[1]);
+      if (hour != null && minute != null) {
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    }
+    return null;
+  }
 
   @override
   void dispose() {
@@ -204,6 +239,33 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           eventName: _nameController.text,
         );
       }
+
+      if (widget.eventToEdit != null) {
+        final updatedEvent = widget.eventToEdit!.copyWith(
+          name: _nameController.text,
+          eventDate: _selectedDate!,
+          shortDescription: _shortDescriptionController.text,
+          fullDescription: _fullDescriptionController.text,
+          location: _locationController.text,
+          imageUrl: imageUrl ?? widget.eventToEdit!.imageUrl,
+          timeInStart: _timeToDbString(_timeInStart!),
+          timeInEnd: _timeToDbString(_timeInEnd!),
+          timeOutStart: _timeOutStart != null ? _timeToDbString(_timeOutStart!) : '00:00:00',
+          timeOutEnd: _timeOutEnd != null ? _timeToDbString(_timeOutEnd!) : '00:00:00',
+          isMandatory: _isMandatory,
+        );
+
+        await ref.read(eventRepositoryProvider).updateEvent(updatedEvent);
+
+        if (mounted) {
+          ref.invalidate(workspaceEventsProvider);
+          context.pop(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Event updated successfully')),
+          );
+        }
+        return;
+      }
       
       final scopeType = org.type == 'campus-based' 
           ? 'Institutional' 
@@ -334,9 +396,11 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
             border: Border.all(color: Colors.grey[300]!),
             image: _eventImageBytes != null
                 ? DecorationImage(image: MemoryImage(_eventImageBytes!), fit: BoxFit.cover)
-                : null,
+                : (widget.eventToEdit?.imageUrl != null
+                    ? DecorationImage(image: NetworkImage(widget.eventToEdit!.imageUrl!), fit: BoxFit.cover)
+                    : null),
           ),
-          child: _eventImageBytes == null
+          child: _eventImageBytes == null && widget.eventToEdit?.imageUrl == null
               ? const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -447,26 +511,28 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       ),
       const SizedBox(height: AppSpacing.md),
       
-      // Multiple Session Toggle Card
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            'Create Session Versions',
-            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+      // Multiple Session Toggle Card (Only available when creating new events)
+      if (widget.eventToEdit == null) ...[
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
           ),
-          subtitle: const Text('Generate separate (Morning), (Afternoon), and/or (Evening) event sessions automatically'),
-          value: _createMultipleSessions,
-          onChanged: (v) => setState(() => _createMultipleSessions = v),
-          activeThumbColor: AppColors.primary,
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'Create Session Versions',
+              style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+            subtitle: const Text('Generate separate (Morning), (Afternoon), and/or (Evening) event sessions automatically'),
+            value: _createMultipleSessions,
+            onChanged: (v) => setState(() => _createMultipleSessions = v),
+            activeThumbColor: AppColors.primary,
+          ),
         ),
-      ),
+      ],
       
       const SizedBox(height: AppSpacing.md),
       
@@ -691,7 +757,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
                   child: FlickrLoader(),
                 )
               : Text(
-                  'Create Event', 
+                  widget.eventToEdit != null ? 'Save Changes' : 'Create Event', 
                   style: AppTextStyles.titleLarge.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -708,7 +774,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
     final isMobile = size.width < 900;
 
     return DashboardLayout(
-      title: 'Create New Event',
+      title: widget.eventToEdit != null ? 'Edit Event' : 'Create New Event',
       onBack: () {
         if (context.canPop()) {
           context.pop();
@@ -745,7 +811,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
                 Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
                 const SizedBox(width: 8),
                 Text(
-                  'Create Event',
+                  widget.eventToEdit != null ? 'Edit Event' : 'Create Event',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
