@@ -33,6 +33,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
   List<Map<String, dynamic>> _rawAttendanceData = [];
   List<QrScanUIModel> _allScans = [];
   List<QrScanUIModel> _filteredScans = [];
+  List<ExcelRowData> _allExcelRows = [];
+  List<ExcelRowData> _filteredExcelRows = [];
+  bool _isExcelView = false;
   int _totalStudentsCount = 0;
   bool _isLoading = true;
   String _selectedMode = 'All';
@@ -104,10 +107,44 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         );
       }).toList();
 
+      final excelRows = rawScans.map((data) {
+        final student = data['student'] as Map<String, dynamic>?;
+        final firstName = student?['first_name'] ?? 'Unknown';
+        final lastName = student?['last_name'] ?? 'Student';
+        final studentId = student?['student_id_number'] ?? '-';
+        
+        final programData = student?['program'] as Map<String, dynamic>?;
+        final programName = programData?['name'] ?? 'N/A';
+        final facultyData = programData?['faculty'] as Map<String, dynamic>?;
+        final facultyName = facultyData?['name'] ?? 'N/A';
+        final yearLevel = student?['year']?.toString() ?? '-';
+        
+        final timeInRaw = data['actual_time_in'];
+        final timeOutRaw = data['actual_time_out'];
+        
+        final formattedTimeIn = timeInRaw != null
+            ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
+            : '-';
+        final formattedTimeOut = timeOutRaw != null
+            ? DateFormat('h:mm a').format(DateTime.parse(timeOutRaw).toLocal())
+            : '-';
+
+        return ExcelRowData(
+          studentId: studentId,
+          name: '$firstName $lastName',
+          faculty: facultyName,
+          program: programName,
+          yearLevel: yearLevel,
+          timeIn: formattedTimeIn,
+          timeOut: formattedTimeOut,
+        );
+      }).toList();
+
       if (mounted) {
         setState(() {
           _rawAttendanceData = rawScans;
           _allScans = scans;
+          _allExcelRows = excelRows;
           _isLoading = false;
           _applyFilters();
         });
@@ -133,6 +170,24 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         final matchesMode = _selectedMode == 'All' || scan.type == _selectedMode;
         
         final matchesProgram = _selectedProgram == 'All' || scan.program == _selectedProgram;
+
+        return matchesQuery && matchesMode && matchesProgram;
+      }).toList();
+
+      _filteredExcelRows = _allExcelRows.where((row) {
+        final matchesQuery = row.name.toLowerCase().contains(query) ||
+            row.studentId.toLowerCase().contains(query) ||
+            row.program.toLowerCase().contains(query) ||
+            row.faculty.toLowerCase().contains(query);
+        
+        bool matchesMode = true;
+        if (_selectedMode == 'Time In') {
+          matchesMode = row.timeIn != '-';
+        } else if (_selectedMode == 'Time Out') {
+          matchesMode = row.timeOut != '-';
+        }
+        
+        final matchesProgram = _selectedProgram == 'All' || row.program == _selectedProgram;
 
         return matchesQuery && matchesMode && matchesProgram;
       }).toList();
@@ -392,13 +447,19 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Attendance Logs',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Attendance Logs',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                            _buildViewToggle(),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         // Search bar
@@ -442,15 +503,17 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                   _buildFilterSection(),
                   const SizedBox(height: 16),
 
-                  // Scans List
-                  _filteredScans.isEmpty
-                      ? _buildEmptyState()
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18.0),
-                          child: Column(
-                            children: _filteredScans.map((scan) => QrRecentScanCard(scan: scan)).toList(),
-                          ),
-                        ),
+                  // Scans List or Excel Preview Table
+                  _isExcelView
+                      ? _buildExcelPreviewTable()
+                      : (_filteredScans.isEmpty
+                          ? _buildEmptyState()
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                              child: Column(
+                                children: _filteredScans.map((scan) => QrRecentScanCard(scan: scan)).toList(),
+                              ),
+                            )),
                 ],
               ),
             ),
@@ -887,4 +950,292 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
       ),
     );
   }
+
+  Widget _buildViewToggle() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleOption(
+            icon: LucideIcons.list,
+            label: 'Card List',
+            isSelected: !_isExcelView,
+            onTap: () => setState(() => _isExcelView = false),
+          ),
+          const SizedBox(width: 4),
+          _buildToggleOption(
+            icon: LucideIcons.sheet,
+            label: 'Excel Preview',
+            isSelected: _isExcelView,
+            onTap: () => setState(() => _isExcelView = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? primaryColor : Colors.grey[600],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? primaryColor : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExcelPreviewTable() {
+    if (_filteredExcelRows.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.04)),
+            dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+              if (states.contains(WidgetState.hovered)) {
+                return primaryColor.withValues(alpha: 0.02);
+              }
+              return null;
+            }),
+            columnSpacing: 24,
+            horizontalMargin: 16,
+            headingRowHeight: 48,
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 48,
+            border: TableBorder(
+              horizontalInside: BorderSide(color: Colors.grey.shade100, width: 1),
+              verticalInside: BorderSide(color: Colors.grey.shade100, width: 0.5),
+            ),
+            columns: [
+              DataColumn(
+                label: Text(
+                  'Student ID',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Student Name',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Faculty',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Program',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Year Level',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Time In',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Time Out',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+            ],
+            rows: _filteredExcelRows.map((row) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(
+                      row.studentId,
+                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      row.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      row.faculty,
+                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      row.program,
+                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      row.yearLevel,
+                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: row.timeIn != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        row.timeIn,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: row.timeIn != '-' ? FontWeight.w600 : FontWeight.normal,
+                          color: row.timeIn != '-' ? Colors.green[800] : Colors.black45,
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: row.timeOut != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        row.timeOut,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: row.timeOut != '-' ? FontWeight.w600 : FontWeight.normal,
+                          color: row.timeOut != '-' ? Colors.green[800] : Colors.black45,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ExcelRowData {
+  final String studentId;
+  final String name;
+  final String faculty;
+  final String program;
+  final String yearLevel;
+  final String timeIn;
+  final String timeOut;
+
+  ExcelRowData({
+    required this.studentId,
+    required this.name,
+    required this.faculty,
+    required this.program,
+    required this.yearLevel,
+    required this.timeIn,
+    required this.timeOut,
+  });
 }
