@@ -35,14 +35,13 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
   List<QrScanUIModel> _filteredScans = [];
   List<ExcelRowData> _allExcelRows = [];
   List<ExcelRowData> _filteredExcelRows = [];
-  bool _isExcelView = false;
+  bool _isExcelView = true;
   int _totalStudentsCount = 0;
   bool _isLoading = true;
   String _selectedMode = 'All';
   String _selectedProgram = 'All';
 
   static const Color primaryColor = Color(0xFF003DA5);
-  static const Color accentColor = Color(0xFFFFC107);
 
   List<String> get _availablePrograms {
     final programs = _allScans
@@ -305,7 +304,6 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
     final presentCount = _allScans.length;
     final absentCount = _totalStudentsCount > presentCount ? _totalStudentsCount - presentCount : 0;
     final isMobile = MediaQuery.of(context).size.width < 768;
@@ -470,7 +468,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                             border: Border.all(color: Colors.grey.shade200),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: Colors.black.withValues(alpha: 0.02),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -1035,6 +1033,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18.0),
       child: Container(
+        width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -1048,172 +1047,179 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.04)),
-            dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
-              if (states.contains(WidgetState.hovered)) {
-                return primaryColor.withValues(alpha: 0.02);
-              }
-              return null;
-            }),
-            columnSpacing: 24,
-            horizontalMargin: 16,
-            headingRowHeight: 48,
-            dataRowMinHeight: 48,
-            dataRowMaxHeight: 48,
-            border: TableBorder(
-              horizontalInside: BorderSide(color: Colors.grey.shade100, width: 1),
-              verticalInside: BorderSide(color: Colors.grey.shade100, width: 0.5),
-            ),
-            columns: [
-              DataColumn(
-                label: Text(
-                  'Student ID',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.04)),
+                  dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return primaryColor.withValues(alpha: 0.02);
+                    }
+                    return null;
+                  }),
+                  columnSpacing: 24,
+                  horizontalMargin: 16,
+                  headingRowHeight: 48,
+                  dataRowMinHeight: 48,
+                  dataRowMaxHeight: 48,
+                  border: TableBorder(
+                    horizontalInside: BorderSide(color: Colors.grey.shade100, width: 1),
+                    verticalInside: BorderSide(color: Colors.grey.shade100, width: 0.5),
                   ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Student Name',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Faculty',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Program',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Year Level',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Time In',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Time Out',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-            ],
-            rows: _filteredExcelRows.map((row) {
-              return DataRow(
-                cells: [
-                  DataCell(
-                    Text(
-                      row.studentId,
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      row.name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      row.faculty,
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      row.program,
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      row.yearLevel,
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
-                    ),
-                  ),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: row.timeIn != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        row.timeIn,
+                  columns: [
+                    DataColumn(
+                      label: Text(
+                        'Student ID',
                         style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
                           fontSize: 12,
-                          fontWeight: row.timeIn != '-' ? FontWeight.w600 : FontWeight.normal,
-                          color: row.timeIn != '-' ? Colors.green[800] : Colors.black45,
+                          color: primaryColor,
                         ),
                       ),
                     ),
-                  ),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: row.timeOut != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        row.timeOut,
+                    DataColumn(
+                      label: Text(
+                        'Student Name',
                         style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
                           fontSize: 12,
-                          fontWeight: row.timeOut != '-' ? FontWeight.w600 : FontWeight.normal,
-                          color: row.timeOut != '-' ? Colors.green[800] : Colors.black45,
+                          color: primaryColor,
                         ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
+                    DataColumn(
+                      label: Text(
+                        'Faculty',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Program',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Year Level',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Time In',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Time Out',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                  rows: _filteredExcelRows.map((row) {
+                    return DataRow(
+                      cells: [
+                        DataCell(
+                          Text(
+                            row.studentId,
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            row.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            row.faculty,
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            row.program,
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            row.yearLevel,
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: row.timeIn != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              row.timeIn,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: row.timeIn != '-' ? FontWeight.w600 : FontWeight.normal,
+                                color: row.timeIn != '-' ? Colors.green[800] : Colors.black45,
+                              ),
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: row.timeOut != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              row.timeOut,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: row.timeOut != '-' ? FontWeight.w600 : FontWeight.normal,
+                                color: row.timeOut != '-' ? Colors.green[800] : Colors.black45,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
