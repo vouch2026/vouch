@@ -73,9 +73,25 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             final eDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
             return eDate.isAtSameMomentAs(today) && !e.isPastTimeout;
           }).toList();
+          todayEvents.sort((a, b) {
+            final dateCompare = a.eventDate.compareTo(b.eventDate);
+            if (dateCompare != 0) return dateCompare;
+            return a.timeInStart.compareTo(b.timeInStart);
+          });
           
           final upcomingEvents = events.where((e) => e.eventDate.isAfter(today)).toList();
+          upcomingEvents.sort((a, b) {
+            final dateCompare = a.eventDate.compareTo(b.eventDate);
+            if (dateCompare != 0) return dateCompare;
+            return a.timeInStart.compareTo(b.timeInStart);
+          });
+
           final pastEvents = events.where((e) => e.isPastTimeout).toList();
+          pastEvents.sort((a, b) {
+            final dateCompare = b.eventDate.compareTo(a.eventDate);
+            if (dateCompare != 0) return dateCompare;
+            return b.timeOutEnd.compareTo(a.timeOutEnd);
+          });
           
           return Padding(
             padding: EdgeInsets.symmetric(
