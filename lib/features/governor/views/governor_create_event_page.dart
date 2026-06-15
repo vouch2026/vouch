@@ -58,6 +58,9 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   TimeOfDay? _eveningTimeOutStart;
   TimeOfDay? _eveningTimeOutEnd;
   
+  final _timeInLongevityController = TextEditingController(text: '15');
+  final _timeOutLongevityController = TextEditingController(text: '15');
+
   XFile? _eventImage;
   Uint8List? _eventImageBytes;
   final _picker = ImagePicker();
@@ -71,6 +74,8 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
     _shortDescriptionController.dispose();
     _fullDescriptionController.dispose();
     _locationController.dispose();
+    _timeInLongevityController.dispose();
+    _timeOutLongevityController.dispose();
     super.dispose();
   }
 
@@ -463,19 +468,87 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         ),
       ),
       
+      const SizedBox(height: AppSpacing.md),
+      
+      // Longevity Settings Card
+      Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Longevity Settings',
+              style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Sets the duration (in minutes) to automatically calculate end times when picking start times.',
+              style: TextStyle(color: Colors.grey, fontSize: 11),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _timeInLongevityController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Time In Longevity (mins)',
+                      hintText: 'e.g., 15',
+                      prefixIcon: Icon(Icons.timer_outlined),
+                    ),
+                    onChanged: (v) => _recalculateAllEndTimes(),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: TextFormField(
+                    controller: _timeOutLongevityController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Time Out Longevity (mins)',
+                      hintText: 'e.g., 15',
+                      prefixIcon: Icon(Icons.timer_outlined),
+                    ),
+                    onChanged: (v) => _recalculateAllEndTimes(),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      
       const Divider(height: AppSpacing.lg),
       
       if (!_createMultipleSessions) ...[
         _buildTimeRow('Time In Window', _timeInStart, _timeInEnd, (start, end) {
           setState(() {
-            if (start != null) _timeInStart = start;
+            if (start != null) {
+              _timeInStart = start;
+              final mins = int.tryParse(_timeInLongevityController.text);
+              if (mins != null) {
+                _timeInEnd = _calculateEndTime(start, mins);
+              }
+            }
             if (end != null) _timeInEnd = end;
           });
         }),
         const Divider(height: AppSpacing.lg),
         _buildTimeRow('Time Out Window', _timeOutStart, _timeOutEnd, (start, end) {
           setState(() {
-            if (start != null) _timeOutStart = start;
+            if (start != null) {
+              _timeOutStart = start;
+              final mins = int.tryParse(_timeOutLongevityController.text);
+              if (mins != null) {
+                _timeOutEnd = _calculateEndTime(start, mins);
+              }
+            }
             if (end != null) _timeOutEnd = end;
           });
         }),
@@ -492,13 +565,25 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           timeOutEnd: _morningTimeOutEnd,
           onTimeInPicked: (start, end) {
             setState(() {
-              if (start != null) _morningTimeInStart = start;
+              if (start != null) {
+                _morningTimeInStart = start;
+                final mins = int.tryParse(_timeInLongevityController.text);
+                if (mins != null) {
+                  _morningTimeInEnd = _calculateEndTime(start, mins);
+                }
+              }
               if (end != null) _morningTimeInEnd = end;
             });
           },
           onTimeOutPicked: (start, end) {
             setState(() {
-              if (start != null) _morningTimeOutStart = start;
+              if (start != null) {
+                _morningTimeOutStart = start;
+                final mins = int.tryParse(_timeOutLongevityController.text);
+                if (mins != null) {
+                  _morningTimeOutEnd = _calculateEndTime(start, mins);
+                }
+              }
               if (end != null) _morningTimeOutEnd = end;
             });
           },
@@ -515,13 +600,25 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           timeOutEnd: _afternoonTimeOutEnd,
           onTimeInPicked: (start, end) {
             setState(() {
-              if (start != null) _afternoonTimeInStart = start;
+              if (start != null) {
+                _afternoonTimeInStart = start;
+                final mins = int.tryParse(_timeInLongevityController.text);
+                if (mins != null) {
+                  _afternoonTimeInEnd = _calculateEndTime(start, mins);
+                }
+              }
               if (end != null) _afternoonTimeInEnd = end;
             });
           },
           onTimeOutPicked: (start, end) {
             setState(() {
-              if (start != null) _afternoonTimeOutStart = start;
+              if (start != null) {
+                _afternoonTimeOutStart = start;
+                final mins = int.tryParse(_timeOutLongevityController.text);
+                if (mins != null) {
+                  _afternoonTimeOutEnd = _calculateEndTime(start, mins);
+                }
+              }
               if (end != null) _afternoonTimeOutEnd = end;
             });
           },
@@ -538,13 +635,25 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           timeOutEnd: _eveningTimeOutEnd,
           onTimeInPicked: (start, end) {
             setState(() {
-              if (start != null) _eveningTimeInStart = start;
+              if (start != null) {
+                _eveningTimeInStart = start;
+                final mins = int.tryParse(_timeInLongevityController.text);
+                if (mins != null) {
+                  _eveningTimeInEnd = _calculateEndTime(start, mins);
+                }
+              }
               if (end != null) _eveningTimeInEnd = end;
             });
           },
           onTimeOutPicked: (start, end) {
             setState(() {
-              if (start != null) _eveningTimeOutStart = start;
+              if (start != null) {
+                _eveningTimeOutStart = start;
+                final mins = int.tryParse(_timeOutLongevityController.text);
+                if (mins != null) {
+                  _eveningTimeOutEnd = _calculateEndTime(start, mins);
+                }
+              }
               if (end != null) _eveningTimeOutEnd = end;
             });
           },
@@ -825,5 +934,49 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         ],
       ),
     );
+  }
+
+  TimeOfDay _calculateEndTime(TimeOfDay start, int longevityMinutes) {
+    final startMinutes = start.hour * 60 + start.minute;
+    final endMinutes = startMinutes + longevityMinutes;
+    final endHour = (endMinutes ~/ 60) % 24;
+    final endMinute = endMinutes % 60;
+    return TimeOfDay(hour: endHour, minute: endMinute);
+  }
+
+  void _recalculateAllEndTimes() {
+    final timeInMins = int.tryParse(_timeInLongevityController.text);
+    final timeOutMins = int.tryParse(_timeOutLongevityController.text);
+
+    setState(() {
+      if (timeInMins != null) {
+        if (_timeInStart != null) {
+          _timeInEnd = _calculateEndTime(_timeInStart!, timeInMins);
+        }
+        if (_morningTimeInStart != null) {
+          _morningTimeInEnd = _calculateEndTime(_morningTimeInStart!, timeInMins);
+        }
+        if (_afternoonTimeInStart != null) {
+          _afternoonTimeInEnd = _calculateEndTime(_afternoonTimeInStart!, timeInMins);
+        }
+        if (_eveningTimeInStart != null) {
+          _eveningTimeInEnd = _calculateEndTime(_eveningTimeInStart!, timeInMins);
+        }
+      }
+      if (timeOutMins != null) {
+        if (_timeOutStart != null) {
+          _timeOutEnd = _calculateEndTime(_timeOutStart!, timeOutMins);
+        }
+        if (_morningTimeOutStart != null) {
+          _morningTimeOutEnd = _calculateEndTime(_morningTimeOutStart!, timeOutMins);
+        }
+        if (_afternoonTimeOutStart != null) {
+          _afternoonTimeOutEnd = _calculateEndTime(_afternoonTimeOutStart!, timeOutMins);
+        }
+        if (_eveningTimeOutStart != null) {
+          _eveningTimeOutEnd = _calculateEndTime(_eveningTimeOutStart!, timeOutMins);
+        }
+      }
+    });
   }
 }
