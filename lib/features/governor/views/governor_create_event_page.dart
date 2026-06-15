@@ -36,6 +36,27 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   TimeOfDay? _timeInEnd;
   TimeOfDay? _timeOutStart;
   TimeOfDay? _timeOutEnd;
+
+  // Multiple sessions variables
+  bool _createMultipleSessions = false;
+
+  bool _morningEnabled = true;
+  TimeOfDay? _morningTimeInStart;
+  TimeOfDay? _morningTimeInEnd;
+  TimeOfDay? _morningTimeOutStart;
+  TimeOfDay? _morningTimeOutEnd;
+
+  bool _afternoonEnabled = true;
+  TimeOfDay? _afternoonTimeInStart;
+  TimeOfDay? _afternoonTimeInEnd;
+  TimeOfDay? _afternoonTimeOutStart;
+  TimeOfDay? _afternoonTimeOutEnd;
+
+  bool _eveningEnabled = false;
+  TimeOfDay? _eveningTimeInStart;
+  TimeOfDay? _eveningTimeInEnd;
+  TimeOfDay? _eveningTimeOutStart;
+  TimeOfDay? _eveningTimeOutEnd;
   
   XFile? _eventImage;
   Uint8List? _eventImageBytes;
@@ -118,11 +139,45 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     
-    if (_selectedDate == null || _timeInStart == null || _timeInEnd == null) {
+    if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required date and time fields')),
+        const SnackBar(content: Text('Please select an event date')),
       );
       return;
+    }
+
+    if (_createMultipleSessions) {
+      if (!_morningEnabled && !_afternoonEnabled && !_eveningEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enable at least one session')),
+        );
+        return;
+      }
+      if (_morningEnabled && (_morningTimeInStart == null || _morningTimeInEnd == null)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill Time In for Morning session')),
+        );
+        return;
+      }
+      if (_afternoonEnabled && (_afternoonTimeInStart == null || _afternoonTimeInEnd == null)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill Time In for Afternoon session')),
+        );
+        return;
+      }
+      if (_eveningEnabled && (_eveningTimeInStart == null || _eveningTimeInEnd == null)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill Time In for Evening session')),
+        );
+        return;
+      }
+    } else {
+      if (_timeInStart == null || _timeInEnd == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill all required Time In fields')),
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
@@ -153,31 +208,99 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           ? org.campusId 
           : (org.type == 'faculty-based' ? org.facultyId : org.programId);
 
-      final event = EventModel(
-        name: _nameController.text,
-        eventDate: _selectedDate!,
-        shortDescription: _shortDescriptionController.text,
-        fullDescription: _fullDescriptionController.text,
-        location: _locationController.text,
-        imageUrl: imageUrl,
-        timeInStart: _timeToDbString(_timeInStart!),
-        timeInEnd: _timeToDbString(_timeInEnd!),
-        timeOutStart: _timeOutStart != null ? _timeToDbString(_timeOutStart!) : '00:00:00',
-        timeOutEnd: _timeOutEnd != null ? _timeToDbString(_timeOutEnd!) : '00:00:00',
-        scopeType: scopeType,
-        scopeId: scopeId!,
-        isMandatory: _isMandatory,
-        academicTermId: activeTerm.id,
-        createdByUserId: user.id,
-      );
+      final List<EventModel> eventsToCreate = [];
 
-      await ref.read(eventRepositoryProvider).createEvent(event);
+      if (_createMultipleSessions) {
+        if (_morningEnabled) {
+          eventsToCreate.add(EventModel(
+            name: '${_nameController.text} (Morning)',
+            eventDate: _selectedDate!,
+            shortDescription: _shortDescriptionController.text,
+            fullDescription: _fullDescriptionController.text,
+            location: _locationController.text,
+            imageUrl: imageUrl,
+            timeInStart: _timeToDbString(_morningTimeInStart!),
+            timeInEnd: _timeToDbString(_morningTimeInEnd!),
+            timeOutStart: _morningTimeOutStart != null ? _timeToDbString(_morningTimeOutStart!) : '00:00:00',
+            timeOutEnd: _morningTimeOutEnd != null ? _timeToDbString(_morningTimeOutEnd!) : '00:00:00',
+            scopeType: scopeType,
+            scopeId: scopeId!,
+            isMandatory: _isMandatory,
+            academicTermId: activeTerm.id,
+            createdByUserId: user.id,
+          ));
+        }
+        if (_afternoonEnabled) {
+          eventsToCreate.add(EventModel(
+            name: '${_nameController.text} (Afternoon)',
+            eventDate: _selectedDate!,
+            shortDescription: _shortDescriptionController.text,
+            fullDescription: _fullDescriptionController.text,
+            location: _locationController.text,
+            imageUrl: imageUrl,
+            timeInStart: _timeToDbString(_afternoonTimeInStart!),
+            timeInEnd: _timeToDbString(_afternoonTimeInEnd!),
+            timeOutStart: _afternoonTimeOutStart != null ? _timeToDbString(_afternoonTimeOutStart!) : '00:00:00',
+            timeOutEnd: _afternoonTimeOutEnd != null ? _timeToDbString(_afternoonTimeOutEnd!) : '00:00:00',
+            scopeType: scopeType,
+            scopeId: scopeId!,
+            isMandatory: _isMandatory,
+            academicTermId: activeTerm.id,
+            createdByUserId: user.id,
+          ));
+        }
+        if (_eveningEnabled) {
+          eventsToCreate.add(EventModel(
+            name: '${_nameController.text} (Evening)',
+            eventDate: _selectedDate!,
+            shortDescription: _shortDescriptionController.text,
+            fullDescription: _fullDescriptionController.text,
+            location: _locationController.text,
+            imageUrl: imageUrl,
+            timeInStart: _timeToDbString(_eveningTimeInStart!),
+            timeInEnd: _timeToDbString(_eveningTimeInEnd!),
+            timeOutStart: _eveningTimeOutStart != null ? _timeToDbString(_eveningTimeOutStart!) : '00:00:00',
+            timeOutEnd: _eveningTimeOutEnd != null ? _timeToDbString(_eveningTimeOutEnd!) : '00:00:00',
+            scopeType: scopeType,
+            scopeId: scopeId!,
+            isMandatory: _isMandatory,
+            academicTermId: activeTerm.id,
+            createdByUserId: user.id,
+          ));
+        }
+      } else {
+        eventsToCreate.add(EventModel(
+          name: _nameController.text,
+          eventDate: _selectedDate!,
+          shortDescription: _shortDescriptionController.text,
+          fullDescription: _fullDescriptionController.text,
+          location: _locationController.text,
+          imageUrl: imageUrl,
+          timeInStart: _timeToDbString(_timeInStart!),
+          timeInEnd: _timeToDbString(_timeInEnd!),
+          timeOutStart: _timeOutStart != null ? _timeToDbString(_timeOutStart!) : '00:00:00',
+          timeOutEnd: _timeOutEnd != null ? _timeToDbString(_timeOutEnd!) : '00:00:00',
+          scopeType: scopeType,
+          scopeId: scopeId!,
+          isMandatory: _isMandatory,
+          academicTermId: activeTerm.id,
+          createdByUserId: user.id,
+        ));
+      }
+
+      for (final event in eventsToCreate) {
+        await ref.read(eventRepositoryProvider).createEvent(event);
+      }
       
       if (mounted) {
         ref.invalidate(workspaceEventsProvider);
         context.pop();
+        final count = eventsToCreate.length;
+        final message = count > 1 
+            ? '$count event sessions created successfully'
+            : 'Event created successfully';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Event created successfully')),
+          SnackBar(content: Text(message)),
         );
       }
     } catch (e) {
@@ -317,20 +440,116 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           ],
         ),
       ),
+      const SizedBox(height: AppSpacing.md),
+      
+      // Multiple Session Toggle Card
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Create Session Versions',
+            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+          ),
+          subtitle: const Text('Generate separate (Morning), (Afternoon), and/or (Evening) event sessions automatically'),
+          value: _createMultipleSessions,
+          onChanged: (v) => setState(() => _createMultipleSessions = v),
+          activeThumbColor: AppColors.primary,
+        ),
+      ),
+      
       const Divider(height: AppSpacing.lg),
-      _buildTimeRow('Time In Window', _timeInStart, _timeInEnd, (start, end) {
-        setState(() {
-          if (start != null) _timeInStart = start;
-          if (end != null) _timeInEnd = end;
-        });
-      }),
-      const Divider(height: AppSpacing.lg),
-      _buildTimeRow('Time Out Window', _timeOutStart, _timeOutEnd, (start, end) {
-        setState(() {
-          if (start != null) _timeOutStart = start;
-          if (end != null) _timeOutEnd = end;
-        });
-      }),
+      
+      if (!_createMultipleSessions) ...[
+        _buildTimeRow('Time In Window', _timeInStart, _timeInEnd, (start, end) {
+          setState(() {
+            if (start != null) _timeInStart = start;
+            if (end != null) _timeInEnd = end;
+          });
+        }),
+        const Divider(height: AppSpacing.lg),
+        _buildTimeRow('Time Out Window', _timeOutStart, _timeOutEnd, (start, end) {
+          setState(() {
+            if (start != null) _timeOutStart = start;
+            if (end != null) _timeOutEnd = end;
+          });
+        }),
+      ] else ...[
+        _buildSessionConfigCard(
+          title: 'Morning',
+          icon: Icons.wb_sunny_rounded,
+          iconColor: AppColors.accent,
+          enabled: _morningEnabled,
+          onToggle: (v) => setState(() => _morningEnabled = v ?? false),
+          timeInStart: _morningTimeInStart,
+          timeInEnd: _morningTimeInEnd,
+          timeOutStart: _morningTimeOutStart,
+          timeOutEnd: _morningTimeOutEnd,
+          onTimeInPicked: (start, end) {
+            setState(() {
+              if (start != null) _morningTimeInStart = start;
+              if (end != null) _morningTimeInEnd = end;
+            });
+          },
+          onTimeOutPicked: (start, end) {
+            setState(() {
+              if (start != null) _morningTimeOutStart = start;
+              if (end != null) _morningTimeOutEnd = end;
+            });
+          },
+        ),
+        _buildSessionConfigCard(
+          title: 'Afternoon',
+          icon: Icons.light_mode_rounded,
+          iconColor: const Color(0xFFF97316),
+          enabled: _afternoonEnabled,
+          onToggle: (v) => setState(() => _afternoonEnabled = v ?? false),
+          timeInStart: _afternoonTimeInStart,
+          timeInEnd: _afternoonTimeInEnd,
+          timeOutStart: _afternoonTimeOutStart,
+          timeOutEnd: _afternoonTimeOutEnd,
+          onTimeInPicked: (start, end) {
+            setState(() {
+              if (start != null) _afternoonTimeInStart = start;
+              if (end != null) _afternoonTimeInEnd = end;
+            });
+          },
+          onTimeOutPicked: (start, end) {
+            setState(() {
+              if (start != null) _afternoonTimeOutStart = start;
+              if (end != null) _afternoonTimeOutEnd = end;
+            });
+          },
+        ),
+        _buildSessionConfigCard(
+          title: 'Evening',
+          icon: Icons.nights_stay_rounded,
+          iconColor: Colors.deepPurple,
+          enabled: _eveningEnabled,
+          onToggle: (v) => setState(() => _eveningEnabled = v ?? false),
+          timeInStart: _eveningTimeInStart,
+          timeInEnd: _eveningTimeInEnd,
+          timeOutStart: _eveningTimeOutStart,
+          timeOutEnd: _eveningTimeOutEnd,
+          onTimeInPicked: (start, end) {
+            setState(() {
+              if (start != null) _eveningTimeInStart = start;
+              if (end != null) _eveningTimeInEnd = end;
+            });
+          },
+          onTimeOutPicked: (start, end) {
+            setState(() {
+              if (start != null) _eveningTimeOutStart = start;
+              if (end != null) _eveningTimeOutEnd = end;
+            });
+          },
+        ),
+      ],
       
       const SizedBox(height: AppSpacing.xl),
       _buildSectionTitle('Event Settings'),
@@ -540,6 +759,71 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildSessionConfigCard({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required bool enabled,
+    required ValueChanged<bool?> onToggle,
+    required TimeOfDay? timeInStart,
+    required TimeOfDay? timeInEnd,
+    required TimeOfDay? timeOutStart,
+    required TimeOfDay? timeOutEnd,
+    required Function(TimeOfDay?, TimeOfDay?) onTimeInPicked,
+    required Function(TimeOfDay?, TimeOfDay?) onTimeOutPicked,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: enabled ? AppColors.white : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: enabled ? AppColors.primary.withValues(alpha: 0.2) : AppColors.border,
+          width: enabled ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                title,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: enabled ? AppColors.textDark : AppColors.textGrey,
+                ),
+              ),
+              const Spacer(),
+              Switch(
+                value: enabled,
+                onChanged: onToggle,
+                activeThumbColor: AppColors.primary,
+              ),
+            ],
+          ),
+          if (enabled) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildTimeRow('Time In Window', timeInStart, timeInEnd, onTimeInPicked),
+            const Divider(height: AppSpacing.lg),
+            _buildTimeRow('Time Out Window', timeOutStart, timeOutEnd, onTimeOutPicked),
+          ],
+        ],
+      ),
     );
   }
 }
