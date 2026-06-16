@@ -11,6 +11,7 @@ import 'package:vouch_v2/features/organizations/providers/workspace_provider.dar
 import 'package:vouch_v2/core/models/app_role.dart';
 import 'package:vouch_v2/features/organizations/models/organization_model.dart';
 import 'package:vouch_v2/features/finance/models/payment_receiver_model.dart';
+import 'package:vouch_v2/features/governor/views/governor_create_fee_page.dart';
 
 void main() {
   testWidgets('Test _StudentFinanceView on mobile size with empty lists', (WidgetTester tester) async {
@@ -312,6 +313,82 @@ void main() {
     // Verify the Submit button is enabled and has the correct text
     expect(find.text('Submit Proof of Payment'), findsOneWidget);
     expect(find.text('Submission is closed because this fee is past its due date.'), findsNothing);
+  });
+
+  testWidgets('Test GovernorCreateFeePage in edit mode with past due date opens date picker', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1.0;
+    
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final now = DateTime.now();
+    final pastDue = now.subtract(const Duration(days: 10));
+
+    final feeToEdit = FeeModel(
+      id: 'fee-1',
+      name: 'Past Due Fee',
+      amount: 250.0,
+      description: 'Instructions',
+      scopeType: 'college',
+      scopeId: 'college-1',
+      isMandatory: true,
+      dueDate: pastDue,
+      academicTermId: 'term-1',
+    );
+
+    final mockUser = UserModel(
+      id: 'user-1',
+      authId: 'auth-1',
+      email: 'governor@test.com',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      role: 'governor',
+      schoolId: '2023-0002',
+      createdAt: now,
+    );
+
+    final mockWorkspaceState = WorkspaceState(
+      selectedOrganization: const OrganizationModel(
+        id: 'org-1',
+        name: 'Test Org',
+        code: 'TO',
+      ),
+      activeRole: AppRole(
+        roleName: 'Governor',
+        hierarchyLevel: 10,
+        scopeType: 'college',
+        permissions: [],
+      ),
+      isInitialized: true,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider.overrideWith((ref) => mockUser),
+          workspaceProvider.overrideWith((ref) => WorkspaceNotifierMock(mockWorkspaceState)),
+        ],
+        child: MaterialApp(
+          home: GovernorCreateFeePage(initialData: feeToEdit),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify fields populated
+    expect(find.text('Past Due Fee'), findsOneWidget);
+    expect(find.text('250.0'), findsOneWidget);
+
+    // Tap on Due Date field to open picker
+    await tester.tap(find.byIcon(Icons.calendar_today_rounded));
+    await tester.pumpAndSettle();
+
+    // DatePicker dialog should be visible and not crash
+    expect(find.byType(DatePickerDialog), findsOneWidget);
   });
 }
 
