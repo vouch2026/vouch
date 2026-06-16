@@ -110,7 +110,7 @@ class AttendanceRepository {
             organization_members!inner(
               status,
               role:roles!inner(name),
-              organization:organizations!inner(type, $orgField)
+              organizations!inner(type, $orgField)
             )
           )
         ''')
@@ -118,8 +118,8 @@ class AttendanceRepository {
         .eq('student.account_status', 'active')
         .eq('student.organization_members.status', 'active')
         .eq('student.organization_members.role.name', 'Member')
-        .eq('student.organization_members.organization.type', orgType)
-        .eq('student.organization_members.organization.$orgField', scopeId)
+        .eq('student.organization_members.organizations.type', orgType)
+        .eq('student.organization_members.organizations.$orgField', scopeId)
         .order('updated_at', ascending: false);
     
     return List<Map<String, dynamic>>.from(response);
@@ -141,12 +141,12 @@ class AttendanceRepository {
 
     final response = await _client
         .from('organization_members')
-        .select('id, user:users!inner(account_status), role:roles!inner(name), organization:organizations!inner(type, $orgField)')
+        .select('id, user:users!inner(account_status), role:roles!inner(name), organizations:organizations!inner(type, $orgField)')
         .eq('status', 'active')
         .eq('user.account_status', 'active')
         .eq('role.name', 'Member')
-        .eq('organization.type', orgType)
-        .eq('organization.$orgField', scopeId);
+        .eq('organizations.type', orgType)
+        .eq('organizations.$orgField', scopeId);
 
     return (response as List).length;
   }

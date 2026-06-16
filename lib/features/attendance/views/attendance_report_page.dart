@@ -15,6 +15,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
 import 'dart:typed_data';
 import 'package:excel/excel.dart' as excel_lib;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/file_saver_helper.dart';
 
 class AttendanceReportPage extends ConsumerStatefulWidget {
@@ -73,15 +74,59 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     setState(() => _isLoading = true);
     try {
       final repository = ref.read(attendanceRepositoryProvider);
-      
-      // Load both the attendance logs and the total student count in the scope in parallel
+      final client = Supabase.instance.client;
+      final scopeType = widget.event.scopeType;
+      final scopeId = widget.event.scopeId;
+
+      String orgField;
+      String orgType;
+      if (scopeType == 'Institutional') {
+        orgField = 'campus_id';
+        orgType = 'campus-based';
+      } else if (scopeType == 'Faculty') {
+        orgField = 'faculty_id';
+        orgType = 'faculty-based';
+      } else {
+        orgField = 'program_id';
+        orgType = 'program-based';
+      }
+
+      // Load both the attendance logs and all active students in the scope in parallel
       final results = await Future.wait([
         repository.getAllAttendanceForEvent(widget.event.id!, widget.event.scopeType, widget.event.scopeId),
-        repository.getStudentsCountForScope(widget.event.scopeType, widget.event.scopeId),
+        client.from('organization_members').select('''
+          id,
+          user:users!inner (
+            id,
+            first_name,
+            last_name,
+            student_id_number,
+            year,
+            program:programs!users_program_id_fkey (
+              name,
+              faculty:faculties!programs_faculty_id_fkey (
+                name
+              )
+            )
+          ),
+          role:roles!inner (
+            name
+          ),
+          organizations!inner (
+            type,
+            $orgField
+          )
+        ''')
+        .eq('status', 'active')
+        .eq('user.account_status', 'active')
+        .eq('role.name', 'Member')
+        .eq('organizations.type', orgType)
+        .eq('organizations.$orgField', scopeId),
       ]);
 
       final rawScans = results[0] as List<Map<String, dynamic>>;
-      _totalStudentsCount = results[1] as int;
+      final members = results[1] as List<dynamic>;
+      _totalStudentsCount = members.length;
       
       final List<Map<String, dynamic>> extractedScans = [];
       for (final data in rawScans) {
@@ -128,27 +173,31 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         );
       }).toList();
 
-      final excelRows = rawScans.map((data) {
-        final student = data['student'] as Map<String, dynamic>?;
-        final firstName = student?['first_name'] ?? 'Unknown';
-        final lastName = student?['last_name'] ?? 'Student';
-        final studentId = student?['student_id_number'] ?? '-';
+      final excelRows = members.map((memberData) {
+        final user = memberData['user'] as Map<String, dynamic>?;
+        final firstName = user?['first_name'] ?? 'Unknown';
+        final lastName = user?['last_name'] ?? 'Student';
+        final studentId = user?['student_id_number'] ?? '-';
+        final userId = user?['id'] as String?;
         
-        final programData = student?['program'] as Map<String, dynamic>?;
+        final programData = user?['program'] as Map<String, dynamic>?;
         final programName = programData?['name'] ?? 'N/A';
         final facultyData = programData?['faculty'] as Map<String, dynamic>?;
         final facultyName = facultyData?['name'] ?? 'N/A';
-        final yearLevel = student?['year']?.toString() ?? '-';
+        final yearLevel = user?['year']?.toString() ?? '-';
         
-        final timeInRaw = data['actual_time_in'];
-        final timeOutRaw = data['actual_time_out'];
+        // Find if this student has a scan record
+        final scanRecord = rawScans.where((scan) => scan['student_id'] == userId).firstOrNull;
+        
+        final timeInRaw = scanRecord?['actual_time_in'];
+        final timeOutRaw = scanRecord?['actual_time_out'];
         
         final formattedTimeIn = timeInRaw != null
             ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
-            : '-';
+            : 'N/A';
         final formattedTimeOut = timeOutRaw != null
             ? DateFormat('h:mm a').format(DateTime.parse(timeOutRaw).toLocal())
-            : '-';
+            : 'N/A';
 
         return ExcelRowData(
           studentId: studentId,
@@ -201,16 +250,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             row.program.toLowerCase().contains(query) ||
             row.faculty.toLowerCase().contains(query);
         
-        bool matchesMode = true;
-        if (_selectedMode == 'Time In') {
-          matchesMode = row.timeIn != '-';
-        } else if (_selectedMode == 'Time Out') {
-          matchesMode = row.timeOut != '-';
-        }
-        
         final matchesProgram = _selectedProgram == 'All' || row.program == _selectedProgram;
 
-        return matchesQuery && matchesMode && matchesProgram;
+        return matchesQuery && matchesProgram;
       }).toList();
     });
   }
@@ -278,6 +320,8 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         
         final timeInRaw = data['actual_time_in'];
         final timeOutRaw = data['actual_time_out'];
+
+        if (timeInRaw == null && timeOutRaw == null) continue;
         
         final formattedTimeIn = timeInRaw != null
             ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
