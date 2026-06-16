@@ -10,6 +10,7 @@ import '../../users/widgets/user_management_header.dart';
 import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
 import 'governor_create_fee_page.dart';
+import 'governor_fee_report_page.dart';
 
 class GovernorCreatedFeesPage extends ConsumerWidget {
   const GovernorCreatedFeesPage({super.key});
@@ -180,7 +181,12 @@ class GovernorCreatedFeesPage extends ConsumerWidget {
                 ),
                 const Spacer(),
                 FilledButton.tonal(
-                  onPressed: () {},
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => GovernorFeeReportPage(fee: fee),
+                    ),
+                  ),
                   child: const Text('View Paid Students'),
                 ),
               ],
