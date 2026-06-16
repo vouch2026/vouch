@@ -371,7 +371,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,
             mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: (status == 'Pending' || status == 'Rejected') ? 360 : 280,
+            mainAxisExtent: 300,
           ),
           itemCount: filtered.length,
           itemBuilder: (context, index) => GovernorSubmissionCard(
@@ -674,7 +674,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                               crossAxisCount: crossAxisCount,
                               crossAxisSpacing: AppSpacing.lg,
                               mainAxisSpacing: AppSpacing.lg,
-                              mainAxisExtent: 280,
+                              mainAxisExtent: 300,
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
