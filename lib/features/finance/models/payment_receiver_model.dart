@@ -4,7 +4,7 @@ part 'payment_receiver_model.freezed.dart';
 part 'payment_receiver_model.g.dart';
 
 @freezed
-class PaymentReceiverModel with _$PaymentReceiverModel {
+abstract class PaymentReceiverModel with _$PaymentReceiverModel {
   const factory PaymentReceiverModel({
     String? id,
     @JsonKey(name: 'bank_type') required String bankType,

@@ -4,7 +4,7 @@ part 'campus_model.freezed.dart';
 part 'campus_model.g.dart';
 
 @freezed
-class CampusModel with _$CampusModel {
+abstract class CampusModel with _$CampusModel {
   const factory CampusModel({
     required String id,
     required String name,

@@ -4,7 +4,7 @@ part 'program_model.freezed.dart';
 part 'program_model.g.dart';
 
 @freezed
-class ProgramModel with _$ProgramModel {
+abstract class ProgramModel with _$ProgramModel {
   const factory ProgramModel({
     required String id,
     required String name,

@@ -4,7 +4,7 @@ part 'sanction_model.freezed.dart';
 part 'sanction_model.g.dart';
 
 @freezed
-class SanctionModel with _$SanctionModel {
+abstract class SanctionModel with _$SanctionModel {
   const factory SanctionModel({
     required String id,
     @JsonKey(name: 'student_id') required String studentId,

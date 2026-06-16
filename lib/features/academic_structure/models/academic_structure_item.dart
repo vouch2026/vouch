@@ -3,7 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'academic_structure_item.freezed.dart';
 
 @freezed
-class AcademicStructureItem with _$AcademicStructureItem {
+abstract class AcademicStructureItem with _$AcademicStructureItem {
   const factory AcademicStructureItem({
     required String campusName,
     required String facultyName,

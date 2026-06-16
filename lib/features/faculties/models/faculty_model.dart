@@ -4,7 +4,7 @@ part 'faculty_model.freezed.dart';
 part 'faculty_model.g.dart';
 
 @freezed
-class FacultyModel with _$FacultyModel {
+abstract class FacultyModel with _$FacultyModel {
   const factory FacultyModel({
     required String id,
     required String name,

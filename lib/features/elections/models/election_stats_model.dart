@@ -4,7 +4,7 @@ part 'election_stats_model.freezed.dart';
 part 'election_stats_model.g.dart';
 
 @freezed
-class ElectionStatsModel with _$ElectionStatsModel {
+abstract class ElectionStatsModel with _$ElectionStatsModel {
   const factory ElectionStatsModel({
     @Default(0) int activeElections,
     @Default(0) int upcomingElections,

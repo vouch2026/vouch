@@ -4,7 +4,7 @@ part 'announcement_model.freezed.dart';
 part 'announcement_model.g.dart';
 
 @freezed
-class AnnouncementModel with _$AnnouncementModel {
+abstract class AnnouncementModel with _$AnnouncementModel {
   const factory AnnouncementModel({
     String? id,
     required String title,

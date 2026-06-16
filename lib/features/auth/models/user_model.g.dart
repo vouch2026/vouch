@@ -6,39 +6,38 @@ part of 'user_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
-    _$UserModelImpl(
-      id: json['id'] as String?,
-      authId: json['auth_id'] as String,
-      email: json['email'] as String,
-      firstName: json['first_name'] as String?,
-      lastName: json['last_name'] as String?,
-      schoolId: json['student_id_number'] as String,
-      facultyId: json['faculty_id'] as String?,
-      programId: json['program_id'] as String?,
-      campusId: json['campus_id'] as String?,
-      yearLevel: (json['year'] as num?)?.toInt(),
-      avatarUrl: json['profile_photo_url'] as String?,
-      idFrontUrl: json['id_front_url'] as String?,
-      idBackUrl: json['id_back_url'] as String?,
-      organizationIds:
-          (json['organization_ids'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      role: json['role'] as String? ?? 'student',
-      status: json['account_status'] as String? ?? 'active',
-      createdAt: json['created_at'] == null
-          ? null
-          : DateTime.parse(json['created_at'] as String),
-      joinedAt: json['joined_at'] == null
-          ? null
-          : DateTime.parse(json['joined_at'] as String),
-      facultyName: json['facultyName'] as String?,
-      programName: json['programName'] as String?,
-    );
+_UserModel _$UserModelFromJson(Map<String, dynamic> json) => _UserModel(
+  id: json['id'] as String?,
+  authId: json['auth_id'] as String,
+  email: json['email'] as String,
+  firstName: json['first_name'] as String?,
+  lastName: json['last_name'] as String?,
+  schoolId: json['student_id_number'] as String,
+  facultyId: json['faculty_id'] as String?,
+  programId: json['program_id'] as String?,
+  campusId: json['campus_id'] as String?,
+  yearLevel: (json['year'] as num?)?.toInt(),
+  avatarUrl: json['profile_photo_url'] as String?,
+  idFrontUrl: json['id_front_url'] as String?,
+  idBackUrl: json['id_back_url'] as String?,
+  organizationIds:
+      (json['organization_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  role: json['role'] as String? ?? 'student',
+  status: json['account_status'] as String? ?? 'active',
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+  joinedAt: json['joined_at'] == null
+      ? null
+      : DateTime.parse(json['joined_at'] as String),
+  facultyName: json['facultyName'] as String?,
+  programName: json['programName'] as String?,
+);
 
-Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
+Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'auth_id': instance.authId,

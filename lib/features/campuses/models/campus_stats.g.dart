@@ -6,21 +6,20 @@ part of 'campus_stats.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$CampusStatsImpl _$$CampusStatsImplFromJson(Map<String, dynamic> json) =>
-    _$CampusStatsImpl(
-      totalCampuses: (json['totalCampuses'] as num?)?.toInt() ?? 0,
-      activeCampuses: (json['activeCampuses'] as num?)?.toInt() ?? 0,
-      totalFaculties: (json['totalFaculties'] as num?)?.toInt() ?? 0,
-      activeDeans: (json['activeDeans'] as num?)?.toInt() ?? 0,
-      totalPrograms: (json['totalPrograms'] as num?)?.toInt() ?? 0,
-      activeProgramHeads: (json['activeProgramHeads'] as num?)?.toInt() ?? 0,
-      totalStudents: (json['totalStudents'] as num?)?.toInt() ?? 0,
-      totalOrganizations: (json['totalOrganizations'] as num?)?.toInt() ?? 0,
-      complianceRate: (json['complianceRate'] as num?)?.toDouble() ?? 0.0,
-      trendPercentage: (json['trendPercentage'] as num?)?.toDouble() ?? 0.0,
-    );
+_CampusStats _$CampusStatsFromJson(Map<String, dynamic> json) => _CampusStats(
+  totalCampuses: (json['totalCampuses'] as num?)?.toInt() ?? 0,
+  activeCampuses: (json['activeCampuses'] as num?)?.toInt() ?? 0,
+  totalFaculties: (json['totalFaculties'] as num?)?.toInt() ?? 0,
+  activeDeans: (json['activeDeans'] as num?)?.toInt() ?? 0,
+  totalPrograms: (json['totalPrograms'] as num?)?.toInt() ?? 0,
+  activeProgramHeads: (json['activeProgramHeads'] as num?)?.toInt() ?? 0,
+  totalStudents: (json['totalStudents'] as num?)?.toInt() ?? 0,
+  totalOrganizations: (json['totalOrganizations'] as num?)?.toInt() ?? 0,
+  complianceRate: (json['complianceRate'] as num?)?.toDouble() ?? 0.0,
+  trendPercentage: (json['trendPercentage'] as num?)?.toDouble() ?? 0.0,
+);
 
-Map<String, dynamic> _$$CampusStatsImplToJson(_$CampusStatsImpl instance) =>
+Map<String, dynamic> _$CampusStatsToJson(_CampusStats instance) =>
     <String, dynamic>{
       'totalCampuses': instance.totalCampuses,
       'activeCampuses': instance.activeCampuses,

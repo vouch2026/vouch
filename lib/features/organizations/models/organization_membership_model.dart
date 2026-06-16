@@ -6,7 +6,7 @@ part 'organization_membership_model.freezed.dart';
 part 'organization_membership_model.g.dart';
 
 @freezed
-class OrganizationMembershipModel with _$OrganizationMembershipModel {
+abstract class OrganizationMembershipModel with _$OrganizationMembershipModel {
   const factory OrganizationMembershipModel({
     required String id,
     @JsonKey(name: 'organization_id') required String organizationId,

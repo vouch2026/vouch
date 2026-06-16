@@ -6,8 +6,8 @@ part of 'faculty_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$FacultyModelImpl _$$FacultyModelImplFromJson(Map<String, dynamic> json) =>
-    _$FacultyModelImpl(
+_FacultyModel _$FacultyModelFromJson(Map<String, dynamic> json) =>
+    _FacultyModel(
       id: json['id'] as String,
       name: json['name'] as String,
       code: json['code'] as String,
@@ -23,7 +23,7 @@ _$FacultyModelImpl _$$FacultyModelImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['updated_at'] as String),
     );
 
-Map<String, dynamic> _$$FacultyModelImplToJson(_$FacultyModelImpl instance) =>
+Map<String, dynamic> _$FacultyModelToJson(_FacultyModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,

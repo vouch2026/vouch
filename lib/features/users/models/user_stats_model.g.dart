@@ -6,8 +6,8 @@ part of 'user_stats_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$UserStatsModelImpl _$$UserStatsModelImplFromJson(Map<String, dynamic> json) =>
-    _$UserStatsModelImpl(
+_UserStatsModel _$UserStatsModelFromJson(Map<String, dynamic> json) =>
+    _UserStatsModel(
       totalUsers: (json['totalUsers'] as num?)?.toInt() ?? 0,
       totalStudents: (json['totalStudents'] as num?)?.toInt() ?? 0,
       activeStudents: (json['activeStudents'] as num?)?.toInt() ?? 0,
@@ -26,22 +26,21 @@ _$UserStatsModelImpl _$$UserStatsModelImplFromJson(Map<String, dynamic> json) =>
       governanceTrend: (json['governanceTrend'] as num?)?.toDouble() ?? 0.0,
     );
 
-Map<String, dynamic> _$$UserStatsModelImplToJson(
-  _$UserStatsModelImpl instance,
-) => <String, dynamic>{
-  'totalUsers': instance.totalUsers,
-  'totalStudents': instance.totalStudents,
-  'activeStudents': instance.activeStudents,
-  'pendingStudents': instance.pendingStudents,
-  'suspendedStudents': instance.suspendedStudents,
-  'totalInstructors': instance.totalInstructors,
-  'activeInstructors': instance.activeInstructors,
-  'deansCount': instance.deansCount,
-  'programHeadsCount': instance.programHeadsCount,
-  'totalOfficers': instance.totalOfficers,
-  'orgMembershipsCount': instance.orgMembershipsCount,
-  'activeGovernanceAccounts': instance.activeGovernanceAccounts,
-  'studentTrend': instance.studentTrend,
-  'instructorTrend': instance.instructorTrend,
-  'governanceTrend': instance.governanceTrend,
-};
+Map<String, dynamic> _$UserStatsModelToJson(_UserStatsModel instance) =>
+    <String, dynamic>{
+      'totalUsers': instance.totalUsers,
+      'totalStudents': instance.totalStudents,
+      'activeStudents': instance.activeStudents,
+      'pendingStudents': instance.pendingStudents,
+      'suspendedStudents': instance.suspendedStudents,
+      'totalInstructors': instance.totalInstructors,
+      'activeInstructors': instance.activeInstructors,
+      'deansCount': instance.deansCount,
+      'programHeadsCount': instance.programHeadsCount,
+      'totalOfficers': instance.totalOfficers,
+      'orgMembershipsCount': instance.orgMembershipsCount,
+      'activeGovernanceAccounts': instance.activeGovernanceAccounts,
+      'studentTrend': instance.studentTrend,
+      'instructorTrend': instance.instructorTrend,
+      'governanceTrend': instance.governanceTrend,
+    };

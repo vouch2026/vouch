@@ -4,7 +4,7 @@ part 'attendance_model.freezed.dart';
 part 'attendance_model.g.dart';
 
 @freezed
-class AttendanceModel with _$AttendanceModel {
+abstract class AttendanceModel with _$AttendanceModel {
   const factory AttendanceModel({
     String? id,
     @JsonKey(name: 'student_id') required String studentId,

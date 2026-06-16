@@ -6,33 +6,32 @@ part of 'event_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$EventModelImpl _$$EventModelImplFromJson(Map<String, dynamic> json) =>
-    _$EventModelImpl(
-      id: json['id'] as String?,
-      name: json['name'] as String,
-      eventDate: DateTime.parse(json['event_date'] as String),
-      shortDescription: json['short_description'] as String?,
-      fullDescription: json['full_description'] as String?,
-      imageUrl: json['image_url'] as String?,
-      location: json['location'] as String,
-      timeInStart: json['time_in_start'] as String,
-      timeInEnd: json['time_in_end'] as String,
-      timeOutStart: json['time_out_start'] as String,
-      timeOutEnd: json['time_out_end'] as String,
-      scopeType: json['scope_type'] as String,
-      scopeId: json['scope_id'] as String,
-      isMandatory: json['is_mandatory'] as bool? ?? true,
-      academicTermId: json['academic_term_id'] as String?,
-      createdAt: json['created_at'] == null
-          ? null
-          : DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] == null
-          ? null
-          : DateTime.parse(json['updated_at'] as String),
-      createdByUserId: json['created_by_user_id'] as String?,
-    );
+_EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
+  id: json['id'] as String?,
+  name: json['name'] as String,
+  eventDate: DateTime.parse(json['event_date'] as String),
+  shortDescription: json['short_description'] as String?,
+  fullDescription: json['full_description'] as String?,
+  imageUrl: json['image_url'] as String?,
+  location: json['location'] as String,
+  timeInStart: json['time_in_start'] as String,
+  timeInEnd: json['time_in_end'] as String,
+  timeOutStart: json['time_out_start'] as String,
+  timeOutEnd: json['time_out_end'] as String,
+  scopeType: json['scope_type'] as String,
+  scopeId: json['scope_id'] as String,
+  isMandatory: json['is_mandatory'] as bool? ?? true,
+  academicTermId: json['academic_term_id'] as String?,
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
+      ? null
+      : DateTime.parse(json['updated_at'] as String),
+  createdByUserId: json['created_by_user_id'] as String?,
+);
 
-Map<String, dynamic> _$$EventModelImplToJson(_$EventModelImpl instance) =>
+Map<String, dynamic> _$EventModelToJson(_EventModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,

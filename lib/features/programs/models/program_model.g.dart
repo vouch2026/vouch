@@ -6,8 +6,8 @@ part of 'program_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$ProgramModelImpl _$$ProgramModelImplFromJson(Map<String, dynamic> json) =>
-    _$ProgramModelImpl(
+_ProgramModel _$ProgramModelFromJson(Map<String, dynamic> json) =>
+    _ProgramModel(
       id: json['id'] as String,
       name: json['name'] as String,
       code: json['code'] as String,
@@ -23,7 +23,7 @@ _$ProgramModelImpl _$$ProgramModelImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['updated_at'] as String),
     );
 
-Map<String, dynamic> _$$ProgramModelImplToJson(_$ProgramModelImpl instance) =>
+Map<String, dynamic> _$ProgramModelToJson(_ProgramModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
