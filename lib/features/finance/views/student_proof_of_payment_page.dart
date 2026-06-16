@@ -1,5 +1,4 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,7 @@ import '../providers/finance_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/storage_provider.dart';
 import '../../../shared/layouts/responsive_layout.dart';
+import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -166,21 +166,14 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   Widget build(BuildContext context) {
     final receiversAsync = ref.watch(paymentReceiversProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          'Proof of Payment',
-          style: AppTextStyles.titleLarge.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: receiversAsync.when(
+    return DashboardLayout(
+      title: 'Proof of Payment',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
+      child: receiversAsync.when(
         data: (receivers) {
           if (_selectedReceiver == null && receivers.isNotEmpty) {
             _selectedReceiver = receivers.first;
@@ -200,6 +193,42 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Breadcrumbs Header
+                      Row(
+                        children: [
+                          Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context);
+                              }
+                            },
+                            child: Text(
+                              'Finance',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Proof of Payment',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       _buildPaymentItemChip(),
                       const SizedBox(height: AppSpacing.lg),
                       if (receivers.length > 1) ...[
@@ -271,7 +300,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: receivers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+            separatorBuilder: (_, index) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (context, index) {
               final receiver = receivers[index];
               final isSelected = _selectedReceiver?.id == receiver.id;
