@@ -461,36 +461,39 @@ class _SidebarItem extends ConsumerWidget {
                   ),
                 ),
               ),
-            ListTile(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              selected: isSelected,
-              selectedTileColor: Colors.transparent,
-              leading: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : AppColors.accent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+            Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                selected: isSelected,
+                selectedTileColor: Colors.transparent,
+                leading: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : AppColors.accent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 16,
+                    color: isSelected ? AppColors.primary : Colors.grey.shade700,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: isSelected ? AppColors.primary : Colors.grey.shade700,
+                title: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: isSelected ? AppColors.primary : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
                 ),
+                onTap: () {
+                  context.go(path);
+                },
               ),
-              title: Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: isSelected ? AppColors.primary : Colors.black87,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-              onTap: () {
-                context.go(path);
-              },
             ),
           ],
         ),

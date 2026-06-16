@@ -262,13 +262,16 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  SwitchListTile(
-                    title: const Text('Mandatory Fee', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Require all organization members to pay this fee'),
-                    value: _isMandatory,
-                    onChanged: (v) => setState(() => _isMandatory = v),
-                    contentPadding: EdgeInsets.zero,
-                    activeColor: theme.colorScheme.primary,
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      title: const Text('Mandatory Fee', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Require all organization members to pay this fee'),
+                      value: _isMandatory,
+                      onChanged: (v) => setState(() => _isMandatory = v),
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: theme.colorScheme.primary,
+                    ),
                   ),
                 ],
               ),
@@ -345,11 +348,20 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final today = DateTime.now();
+    final firstSelectableDate = _selectedDueDate != null && _selectedDueDate!.isBefore(today)
+        ? _selectedDueDate!
+        : today;
+    
+    final lastSelectableDate = _selectedDueDate != null && _selectedDueDate!.isAfter(today.add(const Duration(days: 365)))
+        ? _selectedDueDate!
+        : today.add(const Duration(days: 365));
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDueDate ?? DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: _selectedDueDate ?? today.add(const Duration(days: 7)),
+      firstDate: firstSelectableDate,
+      lastDate: lastSelectableDate,
     );
     if (picked != null) {
       setState(() {

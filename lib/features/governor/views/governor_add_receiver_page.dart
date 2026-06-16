@@ -11,7 +11,9 @@ import '../../finance/providers/finance_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
 class GovernorAddReceiverPage extends ConsumerStatefulWidget {
-  const GovernorAddReceiverPage({super.key});
+  final PaymentReceiverModel? initialData;
+
+  const GovernorAddReceiverPage({super.key, this.initialData});
 
   @override
   ConsumerState<GovernorAddReceiverPage> createState() => _GovernorAddReceiverPageState();
@@ -19,19 +21,70 @@ class GovernorAddReceiverPage extends ConsumerStatefulWidget {
 
 class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPage> {
   final _formKey = GlobalKey<FormState>();
-  String _selectedProvider = 'GCash';
-  final _nameController = TextEditingController();
-  final _numberController = TextEditingController();
+  late String _selectedProvider;
+  late final TextEditingController _nameController;
+  late final TextEditingController _numberController;
   
   bool _isLoading = false;
 
   final List<String> _providers = ['GCash', 'Maya', 'ShopeePay', 'Bank Transfer', 'Cash'];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedProvider = widget.initialData?.bankType ?? 'GCash';
+    _nameController = TextEditingController(text: widget.initialData?.accountName);
+    _numberController = TextEditingController(text: widget.initialData?.accountNumber);
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _numberController.dispose();
     super.dispose();
+  }
+
+  Future<void> _deleteReceiver() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Payment Reference'),
+        content: const Text('Are you sure you want to delete this payment reference? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        await ref.read(financeRepositoryProvider).deletePaymentReceiver(widget.initialData!.id!);
+        if (mounted) {
+          ref.invalidate(paymentReceiversProvider);
+          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payment reference deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -52,22 +105,30 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
           ? org.campusId 
           : (org.type == 'faculty-based' ? org.facultyId : org.programId);
       
-      final receiver = PaymentReceiverModel(
-        bankType: _selectedProvider,
-        accountName: _nameController.text,
-        accountNumber: _numberController.text,
-        createdByUserId: user.id,
-        scopeType: scopeType,
-        scopeId: scopeId,
-      );
-
-      await ref.read(financeRepositoryProvider).createPaymentReceiver(receiver);
+      if (widget.initialData != null) {
+        final receiver = widget.initialData!.copyWith(
+          bankType: _selectedProvider,
+          accountName: _nameController.text,
+          accountNumber: _numberController.text,
+        );
+        await ref.read(financeRepositoryProvider).updatePaymentReceiver(receiver);
+      } else {
+        final receiver = PaymentReceiverModel(
+          bankType: _selectedProvider,
+          accountName: _nameController.text,
+          accountNumber: _numberController.text,
+          createdByUserId: user.id,
+          scopeType: scopeType,
+          scopeId: scopeId,
+        );
+        await ref.read(financeRepositoryProvider).createPaymentReceiver(receiver);
+      }
       
       if (mounted) {
         ref.invalidate(paymentReceiversProvider);
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment reference added successfully')),
+          SnackBar(content: Text('Payment reference ${widget.initialData != null ? 'updated' : 'added'} successfully')),
         );
       }
     } catch (e) {
@@ -84,9 +145,10 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isEdit = widget.initialData != null;
 
     return DashboardLayout(
-      title: 'Add Payment Card',
+      title: isEdit ? 'Edit Payment Card' : 'Add Payment Card',
       onBack: () {
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
@@ -119,7 +181,7 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Add Payment Card',
+                      isEdit ? 'Edit Payment Card' : 'Add Payment Card',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.bodySmall.copyWith(
@@ -132,12 +194,14 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'New Payment Reference',
+                isEdit ? 'Update Payment Reference' : 'New Payment Reference',
                 style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
-                'Add a new bank card or e-wallet for receiving student payments.',
+                isEdit 
+                    ? 'Modify the details for receiving student payments.'
+                    : 'Add a new bank card or e-wallet for receiving student payments.',
                 style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -222,11 +286,32 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
                       ),
                       child: _isLoading 
                         ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
-                        : const Text('Save Reference'),
+                        : Text(isEdit ? 'Save Changes' : 'Save Reference'),
                     ),
                   ),
                 ],
               ),
+              if (isEdit) ...[
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _deleteReceiver,
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                    label: const Text(
+                      'Delete Reference',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

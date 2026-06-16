@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,49 +6,41 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../events/models/event_model.dart';
-import '../providers/attendance_provider.dart';
-import '../models/qr_scan_ui_model.dart';
-import '../widgets/qr_recent_scan_card.dart';
+import 'package:excel/excel.dart' as excel_lib;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/file_saver_helper.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
-import 'dart:typed_data';
-import 'package:excel/excel.dart' as excel_lib;
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/utils/file_saver_helper.dart';
+import '../../finance/models/fee_model.dart';
 
-class AttendanceReportPage extends ConsumerStatefulWidget {
-  final EventModel event;
+class GovernorFeeReportPage extends ConsumerStatefulWidget {
+  final FeeModel fee;
 
-  const AttendanceReportPage({
+  const GovernorFeeReportPage({
     super.key,
-    required this.event,
+    required this.fee,
   });
 
   @override
-  ConsumerState<AttendanceReportPage> createState() => _AttendanceReportPageState();
+  ConsumerState<GovernorFeeReportPage> createState() => _GovernorFeeReportPageState();
 }
 
-class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
+class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _rawAttendanceData = [];
-  List<QrScanUIModel> _allScans = [];
-  List<QrScanUIModel> _filteredScans = [];
-  List<ExcelRowData> _allExcelRows = [];
-  List<ExcelRowData> _filteredExcelRows = [];
-  bool _isExcelView = true;
-  int _totalStudentsCount = 0;
+  List<FeeStudentRowData> _allRows = [];
+  List<FeeStudentRowData> _filteredRows = [];
   bool _isLoading = true;
-  String _selectedMode = 'All';
+  bool _isExcelView = true;
+  String _selectedStatus = 'All'; // All, Paid, Unpaid
   String _selectedProgram = 'All';
 
   static const Color primaryColor = Color(0xFF003DA5);
 
   List<String> get _availablePrograms {
-    final programs = _allScans
-        .map((scan) => scan.program.trim())
+    final programs = _allRows
+        .map((row) => row.program.trim())
         .where((p) => p.isNotEmpty && p != 'N/A')
         .toSet()
         .toList()
@@ -73,10 +66,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final repository = ref.read(attendanceRepositoryProvider);
       final client = Supabase.instance.client;
-      final scopeType = widget.event.scopeType;
-      final scopeId = widget.event.scopeId;
+      final scopeType = widget.fee.scopeType;
+      final scopeId = widget.fee.scopeId;
 
       String orgField;
       String orgType;
@@ -91,9 +83,8 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         orgType = 'program-based';
       }
 
-      // Load both the attendance logs and all active students in the scope in parallel
+      // 1. Fetch all active members/students in the scope
       final results = await Future.wait([
-        repository.getAllAttendanceForEvent(widget.event.id!, widget.event.scopeType, widget.event.scopeId),
         client.from('organization_members').select('''
           id,
           user:users!inner (
@@ -101,18 +92,18 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             first_name,
             last_name,
             student_id_number,
-            year,
             program:programs!users_program_id_fkey (
               name,
               faculty:faculties!programs_faculty_id_fkey (
                 name
               )
-            )
+            ),
+            year
           ),
           role:roles!inner (
             name
           ),
-          organizations!inner (
+          organization:organizations!inner (
             type,
             $orgField
           )
@@ -120,101 +111,87 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         .eq('status', 'active')
         .eq('user.account_status', 'active')
         .eq('role.name', 'Member')
-        .eq('organizations.type', orgType)
-        .eq('organizations.$orgField', scopeId),
+        .eq('organization.type', orgType)
+        .eq('organization.$orgField', scopeId),
+        
+        client.from('student_payments').select('''
+          *,
+          receiver:payment_receiver (
+            bank_type
+          )
+        ''')
+        .eq('fee_id', widget.fee.id!)
       ]);
 
-      final rawScans = results[0] as List<Map<String, dynamic>>;
-      final members = results[1] as List<dynamic>;
-      _totalStudentsCount = members.length;
-      
-      final List<Map<String, dynamic>> extractedScans = [];
-      for (final data in rawScans) {
-        final student = data['student'] as Map<String, dynamic>?;
-        final firstName = student?['first_name'] ?? 'Unknown';
-        final lastName = student?['last_name'] ?? 'Student';
-        final studentId = student?['student_id_number'] ?? '-';
-        final program = (student?['program'] as Map<String, dynamic>?)?['name'] ?? 'N/A';
+      final studentsList = List<Map<String, dynamic>>.from(results[0] as List);
+      final paymentsList = List<Map<String, dynamic>>.from(results[1] as List);
 
-        final timeInRaw = data['actual_time_in'];
-        final timeOutRaw = data['actual_time_out'];
+      final List<FeeStudentRowData> rows = [];
+      for (final member in studentsList) {
+        final userData = member['user'] as Map<String, dynamic>?;
+        if (userData == null) continue;
 
-        if (timeInRaw != null) {
-          extractedScans.add({
-            'name': '$firstName $lastName',
-            'studentId': studentId,
-            'program': program,
-            'dateTime': DateTime.parse(timeInRaw).toLocal(),
-            'type': 'Time In',
-          });
-        }
-        if (timeOutRaw != null) {
-          extractedScans.add({
-            'name': '$firstName $lastName',
-            'studentId': studentId,
-            'program': program,
-            'dateTime': DateTime.parse(timeOutRaw).toLocal(),
-            'type': 'Time Out',
-          });
-        }
-      }
-
-      // Sort extractedScans by dateTime descending (newest first)
-      extractedScans.sort((a, b) => (b['dateTime'] as DateTime).compareTo(a['dateTime'] as DateTime));
-
-      final scans = extractedScans.map((scanData) {
-        return QrScanUIModel(
-          name: scanData['name'] as String,
-          studentId: scanData['studentId'] as String,
-          program: scanData['program'] as String,
-          time: DateFormat('h:mm a').format(scanData['dateTime'] as DateTime),
-          status: 'success',
-          type: scanData['type'] as String,
-        );
-      }).toList();
-
-      final excelRows = members.map((memberData) {
-        final user = memberData['user'] as Map<String, dynamic>?;
-        final firstName = user?['first_name'] ?? 'Unknown';
-        final lastName = user?['last_name'] ?? 'Student';
-        final studentId = user?['student_id_number'] ?? '-';
-        final userId = user?['id'] as String?;
+        final userUuid = userData['id'] as String;
+        final studentId = userData['student_id_number'] ?? '-';
+        final firstName = userData['first_name'] ?? 'Unknown';
+        final lastName = userData['last_name'] ?? 'Student';
+        final name = '$firstName $lastName';
         
-        final programData = user?['program'] as Map<String, dynamic>?;
+        final programData = userData['program'] as Map<String, dynamic>?;
         final programName = programData?['name'] ?? 'N/A';
         final facultyData = programData?['faculty'] as Map<String, dynamic>?;
         final facultyName = facultyData?['name'] ?? 'N/A';
-        final yearLevel = user?['year']?.toString() ?? '-';
-        
-        // Find if this student has a scan record
-        final scanRecord = rawScans.where((scan) => scan['student_id'] == userId).firstOrNull;
-        
-        final timeInRaw = scanRecord?['actual_time_in'];
-        final timeOutRaw = scanRecord?['actual_time_out'];
-        
-        final formattedTimeIn = timeInRaw != null
-            ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
-            : 'N/A';
-        final formattedTimeOut = timeOutRaw != null
-            ? DateFormat('h:mm a').format(DateTime.parse(timeOutRaw).toLocal())
-            : 'N/A';
+        final yearLevel = userData['year']?.toString() ?? '-';
 
-        return ExcelRowData(
+        // Find the payment submission for this student
+        final studentPayments = paymentsList.where((p) => p['student_id'] == userUuid).toList();
+        final payment = studentPayments.where((p) => p['status'] == 'Paid').firstOrNull ??
+                        studentPayments.where((p) => p['status'] == 'Pending').firstOrNull ??
+                        studentPayments.firstOrNull;
+
+        String status = 'Unpaid';
+        String amountText = '₱${widget.fee.amount.toStringAsFixed(2)}';
+        String referenceNo = '-';
+        String paymentMethod = '-';
+        String paidAtText = '-';
+
+        if (payment != null) {
+          final paymentStatus = payment['status'] as String? ?? 'Pending';
+          if (paymentStatus == 'Paid') {
+            status = 'Paid';
+            paidAtText = payment['paid_at'] != null 
+                ? DateFormat('yMMMd').add_jm().format(DateTime.parse(payment['paid_at']).toLocal())
+                : '-';
+          } else if (paymentStatus == 'Pending') {
+            status = 'Pending';
+          } else if (paymentStatus == 'Rejected') {
+            status = 'Unpaid'; // Rejected payment counts as Unpaid
+          }
+          referenceNo = payment['reference_number'] ?? '-';
+          paymentMethod = (payment['receiver'] as Map<String, dynamic>?)?['bank_type'] ?? payment['payment_method'] ?? '-';
+        }
+
+        rows.add(FeeStudentRowData(
+          userUuid: userUuid,
           studentId: studentId,
-          name: '$firstName $lastName',
+          name: name,
           faculty: facultyName,
           program: programName,
           yearLevel: yearLevel,
-          timeIn: formattedTimeIn,
-          timeOut: formattedTimeOut,
-        );
-      }).toList();
+          amount: amountText,
+          paidAt: paidAtText,
+          referenceNo: referenceNo,
+          paymentMethod: paymentMethod,
+          status: status,
+        ));
+      }
+
+      // Sort rows alphabetically by name
+      rows.sort((a, b) => a.name.compareTo(b.name));
 
       if (mounted) {
         setState(() {
-          _rawAttendanceData = rawScans;
-          _allScans = scans;
-          _allExcelRows = excelRows;
+          _allRows = rows;
           _isLoading = false;
           _applyFilters();
         });
@@ -223,7 +200,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load attendance report: $e')),
+          SnackBar(content: Text('Failed to load report data: $e')),
         );
       }
     }
@@ -232,65 +209,41 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
   void _applyFilters() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredScans = _allScans.where((scan) {
-        final matchesQuery = scan.name.toLowerCase().contains(query) ||
-            scan.studentId.toLowerCase().contains(query) ||
-            scan.program.toLowerCase().contains(query);
-        
-        final matchesMode = _selectedMode == 'All' || scan.type == _selectedMode;
-        
-        final matchesProgram = _selectedProgram == 'All' || scan.program == _selectedProgram;
-
-        return matchesQuery && matchesMode && matchesProgram;
-      }).toList();
-
-      _filteredExcelRows = _allExcelRows.where((row) {
+      _filteredRows = _allRows.where((row) {
         final matchesQuery = row.name.toLowerCase().contains(query) ||
             row.studentId.toLowerCase().contains(query) ||
-            row.program.toLowerCase().contains(query) ||
-            row.faculty.toLowerCase().contains(query);
+            row.program.toLowerCase().contains(query);
         
+        final matchesStatus = _selectedStatus == 'All' || row.status == _selectedStatus;
         final matchesProgram = _selectedProgram == 'All' || row.program == _selectedProgram;
 
-        return matchesQuery && matchesProgram;
+        return matchesQuery && matchesStatus && matchesProgram;
       }).toList();
     });
-  }
-
-  String _formatTimeString(String timeStr) {
-    try {
-      final parts = timeStr.split(':');
-      final hour = int.parse(parts[0]);
-      final minute = int.parse(parts[1]);
-      final dt = DateTime(2026, 1, 1, hour, minute);
-      return DateFormat('h:mm a').format(dt);
-    } catch (_) {
-      return timeStr;
-    }
   }
 
   Future<void> _downloadExcelReport() async {
     try {
       final excel = excel_lib.Excel.createExcel();
-      final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+      final defaultSheet = excel.getDefaultSheet()!;
       final sheet = excel[defaultSheet];
 
       // Headers (Metadata)
       sheet.appendRow([
-        excel_lib.TextCellValue('Name of event'),
-        excel_lib.TextCellValue(widget.event.name),
+        excel_lib.TextCellValue('Fee Name'),
+        excel_lib.TextCellValue(widget.fee.name),
       ]);
       sheet.appendRow([
-        excel_lib.TextCellValue('Date'),
-        excel_lib.TextCellValue(DateFormat('yyyy-MM-dd').format(widget.event.eventDate)),
+        excel_lib.TextCellValue('Description'),
+        excel_lib.TextCellValue(widget.fee.description ?? ''),
       ]);
       sheet.appendRow([
-        excel_lib.TextCellValue('Time in'),
-        excel_lib.TextCellValue('${_formatTimeString(widget.event.timeInStart)} - ${_formatTimeString(widget.event.timeInEnd)}'),
+        excel_lib.TextCellValue('Required Amount'),
+        excel_lib.TextCellValue('₱${widget.fee.amount.toStringAsFixed(2)}'),
       ]);
       sheet.appendRow([
-        excel_lib.TextCellValue('Time out'),
-        excel_lib.TextCellValue('${_formatTimeString(widget.event.timeOutStart)} - ${_formatTimeString(widget.event.timeOutEnd)}'),
+        excel_lib.TextCellValue('Due Date'),
+        excel_lib.TextCellValue(DateFormat('yyyy-MM-dd').format(widget.fee.dueDate)),
       ]);
       sheet.appendRow([]); // space row
 
@@ -301,57 +254,40 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         excel_lib.TextCellValue('Faculty'),
         excel_lib.TextCellValue('Program'),
         excel_lib.TextCellValue('Year Level'),
-        excel_lib.TextCellValue('Time in'),
-        excel_lib.TextCellValue('Time out'),
+        excel_lib.TextCellValue('Amount'),
+        excel_lib.TextCellValue('Payment Method'),
+        excel_lib.TextCellValue('Reference Number'),
+        excel_lib.TextCellValue('Date Paid'),
+        excel_lib.TextCellValue('Status'),
       ]);
 
       // Data Rows
-      for (final data in _rawAttendanceData) {
-        final student = data['student'] as Map<String, dynamic>?;
-        final firstName = student?['first_name'] ?? 'Unknown';
-        final lastName = student?['last_name'] ?? 'Student';
-        final studentId = student?['student_id_number'] ?? '-';
-        
-        final programData = student?['program'] as Map<String, dynamic>?;
-        final programName = programData?['name'] ?? 'N/A';
-        final facultyData = programData?['faculty'] as Map<String, dynamic>?;
-        final facultyName = facultyData?['name'] ?? 'N/A';
-        final yearLevel = student?['year']?.toString() ?? '-';
-        
-        final timeInRaw = data['actual_time_in'];
-        final timeOutRaw = data['actual_time_out'];
-
-        if (timeInRaw == null && timeOutRaw == null) continue;
-        
-        final formattedTimeIn = timeInRaw != null
-            ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
-            : '-';
-        final formattedTimeOut = timeOutRaw != null
-            ? DateFormat('h:mm a').format(DateTime.parse(timeOutRaw).toLocal())
-            : '-';
-
+      for (final row in _filteredRows) {
+        if (row.status.toLowerCase() == 'unpaid') continue;
         sheet.appendRow([
-          excel_lib.TextCellValue(studentId),
-          excel_lib.TextCellValue('$firstName $lastName'),
-          excel_lib.TextCellValue(facultyName),
-          excel_lib.TextCellValue(programName),
-          excel_lib.TextCellValue(yearLevel),
-          excel_lib.TextCellValue(formattedTimeIn),
-          excel_lib.TextCellValue(formattedTimeOut),
+          excel_lib.TextCellValue(row.studentId),
+          excel_lib.TextCellValue(row.name),
+          excel_lib.TextCellValue(row.faculty),
+          excel_lib.TextCellValue(row.program),
+          excel_lib.TextCellValue(row.yearLevel),
+          excel_lib.TextCellValue(row.amount),
+          excel_lib.TextCellValue(row.paymentMethod),
+          excel_lib.TextCellValue(row.referenceNo),
+          excel_lib.TextCellValue(row.paidAt),
+          excel_lib.TextCellValue(row.status),
         ]);
       }
 
       final bytes = excel.encode();
       if (bytes == null) throw Exception("Failed to encode excel");
 
-      final String fileName = "${widget.event.name.replaceAll(RegExp(r'[^\w\s\-]'), '_')}_Attendance_Report.xlsx";
-      
+      final String fileName = "${widget.fee.name.replaceAll(RegExp(r'[^\w\s\-]'), '_')}_Payment_Report.xlsx";
       final isSuccess = await FileSaverUtil.saveFile(Uint8List.fromList(bytes), fileName);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isSuccess ? 'Attendance report downloaded successfully!' : 'Failed to download report.'),
+            content: Text(isSuccess ? 'Payment report downloaded successfully!' : 'Failed to download report.'),
             backgroundColor: isSuccess ? Colors.green : Colors.red,
           ),
         );
@@ -368,13 +304,26 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     }
   }
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return '??';
+    final parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final presentCount = _allScans.map((scan) => scan.studentId).toSet().length;
-    final absentCount = _totalStudentsCount > presentCount ? _totalStudentsCount - presentCount : 0;
+    final paidCount = _allRows.where((row) => row.status == 'Paid').length;
+    final pendingCount = _allRows.where((row) => row.status == 'Pending').length;
+    final unpaidCount = _allRows.where((row) => row.status == 'Unpaid').length;
+    final totalCount = _allRows.length;
+
     final isMobile = MediaQuery.of(context).size.width < 768;
+
     return DashboardLayout(
-      title: 'Attendance Report',
+      title: '${widget.fee.name} Report',
       onBack: () {
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
@@ -392,7 +341,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                        Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
                         const SizedBox(width: 8),
                         InkWell(
                           onTap: () {
@@ -404,7 +353,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                             }
                           },
                           child: Text(
-                            'Events',
+                            'Fees',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: Colors.grey[600],
                               fontWeight: FontWeight.w500,
@@ -421,7 +370,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                             }
                           },
                           child: Text(
-                            widget.event.name,
+                            'Manage Fees',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: Colors.grey[600],
                               fontWeight: FontWeight.w500,
@@ -433,7 +382,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Attendance Report',
+                            'Payment Report',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodySmall.copyWith(
@@ -447,7 +396,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Title Section with Download Button
+                  // Header View Details
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Row(
@@ -458,7 +407,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Attendance Report',
+                                '${widget.fee.name} Payment Report',
                                 style: AppTextStyles.headlineMedium.copyWith(
                                   color: AppColors.primary,
                                   fontWeight: FontWeight.bold,
@@ -466,7 +415,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Attendance summary and statistics for ${widget.event.name}',
+                                'Collection summary and student payment statistics',
                                 style: AppTextStyles.bodyMedium.copyWith(
                                   color: Colors.grey[600],
                                 ),
@@ -502,7 +451,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                   const SizedBox(height: 24),
 
                   // Analytics KPI and Chart Card
-                  _buildAnalyticsSection(presentCount, absentCount),
+                  _buildAnalyticsSection(paidCount, pendingCount, unpaidCount, totalCount),
                   const SizedBox(height: 24),
 
                   // Search and Filter Header
@@ -515,7 +464,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Attendance Logs',
+                              'Collection Logs',
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -563,19 +512,19 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Filter chips and dropdowns
+                  // Filter chips
                   _buildFilterSection(),
                   const SizedBox(height: 16),
 
-                  // Scans List or Excel Preview Table
+                  // Table or Card List
                   _isExcelView
                       ? _buildExcelPreviewTable()
-                      : (_filteredScans.isEmpty
+                      : (_filteredRows.isEmpty
                           ? _buildEmptyState()
                           : Padding(
                               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                               child: Column(
-                                children: _filteredScans.map((scan) => QrRecentScanCard(scan: scan)).toList(),
+                                children: _filteredRows.map((row) => _buildStudentCard(row)).toList(),
                               ),
                             )),
                 ],
@@ -584,47 +533,93 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     );
   }
 
-  Widget _buildAnalyticsSection(int presentCount, int absentCount) {
-    final total = _totalStudentsCount > 0 ? _totalStudentsCount : (presentCount + absentCount);
-    final presentPercent = total > 0 ? (presentCount / total * 100).round() : 0;
-    final absentPercent = total > 0 ? (absentCount / total * 100).round() : 0;
+  Widget _buildAnalyticsSection(int paidCount, int pendingCount, int unpaidCount, int totalCount) {
+    final paidPercent = totalCount > 0 ? (paidCount / totalCount * 100).round() : 0;
+    final pendingPercent = totalCount > 0 ? (pendingCount / totalCount * 100).round() : 0;
+    final unpaidPercent = totalCount > 0 ? (unpaidCount / totalCount * 100).round() : 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         children: [
-          // KPI Cards
-          Row(
-            children: [
-              Expanded(
-                child: _buildKpiCard(
-                  title: 'Total Students',
-                  value: '$total',
-                  color: primaryColor,
-                  icon: LucideIcons.users,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildKpiCard(
-                  title: 'Present',
-                  value: '$presentCount',
-                  color: Colors.green,
-                  icon: LucideIcons.checkCircle,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildKpiCard(
-                  title: 'Absent',
-                  value: '$absentCount',
-                  color: Colors.red,
-                  icon: LucideIcons.xCircle,
-                ),
-              ),
-            ],
+          // KPI Cards Row
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 600;
+              if (isNarrow) {
+                return Column(
+                  children: [
+                    _buildKpiCard(
+                      title: 'Total Students',
+                      value: '$totalCount',
+                      color: primaryColor,
+                      icon: LucideIcons.users,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildKpiCard(
+                      title: 'Paid',
+                      value: '$paidCount',
+                      color: Colors.green,
+                      icon: LucideIcons.checkCircle2,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildKpiCard(
+                      title: 'Pending Approval',
+                      value: '$pendingCount',
+                      color: Colors.orange,
+                      icon: LucideIcons.clock,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildKpiCard(
+                      title: 'Unpaid',
+                      value: '$unpaidCount',
+                      color: Colors.red,
+                      icon: LucideIcons.xCircle,
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildKpiCard(
+                      title: 'Total Students',
+                      value: '$totalCount',
+                      color: primaryColor,
+                      icon: LucideIcons.users,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildKpiCard(
+                      title: 'Paid',
+                      value: '$paidCount',
+                      color: Colors.green,
+                      icon: LucideIcons.checkCircle2,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildKpiCard(
+                      title: 'Pending',
+                      value: '$pendingCount',
+                      color: Colors.orange,
+                      icon: LucideIcons.clock,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildKpiCard(
+                      title: 'Unpaid',
+                      value: '$unpaidCount',
+                      color: Colors.red,
+                      icon: LucideIcons.xCircle,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-          
           const SizedBox(height: 16),
 
           // Chart Card
@@ -657,13 +652,19 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                           centerSpaceRadius: 32,
                           sections: [
                             PieChartSectionData(
-                              value: presentCount > 0 ? presentCount.toDouble() : 0.001,
+                              value: paidCount > 0 ? paidCount.toDouble() : 0.001,
                               color: Colors.green,
                               title: '',
                               radius: 18,
                             ),
                             PieChartSectionData(
-                              value: absentCount > 0 ? absentCount.toDouble() : 0.001,
+                              value: pendingCount > 0 ? pendingCount.toDouble() : 0.001,
+                              color: Colors.orange,
+                              title: '',
+                              radius: 18,
+                            ),
+                            PieChartSectionData(
+                              value: unpaidCount > 0 ? unpaidCount.toDouble() : 0.001,
                               color: Colors.red,
                               title: '',
                               radius: 18,
@@ -672,7 +673,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                         ),
                       ),
                       Text(
-                        '$presentPercent%',
+                        '$paidPercent%',
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -690,7 +691,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Attendance Rate',
+                        'Payment Rate',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
@@ -698,9 +699,11 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      _buildLegendItem('Present', Colors.green, presentCount, presentPercent),
+                      _buildLegendItem('Paid', Colors.green, paidCount, paidPercent),
                       const SizedBox(height: 6),
-                      _buildLegendItem('Absent', Colors.red, absentCount, absentPercent),
+                      _buildLegendItem('Pending', Colors.orange, pendingCount, pendingPercent),
+                      const SizedBox(height: 6),
+                      _buildLegendItem('Unpaid', Colors.red, unpaidCount, unpaidPercent),
                     ],
                   ),
                 ),
@@ -743,23 +746,24 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             ),
             child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
           Text(
             value,
             style: GoogleFonts.poppins(
               fontSize: 18,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.bold,
               color: Colors.black87,
-            ),
-          ),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.black45,
             ),
           ),
         ],
@@ -767,7 +771,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     );
   }
 
-  Widget _buildLegendItem(String label, Color color, int count, int percent) {
+  Widget _buildLegendItem(String title, Color color, int count, int percent) {
     return Row(
       children: [
         Container(
@@ -779,67 +783,162 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
+        Text(
+          '$title ($count)',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.black54,
           ),
         ),
+        const Spacer(),
         Text(
-          '$count ($percent%)',
+          '$percent%',
           style: GoogleFonts.poppins(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Colors.black54,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
       ],
     );
   }
 
+  Widget _buildViewToggle() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleOption(
+            icon: LucideIcons.list,
+            label: 'Card List',
+            isSelected: !_isExcelView,
+            onTap: () => setState(() => _isExcelView = false),
+          ),
+          const SizedBox(width: 4),
+          _buildToggleOption(
+            icon: LucideIcons.sheet,
+            label: 'Excel Preview',
+            isSelected: _isExcelView,
+            onTap: () => setState(() => _isExcelView = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? primaryColor : Colors.grey[600],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? primaryColor : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterSection() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
-          _buildFilterChip(
-            label: 'All Scans',
-            isSelected: _selectedMode == 'All',
-            onTap: () => setState(() {
-              _selectedMode = 'All';
-              _applyFilters();
-            }),
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Time In',
-            isSelected: _selectedMode == 'Time In',
-            onTap: () => setState(() {
-              _selectedMode = 'Time In';
-              _applyFilters();
-            }),
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Time Out',
-            isSelected: _selectedMode == 'Time Out',
-            onTap: () => setState(() {
-              _selectedMode = 'Time Out';
-              _applyFilters();
-            }),
-          ),
-          const SizedBox(width: 8),
-          
-          // Program Dropdown Filter
+          // Filter by Status
           PopupMenuButton<String>(
-            onSelected: (String program) {
+            onSelected: (val) {
               setState(() {
-                _selectedProgram = program;
+                _selectedStatus = val;
+                _applyFilters();
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: primaryColor.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              return ['All', 'Paid', 'Unpaid'].map((status) {
+                final isItemSelected = _selectedStatus == status;
+                return PopupMenuItem<String>(
+                  value: status,
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          status == 'All' ? 'All Statuses' : status,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? primaryColor : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle2, size: 16, color: primaryColor),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _selectedStatus == 'All' ? 'Status' : _selectedStatus,
+              isSelected: _selectedStatus != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Filter by Program
+          PopupMenuButton<String>(
+            onSelected: (val) {
+              setState(() {
+                _selectedProgram = val;
                 _applyFilters();
               });
             },
@@ -869,7 +968,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                         ),
                       ),
                       if (isItemSelected)
-                        const Icon(LucideIcons.checkCircle, size: 16, color: primaryColor),
+                        const Icon(LucideIcons.checkCircle2, size: 16, color: primaryColor),
                     ],
                   ),
                 );
@@ -961,8 +1060,8 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All'
-                    ? LucideIcons.clipboard
+                _searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All'
+                    ? LucideIcons.receipt
                     : LucideIcons.search,
                 size: 60,
                 color: primaryColor.withValues(alpha: 0.2),
@@ -970,8 +1069,8 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             ),
             const SizedBox(height: 20),
             Text(
-              _searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All'
-                  ? 'No scans recorded yet'
+              _searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All'
+                  ? 'No collection logs found'
                   : 'No matching records found',
               style: GoogleFonts.poppins(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -988,14 +1087,14 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (!(_searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All'))
+            if (!(_searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All'))
               Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: TextButton(
                   onPressed: () {
                     setState(() {
                       _searchController.clear();
-                      _selectedMode = 'All';
+                      _selectedStatus = 'All';
                       _selectedProgram = 'All';
                       _applyFilters();
                     });
@@ -1015,84 +1114,8 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     );
   }
 
-  Widget _buildViewToggle() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildToggleOption(
-            icon: LucideIcons.list,
-            label: 'Card List',
-            isSelected: !_isExcelView,
-            onTap: () => setState(() => _isExcelView = false),
-          ),
-          const SizedBox(width: 4),
-          _buildToggleOption(
-            icon: LucideIcons.sheet,
-            label: 'Excel Preview',
-            isSelected: _isExcelView,
-            onTap: () => setState(() => _isExcelView = true),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleOption({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: isSelected ? primaryColor : Colors.grey[600],
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? primaryColor : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildExcelPreviewTable() {
-    if (_filteredExcelRows.isEmpty) {
+    if (_filteredRows.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -1189,7 +1212,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                     ),
                     DataColumn(
                       label: Text(
-                        'Time In',
+                        'Amount',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -1199,7 +1222,37 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                     ),
                     DataColumn(
                       label: Text(
-                        'Time Out',
+                        'Method',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Reference No.',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Date Paid',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Status',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -1208,73 +1261,49 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                       ),
                     ),
                   ],
-                  rows: _filteredExcelRows.map((row) {
+                  rows: _filteredRows.map((row) {
+                    Color statusChipColor;
+                    Color statusTextColor;
+                    switch (row.status) {
+                      case 'Paid':
+                        statusChipColor = Colors.green.withValues(alpha: 0.1);
+                        statusTextColor = Colors.green.shade900;
+                        break;
+                      case 'Pending':
+                        statusChipColor = Colors.orange.withValues(alpha: 0.1);
+                        statusTextColor = Colors.orange.shade900;
+                        break;
+                      default:
+                        statusChipColor = Colors.red.withValues(alpha: 0.1);
+                        statusTextColor = Colors.red.shade900;
+                    }
+
                     return DataRow(
                       cells: [
+                        DataCell(Text(row.studentId, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.name, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600))),
+                        DataCell(Text(row.faculty, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.program, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.yearLevel, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.amount, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.paymentMethod, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.referenceNo, style: GoogleFonts.poppins(fontSize: 12))),
+                        DataCell(Text(row.paidAt, style: GoogleFonts.poppins(fontSize: 12))),
                         DataCell(
-                          Text(
-                            row.studentId,
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            row.name,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            row.faculty,
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            row.program,
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            row.yearLevel,
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
-                          ),
-                        ),
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: row.timeIn != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              row.timeIn,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: row.timeIn != '-' ? FontWeight.w600 : FontWeight.normal,
-                                color: row.timeIn != '-' ? Colors.green[800] : Colors.black45,
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusChipColor,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: row.timeOut != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              row.timeOut,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: row.timeOut != '-' ? FontWeight.w600 : FontWeight.normal,
-                                color: row.timeOut != '-' ? Colors.green[800] : Colors.black45,
+                              child: Text(
+                                row.status,
+                                style: GoogleFonts.poppins(
+                                  color: statusTextColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
@@ -1290,24 +1319,163 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
       ),
     );
   }
+
+  Widget _buildStudentCard(FeeStudentRowData row) {
+    Color statusColor;
+    IconData statusIcon;
+    switch (row.status) {
+      case 'Paid':
+        statusColor = const Color(0xFF2E7D32);
+        statusIcon = LucideIcons.checkCircle2;
+        break;
+      case 'Pending':
+        statusColor = const Color(0xFFE65100);
+        statusIcon = LucideIcons.clock;
+        break;
+      default:
+        statusColor = const Color(0xFFC62828);
+        statusIcon = LucideIcons.xCircle;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: primaryColor.withValues(alpha: 0.08),
+            child: Text(
+              _getInitials(row.name),
+              style: GoogleFonts.poppins(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  row.name,
+                  style: GoogleFonts.poppins(
+                    color: primaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${row.studentId} • ${row.program} • Lvl ${row.yearLevel}',
+                  style: GoogleFonts.poppins(
+                    color: Colors.black54, 
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (row.status == 'Paid') ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(LucideIcons.creditCard, size: 12, color: Colors.black45),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Ref: ${row.referenceNo} (${row.paymentMethod})',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black45,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ]
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                row.amount,
+                style: GoogleFonts.poppins(
+                  color: Colors.black87,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, color: statusColor, size: 11),
+                    const SizedBox(width: 4),
+                    Text(
+                      row.status,
+                      style: GoogleFonts.poppins(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class ExcelRowData {
+class FeeStudentRowData {
+  final String userUuid;
   final String studentId;
   final String name;
   final String faculty;
   final String program;
   final String yearLevel;
-  final String timeIn;
-  final String timeOut;
+  final String amount;
+  final String paidAt;
+  final String referenceNo;
+  final String paymentMethod;
+  final String status; // Paid, Pending, Unpaid
 
-  ExcelRowData({
+  FeeStudentRowData({
+    required this.userUuid,
     required this.studentId,
     required this.name,
     required this.faculty,
     required this.program,
     required this.yearLevel,
-    required this.timeIn,
-    required this.timeOut,
+    required this.amount,
+    required this.paidAt,
+    required this.referenceNo,
+    required this.paymentMethod,
+    required this.status,
   });
 }

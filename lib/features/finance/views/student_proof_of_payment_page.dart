@@ -1,5 +1,4 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,7 @@ import '../providers/finance_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/storage_provider.dart';
 import '../../../shared/layouts/responsive_layout.dart';
+import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -94,6 +94,16 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   }
 
   Future<void> _submitProof() async {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final startOfDueDate = DateTime(widget.fee.dueDate.year, widget.fee.dueDate.month, widget.fee.dueDate.day);
+    if (startOfToday.isAfter(startOfDueDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Submission is closed. This fee is past its due date.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     if (_uploadedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload a receipt first'), backgroundColor: Colors.red),
@@ -166,56 +176,121 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   Widget build(BuildContext context) {
     final receiversAsync = ref.watch(paymentReceiversProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          'Proof of Payment',
-          style: AppTextStyles.titleLarge.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: receiversAsync.when(
+    return DashboardLayout(
+      title: 'Proof of Payment',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
+      child: receiversAsync.when(
         data: (receivers) {
           if (_selectedReceiver == null && receivers.isNotEmpty) {
             _selectedReceiver = receivers.first;
           }
 
           final isMobile = ResponsiveLayout.isMobile(context);
-          final horizontalPadding = isMobile ? AppSpacing.lg : AppSpacing.xl * 2;
+          final horizontalPadding = isMobile ? AppSpacing.md : AppSpacing.lg;
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(paymentReceiversProvider),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: AppSpacing.lg),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Breadcrumbs Header
+                  Row(
                     children: [
-                      _buildPaymentItemChip(),
-                      const SizedBox(height: AppSpacing.lg),
-                      if (receivers.length > 1) ...[
-                        _buildProviderSelection(receivers),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                      if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildUploadCard(),
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildReferenceField(),
-                      const SizedBox(height: AppSpacing.xl),
-                      _buildSubmitButton(),
+                      Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Text(
+                          'Fees',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Proof of Payment',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (!isMobile)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 11,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildPaymentItemChip(),
+                              const SizedBox(height: AppSpacing.lg),
+                              if (receivers.length > 1) ...[
+                                _buildProviderSelection(receivers),
+                                const SizedBox(height: AppSpacing.lg),
+                              ],
+                              if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xl),
+                        Expanded(
+                          flex: 9,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildUploadCard(),
+                              const SizedBox(height: AppSpacing.lg),
+                              _buildReferenceField(),
+                              const SizedBox(height: AppSpacing.xl),
+                              _buildSubmitButton(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildPaymentItemChip(),
+                        const SizedBox(height: AppSpacing.lg),
+                        if (receivers.length > 1) ...[
+                          _buildProviderSelection(receivers),
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                        if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildUploadCard(),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildReferenceField(),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildSubmitButton(),
+                      ],
+                    ),
+                ],
               ),
             ),
           );
@@ -271,7 +346,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: receivers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+            separatorBuilder: (_, index) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (context, index) {
               final receiver = receivers[index];
               final isSelected = _selectedReceiver?.id == receiver.id;
@@ -545,13 +620,18 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   }
 
   Widget _buildSubmitButton() {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final startOfDueDate = DateTime(widget.fee.dueDate.year, widget.fee.dueDate.month, widget.fee.dueDate.day);
+    final isPastDue = startOfToday.isAfter(startOfDueDate);
+
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: FilledButton(
-        onPressed: _isSubmitting ? null : _submitProof,
+        onPressed: (_isSubmitting || isPastDue) ? null : _submitProof,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: isPastDue ? Colors.grey : AppColors.primary,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: _isSubmitting
@@ -561,7 +641,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
                 child: FlickrLoader(),
               )
             : Text(
-                'Submit Proof',
+                isPastDue ? 'Submission Closed (Past Due)' : 'Submit Proof',
                 style: AppTextStyles.titleSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
               ),
       ),

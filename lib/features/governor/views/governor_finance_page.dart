@@ -18,6 +18,7 @@ import 'governor_add_receiver_page.dart';
 import 'governor_create_fee_page.dart';
 import 'governor_created_fees_page.dart';
 import '../../finance/views/student_proof_of_payment_page.dart';
+import '../../finance/models/payment_receiver_model.dart';
 
 class GovernorFinancePage extends ConsumerStatefulWidget {
   const GovernorFinancePage({super.key});
@@ -29,6 +30,8 @@ class GovernorFinancePage extends ConsumerStatefulWidget {
 class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  String _selectedFeeFilter = 'All Fees';
+  String _selectedPaymentMethodFilter = 'All Methods';
 
   @override
   void initState() {
@@ -57,6 +60,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     final theme = Theme.of(context);
     final receiversAsync = ref.watch(paymentReceiversProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
+    final feesAsync = ref.watch(workspaceFeesProvider);
 
     return DashboardLayout(
       title: 'Organization Finance',
@@ -167,7 +171,14 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                           itemCount: receivers.length,
                           itemBuilder: (context, index) => GovernorReceiverCard(
                             receiver: receivers[index],
-                            onEdit: () {},
+                            onEdit: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => GovernorAddReceiverPage(
+                                  initialData: receivers[index],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -216,14 +227,22 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                                 children: [
                                   Expanded(child: _buildSearchField()),
                                   const SizedBox(width: AppSpacing.lg),
-                                  _buildFeeTypeFilter(),
+                                  _buildFeeTypeFilter(feesAsync),
+                                  const SizedBox(width: AppSpacing.md),
+                                  _buildPaymentMethodFilter(receiversAsync),
                                 ],
                               )
                             : Column(
                                 children: [
                                   _buildSearchField(),
                                   const SizedBox(height: AppSpacing.md),
-                                  SizedBox(width: double.infinity, child: _buildFeeTypeFilter()),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildFeeTypeFilter(feesAsync)),
+                                      const SizedBox(width: AppSpacing.md),
+                                      Expanded(child: _buildPaymentMethodFilter(receiversAsync)),
+                                    ],
+                                  ),
                                 ],
                               ),
                         ],
@@ -303,40 +322,115 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     );
   }
 
-  Widget _buildFeeTypeFilter() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+  Widget _buildFeeTypeFilter(AsyncValue<List<FeeModel>> feesAsync) {
+    final fees = feesAsync.valueOrNull ?? [];
+    final feeNames = ['All Fees', ...fees.map((f) => f.name).toSet()];
+
+    return PopupMenuButton<String>(
+      onSelected: (val) {
+        setState(() {
+          _selectedFeeFilter = val;
+        });
+      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.filter_list_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'All Fees',
-            style: AppTextStyles.labelLarge.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
+      itemBuilder: (context) => feeNames.map((name) => PopupMenuItem(
+        value: name,
+        child: Text(name),
+      )).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.filter_list_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(
+                _selectedFeeFilter,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-        ],
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodFilter(AsyncValue<List<PaymentReceiverModel>> receiversAsync) {
+    final receivers = receiversAsync.valueOrNull ?? [];
+    final paymentMethods = ['All Methods', ...receivers.map((r) => r.bankType).toSet()];
+
+    return PopupMenuButton<String>(
+      onSelected: (val) {
+        setState(() {
+          _selectedPaymentMethodFilter = val;
+        });
+      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      itemBuilder: (context) => paymentMethods.map((name) => PopupMenuItem(
+        value: name,
+        child: Text(name),
+      )).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.payment_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(
+                _selectedPaymentMethodFilter,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSubmissionList(List<StudentPaymentModel> submissions, String status) {
     final query = _searchController.text.toLowerCase();
+    final receivers = ref.read(paymentReceiversProvider).valueOrNull ?? [];
     final filtered = submissions.where((s) {
       final matchesStatus = s.status == status;
       final matchesQuery = (s.studentName?.toLowerCase().contains(query) ?? false) ||
                           (s.feeName?.toLowerCase().contains(query) ?? false);
-      return matchesStatus && matchesQuery;
+      final matchesFee = _selectedFeeFilter == 'All Fees' || s.feeName == _selectedFeeFilter;
+
+      final receiver = receivers.where((r) => r.id == s.paymentReceiverId).firstOrNull;
+      final paymentMethod = receiver?.bankType ?? 'Unknown';
+      final matchesPaymentMethod = _selectedPaymentMethodFilter == 'All Methods' || 
+          paymentMethod == _selectedPaymentMethodFilter;
+
+      return matchesStatus && matchesQuery && matchesFee && matchesPaymentMethod;
     }).toList();
 
     if (filtered.isEmpty) {
@@ -553,20 +647,27 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
             data: (submissions) {
               final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
               
+              StudentPaymentModel? getLatestSubmission(String feeId) {
+                final feeSubmissions = mySubmissions.where((s) => s.feeId == feeId).toList();
+                return feeSubmissions.where((s) => s.status == 'Paid').firstOrNull ??
+                       feeSubmissions.where((s) => s.status == 'Pending').firstOrNull ??
+                       feeSubmissions.firstOrNull;
+              }
+              
               // Calculate Total Payable (Outstanding Balance) responding to category filter
               final totalPayable = fees.where((fee) {
                 if (_categoryFilter == 'Mandatory') return fee.isMandatory;
                 if (_categoryFilter == 'Non-Mandatory') return !fee.isMandatory;
                 return true;
               }).where((fee) {
-                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final submission = getLatestSubmission(fee.id!);
                 final status = submission?.status ?? 'To Pay';
                 return status == 'To Pay' || status == 'Rejected';
               }).fold<double>(0, (sum, fee) => sum + fee.amount);
               
               // Apply Filtering
               final filteredFees = fees.where((fee) {
-                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final submission = getLatestSubmission(fee.id!);
                 final status = submission?.status ?? 'To Pay';
                 
                 // Category Filter
@@ -672,7 +773,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final fee = filteredFees[index];
-                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                final submission = getLatestSubmission(fee.id!);
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                                   child: _StudentFeeCard(fee: fee, submission: submission),
@@ -695,7 +796,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final fee = filteredFees[index];
-                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                final submission = getLatestSubmission(fee.id!);
                                 return _StudentFeeCard(fee: fee, submission: submission);
                               },
                               childCount: filteredFees.length,
@@ -991,11 +1092,17 @@ class _StudentFeeCard extends StatelessWidget {
     final isPaid = status == 'Paid';
     final isPending = status == 'Pending';
     final isRejected = status == 'Rejected';
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final startOfDueDate = DateTime(fee.dueDate.year, fee.dueDate.month, fee.dueDate.day);
+    final isPastDue = startOfToday.isAfter(startOfDueDate);
+
+    final displayStatus = ((status == 'To Pay' || status == 'Rejected') && isPastDue) ? 'Past Due' : status;
 
     Color statusColor = AppColors.primary;
     if (isPaid) statusColor = Colors.green;
     if (isPending) statusColor = Colors.amber;
-    if (isRejected) statusColor = Colors.red;
+    if (isRejected || ((status == 'To Pay' || status == 'Rejected') && isPastDue)) statusColor = Colors.red;
 
     return Card(
       elevation: 0,
@@ -1056,7 +1163,7 @@ class _StudentFeeCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        status.toUpperCase(),
+                        displayStatus.toUpperCase(),
                         style: AppTextStyles.labelSmall.copyWith(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -1074,22 +1181,45 @@ class _StudentFeeCard extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => StudentProofOfPaymentPage(fee: fee),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add_card_rounded, size: 18),
-                  label: Text(isRejected ? 'Resubmit Proof' : 'Submit Proof of Payment'),
+                  onPressed: isPastDue
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentProofOfPaymentPage(fee: fee),
+                            ),
+                          );
+                        },
+                  icon: Icon(isPastDue ? Icons.lock_clock_outlined : Icons.add_card_rounded, size: 18),
+                  label: Text(isPastDue
+                      ? 'Submission Closed'
+                      : (isRejected ? 'Resubmit Proof' : 'Submit Proof of Payment')),
                   style: FilledButton.styleFrom(
                     backgroundColor: isRejected ? Colors.red : AppColors.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
+              if (isPastDue) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, size: 16, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Submission is closed because this fee is past its due date.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.red[800],
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
             if (isPending) ...[
               const SizedBox(height: AppSpacing.md),
