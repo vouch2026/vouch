@@ -309,7 +309,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       )
                     : Text(
                         'Login',
-                        style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
               ),
             ),

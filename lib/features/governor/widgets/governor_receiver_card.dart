@@ -138,6 +138,7 @@ class _GovernorReceiverCardState extends State<GovernorReceiverCard> {
       case 'gcash': return const Color(0xFF1F37A6);
       case 'maya': return const Color(0xFF00C344);
       case 'shopeepay': return const Color(0xFFEE4D2D);
+      case 'cash': return const Color(0xFF0F9D58);
       default: return const Color(0xFF1F37A6);
     }
   }
@@ -146,12 +147,13 @@ class _GovernorReceiverCardState extends State<GovernorReceiverCard> {
     switch (provider.toLowerCase()) {
       case 'gcash': return Icons.account_balance_wallet_rounded;
       case 'maya': return Icons.credit_card_rounded;
+      case 'cash': return Icons.payments_rounded;
       default: return Icons.account_balance_wallet_rounded;
     }
   }
 
   String _formatNumber(String number) {
-    if (number.length < 11) return number;
+    if (number.length != 11 || !RegExp(r'^\d+$').hasMatch(number)) return number;
     return '${number.substring(0, 4)} ${number.substring(4, 7)} ${number.substring(7)}';
   }
 }

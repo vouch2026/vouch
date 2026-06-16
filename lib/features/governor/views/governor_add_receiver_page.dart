@@ -2,6 +2,7 @@ import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -24,7 +25,7 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
   
   bool _isLoading = false;
 
-  final List<String> _providers = ['GCash', 'Maya', 'ShopeePay', 'Bank Transfer'];
+  final List<String> _providers = ['GCash', 'Maya', 'ShopeePay', 'Bank Transfer', 'Cash'];
 
   @override
   void dispose() {
@@ -86,6 +87,11 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
 
     return DashboardLayout(
       title: 'Add Payment Card',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Form(
@@ -93,6 +99,38 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Breadcrumbs Header
+              Row(
+                children: [
+                  Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: Text(
+                      'Fees',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Add Payment Card',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'New Payment Reference',
                 style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
@@ -133,27 +171,31 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
               
               _buildFormSection(
                 context,
-                title: 'ACCOUNT DETAILS',
+                title: _selectedProvider == 'Cash' ? 'COLLECTOR DETAILS' : 'ACCOUNT DETAILS',
                 children: [
-                  _buildLabel('Account Name'),
+                  _buildLabel(_selectedProvider == 'Cash' ? 'Collector / Officer Name' : 'Account Name'),
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., Juan Dela Cruz',
-                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    decoration: InputDecoration(
+                      hintText: _selectedProvider == 'Cash' ? "e.g., Treasurer's Name" : 'e.g., Juan Dela Cruz',
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
                     ),
-                    validator: (v) => v?.isEmpty == true ? 'Name is required' : null,
+                    validator: (v) => v?.isEmpty == true 
+                        ? (_selectedProvider == 'Cash' ? 'Collector name is required' : 'Name is required') 
+                        : null,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _buildLabel('Account Number'),
+                  _buildLabel(_selectedProvider == 'Cash' ? 'Payment Location / Instructions' : 'Account Number'),
                   TextFormField(
                     controller: _numberController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter mobile or card number',
-                      prefixIcon: Icon(Icons.numbers_rounded),
+                    keyboardType: _selectedProvider == 'Cash' ? TextInputType.text : TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: _selectedProvider == 'Cash' ? "e.g., Office Room 101 or 'Pay in-person'" : 'Enter mobile or card number',
+                      prefixIcon: Icon(_selectedProvider == 'Cash' ? Icons.info_outline_rounded : Icons.numbers_rounded),
                     ),
-                    validator: (v) => v?.isEmpty == true ? 'Number is required' : null,
+                    validator: (v) => v?.isEmpty == true 
+                        ? (_selectedProvider == 'Cash' ? 'Payment location/instructions are required' : 'Number is required') 
+                        : null,
                   ),
                 ],
               ),

@@ -67,7 +67,23 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Fees',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
                   child: UserManagementHeader(
                     title: 'Finance & Collections',
                     subtitle: 'Manage fees, verify student payments, and track organization funds',
@@ -371,7 +387,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,
             mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: (status == 'Pending' || status == 'Rejected') ? 360 : 280,
+            mainAxisExtent: 300,
           ),
           itemCount: filtered.length,
           itemBuilder: (context, index) => GovernorSubmissionCard(
@@ -536,9 +552,17 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
           data: (fees) => submissionsAsync.when(
             data: (submissions) {
               final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
-              final totalPaid = mySubmissions
-                  .where((s) => s.status == 'Paid')
-                  .fold<double>(0, (sum, s) => sum + s.amountPaid);
+              
+              // Calculate Total Payable (Outstanding Balance) responding to category filter
+              final totalPayable = fees.where((fee) {
+                if (_categoryFilter == 'Mandatory') return fee.isMandatory;
+                if (_categoryFilter == 'Non-Mandatory') return !fee.isMandatory;
+                return true;
+              }).where((fee) {
+                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final status = submission?.status ?? 'To Pay';
+                return status == 'To Pay' || status == 'Rejected';
+              }).fold<double>(0, (sum, fee) => sum + fee.amount);
               
               // Apply Filtering
               final filteredFees = fees.where((fee) {
@@ -561,6 +585,9 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
 
               return LayoutBuilder(
                 builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 600;
+                  final horizontalPadding = isMobile ? AppSpacing.md : AppSpacing.lg;
+
                   int crossAxisCount = 1;
                   if (constraints.maxWidth > 1400) {
                     crossAxisCount = 4;
@@ -574,10 +601,28 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                     slivers: [
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding,
+                            vertical: AppSpacing.lg,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Breadcrumbs Header
+                              Row(
+                                children: [
+                                  Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Fees',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.md),
                               UserManagementHeader(
                                 title: 'Organization Fees',
                                 subtitle: 'View and settle your organization-related fees',
@@ -587,7 +632,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                               Center(
                                 child: ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 600),
-                                  child: _buildSummaryCard(totalPaid, userProfile?.schoolId ?? 'Unknown'),
+                                  child: _buildSummaryCard(totalPayable, userProfile?.schoolId ?? 'Unknown'),
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.xl),
@@ -612,7 +657,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                       if (filteredFees.isEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                             child: _buildEmptyState(
                               context,
                               Icons.receipt_long_outlined,
@@ -620,9 +665,26 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             ),
                           ),
                         )
+                      else if (isMobile)
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final fee = filteredFees[index];
+                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  child: _StudentFeeCard(fee: fee, submission: submission),
+                                );
+                              },
+                              childCount: filteredFees.length,
+                            ),
+                          ),
+                        )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                           sliver: SliverGrid(
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
@@ -643,7 +705,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
 
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.md),
+                          padding: EdgeInsets.fromLTRB(horizontalPadding, AppSpacing.xxl, horizontalPadding, AppSpacing.md),
                           child: Text(
                             'MY PAYMENT HISTORY',
                             style: AppTextStyles.labelMedium.copyWith(
@@ -658,7 +720,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                       if (mySubmissions.isEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                             child: _buildEmptyState(
                               context,
                               Icons.history_rounded,
@@ -666,15 +728,33 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             ),
                           ),
                         )
+                      else if (isMobile)
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  child: GovernorSubmissionCard(
+                                    submission: mySubmissions[index],
+                                    onViewReceipt: () => _showReceiptPreview(context, mySubmissions[index]),
+                                  ),
+                                );
+                              },
+                              childCount: mySubmissions.length,
+                            ),
+                          ),
+                        )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                           sliver: SliverGrid(
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
                               crossAxisSpacing: AppSpacing.lg,
                               mainAxisSpacing: AppSpacing.lg,
-                              mainAxisExtent: 280,
+                              mainAxisExtent: 300,
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
@@ -764,7 +844,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
     );
   }
 
-  Widget _buildSummaryCard(double totalPaid, String studentId) {
+  Widget _buildSummaryCard(double totalPayable, String studentId) {
     return Container(
       width: double.infinity,
       height: 180,
@@ -795,7 +875,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'TOTAL PAID',
+                  'TOTAL PAYABLE',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: Colors.white.withOpacity(0.7),
                     fontWeight: FontWeight.bold,
@@ -804,7 +884,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  '₱ ${totalPaid.toStringAsFixed(2)}',
+                  '₱ ${totalPayable.toStringAsFixed(2)}',
                   style: AppTextStyles.headlineMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

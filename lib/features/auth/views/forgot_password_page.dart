@@ -206,7 +206,13 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                         size: 8,
                         distance: 10,
                       )
-                    : Text('Reset Password', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                    : Text(
+                        'Reset Password',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
               ),
             ),
           ],

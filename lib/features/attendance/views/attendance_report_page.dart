@@ -12,6 +12,7 @@ import '../widgets/qr_recent_scan_card.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_spacing.dart';
 import 'dart:typed_data';
 import 'package:excel/excel.dart' as excel_lib;
 import '../../../core/utils/file_saver_helper.dart';
@@ -344,7 +345,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                 children: [
                   // Breadcrumbs / Header
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Row(
                       children: [
                         Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
@@ -404,7 +405,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
 
                   // Title Section with Download Button
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -462,7 +463,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
 
                   // Search and Filter Header
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -528,7 +529,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                       : (_filteredScans.isEmpty
                           ? _buildEmptyState()
                           : Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                               child: Column(
                                 children: _filteredScans.map((scan) => QrRecentScanCard(scan: scan)).toList(),
                               ),
@@ -545,7 +546,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
     final absentPercent = total > 0 ? (absentCount / total * 100).round() : 0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         children: [
           // KPI Cards

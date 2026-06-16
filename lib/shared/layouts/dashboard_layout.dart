@@ -43,7 +43,7 @@ class DashboardLayout extends ConsumerWidget {
         : (isMobile ? 50.0 : 56.0);
     final double topMargin = isMobile ? 8.0 : (isTablet ? 12.0 : 16.0);
     final double bottomMargin = isMobile ? 4.0 : (isTablet ? 6.0 : 8.0);
-    final double horizontalMargin = isMobile ? 10.0 : (isTablet ? 14.0 : 16.0);
+    final double horizontalMargin = isMobile ? 8.0 : (isTablet ? 12.0 : 16.0);
     final double totalAppBarHeight = containerHeight + topMargin + bottomMargin;
     final double borderRadius = isMobile ? 12.0 : 16.0;
 

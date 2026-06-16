@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../routes/route_paths.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
@@ -25,15 +27,28 @@ class GovernorAnnouncementCard extends ConsumerStatefulWidget {
 }
 
 class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementCard> {
-  bool _isHovered = false;
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
-        );
+    String formattedUrl = url.trim();
+    if (formattedUrl.isNotEmpty) {
+      if (!formattedUrl.contains('://')) {
+        formattedUrl = 'https://$formattedUrl';
+      }
+      try {
+        final uri = Uri.parse(formattedUrl);
+        if (!await launchUrl(uri)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not launch $formattedUrl')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Invalid URL: $formattedUrl')),
+          );
+        }
       }
     }
   }
@@ -58,7 +73,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -111,45 +126,48 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
                   overflow: TextOverflow.ellipsis,
                 ),
                 
-                if (widget.announcement.linkUrl != null) ...[
+                if (widget.announcement.linkUrls != null && widget.announcement.linkUrls!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.link_rounded, size: 16, color: theme.colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _launchUrl(widget.announcement.linkUrl!),
-                            child: Text(
-                              widget.announcement.linkUrl!,
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
+                  ...widget.announcement.linkUrls!.map((link) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.link_rounded, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _launchUrl(link),
+                              child: Text(
+                                link,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () => _copyToClipboard(widget.announcement.linkUrl!),
-                          icon: const Icon(Icons.copy_rounded, size: 14),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _copyToClipboard(link),
+                            icon: const Icon(Icons.copy_rounded, size: 14),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  )),
                 ],
                 
                 const SizedBox(height: AppSpacing.md),
@@ -186,6 +204,9 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
       icon: const Icon(Icons.more_vert_rounded, size: 20),
       onSelected: (val) {
         if (val == 'pin') widget.onPin?.call();
+        if (val == 'edit') {
+          context.push(RoutePaths.workspaceCreateAnnouncement, extra: widget.announcement);
+        }
         if (val == 'delete') widget.onDelete?.call();
       },
       itemBuilder: (context) => [
@@ -204,7 +225,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
           child: Row(
             children: [
               Icon(Icons.edit_outlined, size: 18),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text('Edit Announcement'),
             ],
           ),
@@ -214,7 +235,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
           child: Row(
             children: [
               Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text('Delete', style: TextStyle(color: Colors.red)),
             ],
           ),
@@ -251,9 +272,9 @@ class _CategoryBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         category.toUpperCase(),

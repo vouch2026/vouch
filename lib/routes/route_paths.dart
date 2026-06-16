@@ -51,6 +51,7 @@ class RoutePaths {
   static const String workspaceCreateEvent = '/workspace/events/create';
   static const String workspaceAttendance = '/workspace/attendance';
   static const String workspaceAnnouncements = '/workspace/announcements';
+  static const String workspaceCreateAnnouncement = '/workspace/announcements/create';
   static const String workspaceDocuments = '/workspace/documents';
   static const String workspaceFees = '/workspace/fees';
   static const String workspaceCollections = '/workspace/collections';

@@ -1,15 +1,17 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../routes/route_paths.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_announcement_card.dart';
-import 'governor_create_announcement_page.dart';
 
 class GovernorAnnouncementsPage extends ConsumerStatefulWidget {
   const GovernorAnnouncementsPage({super.key});
@@ -58,16 +60,39 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 600;
-              final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 1000;
-              final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : 3);
+              final isMobile = constraints.maxWidth < 768;
+              int crossAxisCount = 1;
+              if (constraints.maxWidth > 1200) {
+                crossAxisCount = 4;
+              } else if (constraints.maxWidth > 900) {
+                crossAxisCount = 3;
+              } else if (constraints.maxWidth > 600) {
+                crossAxisCount = 2;
+              }
 
               return RefreshIndicator(
                 onRefresh: () => ref.refresh(workspaceAnnouncementsProvider.future),
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                    vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                  ),
                   children: [
+                    Row(
+                      children: [
+                        Icon(Icons.campaign_outlined, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Announcements',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     UserManagementHeader(
                       title: 'Announcements',
                       subtitle: 'Broadcast important updates and news to your members',
@@ -76,7 +101,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                           HeaderActionButton(
                             icon: Icons.add_comment_rounded,
                             label: 'Post Announcement',
-                            onPressed: () => _navigateToCreate(context),
+                            onPressed: () => context.push(RoutePaths.workspaceCreateAnnouncement),
                             isPrimary: true,
                           ),
                       ],
@@ -108,8 +133,14 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                     ] else
                       Row(
                         children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth * 0.6,
+                            ),
+                            child: _buildCategoryFilters(theme),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
-                            flex: 2,
                             child: TextField(
                               controller: _searchController,
                               decoration: InputDecoration(
@@ -119,11 +150,6 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                                 contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            flex: 3,
-                            child: _buildCategoryFilters(theme),
                           ),
                         ],
                       ),
@@ -220,8 +246,8 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
         return Expanded(
           child: Padding(
             padding: EdgeInsets.only(
-              left: idx == 0 ? 0 : AppSpacing.md / 2,
-              right: idx == crossAxisCount - 1 ? 0 : AppSpacing.md / 2,
+              left: idx == 0 ? 0 : AppSpacing.lg / 2,
+              right: idx == crossAxisCount - 1 ? 0 : AppSpacing.lg / 2,
             ),
             child: Column(
               children: col.map((a) => Padding(
@@ -238,10 +264,6 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
         );
       }).toList(),
     );
-  }
-
-  void _navigateToCreate(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateAnnouncementPage()));
   }
 
   Future<void> _deleteAnnouncement(String id) async {

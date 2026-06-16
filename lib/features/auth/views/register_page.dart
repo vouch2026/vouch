@@ -522,7 +522,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       )
                     : Text(
                         'Sign Up',
-                        style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
               ),
             ),

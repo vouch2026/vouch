@@ -177,7 +177,13 @@ class _ChangeEmailPageState extends ConsumerState<ChangeEmailPage> {
                 ),
                 child: authState.isLoading
                     ? const FlickrLoader()
-                    : Text('Verify and Update', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                    : Text(
+                        'Verify and Update',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
               ),
             ),
           ],

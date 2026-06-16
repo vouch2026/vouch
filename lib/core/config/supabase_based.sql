@@ -307,7 +307,7 @@ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 title VARCHAR(255) NOT NULL,
 content TEXT NOT NULL,
 type VARCHAR(50) DEFAULT 'General',
-link_url VARCHAR(2048),
+link_urls TEXT[],
 image_url VARCHAR(2048),
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,
@@ -1053,7 +1053,7 @@ SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name IN ('Governor', 'Vice Governor', 'President', 'Vice President') 
 AND p.action IN (
     'create_event', 'edit_event', 'delete_event', 'view_events', 'scan_event_attendance', 'override_attendance', 
-    'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'view_clearance_dashboard', 'reject_clearance', 
+    'create_fee', 'edit_fee', 'delete_fee', 'view_fees', 'verify_payment', 'reject_payment', 'view_clearance_dashboard', 'reject_clearance', 
     'manage_payment_receivers', 'manage_collections', 'create_announcement', 'edit_announcement', 'delete_announcement', 
     'view_announcements', 'view_members', 'view_officers', 'manage_activity_cards', 'view_activity_cards', 'view_analytics', 'assign_roles', 'revoke_roles', 'manage_organization', 'view_documents',
     'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'

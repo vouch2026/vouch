@@ -319,6 +319,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   }
 
   Widget _buildTransferCard(PaymentReceiverModel receiver) {
+    final isCash = receiver.bankType.toLowerCase() == 'cash';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -338,20 +339,20 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Transfer Funds To ${receiver.bankType}',
+            isCash ? 'Pay via Cash / In-Person' : 'Transfer Funds To ${receiver.bankType}',
             style: AppTextStyles.titleSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: AppSpacing.md),
           _buildCopyRow(
-            label: '${receiver.bankType} Number',
+            label: isCash ? 'Payment Location / Instructions' : '${receiver.bankType} Number',
             value: receiver.accountNumber,
-            onCopy: () => _copyToClipboard(receiver.accountNumber, '${receiver.bankType} Number'),
+            onCopy: () => _copyToClipboard(receiver.accountNumber, isCash ? 'Payment Instructions' : '${receiver.bankType} Number'),
           ),
           const SizedBox(height: AppSpacing.md),
           _buildCopyRow(
-            label: 'Account Name',
+            label: isCash ? 'Collector / Officer Name' : 'Account Name',
             value: receiver.accountName,
-            onCopy: () => _copyToClipboard(receiver.accountName, 'Account Name'),
+            onCopy: () => _copyToClipboard(receiver.accountName, isCash ? 'Collector Name' : 'Account Name'),
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
@@ -361,7 +362,9 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Note: Please ensure details are correct and keep your transaction screenshot.',
+              isCash
+                  ? 'Note: Please pay in-person, receive a physical receipt, and upload a photo of the receipt as proof.'
+                  : 'Note: Please ensure details are correct and keep your transaction screenshot.',
               style: AppTextStyles.bodySmall.copyWith(color: Colors.black54),
             ),
           ),
@@ -518,7 +521,9 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
         TextField(
           controller: _referenceController,
           decoration: InputDecoration(
-            hintText: 'Enter ${_selectedReceiver?.bankType ?? 'Provider'} Ref No.',
+            hintText: _selectedReceiver?.bankType.toLowerCase() == 'cash'
+                ? 'Enter Receipt Reference Number'
+                : 'Enter ${_selectedReceiver?.bankType ?? 'Provider'} Ref No.',
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -570,6 +575,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
       case 'shopeepay': return Icons.shopping_bag_outlined;
       case 'coins.ph': return Icons.currency_bitcoin;
       case 'grabpay': return Icons.directions_car_outlined;
+      case 'cash': return Icons.payments_outlined;
       default: return Icons.credit_card_outlined;
     }
   }
