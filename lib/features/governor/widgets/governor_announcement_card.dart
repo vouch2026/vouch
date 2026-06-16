@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../routes/route_paths.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
@@ -186,6 +188,9 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
       icon: const Icon(Icons.more_vert_rounded, size: 20),
       onSelected: (val) {
         if (val == 'pin') widget.onPin?.call();
+        if (val == 'edit') {
+          context.push(RoutePaths.workspaceCreateAnnouncement, extra: widget.announcement);
+        }
         if (val == 'delete') widget.onDelete?.call();
       },
       itemBuilder: (context) => [

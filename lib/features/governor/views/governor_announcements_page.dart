@@ -1,9 +1,12 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../routes/route_paths.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
@@ -68,6 +71,20 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
+                    Row(
+                      children: [
+                        Icon(Icons.campaign_outlined, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Announcements',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     UserManagementHeader(
                       title: 'Announcements',
                       subtitle: 'Broadcast important updates and news to your members',
@@ -76,7 +93,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                           HeaderActionButton(
                             icon: Icons.add_comment_rounded,
                             label: 'Post Announcement',
-                            onPressed: () => _navigateToCreate(context),
+                            onPressed: () => context.push(RoutePaths.workspaceCreateAnnouncement),
                             isPrimary: true,
                           ),
                       ],
@@ -238,10 +255,6 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
         );
       }).toList(),
     );
-  }
-
-  void _navigateToCreate(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateAnnouncementPage()));
   }
 
   Future<void> _deleteAnnouncement(String id) async {

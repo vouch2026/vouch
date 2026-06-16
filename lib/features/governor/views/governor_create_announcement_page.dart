@@ -120,7 +120,7 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
 
       if (mounted) {
         ref.invalidate(workspaceAnnouncementsProvider);
-        Navigator.pop(context, true);
+        context.pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Announcement ${widget.initialData != null ? 'updated' : 'posted'} successfully')),
         );
@@ -140,184 +140,246 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEdit = widget.initialData != null;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 900;
 
     return DashboardLayout(
       title: isEdit ? 'Edit Announcement' : 'Post Announcement',
+      onBack: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/workspace/announcements');
+        }
+      },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? 'Update Announcement' : 'Write New Announcement',
-                style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.campaign_outlined, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/workspace/announcements');
+                    }
+                  },
+                  child: Text(
+                    'Announcements',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                Text(
+                  isEdit ? 'Edit Announcement' : 'Create Announcement',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Share important updates, events, or news with your organization members.',
-                style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              
-              _buildFormSection(
-                context,
-                title: 'VISUALS (OPTIONAL)',
-                children: [
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      width: double.infinity,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey[300]!),
-                        image: _announcementImageBytes != null
-                            ? DecorationImage(image: MemoryImage(_announcementImageBytes!), fit: BoxFit.cover)
-                            : (widget.initialData?.imageUrl != null
-                                ? DecorationImage(image: NetworkImage(widget.initialData!.imageUrl!), fit: BoxFit.cover)
-                                : null),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEdit ? 'Update Announcement' : 'Write New Announcement',
+                      style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Share important updates, events, or news with your organization members.',
+                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    if (!isMobile)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: _buildLeftFields(context),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xl),
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: _buildRightFields(context, theme),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ..._buildLeftFields(context),
+                          const SizedBox(height: AppSpacing.lg),
+                          ..._buildRightFields(context, theme),
+                        ],
                       ),
-                      child: _announcementImageBytes == null && widget.initialData?.imageUrl == null
-                          ? const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey),
-                                SizedBox(height: 8),
-                                Text('Add an image (Optional)', style: TextStyle(color: Colors.grey)),
-                              ],
-                            )
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: AppSpacing.lg),
-
-              _buildFormSection(
-                context,
-                title: 'CONTENT',
-                children: [
-                  _buildLabel('Announcement Title'),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., Orientation Schedule, Holiday Notice',
-                      prefixIcon: Icon(Icons.campaign_outlined),
-                    ),
-                    validator: (v) => v?.isEmpty == true ? 'Title is required' : null,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildLabel('Message Content'),
-                  TextFormField(
-                    controller: _contentController,
-                    maxLines: 6,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter the full message details here...',
-                      alignLabelWithHint: true,
-                    ),
-                    validator: (v) => v?.isEmpty == true ? 'Content is required' : null,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildLabel('Reference Link (Optional)'),
-                  TextFormField(
-                    controller: _linkController,
-                    decoration: const InputDecoration(
-                      hintText: 'https://example.com',
-                      prefixIcon: Icon(Icons.link_rounded),
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: AppSpacing.lg),
-              
-              _buildFormSection(
-                context,
-                title: 'SETTINGS',
-                children: [
-                  _buildLabel('Announcement Type'),
-                  Wrap(
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.md,
-                    children: _types.map((t) {
-                      final isSelected = _selectedType == t;
-                      return ChoiceChip(
-                        label: Text(t),
-                        selected: isSelected,
-                        onSelected: (val) => setState(() => _selectedType = t),
-                        selectedColor: theme.colorScheme.primaryContainer,
-                        labelStyle: TextStyle(
-                          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    const SizedBox(height: AppSpacing.xxl),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isLoading ? null : () => context.pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: AppSpacing.xxl),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                      ),
-                      child: const Text('Cancel'),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _isLoading ? null : _submit,
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                            ),
+                            child: _isLoading 
+                              ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
+                              : Text(isEdit ? 'Update Post' : 'Post Announcement'),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                      ),
-                      child: _isLoading 
-                        ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
-                        : Text(isEdit ? 'Update Post' : 'Post Announcement'),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFormSection(BuildContext context, {required String title, required List<Widget> children}) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+  List<Widget> _buildLeftFields(BuildContext context) {
+    return [
+      _buildSectionTitle('Announcement Content'),
+      const SizedBox(height: AppSpacing.md),
+      _buildLabel('Announcement Title'),
+      TextFormField(
+        controller: _titleController,
+        decoration: const InputDecoration(
+          hintText: 'e.g., Orientation Schedule, Holiday Notice',
+          prefixIcon: Icon(Icons.campaign_outlined),
+        ),
+        validator: (v) => v?.isEmpty == true ? 'Title is required' : null,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
-            ),
+      const SizedBox(height: AppSpacing.lg),
+      _buildLabel('Message Content'),
+      TextFormField(
+        controller: _contentController,
+        maxLines: 8,
+        decoration: const InputDecoration(
+          hintText: 'Enter the full message details here...',
+          alignLabelWithHint: true,
+        ),
+        validator: (v) => v?.isEmpty == true ? 'Content is required' : null,
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      _buildLabel('Reference Link (Optional)'),
+      TextFormField(
+        controller: _linkController,
+        decoration: const InputDecoration(
+          hintText: 'https://example.com',
+          prefixIcon: Icon(Icons.link_rounded),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildRightFields(BuildContext context, ThemeData theme) {
+    return [
+      _buildSectionTitle('Visuals (Optional)'),
+      const SizedBox(height: AppSpacing.md),
+      GestureDetector(
+        onTap: _pickImage,
+        child: Container(
+          width: double.infinity,
+          height: 180,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[300]!),
+            image: _announcementImageBytes != null
+                ? DecorationImage(image: MemoryImage(_announcementImageBytes!), fit: BoxFit.cover)
+                : (widget.initialData?.imageUrl != null
+                    ? DecorationImage(image: NetworkImage(widget.initialData!.imageUrl!), fit: BoxFit.cover)
+                    : null),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          ...children,
-        ],
+          child: _announcementImageBytes == null && widget.initialData?.imageUrl == null
+              ? const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey),
+                    SizedBox(height: 8),
+                    Text('Add an image (Optional)', style: TextStyle(color: Colors.grey)),
+                  ],
+                )
+              : null,
+        ),
       ),
+      const SizedBox(height: AppSpacing.xl),
+      _buildSectionTitle('Settings'),
+      const SizedBox(height: AppSpacing.md),
+      _buildLabel('Announcement Type'),
+      Wrap(
+        spacing: AppSpacing.md,
+        runSpacing: AppSpacing.md,
+        children: _types.map((t) {
+          final isSelected = _selectedType == t;
+          return ChoiceChip(
+            label: Text(t),
+            selected: isSelected,
+            onSelected: (val) => setState(() => _selectedType = t),
+            selectedColor: theme.colorScheme.primaryContainer,
+            labelStyle: TextStyle(
+              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          );
+        }).toList(),
+      ),
+    ];
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
     );
   }
 

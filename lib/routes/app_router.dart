@@ -34,6 +34,8 @@ import '../features/dashboard/views/governor_module_placeholder.dart';
 import '../features/governor/views/governor_events_page.dart';
 import '../features/governor/views/governor_create_event_page.dart';
 import '../features/governor/views/governor_announcements_page.dart';
+import '../features/governor/views/governor_create_announcement_page.dart';
+import '../features/announcements/models/announcement_model.dart';
 import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
 import '../features/governor/views/governor_officers_page.dart';
@@ -328,6 +330,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.workspaceAnnouncements,
         name: RouteNames.workspaceAnnouncements,
         builder: (context, state) => const GovernorAnnouncementsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceCreateAnnouncement,
+        name: RouteNames.workspaceCreateAnnouncement,
+        builder: (context, state) {
+          final announcement = state.extra as AnnouncementModel?;
+          return GovernorCreateAnnouncementPage(initialData: announcement);
+        },
       ),
       GoRoute(
         path: RoutePaths.workspaceDocuments,
