@@ -43,8 +43,10 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
   Future<void> _updateStatus(String id, String status, [String? reason]) async {
     setState(() => _isProcessing = true);
     try {
-      final user = ref.read(userProfileProvider).value!;
-      await ref.read(financeRepositoryProvider).updatePaymentStatus(id, status, reason, user.id!);
+      final userProfile = await ref.read(userProfileProvider.future);
+      final userId = userProfile?.id;
+      if (userId == null) throw Exception('No authenticated user profile found');
+      await ref.read(financeRepositoryProvider).updatePaymentStatus(id, status, reason, userId);
       ref.invalidate(workspaceStudentPaymentsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,7 +83,7 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Please provide a reason why this proof of payment is invalid. This will be visible to the student.',
+              'Please provide a reason why this proof of payment is invalid (optional). This will be visible to the student.',
               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -89,7 +91,7 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
               controller: controller,
               decoration: const InputDecoration(
                 hintText: 'e.g. Reference number doesn\'t match, receipt is blur...',
-                labelText: 'Reason for Invalidation',
+                labelText: 'Reason for Invalidation (Optional)',
               ),
               maxLines: 3,
             ),
@@ -102,14 +104,9 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
           ),
           FilledButton(
             onPressed: () {
-              if (controller.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a reason'), backgroundColor: Colors.red),
-                );
-                return;
-              }
               Navigator.pop(context);
-              _updateStatus(id, 'Rejected', controller.text.trim());
+              final reason = controller.text.trim();
+              _updateStatus(id, 'Rejected', reason.isEmpty ? null : reason);
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
