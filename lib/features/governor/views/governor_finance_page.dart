@@ -569,6 +569,9 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
 
               return LayoutBuilder(
                 builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 600;
+                  final horizontalPadding = isMobile ? AppSpacing.md : AppSpacing.lg;
+
                   int crossAxisCount = 1;
                   if (constraints.maxWidth > 1400) {
                     crossAxisCount = 4;
@@ -582,10 +585,28 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                     slivers: [
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding,
+                            vertical: AppSpacing.lg,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Breadcrumbs Header
+                              Row(
+                                children: [
+                                  Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Fees',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.md),
                               UserManagementHeader(
                                 title: 'Organization Fees',
                                 subtitle: 'View and settle your organization-related fees',
@@ -620,7 +641,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                       if (filteredFees.isEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                             child: _buildEmptyState(
                               context,
                               Icons.receipt_long_outlined,
@@ -628,9 +649,26 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             ),
                           ),
                         )
+                      else if (isMobile)
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final fee = filteredFees[index];
+                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  child: _StudentFeeCard(fee: fee, submission: submission),
+                                );
+                              },
+                              childCount: filteredFees.length,
+                            ),
+                          ),
+                        )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                           sliver: SliverGrid(
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
@@ -651,7 +689,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
 
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.md),
+                          padding: EdgeInsets.fromLTRB(horizontalPadding, AppSpacing.xxl, horizontalPadding, AppSpacing.md),
                           child: Text(
                             'MY PAYMENT HISTORY',
                             style: AppTextStyles.labelMedium.copyWith(
@@ -666,7 +704,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                       if (mySubmissions.isEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                             child: _buildEmptyState(
                               context,
                               Icons.history_rounded,
@@ -674,9 +712,27 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             ),
                           ),
                         )
+                      else if (isMobile)
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  child: GovernorSubmissionCard(
+                                    submission: mySubmissions[index],
+                                    onViewReceipt: () => _showReceiptPreview(context, mySubmissions[index]),
+                                  ),
+                                );
+                              },
+                              childCount: mySubmissions.length,
+                            ),
+                          ),
+                        )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                           sliver: SliverGrid(
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,

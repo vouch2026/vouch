@@ -205,7 +205,7 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
                     InkWell(
                       onTap: () => Navigator.pop(context),
                       child: Text(
-                        'Finance',
+                        'Fees',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.grey[600],
                           fontWeight: FontWeight.w500,
