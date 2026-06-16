@@ -167,7 +167,14 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                           itemCount: receivers.length,
                           itemBuilder: (context, index) => GovernorReceiverCard(
                             receiver: receivers[index],
-                            onEdit: () {},
+                            onEdit: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => GovernorAddReceiverPage(
+                                  initialData: receivers[index],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );
