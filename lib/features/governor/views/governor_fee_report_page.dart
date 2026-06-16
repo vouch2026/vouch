@@ -33,7 +33,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
   List<FeeStudentRowData> _filteredRows = [];
   bool _isLoading = true;
   bool _isExcelView = true;
-  String _selectedStatus = 'All'; // All, Paid, Pending, Unpaid
+  String _selectedStatus = 'All'; // All, Paid, Unpaid
   String _selectedProgram = 'All';
 
   static const Color primaryColor = Color(0xFF003DA5);
@@ -901,7 +901,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
               side: BorderSide(color: primaryColor.withValues(alpha: 0.05)),
             ),
             itemBuilder: (BuildContext context) {
-              return ['All', 'Paid', 'Pending', 'Unpaid'].map((status) {
+              return ['All', 'Paid', 'Unpaid'].map((status) {
                 final isItemSelected = _selectedStatus == status;
                 return PopupMenuItem<String>(
                   value: status,

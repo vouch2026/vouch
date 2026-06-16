@@ -334,131 +334,140 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        fee.name,
-                        style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: fee.isMandatory 
-                                  ? AppColors.primary.withValues(alpha: 0.1) 
-                                  : Colors.grey.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GovernorFeeReportPage(fee: fee),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fee.name,
+                          style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
                                 color: fee.isMandatory 
-                                    ? AppColors.primary.withValues(alpha: 0.2) 
-                                    : Colors.grey.withValues(alpha: 0.2),
+                                    ? AppColors.primary.withValues(alpha: 0.1) 
+                                    : Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: fee.isMandatory 
+                                      ? AppColors.primary.withValues(alpha: 0.2) 
+                                      : Colors.grey.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                fee.isMandatory ? 'MANDATORY' : 'NON-MANDATORY',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: fee.isMandatory ? AppColors.primary : Colors.grey[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              fee.isMandatory ? 'MANDATORY' : 'NON-MANDATORY',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: fee.isMandatory ? AppColors.primary : Colors.grey[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '₱${fee.amount.toStringAsFixed(2)}',
+                    style: AppTextStyles.titleLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  PopupMenuButton<String>(
+                    onSelected: (val) {
+                      if (val == 'edit') {
+                        _navigateToEdit(context, fee);
+                      } else if (val == 'delete') {
+                        _deleteFee(context, fee);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Edit Fee')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete Fee', style: TextStyle(color: Colors.red))),
                     ],
                   ),
-                ),
-                Text(
-                  '₱${fee.amount.toStringAsFixed(2)}',
-                  style: AppTextStyles.titleLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                PopupMenuButton<String>(
-                  onSelected: (val) {
-                    if (val == 'edit') {
-                      _navigateToEdit(context, fee);
-                    } else if (val == 'delete') {
-                      _deleteFee(context, fee);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Edit Fee')),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete Fee', style: TextStyle(color: Colors.red))),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            if (fee.description != null && fee.description!.isNotEmpty)
-              Text(
-                fee.description!,
-                style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[700], height: 1.4),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                ],
               ),
-            const SizedBox(height: AppSpacing.lg),
-            const Divider(height: 1),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 4),
+              const SizedBox(height: AppSpacing.md),
+              if (fee.description != null && fee.description!.isNotEmpty)
                 Text(
-                  'Due: ${DateFormat.yMMMd().format(fee.dueDate)}',
-                  style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                  fee.description!,
+                  style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[700], height: 1.4),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isActive 
-                        ? Colors.green.withValues(alpha: 0.1) 
-                        : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
+              const SizedBox(height: AppSpacing.lg),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Due: ${DateFormat.yMMMd().format(fee.dueDate)}',
+                    style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
                       color: isActive 
-                          ? Colors.green.withValues(alpha: 0.2) 
-                          : Colors.red.withValues(alpha: 0.2),
+                          ? Colors.green.withValues(alpha: 0.1) 
+                          : Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isActive 
+                            ? Colors.green.withValues(alpha: 0.2) 
+                            : Colors.red.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Text(
+                      isActive ? 'ACTIVE' : 'PAST DEADLINE',
+                      style: TextStyle(
+                        color: isActive ? Colors.green[700] : Colors.red[700],
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    isActive ? 'ACTIVE' : 'PAST DEADLINE',
-                    style: TextStyle(
-                      color: isActive ? Colors.green[700] : Colors.red[700],
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                  const Spacer(),
+                  FilledButton.tonal(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GovernorFeeReportPage(fee: fee),
+                      ),
                     ),
+                    child: const Text('View Payment Report'),
                   ),
-                ),
-                const Spacer(),
-                FilledButton.tonal(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => GovernorFeeReportPage(fee: fee),
-                    ),
-                  ),
-                  child: const Text('View Paid Students'),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

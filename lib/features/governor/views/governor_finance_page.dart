@@ -29,6 +29,7 @@ class GovernorFinancePage extends ConsumerStatefulWidget {
 class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  String _selectedFeeFilter = 'All Fees';
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     final theme = Theme.of(context);
     final receiversAsync = ref.watch(paymentReceiversProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
+    final feesAsync = ref.watch(workspaceFeesProvider);
 
     return DashboardLayout(
       title: 'Organization Finance',
@@ -223,14 +225,14 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                                 children: [
                                   Expanded(child: _buildSearchField()),
                                   const SizedBox(width: AppSpacing.lg),
-                                  _buildFeeTypeFilter(),
+                                  _buildFeeTypeFilter(feesAsync),
                                 ],
                               )
                             : Column(
                                 children: [
                                   _buildSearchField(),
                                   const SizedBox(height: AppSpacing.md),
-                                  SizedBox(width: double.infinity, child: _buildFeeTypeFilter()),
+                                  SizedBox(width: double.infinity, child: _buildFeeTypeFilter(feesAsync)),
                                 ],
                               ),
                         ],
@@ -310,29 +312,49 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     );
   }
 
-  Widget _buildFeeTypeFilter() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+  Widget _buildFeeTypeFilter(AsyncValue<List<FeeModel>> feesAsync) {
+    final fees = feesAsync.valueOrNull ?? [];
+    final feeNames = ['All Fees', ...fees.map((f) => f.name).toSet()];
+
+    return PopupMenuButton<String>(
+      onSelected: (val) {
+        setState(() {
+          _selectedFeeFilter = val;
+        });
+      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.filter_list_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'All Fees',
-            style: AppTextStyles.labelLarge.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
+      itemBuilder: (context) => feeNames.map((name) => PopupMenuItem(
+        value: name,
+        child: Text(name),
+      )).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.filter_list_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(
+                _selectedFeeFilter,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-        ],
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
       ),
     );
   }
@@ -343,7 +365,8 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
       final matchesStatus = s.status == status;
       final matchesQuery = (s.studentName?.toLowerCase().contains(query) ?? false) ||
                           (s.feeName?.toLowerCase().contains(query) ?? false);
-      return matchesStatus && matchesQuery;
+      final matchesFee = _selectedFeeFilter == 'All Fees' || s.feeName == _selectedFeeFilter;
+      return matchesStatus && matchesQuery && matchesFee;
     }).toList();
 
     if (filtered.isEmpty) {
