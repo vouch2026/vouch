@@ -536,9 +536,17 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
           data: (fees) => submissionsAsync.when(
             data: (submissions) {
               final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
-              final totalPaid = mySubmissions
-                  .where((s) => s.status == 'Paid')
-                  .fold<double>(0, (sum, s) => sum + s.amountPaid);
+              
+              // Calculate Total Payable (Outstanding Balance) responding to category filter
+              final totalPayable = fees.where((fee) {
+                if (_categoryFilter == 'Mandatory') return fee.isMandatory;
+                if (_categoryFilter == 'Non-Mandatory') return !fee.isMandatory;
+                return true;
+              }).where((fee) {
+                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final status = submission?.status ?? 'To Pay';
+                return status == 'To Pay' || status == 'Rejected';
+              }).fold<double>(0, (sum, fee) => sum + fee.amount);
               
               // Apply Filtering
               final filteredFees = fees.where((fee) {
@@ -587,7 +595,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                               Center(
                                 child: ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 600),
-                                  child: _buildSummaryCard(totalPaid, userProfile?.schoolId ?? 'Unknown'),
+                                  child: _buildSummaryCard(totalPayable, userProfile?.schoolId ?? 'Unknown'),
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.xl),
@@ -764,7 +772,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
     );
   }
 
-  Widget _buildSummaryCard(double totalPaid, String studentId) {
+  Widget _buildSummaryCard(double totalPayable, String studentId) {
     return Container(
       width: double.infinity,
       height: 180,
@@ -795,7 +803,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'TOTAL PAID',
+                  'TOTAL PAYABLE',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: Colors.white.withOpacity(0.7),
                     fontWeight: FontWeight.bold,
@@ -804,7 +812,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  '₱ ${totalPaid.toStringAsFixed(2)}',
+                  '₱ ${totalPayable.toStringAsFixed(2)}',
                   style: AppTextStyles.headlineMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
