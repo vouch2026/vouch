@@ -67,7 +67,23 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Fees',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
                   child: UserManagementHeader(
                     title: 'Finance & Collections',
                     subtitle: 'Manage fees, verify student payments, and track organization funds',
