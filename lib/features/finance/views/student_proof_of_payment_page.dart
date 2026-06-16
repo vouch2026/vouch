@@ -94,6 +94,16 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   }
 
   Future<void> _submitProof() async {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final startOfDueDate = DateTime(widget.fee.dueDate.year, widget.fee.dueDate.month, widget.fee.dueDate.day);
+    if (startOfToday.isAfter(startOfDueDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Submission is closed. This fee is past its due date.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     if (_uploadedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload a receipt first'), backgroundColor: Colors.red),
@@ -610,13 +620,18 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
   }
 
   Widget _buildSubmitButton() {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final startOfDueDate = DateTime(widget.fee.dueDate.year, widget.fee.dueDate.month, widget.fee.dueDate.day);
+    final isPastDue = startOfToday.isAfter(startOfDueDate);
+
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: FilledButton(
-        onPressed: _isSubmitting ? null : _submitProof,
+        onPressed: (_isSubmitting || isPastDue) ? null : _submitProof,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: isPastDue ? Colors.grey : AppColors.primary,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: _isSubmitting
@@ -626,7 +641,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
                 child: FlickrLoader(),
               )
             : Text(
-                'Submit Proof',
+                isPastDue ? 'Submission Closed (Past Due)' : 'Submit Proof',
                 style: AppTextStyles.titleSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
               ),
       ),

@@ -160,6 +160,159 @@ void main() {
     // Verify it rendered our payment method filter default selection
     expect(find.text('All Methods'), findsOneWidget);
   });
+
+  testWidgets('Test _StudentFinanceView with past due fee shows disabled submission', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final now = DateTime.now();
+    final pastDue = now.subtract(const Duration(days: 2));
+
+    final mockFees = [
+      FeeModel(
+        id: 'fee-1',
+        name: 'Membership Fee',
+        amount: 100.0,
+        scopeType: 'college',
+        scopeId: 'college-1',
+        isMandatory: true,
+        dueDate: pastDue,
+        academicTermId: 'term-1',
+      ),
+    ];
+    final mockSubmissions = <StudentPaymentModel>[];
+
+    final mockUser = UserModel(
+      id: 'user-1',
+      authId: 'auth-1',
+      email: 'student@test.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: 'student',
+      schoolId: '2023-0001',
+      createdAt: now,
+    );
+
+    final mockWorkspaceState = WorkspaceState(
+      selectedOrganization: const OrganizationModel(
+        id: 'org-1',
+        name: 'Test Org',
+        code: 'TO',
+      ),
+      activeRole: AppRole(
+        roleName: 'Student',
+        hierarchyLevel: 1,
+        scopeType: 'college',
+        permissions: [],
+      ),
+      isInitialized: true,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          workspaceFeesProvider.overrideWith((ref) => mockFees),
+          workspaceStudentPaymentsProvider.overrideWith((ref) => mockSubmissions),
+          userProfileProvider.overrideWith((ref) => mockUser),
+          paymentReceiversProvider.overrideWith((ref) => []),
+          workspaceProvider.overrideWith((ref) => WorkspaceNotifierMock(mockWorkspaceState)),
+        ],
+        child: const MaterialApp(
+          home: GovernorFinancePage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify it rendered display status as PAST DUE
+    expect(find.text('PAST DUE'), findsOneWidget);
+    
+    // Verify the Submit button is disabled or Submission Closed text is visible
+    expect(find.text('Submission Closed'), findsOneWidget);
+    expect(find.text('Submission is closed because this fee is past its due date.'), findsOneWidget);
+  });
+
+  testWidgets('Test _StudentFinanceView with due date as today allows submission', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final now = DateTime.now();
+
+    final mockFees = [
+      FeeModel(
+        id: 'fee-1',
+        name: 'Membership Fee',
+        amount: 100.0,
+        scopeType: 'college',
+        scopeId: 'college-1',
+        isMandatory: true,
+        dueDate: now,
+        academicTermId: 'term-1',
+      ),
+    ];
+    final mockSubmissions = <StudentPaymentModel>[];
+
+    final mockUser = UserModel(
+      id: 'user-1',
+      authId: 'auth-1',
+      email: 'student@test.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: 'student',
+      schoolId: '2023-0001',
+      createdAt: now,
+    );
+
+    final mockWorkspaceState = WorkspaceState(
+      selectedOrganization: const OrganizationModel(
+        id: 'org-1',
+        name: 'Test Org',
+        code: 'TO',
+      ),
+      activeRole: AppRole(
+        roleName: 'Student',
+        hierarchyLevel: 1,
+        scopeType: 'college',
+        permissions: [],
+      ),
+      isInitialized: true,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          workspaceFeesProvider.overrideWith((ref) => mockFees),
+          workspaceStudentPaymentsProvider.overrideWith((ref) => mockSubmissions),
+          userProfileProvider.overrideWith((ref) => mockUser),
+          paymentReceiversProvider.overrideWith((ref) => []),
+          workspaceProvider.overrideWith((ref) => WorkspaceNotifierMock(mockWorkspaceState)),
+        ],
+        child: const MaterialApp(
+          home: GovernorFinancePage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify it rendered display status as TO PAY
+    expect(find.text('TO PAY'), findsOneWidget);
+    
+    // Verify the Submit button is enabled and has the correct text
+    expect(find.text('Submit Proof of Payment'), findsOneWidget);
+    expect(find.text('Submission is closed because this fee is past its due date.'), findsNothing);
+  });
 }
 
 class WorkspaceNotifierMock extends StateNotifier<WorkspaceState> implements WorkspaceNotifier {

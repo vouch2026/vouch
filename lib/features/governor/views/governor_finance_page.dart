@@ -1092,11 +1092,17 @@ class _StudentFeeCard extends StatelessWidget {
     final isPaid = status == 'Paid';
     final isPending = status == 'Pending';
     final isRejected = status == 'Rejected';
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final startOfDueDate = DateTime(fee.dueDate.year, fee.dueDate.month, fee.dueDate.day);
+    final isPastDue = startOfToday.isAfter(startOfDueDate);
+
+    final displayStatus = ((status == 'To Pay' || status == 'Rejected') && isPastDue) ? 'Past Due' : status;
 
     Color statusColor = AppColors.primary;
     if (isPaid) statusColor = Colors.green;
     if (isPending) statusColor = Colors.amber;
-    if (isRejected) statusColor = Colors.red;
+    if (isRejected || ((status == 'To Pay' || status == 'Rejected') && isPastDue)) statusColor = Colors.red;
 
     return Card(
       elevation: 0,
@@ -1157,7 +1163,7 @@ class _StudentFeeCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        status.toUpperCase(),
+                        displayStatus.toUpperCase(),
                         style: AppTextStyles.labelSmall.copyWith(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -1175,22 +1181,45 @@ class _StudentFeeCard extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => StudentProofOfPaymentPage(fee: fee),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add_card_rounded, size: 18),
-                  label: Text(isRejected ? 'Resubmit Proof' : 'Submit Proof of Payment'),
+                  onPressed: isPastDue
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentProofOfPaymentPage(fee: fee),
+                            ),
+                          );
+                        },
+                  icon: Icon(isPastDue ? Icons.lock_clock_outlined : Icons.add_card_rounded, size: 18),
+                  label: Text(isPastDue
+                      ? 'Submission Closed'
+                      : (isRejected ? 'Resubmit Proof' : 'Submit Proof of Payment')),
                   style: FilledButton.styleFrom(
                     backgroundColor: isRejected ? Colors.red : AppColors.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
+              if (isPastDue) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, size: 16, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Submission is closed because this fee is past its due date.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.red[800],
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
             if (isPending) ...[
               const SizedBox(height: AppSpacing.md),
