@@ -560,20 +560,27 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
             data: (submissions) {
               final mySubmissions = submissions.where((s) => s.studentId == userProfile?.id).toList();
               
+              StudentPaymentModel? getLatestSubmission(String feeId) {
+                final feeSubmissions = mySubmissions.where((s) => s.feeId == feeId).toList();
+                return feeSubmissions.where((s) => s.status == 'Paid').firstOrNull ??
+                       feeSubmissions.where((s) => s.status == 'Pending').firstOrNull ??
+                       feeSubmissions.firstOrNull;
+              }
+              
               // Calculate Total Payable (Outstanding Balance) responding to category filter
               final totalPayable = fees.where((fee) {
                 if (_categoryFilter == 'Mandatory') return fee.isMandatory;
                 if (_categoryFilter == 'Non-Mandatory') return !fee.isMandatory;
                 return true;
               }).where((fee) {
-                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final submission = getLatestSubmission(fee.id!);
                 final status = submission?.status ?? 'To Pay';
                 return status == 'To Pay' || status == 'Rejected';
               }).fold<double>(0, (sum, fee) => sum + fee.amount);
               
               // Apply Filtering
               final filteredFees = fees.where((fee) {
-                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                final submission = getLatestSubmission(fee.id!);
                 final status = submission?.status ?? 'To Pay';
                 
                 // Category Filter
@@ -679,7 +686,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final fee = filteredFees[index];
-                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                final submission = getLatestSubmission(fee.id!);
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                                   child: _StudentFeeCard(fee: fee, submission: submission),
@@ -702,7 +709,7 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final fee = filteredFees[index];
-                                final submission = mySubmissions.where((s) => s.feeId == fee.id).firstOrNull;
+                                final submission = getLatestSubmission(fee.id!);
                                 return _StudentFeeCard(fee: fee, submission: submission);
                               },
                               childCount: filteredFees.length,

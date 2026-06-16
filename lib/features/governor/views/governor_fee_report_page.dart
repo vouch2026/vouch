@@ -144,7 +144,10 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
         final yearLevel = userData['year']?.toString() ?? '-';
 
         // Find the payment submission for this student
-        final payment = paymentsList.where((p) => p['student_id'] == userUuid).firstOrNull;
+        final studentPayments = paymentsList.where((p) => p['student_id'] == userUuid).toList();
+        final payment = studentPayments.where((p) => p['status'] == 'Paid').firstOrNull ??
+                        studentPayments.where((p) => p['status'] == 'Pending').firstOrNull ??
+                        studentPayments.firstOrNull;
 
         String status = 'Unpaid';
         String amountText = '₱${widget.fee.amount.toStringAsFixed(2)}';
@@ -319,7 +322,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return DashboardLayout(
-      title: 'Payment Report',
+      title: '${widget.fee.name} Report',
       onBack: () {
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
@@ -403,7 +406,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Payment Report',
+                                '${widget.fee.name} Payment Report',
                                 style: AppTextStyles.headlineMedium.copyWith(
                                   color: AppColors.primary,
                                   fontWeight: FontWeight.bold,
@@ -411,7 +414,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Collection summary and statistics for ${widget.fee.name}',
+                                'Collection summary and student payment statistics',
                                 style: AppTextStyles.bodyMedium.copyWith(
                                   color: Colors.grey[600],
                                 ),
