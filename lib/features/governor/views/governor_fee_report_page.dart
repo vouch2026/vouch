@@ -263,6 +263,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
 
       // Data Rows
       for (final row in _filteredRows) {
+        if (row.status.toLowerCase() == 'unpaid') continue;
         sheet.appendRow([
           excel_lib.TextCellValue(row.studentId),
           excel_lib.TextCellValue(row.name),
