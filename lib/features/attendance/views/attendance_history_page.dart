@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/attendance_provider.dart';
 import '../models/qr_scan_ui_model.dart';
 import '../widgets/qr_recent_scan_card.dart';
+import '../../../core/theme/app_spacing.dart';
 
 class AttendanceHistoryPage extends ConsumerStatefulWidget {
   final String eventId;
@@ -184,7 +185,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                 children: [
                   // Custom AppBar
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 16),
                     color: Colors.white,
                     child: Column(
                       children: [
@@ -267,7 +268,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
 
                   // Search Bar
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -333,7 +334,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                           : _filteredScans.isEmpty
                               ? _buildEmptyState()
                               : ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+                                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 24),
                                   itemCount: _filteredScans.length,
                                   physics: const AlwaysScrollableScrollPhysics(),
                                   itemBuilder: (context, index) {
@@ -354,7 +355,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   Widget _buildFilterSection() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
           _buildFilterChip(
