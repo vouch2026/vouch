@@ -27,15 +27,28 @@ class GovernorAnnouncementCard extends ConsumerStatefulWidget {
 }
 
 class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementCard> {
-  bool _isHovered = false;
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
-        );
+    String formattedUrl = url.trim();
+    if (formattedUrl.isNotEmpty) {
+      if (!formattedUrl.contains('://')) {
+        formattedUrl = 'https://$formattedUrl';
+      }
+      try {
+        final uri = Uri.parse(formattedUrl);
+        if (!await launchUrl(uri)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not launch $formattedUrl')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Invalid URL: $formattedUrl')),
+          );
+        }
       }
     }
   }
@@ -60,7 +73,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -154,7 +167,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
                         ],
                       ),
                     ),
-                  )).toList(),
+                  )),
                 ],
                 
                 const SizedBox(height: AppSpacing.md),
@@ -212,7 +225,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
           child: Row(
             children: [
               Icon(Icons.edit_outlined, size: 18),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text('Edit Announcement'),
             ],
           ),
@@ -222,7 +235,7 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
           child: Row(
             children: [
               Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text('Delete', style: TextStyle(color: Colors.red)),
             ],
           ),
@@ -259,9 +272,9 @@ class _CategoryBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         category.toUpperCase(),
