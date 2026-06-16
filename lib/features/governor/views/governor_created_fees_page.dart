@@ -16,11 +16,15 @@ class GovernorCreatedFeesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final feesAsync = ref.watch(workspaceFeesProvider);
 
     return DashboardLayout(
-      title: 'Created Fees',
+      title: 'Manage Fees',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
@@ -46,7 +50,7 @@ class GovernorCreatedFeesPage extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Created Fees',
+                    'Manage Fees',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodySmall.copyWith(

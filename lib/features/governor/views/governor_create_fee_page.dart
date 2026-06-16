@@ -130,6 +130,11 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
 
     return DashboardLayout(
       title: isEdit ? 'Edit Fee' : 'Create New Fee',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Form(
