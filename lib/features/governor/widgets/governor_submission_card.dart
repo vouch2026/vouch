@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../finance/models/student_payment_model.dart';
+import '../../finance/providers/finance_provider.dart';
 import '../../finance/views/payment_details_page.dart';
 
-class GovernorSubmissionCard extends StatefulWidget {
+class GovernorSubmissionCard extends ConsumerStatefulWidget {
   final StudentPaymentModel submission;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
@@ -21,10 +23,10 @@ class GovernorSubmissionCard extends StatefulWidget {
   });
 
   @override
-  State<GovernorSubmissionCard> createState() => _GovernorSubmissionCardState();
+  ConsumerState<GovernorSubmissionCard> createState() => _GovernorSubmissionCardState();
 }
 
-class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
+class _GovernorSubmissionCardState extends ConsumerState<GovernorSubmissionCard> {
   bool _isHovered = false;
 
   @override
@@ -32,6 +34,10 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
     final theme = Theme.of(context);
     final status = widget.submission.status;
     final statusColor = _getStatusColor(status);
+    
+    final receiversAsync = ref.watch(paymentReceiversProvider);
+    final receiver = receiversAsync.valueOrNull?.where((r) => r.id == widget.submission.paymentReceiverId).firstOrNull;
+    final paymentMethod = receiver?.bankType ?? 'Unknown';
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -126,11 +132,35 @@ class _GovernorSubmissionCardState extends State<GovernorSubmissionCard> {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              widget.submission.paidAt != null 
-                                ? 'Paid: ${DateFormat.yMMMd().format(widget.submission.paidAt!)}'
-                                : 'Date Unknown',
-                              style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                            Row(
+                              children: [
+                                Text(
+                                  widget.submission.paidAt != null 
+                                    ? 'Paid: ${DateFormat.yMMMd().format(widget.submission.paidAt!)}'
+                                    : 'Date Unknown',
+                                  style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    paymentMethod.toUpperCase(),
+                                    style: TextStyle(
+                                      color: theme.colorScheme.primary,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
