@@ -4,7 +4,7 @@ part 'org_membership_model.freezed.dart';
 part 'org_membership_model.g.dart';
 
 @freezed
-class OrgMembershipModel with _$OrgMembershipModel {
+abstract class OrgMembershipModel with _$OrgMembershipModel {
   const factory OrgMembershipModel({
     required String organizationId,
     required String organizationName,

@@ -4,7 +4,7 @@ part 'user_model.g.dart';
 part 'user_model.freezed.dart';
 
 @freezed
-class UserModel with _$UserModel {
+abstract class UserModel with _$UserModel {
   const factory UserModel({
     String? id, // public.users.id
     @JsonKey(name: 'auth_id') required String authId,

@@ -4,7 +4,7 @@ part 'campus_stats.freezed.dart';
 part 'campus_stats.g.dart';
 
 @freezed
-class CampusStats with _$CampusStats {
+abstract class CampusStats with _$CampusStats {
   const factory CampusStats({
     @Default(0) int totalCampuses,
     @Default(0) int activeCampuses,

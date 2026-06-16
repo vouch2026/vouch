@@ -6,8 +6,8 @@ part of 'candidate_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$CandidateModelImpl _$$CandidateModelImplFromJson(Map<String, dynamic> json) =>
-    _$CandidateModelImpl(
+_CandidateModel _$CandidateModelFromJson(Map<String, dynamic> json) =>
+    _CandidateModel(
       id: json['id'] as String,
       electionId: json['electionId'] as String,
       userId: json['userId'] as String,
@@ -21,18 +21,17 @@ _$CandidateModelImpl _$$CandidateModelImplFromJson(Map<String, dynamic> json) =>
       organizationName: json['organizationName'] as String?,
     );
 
-Map<String, dynamic> _$$CandidateModelImplToJson(
-  _$CandidateModelImpl instance,
-) => <String, dynamic>{
-  'id': instance.id,
-  'electionId': instance.electionId,
-  'userId': instance.userId,
-  'fullName': instance.fullName,
-  'position': instance.position,
-  'partyList': instance.partyList,
-  'platform': instance.platform,
-  'status': instance.status,
-  'votes': instance.votes,
-  'avatarUrl': instance.avatarUrl,
-  'organizationName': instance.organizationName,
-};
+Map<String, dynamic> _$CandidateModelToJson(_CandidateModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'electionId': instance.electionId,
+      'userId': instance.userId,
+      'fullName': instance.fullName,
+      'position': instance.position,
+      'partyList': instance.partyList,
+      'platform': instance.platform,
+      'status': instance.status,
+      'votes': instance.votes,
+      'avatarUrl': instance.avatarUrl,
+      'organizationName': instance.organizationName,
+    };

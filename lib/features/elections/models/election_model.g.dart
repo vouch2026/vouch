@@ -6,8 +6,8 @@ part of 'election_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$ElectionModelImpl _$$ElectionModelImplFromJson(Map<String, dynamic> json) =>
-    _$ElectionModelImpl(
+_ElectionModel _$ElectionModelFromJson(Map<String, dynamic> json) =>
+    _ElectionModel(
       id: json['id'] as String,
       name: json['name'] as String,
       organizationId: json['organizationId'] as String,
@@ -23,7 +23,7 @@ _$ElectionModelImpl _$$ElectionModelImplFromJson(Map<String, dynamic> json) =>
       votesCast: (json['votesCast'] as num?)?.toInt(),
     );
 
-Map<String, dynamic> _$$ElectionModelImplToJson(_$ElectionModelImpl instance) =>
+Map<String, dynamic> _$ElectionModelToJson(_ElectionModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,

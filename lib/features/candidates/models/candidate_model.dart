@@ -4,7 +4,7 @@ part 'candidate_model.freezed.dart';
 part 'candidate_model.g.dart';
 
 @freezed
-class CandidateModel with _$CandidateModel {
+abstract class CandidateModel with _$CandidateModel {
   const factory CandidateModel({
     required String id,
     required String electionId,

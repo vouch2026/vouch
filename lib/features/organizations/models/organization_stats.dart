@@ -4,7 +4,7 @@ part 'organization_stats.freezed.dart';
 part 'organization_stats.g.dart';
 
 @freezed
-class OrganizationStats with _$OrganizationStats {
+abstract class OrganizationStats with _$OrganizationStats {
   const factory OrganizationStats({
     @Default(0) int totalOrganizations,
     @Default(0) int activeOrganizations,

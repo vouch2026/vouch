@@ -6,8 +6,8 @@ part of 'sanction_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$SanctionModelImpl _$$SanctionModelImplFromJson(Map<String, dynamic> json) =>
-    _$SanctionModelImpl(
+_SanctionModel _$SanctionModelFromJson(Map<String, dynamic> json) =>
+    _SanctionModel(
       id: json['id'] as String,
       studentId: json['student_id'] as String,
       scopeType: json['scope_type'] as String,
@@ -27,7 +27,7 @@ _$SanctionModelImpl _$$SanctionModelImplFromJson(Map<String, dynamic> json) =>
       receivedByName: json['received_by_name'] as String?,
     );
 
-Map<String, dynamic> _$$SanctionModelImplToJson(_$SanctionModelImpl instance) =>
+Map<String, dynamic> _$SanctionModelToJson(_SanctionModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'student_id': instance.studentId,

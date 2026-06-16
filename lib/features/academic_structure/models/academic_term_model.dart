@@ -4,7 +4,7 @@ part 'academic_term_model.freezed.dart';
 part 'academic_term_model.g.dart';
 
 @freezed
-class AcademicTermModel with _$AcademicTermModel {
+abstract class AcademicTermModel with _$AcademicTermModel {
   const factory AcademicTermModel({
     required String id,
     @JsonKey(name: 'academic_year') required String academicYear,

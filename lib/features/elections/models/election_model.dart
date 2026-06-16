@@ -4,7 +4,7 @@ part 'election_model.freezed.dart';
 part 'election_model.g.dart';
 
 @freezed
-class ElectionModel with _$ElectionModel {
+abstract class ElectionModel with _$ElectionModel {
   const factory ElectionModel({
     required String id,
     required String name,

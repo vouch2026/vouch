@@ -13,7 +13,7 @@ import '../../../core/models/app_role.dart';
 part 'workspace_provider.freezed.dart';
 
 @freezed
-class WorkspaceState with _$WorkspaceState {
+abstract class WorkspaceState with _$WorkspaceState {
   const factory WorkspaceState({
     OrganizationModel? selectedOrganization,
     OrganizationMembershipModel? activeMembership,

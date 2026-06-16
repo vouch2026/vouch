@@ -6,9 +6,9 @@ part of 'organization_membership_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$OrganizationMembershipModelImpl _$$OrganizationMembershipModelImplFromJson(
+_OrganizationMembershipModel _$OrganizationMembershipModelFromJson(
   Map<String, dynamic> json,
-) => _$OrganizationMembershipModelImpl(
+) => _OrganizationMembershipModel(
   id: json['id'] as String,
   organizationId: json['organization_id'] as String,
   userId: json['user_id'] as String,
@@ -40,8 +40,8 @@ _$OrganizationMembershipModelImpl _$$OrganizationMembershipModelImplFromJson(
       const [],
 );
 
-Map<String, dynamic> _$$OrganizationMembershipModelImplToJson(
-  _$OrganizationMembershipModelImpl instance,
+Map<String, dynamic> _$OrganizationMembershipModelToJson(
+  _OrganizationMembershipModel instance,
 ) => <String, dynamic>{
   'id': instance.id,
   'organization_id': instance.organizationId,

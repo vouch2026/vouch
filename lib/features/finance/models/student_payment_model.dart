@@ -4,7 +4,7 @@ part 'student_payment_model.freezed.dart';
 part 'student_payment_model.g.dart';
 
 @freezed
-class StudentPaymentModel with _$StudentPaymentModel {
+abstract class StudentPaymentModel with _$StudentPaymentModel {
   const factory StudentPaymentModel({
     String? id,
     @JsonKey(name: 'student_id') required String studentId,

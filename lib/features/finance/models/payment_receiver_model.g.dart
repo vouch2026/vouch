@@ -6,9 +6,9 @@ part of 'payment_receiver_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$PaymentReceiverModelImpl _$$PaymentReceiverModelImplFromJson(
+_PaymentReceiverModel _$PaymentReceiverModelFromJson(
   Map<String, dynamic> json,
-) => _$PaymentReceiverModelImpl(
+) => _PaymentReceiverModel(
   id: json['id'] as String?,
   bankType: json['bank_type'] as String,
   accountName: json['account_name'] as String,
@@ -18,8 +18,8 @@ _$PaymentReceiverModelImpl _$$PaymentReceiverModelImplFromJson(
   scopeId: json['scope_id'] as String?,
 );
 
-Map<String, dynamic> _$$PaymentReceiverModelImplToJson(
-  _$PaymentReceiverModelImpl instance,
+Map<String, dynamic> _$PaymentReceiverModelToJson(
+  _PaymentReceiverModel instance,
 ) => <String, dynamic>{
   'id': instance.id,
   'bank_type': instance.bankType,
