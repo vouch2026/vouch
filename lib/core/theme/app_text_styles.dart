@@ -7,6 +7,7 @@ class AppTextStyles {
 
   static TextStyle get baseStyle => GoogleFonts.poppins(
         color: AppColors.textDark,
+        height: 1.2,
       );
 
   // Display
