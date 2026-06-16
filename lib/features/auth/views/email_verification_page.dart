@@ -188,7 +188,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                       height: 20,
                       child: FlickrLoader(),
                     )
-                  : Text('Verify Email', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                  : Text(
+                      'Verify Email',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
