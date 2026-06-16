@@ -12,7 +12,9 @@ _AnnouncementModel _$AnnouncementModelFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       content: json['content'] as String,
       type: json['type'] as String? ?? 'General',
-      linkUrl: json['link_url'] as String?,
+      linkUrls: (json['link_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       imageUrl: json['image_url'] as String?,
       scopeType: json['scope_type'] as String,
       scopeId: json['scope_id'] as String,
@@ -33,7 +35,7 @@ Map<String, dynamic> _$AnnouncementModelToJson(_AnnouncementModel instance) =>
       'title': instance.title,
       'content': instance.content,
       'type': instance.type,
-      'link_url': instance.linkUrl,
+      'link_urls': instance.linkUrls,
       'image_url': instance.imageUrl,
       'scope_type': instance.scopeType,
       'scope_id': instance.scopeId,

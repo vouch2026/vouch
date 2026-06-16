@@ -30,7 +30,7 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
-  late final TextEditingController _linkController;
+  final List<TextEditingController> _linkControllers = [];
   
   String _selectedType = 'General';
   XFile? _announcementImage;
@@ -45,7 +45,13 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
     super.initState();
     _titleController = TextEditingController(text: widget.initialData?.title);
     _contentController = TextEditingController(text: widget.initialData?.content);
-    _linkController = TextEditingController(text: widget.initialData?.linkUrl);
+    if (widget.initialData?.linkUrls != null && widget.initialData!.linkUrls!.isNotEmpty) {
+      for (final link in widget.initialData!.linkUrls!) {
+        _linkControllers.add(TextEditingController(text: link));
+      }
+    } else {
+      _linkControllers.add(TextEditingController());
+    }
     _selectedType = widget.initialData?.type ?? 'General';
   }
 
@@ -53,7 +59,9 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
-    _linkController.dispose();
+    for (final controller in _linkControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -99,12 +107,17 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
           ? org.campusId 
           : (org.type == 'faculty-based' ? org.facultyId : org.programId);
 
+      final linkUrls = _linkControllers
+          .map((c) => c.text.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+
       final announcement = AnnouncementModel(
         id: widget.initialData?.id,
         title: _titleController.text,
         content: _contentController.text,
         type: _selectedType,
-        linkUrl: _linkController.text.isNotEmpty ? _linkController.text : null,
+        linkUrls: linkUrls.isNotEmpty ? linkUrls : null,
         imageUrl: imageUrl,
         scopeType: scopeType,
         scopeId: scopeId!,
@@ -310,14 +323,58 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
         validator: (v) => v?.isEmpty == true ? 'Content is required' : null,
       ),
       const SizedBox(height: AppSpacing.lg),
-      _buildLabel('Reference Link (Optional)'),
-      TextFormField(
-        controller: _linkController,
-        decoration: const InputDecoration(
-          hintText: 'https://example.com',
-          prefixIcon: Icon(Icons.link_rounded),
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildLabel('Reference Links (Optional)'),
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _linkControllers.add(TextEditingController());
+              });
+            },
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Add Link'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
       ),
+      ..._linkControllers.asMap().entries.map((entry) {
+        final index = entry.key;
+        final controller = entry.value;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: 'https://example.com',
+                    prefixIcon: Icon(Icons.link_rounded),
+                  ),
+                ),
+              ),
+              if (_linkControllers.length > 1) ...[
+                const SizedBox(width: AppSpacing.sm),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _linkControllers.removeAt(index);
+                      controller.dispose();
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
     ];
   }
 

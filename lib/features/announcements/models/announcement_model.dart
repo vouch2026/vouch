@@ -10,7 +10,7 @@ abstract class AnnouncementModel with _$AnnouncementModel {
     required String title,
     required String content,
     @Default('General') String type,
-    @JsonKey(name: 'link_url') String? linkUrl,
+    @JsonKey(name: 'link_urls') List<String>? linkUrls,
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'scope_type') required String scopeType,
     @JsonKey(name: 'scope_id') required String scopeId,

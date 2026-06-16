@@ -113,45 +113,48 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
                   overflow: TextOverflow.ellipsis,
                 ),
                 
-                if (widget.announcement.linkUrl != null) ...[
+                if (widget.announcement.linkUrls != null && widget.announcement.linkUrls!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.link_rounded, size: 16, color: theme.colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _launchUrl(widget.announcement.linkUrl!),
-                            child: Text(
-                              widget.announcement.linkUrl!,
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
+                  ...widget.announcement.linkUrls!.map((link) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.link_rounded, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _launchUrl(link),
+                              child: Text(
+                                link,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () => _copyToClipboard(widget.announcement.linkUrl!),
-                          icon: const Icon(Icons.copy_rounded, size: 14),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _copyToClipboard(link),
+                            icon: const Icon(Icons.copy_rounded, size: 14),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  )).toList(),
                 ],
                 
                 const SizedBox(height: AppSpacing.md),
