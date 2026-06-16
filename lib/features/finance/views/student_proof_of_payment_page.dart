@@ -180,71 +180,107 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
           }
 
           final isMobile = ResponsiveLayout.isMobile(context);
-          final horizontalPadding = isMobile ? AppSpacing.lg : AppSpacing.xl * 2;
+          final horizontalPadding = isMobile ? AppSpacing.md : AppSpacing.lg;
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(paymentReceiversProvider),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: AppSpacing.lg),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Breadcrumbs Header
+                  Row(
                     children: [
-                      // Breadcrumbs Header
-                      Row(
-                        children: [
-                          Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () {
-                              if (Navigator.canPop(context)) {
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: Text(
-                              'Finance',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                      Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Text(
+                          'Fees',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Proof of Payment',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      _buildPaymentItemChip(),
-                      const SizedBox(height: AppSpacing.lg),
-                      if (receivers.length > 1) ...[
-                        _buildProviderSelection(receivers),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                      if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildUploadCard(),
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildReferenceField(),
-                      const SizedBox(height: AppSpacing.xl),
-                      _buildSubmitButton(),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Proof of Payment',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (!isMobile)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 11,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildPaymentItemChip(),
+                              const SizedBox(height: AppSpacing.lg),
+                              if (receivers.length > 1) ...[
+                                _buildProviderSelection(receivers),
+                                const SizedBox(height: AppSpacing.lg),
+                              ],
+                              if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xl),
+                        Expanded(
+                          flex: 9,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildUploadCard(),
+                              const SizedBox(height: AppSpacing.lg),
+                              _buildReferenceField(),
+                              const SizedBox(height: AppSpacing.xl),
+                              _buildSubmitButton(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildPaymentItemChip(),
+                        const SizedBox(height: AppSpacing.lg),
+                        if (receivers.length > 1) ...[
+                          _buildProviderSelection(receivers),
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                        if (_selectedReceiver != null) _buildTransferCard(_selectedReceiver!),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildUploadCard(),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildReferenceField(),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildSubmitButton(),
+                      ],
+                    ),
+                ],
               ),
             ),
           );
