@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -69,7 +70,7 @@ class _AcademicStructureTableState extends ConsumerState<AcademicStructureTable>
         loading: () => const Center(
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.xxl),
-            child: CircularProgressIndicator(),
+            child: FlickrLoader(),
           ),
         ),
         error: (err, stack) => Center(

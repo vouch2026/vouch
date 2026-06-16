@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -219,7 +220,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: FlickrLoader()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
@@ -552,7 +553,7 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
             ? const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: FlickrLoader(),
               )
             : Text(
                 'Submit Proof',

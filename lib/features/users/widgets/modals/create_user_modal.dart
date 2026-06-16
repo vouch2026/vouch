@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -547,7 +548,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         FilledButton.icon(
           onPressed: isLoading ? null : _handleCreate,
           icon: isLoading 
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            ? const SizedBox(width: 18, height: 18, child: FlickrLoader())
             : const Icon(Icons.check_rounded, size: 18),
           label: Text(isLoading ? 'Creating...' : 'Create & Activate'),
         ),

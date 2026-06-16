@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -286,7 +287,7 @@ class _MembersTab extends ConsumerWidget {
           const SizedBox(height: AppSpacing.lg),
           membersAsync.when(
             data: (members) => _buildMembersTable(context, members),
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: FlickrLoader()),
             error: (err, _) => Center(child: Text('Error loading members: $err')),
           ),
         ],
@@ -442,7 +443,7 @@ class _OfficersTab extends ConsumerWidget {
                 itemBuilder: (context, index) => _buildOfficerCard(currentTermOfficers[index]),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: FlickrLoader()),
             error: (err, _) => Center(child: Text('Error loading officers: $err')),
           ),
         ],
@@ -604,7 +605,7 @@ class _GovernanceTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (err, _) => Text('Error: $err'),
     );
   }
@@ -695,7 +696,7 @@ class _GovernanceTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (err, _) => Text('Error: $err'),
     );
   }
@@ -1016,7 +1017,7 @@ class _AuditLogsTab extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: FlickrLoader()),
             error: (err, _) => Text('Error: $err'),
           ),
         ],

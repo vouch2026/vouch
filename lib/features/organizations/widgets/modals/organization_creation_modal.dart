@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -243,7 +244,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                       ? null
                       : _handleSubmit,
                     child: organizationState.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(width: 20, height: 20, child: FlickrLoader())
                       : const Text('Create Organization'),
                   ),
                 ),

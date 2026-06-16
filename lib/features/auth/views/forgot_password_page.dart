@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../controllers/auth_controller.dart';
+import '../../../core/widgets/loaders/flickr_loader.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -201,7 +202,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: authState.isLoading
-                    ? const CircularProgressIndicator()
+                    ? const FlickrLoader(
+                        size: 8,
+                        distance: 10,
+                      )
                     : Text('Reset Password', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
               ),
             ),

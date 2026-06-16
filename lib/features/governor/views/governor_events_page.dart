@@ -1,6 +1,8 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
@@ -10,7 +12,6 @@ import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
 import '../widgets/governor_event_card.dart';
 import '../widgets/governor_past_event_card.dart';
-import '../widgets/governor_rate_event_card.dart';
 
 import '../../organizations/providers/workspace_provider.dart';
 import '../../events/views/student_events_view.dart';
@@ -28,7 +29,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -58,6 +59,8 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                            activeRole == 'Secretary';
     
     final eventsAsync = ref.watch(workspaceEventsProvider);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
 
     return DashboardLayout(
       title: 'Organization Events',
@@ -70,19 +73,52 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             final eDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
             return eDate.isAtSameMomentAs(today) && !e.isPastTimeout;
           }).toList();
+          todayEvents.sort((a, b) {
+            final dateCompare = a.eventDate.compareTo(b.eventDate);
+            if (dateCompare != 0) return dateCompare;
+            return a.timeInStart.compareTo(b.timeInStart);
+          });
           
           final upcomingEvents = events.where((e) => e.eventDate.isAfter(today)).toList();
+          upcomingEvents.sort((a, b) {
+            final dateCompare = a.eventDate.compareTo(b.eventDate);
+            if (dateCompare != 0) return dateCompare;
+            return a.timeInStart.compareTo(b.timeInStart);
+          });
+
           final pastEvents = events.where((e) => e.isPastTimeout).toList();
+          pastEvents.sort((a, b) {
+            final dateCompare = b.eventDate.compareTo(a.eventDate);
+            if (dateCompare != 0) return dateCompare;
+            return b.timeOutEnd.compareTo(a.timeOutEnd);
+          });
           
-          return NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: UserManagementHeader(
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+              vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+            ),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Events',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      UserManagementHeader(
                         title: 'Events',
                         subtitle: 'Manage organization events, attendance, and feedback',
                         actions: [
@@ -95,11 +131,9 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                             ),
                         ],
                       ),
-                    ),
-                    
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: Container(
+                      const SizedBox(height: AppSpacing.lg),
+                      
+                      Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
@@ -120,28 +154,26 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                             Tab(text: 'Today'),
                             Tab(text: 'Upcoming'),
                             Tab(text: 'Past'),
-                            Tab(text: 'Ratings'),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
-                _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
-                _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 200),
-                _buildTabView([], (event) => GovernorRateEventCard(event: event), mainAxisExtent: 320), // Ratings still mock/placeholder
               ],
+              body: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
+                  _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
+                  _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 200),
+                ],
+              ),
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: FlickrLoader()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
@@ -182,7 +214,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,

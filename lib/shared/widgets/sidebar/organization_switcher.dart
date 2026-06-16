@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -120,7 +121,7 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                       const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        child: FlickrLoader(),
                       )
                     else
                       const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textGrey, size: 20),
@@ -143,7 +144,7 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
       ),
       loading: () => const Padding(
         padding: EdgeInsets.all(AppSpacing.md),
-        child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        child: Center(child: SizedBox(width: 20, height: 20, child: FlickrLoader())),
       ),
       error: (err, _) => const SizedBox.shrink(),
     );

@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,14 +14,14 @@ import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../attendance/providers/attendance_provider.dart';
-import '../../attendance/models/attendance_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
-import '../../attendance/views/attendance_history_page.dart';
+import '../../attendance/views/attendance_report_page.dart';
 import 'event_highlights_gallery_page.dart';
+import '../../governor/views/governor_create_event_page.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -135,22 +136,40 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     }
   }
 
+  void _navigateToEditEvent(EventModel currentEvent) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GovernorCreateEventPage(eventToEdit: currentEvent),
+      ),
+    ).then((updated) {
+      if (updated == true) {
+        ref.invalidate(eventProvider(widget.event.id!));
+        ref.invalidate(workspaceEventsProvider);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final highlightsAsync = ref.watch(eventHighlightsProvider(widget.event.id!));
+    final eventAsync = ref.watch(eventProvider(widget.event.id!));
+    final event = eventAsync.value ?? widget.event;
+
+    final highlightsAsync = ref.watch(eventHighlightsProvider(event.id!));
     final isMobile = ResponsiveLayout.isMobile(context);
     
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole;
     final canScan = activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false;
+    final canEdit = activeRole?.hasPermission(AppPermissions.editEvent) ?? false;
     final isOfficer = activeRole != null && activeRole.roleName != 'Member';
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final isToday = widget.event.eventDate.year == now.year &&
-                    widget.event.eventDate.month == now.month &&
-                    widget.event.eventDate.day == now.day;
-    final isUpcoming = widget.event.eventDate.isAfter(today);
+    final isToday = event.eventDate.year == now.year &&
+                    event.eventDate.month == now.month &&
+                    event.eventDate.day == now.day;
+    final isUpcoming = event.eventDate.isAfter(today);
 
     return DashboardLayout(
       title: 'Event Details',
@@ -164,7 +183,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => EventScannerScreen(event: widget.event),
+                builder: (context) => EventScannerScreen(event: event),
               ),
             ),
             label: Text(
@@ -183,111 +202,106 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         : null,
       child: SingleChildScrollView(
         padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Text(
-                        'Events',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(
+                    'Events',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.event.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                _buildResponsiveHero(),
-                const SizedBox(height: AppSpacing.xl),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTitleSection(),
-                            const SizedBox(height: AppSpacing.lg),
-                            _buildDescriptionSection(),
-                            const SizedBox(height: AppSpacing.xxl),
-                            if (!isOfficer && !isUpcoming)
-                              highlightsAsync.when(
-                                data: (count) => _buildHighlightsSection(count),
-                                loading: () => const Center(child: CircularProgressIndicator()),
-                                error: (_, __) => const SizedBox.shrink(),
-                              ),
-                            if (isOfficer && widget.event.isPastTimeout) ...[
-                              _buildOfficerPastEventActions(context),
-                            ],
-                          ],
-                        ),
-                      ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    event.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
                     ),
-                    if (!isMobile) ...[
-                      const SizedBox(width: AppSpacing.xxl),
-                      Expanded(
-                        flex: 1,
-                        child: _buildInfoSidebar(),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-                if (isMobile) ...[
-                  const SizedBox(height: AppSpacing.xxl),
-                  _buildInfoSidebar(),
-                ],
-                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            _buildResponsiveHero(event),
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTitleSection(event, canEdit),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildDescriptionSection(event),
+                        const SizedBox(height: AppSpacing.xxl),
+                        if (!isOfficer && !isUpcoming)
+                          highlightsAsync.when(
+                            data: (count) => _buildHighlightsSection(count),
+                            loading: () => const Center(child: FlickrLoader()),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        if (isOfficer && event.isPastTimeout) ...[
+                          _buildOfficerPastEventActions(context, event),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isMobile) ...[
+                  const SizedBox(width: AppSpacing.xxl),
+                  Expanded(
+                    flex: 1,
+                    child: _buildInfoSidebar(event),
+                  ),
+                ],
+              ],
+            ),
+            if (isMobile) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              _buildInfoSidebar(event),
+            ],
+            const SizedBox(height: AppSpacing.xxl),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildResponsiveHero() {
+  Widget _buildResponsiveHero(EventModel event) {
     return Container(
       width: double.infinity,
       height: 300,
@@ -305,8 +319,8 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: widget.event.imageUrl != null
-            ? Image.network(widget.event.imageUrl!, fit: BoxFit.cover)
+        child: event.imageUrl != null
+            ? Image.network(event.imageUrl!, fit: BoxFit.cover)
             : Container(
                 color: AppColors.primary.withValues(alpha: 0.05),
                 child: Column(
@@ -336,51 +350,74 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
   }
 
-  Widget _buildTitleSection() {
-    return Column(
+  Widget _buildTitleSection(EventModel event, bool canEdit) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            if (widget.event.isMandatory)
-              Container(
-                margin: const EdgeInsets.only(right: AppSpacing.sm),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'MANDATORY',
-                  style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (event.isMandatory)
+                    Container(
+                      margin: const EdgeInsets.only(right: AppSpacing.sm),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'MANDATORY',
+                        style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  Text(
+                    event.scopeType.toUpperCase(),
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
               ),
-            Text(
-              widget.event.scopeType.toUpperCase(),
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                event.name,
+                style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold),
               ),
+            ],
+          ),
+        ),
+        if (canEdit) ...[
+          const SizedBox(width: AppSpacing.md),
+          OutlinedButton.icon(
+            onPressed: () => _navigateToEditEvent(event),
+            icon: const Icon(Icons.edit_rounded, size: 16),
+            label: const Text('Edit Event', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              side: const BorderSide(color: AppColors.primary),
+              foregroundColor: AppColors.primary,
             ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          widget.event.name,
-          style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold),
-        ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildDescriptionSection() {
+  Widget _buildDescriptionSection(EventModel event) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.event.shortDescription != null) ...[
+        if (event.shortDescription != null) ...[
           Text(
-            widget.event.shortDescription!,
+            event.shortDescription!,
             style: AppTextStyles.titleMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -391,21 +428,21 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          widget.event.fullDescription ?? 'No description available for this event.',
+          event.fullDescription ?? 'No description available for this event.',
           style: AppTextStyles.bodyLarge.copyWith(height: 1.6, color: AppColors.textDark),
         ),
       ],
     );
   }
 
-  Widget _buildInfoSidebar() {
+  Widget _buildInfoSidebar(EventModel event) {
     final userAsync = ref.watch(userProfileProvider);
-    final attendanceAsync = ref.watch(userEventAttendanceProvider(widget.event.id!));
+    final attendanceAsync = ref.watch(userEventAttendanceProvider(event.id!));
     final workspace = ref.watch(workspaceProvider);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final isPast = widget.event.eventDate.isBefore(today);
+    final isPast = event.eventDate.isBefore(today);
 
     return userAsync.when(
       data: (user) {
@@ -417,14 +454,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             _buildInfoCard(
               icon: Icons.calendar_today_rounded,
               title: 'Date',
-              content: DateFormat.yMMMMd().format(widget.event.eventDate),
+              content: DateFormat.yMMMMd().format(event.eventDate),
               color: Colors.blue,
             ),
             const SizedBox(height: AppSpacing.md),
             _buildInfoCard(
               icon: Icons.location_on_rounded,
               title: 'Location',
-              content: widget.event.location,
+              content: event.location,
               color: Colors.red,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -464,28 +501,28 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: FlickrLoader()),
                 error: (_, __) => const Text('Error loading attendance'),
               ),
             ] else ...[
               _buildInfoCard(
                 icon: Icons.access_time_rounded,
                 title: isOfficer ? 'Time In' : 'Check-in Window',
-                content: TimeFormatter.formatTimeRange(widget.event.timeInStart, widget.event.timeInEnd),
+                content: TimeFormatter.formatTimeRange(event.timeInStart, event.timeInEnd),
                 color: Colors.green,
               ),
               const SizedBox(height: AppSpacing.md),
               _buildInfoCard(
                 icon: Icons.logout_rounded,
                 title: isOfficer ? 'Time Out' : 'Check-out Window',
-                content: TimeFormatter.formatTimeRange(widget.event.timeOutStart, widget.event.timeOutEnd),
+                content: TimeFormatter.formatTimeRange(event.timeOutStart, event.timeOutEnd),
                 color: Colors.orange,
               ),
             ],
           ],
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (_, __) => const Text('Error loading user profile'),
     );
   }
@@ -686,7 +723,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _isUploading
-                  ? const CircularProgressIndicator(color: AppColors.primary)
+                  ? const FlickrLoader()
                   : Text(
                       'Upload Event Highlights', 
                       style: AppTextStyles.titleLarge.copyWith(
@@ -701,7 +738,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
   }
 
-  Widget _buildOfficerPastEventActions(BuildContext context) {
+  Widget _buildOfficerPastEventActions(BuildContext context, EventModel event) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -729,8 +766,8 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                   context,
                   MaterialPageRoute(
                     builder: (_) => EventHighlightsGalleryPage(
-                      eventId: widget.event.id!,
-                      eventName: widget.event.name,
+                      eventId: event.id!,
+                      eventName: event.name,
                     ),
                   ),
                 ),
@@ -757,9 +794,8 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AttendanceHistoryPage(
-                      eventId: widget.event.id!,
-                      eventName: widget.event.name,
+                    builder: (_) => AttendanceReportPage(
+                      event: event,
                     ),
                   ),
                 ),

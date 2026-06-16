@@ -11,6 +11,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
+import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../campuses/models/campus_model.dart';
 import '../../faculties/providers/faculty_provider.dart';
@@ -515,13 +516,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                 ),
                 child: authState.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
+                    ? const FlickrLoader(
+                        size: 8,
+                        distance: 10,
                       )
                     : Text(
                         'Sign Up',

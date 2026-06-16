@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -196,7 +197,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
               ? null
               : _handleAssign,
           icon: _isSubmitting 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              ? const SizedBox(width: 20, height: 20, child: FlickrLoader())
               : const Icon(Icons.verified_user_rounded),
           label: const Text('Confirm Assignment'),
           style: FilledButton.styleFrom(

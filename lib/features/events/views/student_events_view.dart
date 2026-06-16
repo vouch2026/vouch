@@ -1,12 +1,11 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/event_model.dart';
 import '../providers/event_provider.dart';
-import 'student_event_details_page.dart';
-import '../widgets/student_rate_event_card.dart';
 import '../widgets/student_past_event_card.dart';
 import '../widgets/student_event_card.dart';
 
@@ -23,7 +22,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -36,6 +35,8 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final eventsAsync = ref.watch(workspaceEventsProvider);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
 
     return eventsAsync.when(
       data: (events) {
@@ -46,21 +47,54 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
           final eDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
           return eDate.isAtSameMomentAs(today) && !e.isPastTimeout;
         }).toList();
+        todayEvents.sort((a, b) {
+          final dateCompare = a.eventDate.compareTo(b.eventDate);
+          if (dateCompare != 0) return dateCompare;
+          return a.timeInStart.compareTo(b.timeInStart);
+        });
         
         final upcomingEvents = events.where((e) => e.eventDate.isAfter(today)).toList();
+        upcomingEvents.sort((a, b) {
+          final dateCompare = a.eventDate.compareTo(b.eventDate);
+          if (dateCompare != 0) return dateCompare;
+          return a.timeInStart.compareTo(b.timeInStart);
+        });
+
         final pastEvents = events.where((e) => e.isPastTimeout).toList();
+        pastEvents.sort((a, b) {
+          final dateCompare = b.eventDate.compareTo(a.eventDate);
+          if (dateCompare != 0) return dateCompare;
+          return b.timeOutEnd.compareTo(a.timeOutEnd);
+        });
         
-        return NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+              ),
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                  SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Events',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
                         Text(
                           'Organization Events',
                           style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
@@ -70,55 +104,51 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
                           'View upcoming events and share your highlights',
                           style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
                         ),
+                        const SizedBox(height: AppSpacing.lg),
+                        
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                          ),
+                          child: TabBar(
+                            controller: _tabController,
+                            isScrollable: true,
+                            tabAlignment: TabAlignment.start,
+                            labelColor: theme.colorScheme.primary,
+                            unselectedLabelColor: Colors.grey[600],
+                            dividerColor: Colors.transparent,
+                            indicatorColor: theme.colorScheme.primary,
+                            indicatorWeight: 3,
+                            labelStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                            tabs: const [
+                              Tab(text: 'Today'),
+                              Tab(text: 'Upcoming'),
+                              Tab(text: 'Past'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
                       ],
                     ),
                   ),
-                  
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
-                        labelColor: theme.colorScheme.primary,
-                        unselectedLabelColor: Colors.grey[600],
-                        dividerColor: Colors.transparent,
-                        indicatorColor: theme.colorScheme.primary,
-                        indicatorWeight: 3,
-                        labelStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
-                        tabs: const [
-                          Tab(text: 'Today'),
-                          Tab(text: 'Upcoming'),
-                          Tab(text: 'Past'),
-                          Tab(text: 'Rate'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                 ],
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildTabView(todayEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
+                    _buildTabView(upcomingEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
+                    _buildTabView(pastEvents, (event) => StudentPastEventCard(event: event), mainAxisExtent: 200),
+                  ],
+                ),
               ),
             ),
-          ],
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildTabView(todayEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
-              _buildTabView(upcomingEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
-              _buildTabView(pastEvents, (event) => StudentPastEventCard(event: event), mainAxisExtent: 200),
-              _buildTabView(pastEvents, (event) => StudentRateEventCard(event: event), mainAxisExtent: 340),
-            ],
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: FlickrLoader()),
       error: (err, _) => Center(child: Text('Error: $err')),
     );
   }
@@ -152,7 +182,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.lg,

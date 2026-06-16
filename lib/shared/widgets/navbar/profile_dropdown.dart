@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
@@ -159,7 +160,7 @@ class ProfileDropdown extends ConsumerWidget {
         child: SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: FlickrLoader(),
         ),
       ),
       error: (_, __) => const Icon(Icons.error_outline),

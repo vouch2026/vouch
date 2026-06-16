@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -29,7 +30,7 @@ class DashboardPage extends ConsumerWidget {
           key: ValueKey(isSuperAdmin ? 'admin' : (selectedOrg?.id ?? 'global')),
           title: showGovernorView ? 'Workspace Command Center' : 'Main Dashboard',
           child: workspace.isLoading 
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: FlickrLoader())
               : showGovernorView 
                   ? const GovernorDashboardView()
                   : LayoutBuilder(
@@ -98,7 +99,7 @@ class DashboardPage extends ConsumerWidget {
                   ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const Scaffold(body: Center(child: FlickrLoader())),
       error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }

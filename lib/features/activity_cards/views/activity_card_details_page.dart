@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -165,7 +166,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                                     child: ElevatedButton.icon(
                                       onPressed: _isRequesting ? null : () => _handleRequestClearance(activityCard),
                                       icon: _isRequesting 
-                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                                        ? const SizedBox(width: 18, height: 18, child: FlickrLoader())
                                         : const Icon(Icons.send_rounded),
                                       label: Text(
                                         _isRequesting ? 'Submitting...' : (isRejected ? 'Resubmit Clearance' : 'Request Clearance'),
@@ -302,11 +303,11 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                 ],
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: FlickrLoader()),
             error: (err, _) => Center(child: Text('Error loading student info: $err')),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: FlickrLoader()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );

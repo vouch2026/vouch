@@ -31,8 +31,139 @@
 
   <title>Vouch</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      overflow: hidden;
+    }
+    #splash-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #ffffff;
+      z-index: 99999;
+      opacity: 1;
+      transition: opacity 0.4s ease-in-out;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-grow: 1;
+    }
+    .logo-img {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    .flickr-loader {
+      position: relative;
+      width: 60px;
+      height: 20px;
+      margin-top: 32px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .flickr-ball {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      animation: flickr-orbit 1.6s infinite ease-in-out;
+    }
+    .flickr-blue {
+      background-color: #003DA5; /* Royal Blue */
+      animation-delay: 0s;
+    }
+    .flickr-gold {
+      background-color: #FFC107; /* Gold */
+      animation-delay: -0.8s; /* 180 degrees out of phase */
+    }
+    .splash-footer {
+      padding-bottom: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .footer-label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 500;
+    }
+    .footer-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .first-name {
+      color: #FFC107; /* Gold */
+    }
+    .last-name {
+      color: #003DA5; /* Royal Blue */
+    }
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+      50% {
+        transform: scale(1.04);
+        opacity: 1;
+      }
+    }
+    @keyframes flickr-orbit {
+      0%, 100% {
+        transform: translateX(-16px) scale(1);
+        z-index: 2;
+      }
+      25% {
+        transform: translateX(0px) scale(1.25);
+        z-index: 2;
+      }
+      50% {
+        transform: translateX(16px) scale(1);
+        z-index: 1;
+      }
+      75% {
+        transform: translateX(0px) scale(0.75);
+        z-index: 1;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div id="splash-container">
+    <div class="splash-content">
+      <!-- Standard Flutter asset path is assets/assets/logos/vouch.png, fallback handles debug/release differences -->
+      <img src="assets/assets/logos/vouch.png" onerror="this.onerror=null; this.src='assets/logos/vouch.png';" class="logo-img" alt="Vouch Logo">
+      <div class="flickr-loader">
+        <div class="flickr-ball flickr-blue"></div>
+        <div class="flickr-ball flickr-gold"></div>
+      </div>
+    </div>
+    <div class="splash-footer">
+      <div class="footer-label">Created By</div>
+      <div class="footer-name">
+        <span class="first-name">Jeslito</span> <span class="last-name">G. Geverola</span>
+      </div>
+    </div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -1,3 +1,4 @@
+import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,27 +66,48 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       final repository = ref.read(attendanceRepositoryProvider);
       final rawScans = await repository.getRecentScansForEvent(widget.event.id!);
       
-      final scans = rawScans.map((data) {
+      final List<Map<String, dynamic>> extractedScans = [];
+      for (final data in rawScans) {
         final student = data['student'] as Map<String, dynamic>?;
         final firstName = student?['first_name'] ?? 'Unknown';
         final lastName = student?['last_name'] ?? 'Student';
         final studentId = student?['student_id_number'] ?? '-';
         final program = (student?['program'] as Map<String, dynamic>?)?['name'] ?? 'N/A';
-        
-        final timeIn = data['actual_time_in'];
-        final timeOut = data['actual_time_out'];
-        final time = timeOut ?? timeIn;
-        final formattedTime = time != null 
-            ? DateFormat('h:mm a').format(DateTime.parse(time).toLocal())
-            : '-';
-            
+
+        final timeInRaw = data['actual_time_in'];
+        final timeOutRaw = data['actual_time_out'];
+
+        if (timeInRaw != null) {
+          extractedScans.add({
+            'name': '$firstName $lastName',
+            'studentId': studentId,
+            'program': program,
+            'dateTime': DateTime.parse(timeInRaw).toLocal(),
+            'type': 'Time In',
+          });
+        }
+        if (timeOutRaw != null) {
+          extractedScans.add({
+            'name': '$firstName $lastName',
+            'studentId': studentId,
+            'program': program,
+            'dateTime': DateTime.parse(timeOutRaw).toLocal(),
+            'type': 'Time Out',
+          });
+        }
+      }
+
+      // Sort extractedScans by dateTime descending (newest first)
+      extractedScans.sort((a, b) => (b['dateTime'] as DateTime).compareTo(a['dateTime'] as DateTime));
+
+      final scans = extractedScans.map((scanData) {
         return QrScanUIModel(
-          name: '$firstName $lastName',
-          studentId: studentId,
-          program: program,
-          time: formattedTime,
+          name: scanData['name'] as String,
+          studentId: scanData['studentId'] as String,
+          program: scanData['program'] as String,
+          time: DateFormat('h:mm a').format(scanData['dateTime'] as DateTime),
           status: 'success',
-          type: timeOut != null ? 'Time Out' : 'Time In',
+          type: scanData['type'] as String,
         );
       }).toList();
 
@@ -613,7 +635,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                         const Divider(height: 24),
                         Expanded(
                           child: _isLoadingScans 
-                            ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                            ? const Center(child: FlickrLoader())
                             : _recentScans.isEmpty
                               ? Center(
                                   child: Column(
@@ -651,7 +673,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   Widget _buildRecentScansList() {
     if (_isLoadingScans) {
-      return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: primaryColor)));
+      return const SliverFillRemaining(child: Center(child: FlickrLoader()));
     }
     if (_recentScans.isEmpty) {
       return SliverFillRemaining(

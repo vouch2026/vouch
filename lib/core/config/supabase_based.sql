@@ -20,7 +20,6 @@ DROP TABLE IF EXISTS student_payments CASCADE;
 DROP TABLE IF EXISTS payment_receiver CASCADE;
 DROP TABLE IF EXISTS student_attendance CASCADE;
 DROP TABLE IF EXISTS sanction_rules CASCADE;
-DROP TABLE IF EXISTS event_ratings CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS fees CASCADE;
 DROP TABLE IF EXISTS organization_members CASCADE;
@@ -320,16 +319,6 @@ created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
 
 CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON announcements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TABLE event_ratings (
-id SERIAL PRIMARY KEY,
-event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-rating INT CHECK (rating >= 1 AND rating <= 5),
-comment TEXT,
-created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-UNIQUE(event_id, user_id)
-);
-
 CREATE TABLE sanction_rules (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 scope_type scope_type NOT NULL,
@@ -472,7 +461,6 @@ ALTER TABLE activity_card_clearance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_card_clearance_signatures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_receiver ENABLE ROW LEVEL SECURITY;
 ALTER TABLE governance_audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE event_ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sanction_rules ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
@@ -655,13 +643,6 @@ CREATE POLICY "Students can insert signatures for their own requests" ON activit
 WITH CHECK (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id()));
 CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id = required_role_id AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)));
-
--- Ratings
-CREATE POLICY "Ratings are viewable by everyone" ON event_ratings FOR SELECT USING (true);
-CREATE POLICY "Users can rate events" ON event_ratings FOR INSERT TO authenticated
-WITH CHECK (user_id = public.get_my_id());
-CREATE POLICY "Users can update their own ratings" ON event_ratings FOR UPDATE TO authenticated
-USING (user_id = public.get_my_id());
 
 -- Sanction Rules
 CREATE POLICY "Sanction rules are viewable by everyone" ON sanction_rules FOR SELECT USING (true);
