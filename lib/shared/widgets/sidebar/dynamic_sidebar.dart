@@ -7,11 +7,11 @@ import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/permissions/app_permissions.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
 import '../../../../core/providers/sidebar_provider.dart';
 import 'organization_switcher.dart';
+import '../../../../core/config/sidebars/sidebar_config.dart';
 
 class DynamicSidebar extends ConsumerStatefulWidget {
   const DynamicSidebar({super.key});
@@ -71,6 +71,64 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
     final selectedOrg = workspace.selectedOrganization;
     final activeRole = workspace.activeRole;
 
+    // Resolve sidebar sections based on role or super admin status
+    final List<SidebarSectionConfig> sections;
+    if (isSuperAdmin) {
+      sections = [
+        const SidebarSectionConfig(
+          title: 'PERSONAL HUB',
+          items: [
+            SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+            SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+            SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+            SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+            SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
+          ],
+        ),
+        const SidebarSectionConfig(
+          title: 'SYSTEM ADMINISTRATION',
+          items: [
+            SidebarItemConfig(
+              label: 'My Organizations',
+              icon: Icons.corporate_fare_outlined,
+              path: RoutePaths.organizations,
+            ),
+            SidebarItemConfig(
+              label: 'Academic Structure',
+              icon: Icons.account_tree_outlined,
+              path: RoutePaths.academicStructure,
+            ),
+            SidebarItemConfig(
+              label: 'All Users',
+              icon: Icons.people_outline_rounded,
+              path: RoutePaths.users,
+            ),
+            SidebarItemConfig(
+              label: 'Global Elections',
+              icon: Icons.how_to_vote_rounded,
+              path: RoutePaths.comselecDashboard,
+            ),
+          ],
+        ),
+      ];
+    } else if (selectedOrg != null) {
+      final roleKey = getSidebarRoleKey(activeRole?.roleName ?? 'Member');
+      sections = roleSidebars[roleKey] ?? roleSidebars['member']!;
+    } else {
+      sections = [
+        const SidebarSectionConfig(
+          title: 'PERSONAL HUB',
+          items: [
+            SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+            SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+            SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+            SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+            SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
+          ],
+        ),
+      ];
+    }
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.white,
@@ -98,166 +156,29 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                   controller: _scrollController,
                   padding: EdgeInsets.zero,
                   children: [
-                    const _SidebarHeader(label: 'PERSONAL HUB'),
-                    const _SidebarItem(
-                      icon: Icons.dashboard_outlined,
-                      label: 'Dashboard',
-                      path: RoutePaths.dashboard,
-                    ),
-                    const _SidebarItem(
-                      icon: Icons.calendar_today_outlined,
-                      label: 'Calendar',
-                      path: RoutePaths.calendar,
-                    ),
-                    const _SidebarItem(
-                      icon: Icons.notifications_none_rounded,
-                      label: 'Notifications',
-                      path: RoutePaths.notifications,
-                    ),
+                    ...sections.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final section = entry.value;
+                      final String title = section.title == 'WORKSPACE: DETAILS'
+                          ? 'WORKSPACE: ${selectedOrg?.code ?? ''}'
+                          : section.title;
 
-                    if (isSuperAdmin) ...[
-                      const _SectionDivider(),
-                      const _SidebarHeader(label: 'SYSTEM ADMINISTRATION'),
-                      const _SidebarItem(
-                        icon: Icons.corporate_fare_outlined,
-                        label: 'My Organizations',
-                        path: RoutePaths.organizations,
-                      ),
-                      const _SidebarItem(
-                        icon: Icons.account_tree_outlined,
-                        label: 'Academic Structure',
-                        path: RoutePaths.academicStructure,
-                      ),
-                      const _SidebarItem(
-                        icon: Icons.people_outline_rounded,
-                        label: 'All Users',
-                        path: RoutePaths.users,
-                      ),
-                      const _SidebarItem(
-                        icon: Icons.how_to_vote_rounded,
-                        label: 'Global Elections',
-                        path: RoutePaths.comselecDashboard,
-                      ),
-                    ] else if (selectedOrg != null) ...[
-                      const _SectionDivider(),
-                      _SidebarHeader(label: 'WORKSPACE: ${selectedOrg.code}'),
-                      _SidebarItem(
-                        icon: Icons.grid_view_rounded,
-                        label: '${activeRole?.roleName ?? 'Workspace'} Home',
-                        path: RoutePaths.dashboard,
-                      ),
-                      
-                      // People Section
-                      if (activeRole?.hasAnyPermission([AppPermissions.viewMembers, AppPermissions.viewOfficers, AppPermissions.assignRoles]) ?? false) ...[
-                        const _SidebarHeader(label: 'PEOPLE'),
-                        if (activeRole?.hasPermission(AppPermissions.viewMembers) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.people_outline_rounded,
-                            label: 'Members',
-                            path: RoutePaths.workspaceMembers,
-                          ),
-                        if (activeRole?.hasPermission(AppPermissions.viewOfficers) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.badge_outlined,
-                            label: 'Officers',
-                            path: RoutePaths.workspaceOfficers,
-                          ),
-                      ],
-
-                      // Operations Section
-                      if (activeRole?.hasAnyPermission([
-                        AppPermissions.viewEvents, 
-                        AppPermissions.createEvent,
-                        AppPermissions.manageActivityCards,
-                        AppPermissions.viewActivityCards,
-                        AppPermissions.viewAnnouncements,
-                        AppPermissions.createAnnouncement,
-                        AppPermissions.viewSanctions,
-                        AppPermissions.createSanctionRules,
-                        AppPermissions.receiveSanctionItems
-                      ]) ?? false) ...[
-                        const _SidebarHeader(label: 'OPERATIONS'),
-                        if (activeRole?.hasAnyPermission([AppPermissions.viewEvents, AppPermissions.createEvent]) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.calendar_today_outlined,
-                            label: 'Events',
-                            path: RoutePaths.workspaceEvents,
-                          ),
-                        if (activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.how_to_reg_rounded,
-                            label: 'Attendance',
-                            path: RoutePaths.workspaceAttendance,
-                          ),
-                        if (activeRole?.hasAnyPermission([AppPermissions.manageActivityCards, AppPermissions.viewActivityCards]) ?? false)
-                          _SidebarItem(
-                            icon: Icons.assignment_outlined,
-                            label: 'Activity Cards',
-                            path: activeRole!.hasPermission(AppPermissions.manageActivityCards)
-                                ? RoutePaths.workspaceActivityCards
-                                : RoutePaths.activityCards,
-                          ),
-                        if (activeRole?.hasAnyPermission([AppPermissions.viewAnnouncements, AppPermissions.createAnnouncement]) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.campaign_outlined,
-                            label: 'Announcements',
-                            path: RoutePaths.workspaceAnnouncements,
-                          ),
-                        if (activeRole?.hasAnyPermission([AppPermissions.viewSanctions, AppPermissions.createSanctionRules, AppPermissions.receiveSanctionItems]) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.gavel_rounded,
-                            label: 'Sanctions',
-                            path: RoutePaths.workspaceSanctions,
-                          ),
-                        if (activeRole?.hasPermission(AppPermissions.viewDocuments) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.folder_open_rounded,
-                            label: 'Records',
-                            path: RoutePaths.workspaceDocuments,
-                          ),
-                      ],
-                      
-                      // Finance Section
-                      if (activeRole?.hasAnyPermission([
-                        AppPermissions.viewFees, 
-                        AppPermissions.createFee, 
-                        AppPermissions.manageCollections
-                      ]) ?? false) ...[
-                        const _SidebarHeader(label: 'FINANCE'),
-                        if (activeRole?.hasAnyPermission([AppPermissions.viewFees, AppPermissions.createFee]) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.payments_outlined,
-                            label: 'Fees',
-                            path: RoutePaths.workspaceFees,
-                          ),
-                        if (activeRole?.hasPermission(AppPermissions.manageCollections) ?? false)
-                          const _SidebarItem(
-                            icon: Icons.account_balance_wallet_outlined,
-                            label: 'Collections',
-                            path: RoutePaths.workspaceCollections,
-                          ),
-                      ],
-
-                      // Insights Section
-                      if (activeRole?.hasAnyPermission([AppPermissions.viewAnalytics, AppPermissions.viewProgramAnalytics, AppPermissions.viewFacultyAnalytics]) ?? false) ...[
-                        const _SidebarHeader(label: 'INSIGHTS'),
-                        const _SidebarItem(
-                          icon: Icons.bar_chart_rounded,
-                          label: 'Reports',
-                          path: RoutePaths.dashboard, // Placeholder or specific report path
-                        ),
-                      ],
-
-                      // Settings Section
-                      if (activeRole?.hasPermission(AppPermissions.manageOrganization) ?? false) ...[
-                        const _SidebarHeader(label: 'SETTINGS'),
-                        const _SidebarItem(
-                          icon: Icons.settings_outlined,
-                          label: 'Organization Settings',
-                          path: RoutePaths.workspaceSettings,
-                        ),
-                      ],
-                    ],
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (index > 0) const _SectionDivider(),
+                          _SidebarHeader(label: title),
+                          ...section.items.map((item) {
+                            return _SidebarItem(
+                              icon: item.icon,
+                              label: item.label,
+                              path: item.path,
+                            );
+                          }),
+                        ],
+                      );
+                    }),
                   ],
                 ),
               ),

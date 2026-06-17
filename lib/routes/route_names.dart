@@ -64,4 +64,25 @@ class RouteNames {
   static const String workspaceActivityCards = 'workspace-activity-cards';
   static const String workspaceActivityCardDetails = 'workspace-activity-card-details';
   static const String workspaceSettings = 'workspace-settings';
+
+  // Placeholder and Role-Specific Sidebar Route Names
+  static const String tasks = 'tasks';
+  static const String schedule = 'schedule';
+  static const String workspaceExcuseRequests = 'workspace-excuse-requests';
+  static const String workspaceOfficerAppointments = 'workspace-officer-appointments';
+  static const String workspaceCollectionsAudit = 'workspace-collections-audit';
+  static const String workspaceAuditLogs = 'workspace-audit-logs';
+  static const String workspaceAuditReports = 'workspace-audit-reports';
+  static const String workspaceAuditAnalytics = 'workspace-audit-analytics';
+  static const String workspacePublications = 'workspace-publications';
+  static const String workspaceGallery = 'workspace-gallery';
+  static const String workspaceEngagementReports = 'workspace-engagement-reports';
+  static const String workspaceMeetingMinutes = 'workspace-meeting-minutes';
+  static const String workspaceAttendanceReports = 'workspace-attendance-reports';
+  static const String workspaceProposals = 'workspace-proposals';
+  static const String workspaceVoting = 'workspace-voting';
+  static const String workspaceResolutions = 'workspace-resolutions';
+  static const String workspaceGovernanceReports = 'workspace-governance-reports';
+  static const String workspaceCollectionAnalytics = 'workspace-collection-analytics';
+  static const String workspaceReports = 'workspace-reports';
 }
