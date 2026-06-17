@@ -56,6 +56,24 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
     super.dispose();
   }
 
+  Widget _buildPrefixIcon(IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10, right: 8),
+      child: Center(
+        widthFactor: 1,
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     
@@ -127,6 +145,9 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEdit = widget.initialData != null;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 900;
+    final padding = isMobile ? AppSpacing.lg : AppSpacing.xl;
 
     return DashboardLayout(
       title: isEdit ? 'Edit Fee' : 'Create New Fee',
@@ -136,7 +157,7 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
         }
       },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(padding),
         child: Form(
           key: _formKey,
           child: Column(
@@ -185,128 +206,228 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
               ),
               const SizedBox(height: AppSpacing.xl),
               
-              _buildFormSection(
-                context,
-                title: 'BASIC INFORMATION',
-                children: [
-                  _buildLabel('Fee Title'),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., membership Fee, T-Shirt, etc.',
-                      prefixIcon: Icon(Icons.title_rounded),
+              if (!isMobile)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: _buildBasicInfoSection(context),
                     ),
-                    validator: (v) => v?.isEmpty == true ? 'Title is required' : null,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('Amount (₱)'),
-                            TextFormField(
-                              controller: _amountController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(
-                                hintText: '0.00',
-                                prefixIcon: Icon(Icons.payments_outlined),
-                              ),
-                              validator: (v) {
-                                if (v?.isEmpty == true) return 'Amount is required';
-                                if (double.tryParse(v!) == null) return 'Invalid amount';
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('Due Date'),
-                            TextFormField(
-                              controller: _dueDateController,
-                              readOnly: true,
-                              decoration: const InputDecoration(
-                                hintText: 'Select Date',
-                                prefixIcon: Icon(Icons.calendar_today_rounded),
-                                suffixIcon: Icon(Icons.arrow_drop_down_rounded),
-                              ),
-                              onTap: () => _selectDate(context),
-                              validator: (v) => v?.isEmpty == true ? 'Due date is required' : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: AppSpacing.xl),
-              
-              _buildFormSection(
-                context,
-                title: 'INSTRUCTIONS & SETTINGS',
-                children: [
-                  _buildLabel('Instructions / Description'),
-                  TextFormField(
-                    controller: _descriptionController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      hintText: 'Add payment instructions or notes for students...',
+                    const SizedBox(width: AppSpacing.xl),
+                    Expanded(
+                      flex: 5,
+                      child: _buildInstructionsSection(context),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Material(
-                    type: MaterialType.transparency,
-                    child: SwitchListTile(
-                      title: const Text('Mandatory Fee', style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text('Require all organization members to pay this fee'),
-                      value: _isMandatory,
-                      onChanged: (v) => setState(() => _isMandatory = v),
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: theme.colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
-              
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    _buildBasicInfoSection(context),
+                    const SizedBox(height: AppSpacing.xl),
+                    _buildInstructionsSection(context),
+                  ],
+                ),
+                
               const SizedBox(height: AppSpacing.xxl),
               
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              // Action Buttons Row (aligned responsive)
+              LayoutBuilder(
+                builder: (context, buttonConstraints) {
+                  final isButtonsMobile = buttonConstraints.maxWidth < 600;
+                  
+                  final cancelButton = OutlinedButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: theme.colorScheme.outlineVariant),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Text('Cancel'),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    child: const Text('Cancel'),
+                  );
+                  
+                  final submitButton = FilledButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: _isLoading 
-                        ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
-                        : Text(isEdit ? 'Update Fee' : 'Create Fee'),
                     ),
-                  ),
-                ],
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: FlickrLoader(),
+                        )
+                      : Text(isEdit ? 'Update Fee' : 'Create Fee'),
+                  );
+
+                  if (isButtonsMobile) {
+                    return Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: submitButton,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        SizedBox(
+                          width: double.infinity,
+                          child: cancelButton,
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 150,
+                        child: cancelButton,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      SizedBox(
+                        width: 180,
+                        child: submitButton,
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBasicInfoSection(BuildContext context) {
+    return _buildFormSection(
+      context,
+      title: 'BASIC INFORMATION',
+      children: [
+        _buildLabel('Fee Title'),
+        TextFormField(
+          controller: _titleController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Membership Fee, T-Shirt, etc.',
+            prefixIcon: _buildPrefixIcon(Icons.title_rounded),
+          ),
+          validator: (v) => v?.isEmpty == true ? 'Title is required' : null,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        
+        // Amount and Due Date side-by-side or stacked responsive
+        LayoutBuilder(
+          builder: (context, fieldConstraints) {
+            final isFieldsStacked = fieldConstraints.maxWidth < 450;
+            
+            final amountField = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildLabel('Amount (₱)'),
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: '0.00',
+                    prefixIcon: _buildPrefixIcon(Icons.payments_outlined),
+                  ),
+                  validator: (v) {
+                    if (v?.isEmpty == true) return 'Amount is required';
+                    if (double.tryParse(v!) == null) return 'Invalid amount';
+                    return null;
+                  },
+                ),
+              ],
+            );
+            
+            final dueDateField = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildLabel('Due Date'),
+                TextFormField(
+                  controller: _dueDateController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'Select Date',
+                    prefixIcon: _buildPrefixIcon(Icons.calendar_today_rounded),
+                    suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
+                  ),
+                  onTap: () => _selectDate(context),
+                  validator: (v) => v?.isEmpty == true ? 'Due date is required' : null,
+                ),
+              ],
+            );
+
+            if (isFieldsStacked) {
+              return Column(
+                children: [
+                  amountField,
+                  const SizedBox(height: AppSpacing.lg),
+                  dueDateField,
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: amountField,
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: dueDateField,
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInstructionsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    return _buildFormSection(
+      context,
+      title: 'INSTRUCTIONS & SETTINGS',
+      children: [
+        _buildLabel('Instructions / Description'),
+        TextFormField(
+          controller: _descriptionController,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Add payment instructions or notes for students...',
+            alignLabelWithHint: true,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Material(
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            child: SwitchListTile(
+              title: const Text('Mandatory Fee', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Require all organization members to pay this fee'),
+              value: _isMandatory,
+              onChanged: (v) => setState(() => _isMandatory = v),
+              contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+              activeThumbColor: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -316,19 +437,39 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
           ...children,

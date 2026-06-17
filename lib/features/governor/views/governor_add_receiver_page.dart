@@ -44,21 +44,88 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
     super.dispose();
   }
 
+  Widget _buildPrefixIcon(IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10, right: 8),
+      child: Center(
+        widthFactor: 1,
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+      ),
+    );
+  }
+
   Future<void> _deleteReceiver() async {
+    final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Payment Reference'),
-        content: const Text('Are you sure you want to delete this payment reference? This action cannot be undone.'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Delete Reference',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to delete this payment reference? Students will no longer see this as a payment option. This action cannot be undone.',
+          style: TextStyle(color: Colors.black87, height: 1.4, fontSize: 14),
+        ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -146,6 +213,9 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEdit = widget.initialData != null;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 900;
+    final padding = isMobile ? AppSpacing.lg : AppSpacing.xl;
 
     return DashboardLayout(
       title: isEdit ? 'Edit Payment Card' : 'Add Payment Card',
@@ -155,7 +225,7 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
         }
       },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(padding),
         child: Form(
           key: _formKey,
           child: Column(
@@ -206,116 +276,198 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
               ),
               const SizedBox(height: AppSpacing.xl),
               
-              _buildFormSection(
-                context,
-                title: 'PROVIDER SELECTION',
-                children: [
-                  _buildLabel('Select Provider'),
-                  Wrap(
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.md,
-                    children: _providers.map((p) {
-                      final isSelected = _selectedProvider == p;
-                      return ChoiceChip(
-                        label: Text(p),
-                        selected: isSelected,
-                        onSelected: (val) => setState(() => _selectedProvider = p),
-                        selectedColor: theme.colorScheme.primaryContainer,
-                        labelStyle: TextStyle(
-                          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: AppSpacing.lg),
-              
-              _buildFormSection(
-                context,
-                title: _selectedProvider == 'Cash' ? 'COLLECTOR DETAILS' : 'ACCOUNT DETAILS',
-                children: [
-                  _buildLabel(_selectedProvider == 'Cash' ? 'Collector / Officer Name' : 'Account Name'),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      hintText: _selectedProvider == 'Cash' ? "e.g., Treasurer's Name" : 'e.g., Juan Dela Cruz',
-                      prefixIcon: const Icon(Icons.person_outline_rounded),
+              if (!isMobile)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: _buildProviderSection(context),
                     ),
-                    validator: (v) => v?.isEmpty == true 
-                        ? (_selectedProvider == 'Cash' ? 'Collector name is required' : 'Name is required') 
-                        : null,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildLabel(_selectedProvider == 'Cash' ? 'Payment Location / Instructions' : 'Account Number'),
-                  TextFormField(
-                    controller: _numberController,
-                    keyboardType: _selectedProvider == 'Cash' ? TextInputType.text : TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: _selectedProvider == 'Cash' ? "e.g., Office Room 101 or 'Pay in-person'" : 'Enter mobile or card number',
-                      prefixIcon: Icon(_selectedProvider == 'Cash' ? Icons.info_outline_rounded : Icons.numbers_rounded),
+                    const SizedBox(width: AppSpacing.xl),
+                    Expanded(
+                      flex: 5,
+                      child: _buildDetailsSection(context),
                     ),
-                    validator: (v) => v?.isEmpty == true 
-                        ? (_selectedProvider == 'Cash' ? 'Payment location/instructions are required' : 'Number is required') 
-                        : null,
-                  ),
-                ],
-              ),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    _buildProviderSection(context),
+                    const SizedBox(height: AppSpacing.xl),
+                    _buildDetailsSection(context),
+                  ],
+                ),
               
               const SizedBox(height: AppSpacing.xxl),
               
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                      ),
-                      child: _isLoading 
-                        ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
-                        : Text(isEdit ? 'Save Changes' : 'Save Reference'),
-                    ),
-                  ),
-                ],
-              ),
-              if (isEdit) ...[
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _deleteReceiver,
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                    label: const Text(
-                      'Delete Reference',
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                    ),
+              // Action Buttons Row (aligned responsive)
+              LayoutBuilder(
+                builder: (context, buttonConstraints) {
+                  final isButtonsMobile = buttonConstraints.maxWidth < 600;
+                  
+                  final cancelButton = OutlinedButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: theme.colorScheme.outlineVariant),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                    child: const Text('Cancel'),
+                  );
+                  
+                  final submitButton = FilledButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: FlickrLoader(),
+                        )
+                      : Text(isEdit ? 'Save Changes' : 'Save Reference'),
+                  );
+
+                  final deleteButton = isEdit
+                      ? OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _deleteReceiver,
+                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                          label: const Text(
+                            'Delete Reference',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        )
+                      : null;
+
+                  if (isButtonsMobile) {
+                    return Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: submitButton,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        SizedBox(
+                          width: double.infinity,
+                          child: cancelButton,
+                        ),
+                        if (deleteButton != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          SizedBox(
+                            width: double.infinity,
+                            child: deleteButton,
+                          ),
+                        ],
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      if (deleteButton != null) ...[
+                        deleteButton,
+                        const Spacer(),
+                      ] else ...[
+                        const Spacer(),
+                      ],
+                      SizedBox(
+                        width: 130,
+                        child: cancelButton,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      SizedBox(
+                        width: 180,
+                        child: submitButton,
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildProviderSection(BuildContext context) {
+    final theme = Theme.of(context);
+    return _buildFormSection(
+      context,
+      title: 'PROVIDER SELECTION',
+      children: [
+        _buildLabel('Select Provider'),
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          children: _providers.map((p) {
+            final isSelected = _selectedProvider == p;
+            return ChoiceChip(
+              label: Text(p),
+              selected: isSelected,
+              onSelected: (val) => setState(() => _selectedProvider = p),
+              selectedColor: theme.colorScheme.primaryContainer,
+              labelStyle: TextStyle(
+                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection(BuildContext context) {
+    return _buildFormSection(
+      context,
+      title: _selectedProvider == 'Cash' ? 'COLLECTOR DETAILS' : 'ACCOUNT DETAILS',
+      children: [
+        _buildLabel(_selectedProvider == 'Cash' ? 'Collector / Officer Name' : 'Account Name'),
+        TextFormField(
+          controller: _nameController,
+          decoration: InputDecoration(
+            hintText: _selectedProvider == 'Cash' ? "e.g., Treasurer's Name" : 'e.g., Juan Dela Cruz',
+            prefixIcon: _buildPrefixIcon(Icons.person_outline_rounded),
+          ),
+          validator: (v) => v?.isEmpty == true 
+              ? (_selectedProvider == 'Cash' ? 'Collector name is required' : 'Name is required') 
+              : null,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _buildLabel(_selectedProvider == 'Cash' ? 'Payment Location / Instructions' : 'Account Number'),
+        TextFormField(
+          controller: _numberController,
+          keyboardType: _selectedProvider == 'Cash' ? TextInputType.text : TextInputType.number,
+          decoration: InputDecoration(
+            hintText: _selectedProvider == 'Cash' ? "e.g., Office Room 101 or 'Pay in-person'" : 'Enter mobile or card number',
+            prefixIcon: _buildPrefixIcon(_selectedProvider == 'Cash' ? Icons.info_outline_rounded : Icons.numbers_rounded),
+          ),
+          validator: (v) => v?.isEmpty == true 
+              ? (_selectedProvider == 'Cash' ? 'Payment location/instructions are required' : 'Number is required') 
+              : null,
+        ),
+      ],
     );
   }
 
@@ -325,19 +477,39 @@ class _GovernorAddReceiverPageState extends ConsumerState<GovernorAddReceiverPag
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
           ...children,
