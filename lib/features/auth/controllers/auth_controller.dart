@@ -16,10 +16,29 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<void> signIn(String email, String password) async {
     state = const AsyncLoading();
-    final result = await AsyncValue.guard(() => _repository.signInWithEmail(
-          email: email,
-          password: password,
-        ));
+    final result = await AsyncValue.guard(() async {
+      final response = await _repository.signInWithEmail(
+        email: email,
+        password: password,
+      );
+      final user = response.user;
+      if (user != null) {
+        final profile = await _repository.getUserProfile(user.id);
+        if (profile == null) {
+          await _repository.signOut();
+          throw Exception('User profile not found.');
+        }
+        if (profile.status != 'active') {
+          await _repository.signOut();
+          if (profile.status == 'pending') {
+            throw Exception('Your account is pending activation. Please contact an administrator.');
+          } else {
+            throw Exception('Your account is ${profile.status}. Please contact an administrator.');
+          }
+        }
+      }
+      return response;
+    });
     if (!result.hasError) {
       ref.invalidate(userProfileProvider);
       ref.invalidate(workspaceProvider);
@@ -90,11 +109,30 @@ class AuthController extends AsyncNotifier<void> {
     required String token,
   }) async {
     state = const AsyncLoading();
-    final result = await AsyncValue.guard(() => _repository.verifyOTP(
-          email: email,
-          token: token,
-          type: OtpType.signup,
-        ));
+    final result = await AsyncValue.guard(() async {
+      final response = await _repository.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.signup,
+      );
+      final user = response.user;
+      if (user != null) {
+        final profile = await _repository.getUserProfile(user.id);
+        if (profile == null) {
+          await _repository.signOut();
+          throw Exception('User profile not found.');
+        }
+        if (profile.status != 'active') {
+          await _repository.signOut();
+          if (profile.status == 'pending') {
+            throw Exception('Your account is pending activation. Please contact an administrator.');
+          } else {
+            throw Exception('Your account is ${profile.status}. Please contact an administrator.');
+          }
+        }
+      }
+      return response;
+    });
     if (!result.hasError) {
       ref.invalidate(userProfileProvider);
     }
