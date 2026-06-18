@@ -80,6 +80,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
       ref.invalidate(sanctionRulesProvider);
       ref.invalidate(workspaceSanctionsProvider);
       ref.invalidate(mySanctionsProvider);
+      ref.invalidate(workspaceMandatoryEventsCountProvider);
       messenger.showSnackBar(const SnackBar(content: Text('Rule deleted successfully.')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -347,6 +348,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                   ref.invalidate(sanctionRulesProvider);
                   ref.invalidate(workspaceSanctionsProvider);
                   ref.invalidate(mySanctionsProvider);
+                  ref.invalidate(workspaceMandatoryEventsCountProvider);
                   if (mounted) {
                     setState(() {});
                     navigator.pop();
@@ -557,7 +559,9 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
 
     final sanctionsAsync = ref.watch(workspaceSanctionsProvider);
     final rulesAsync = ref.watch(sanctionRulesProvider);
+    final maxSanctionScoreAsync = ref.watch(workspaceMandatoryEventsCountProvider);
 
+    int maxSanctionScore = maxSanctionScoreAsync.value ?? 0;
     int totalRules = rulesAsync.value?.length ?? 0;
     int activeSanctions = sanctionsAsync.value?.where((s) => s.status != 'Item Received').length ?? 0;
     int clearedSanctions = sanctionsAsync.value?.where((s) => s.status == 'Item Received').length ?? 0;
@@ -797,7 +801,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
     );
 
     return DashboardLayout(
-      title: 'Compliance & Sanctions',
+      title: 'Sanctions',
       child: LoadingOverlay(
         isLoading: _isSyncing,
         child: SingleChildScrollView(
@@ -825,7 +829,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
               const SizedBox(height: AppSpacing.md),
               UserManagementHeader(
                 title: 'Manage Sanctions',
-                subtitle: 'Define rules and view compliance records of students.',
+                subtitle: 'Define rules and view sanction records of students.',
                 actions: [
                   if (canSync)
                     HeaderActionButton(
@@ -844,6 +848,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                           ref.invalidate(workspaceSanctionsProvider);
                           ref.invalidate(mySanctionsProvider);
                           ref.invalidate(sanctionRulesProvider);
+                          ref.invalidate(workspaceMandatoryEventsCountProvider);
                           
                           messenger.showSnackBar(const SnackBar(content: Text('Sanction records synchronized successfully.')));
                         } catch (e) {
@@ -867,9 +872,15 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
               const SizedBox(height: AppSpacing.lg),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isSmall = constraints.maxWidth < 600;
-                  final crossCount = isSmall ? 1 : 3;
-                  final ratio = isSmall ? 3.5 : 2.5;
+                  int crossCount = 1;
+                  double ratio = 3.5;
+                  if (constraints.maxWidth > 900) {
+                    crossCount = 4;
+                    ratio = 2.0;
+                  } else if (constraints.maxWidth > 600) {
+                    crossCount = 2;
+                    ratio = 2.5;
+                  }
 
                   return GridView(
                     shrinkWrap: true,
@@ -882,13 +893,19 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                     ),
                     children: [
                       _buildStatCard(
+                        title: 'Max Sanction Score',
+                        value: maxSanctionScore.toString(),
+                        icon: Icons.assignment_turned_in_rounded,
+                        color: AppColors.primary,
+                      ),
+                      _buildStatCard(
                         title: 'Total Rules',
                         value: totalRules.toString(),
                         icon: Icons.rule_rounded,
                         color: AppColors.primary,
                       ),
                       _buildStatCard(
-                        title: 'Active Sanctions',
+                        title: 'Pending Sanctions',
                         value: activeSanctions.toString(),
                         icon: Icons.pending_actions_rounded,
                         color: Colors.orange,

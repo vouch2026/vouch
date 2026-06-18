@@ -140,12 +140,83 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
         child: profileAsync.when(
           data: (profile) {
             if (profile == null) {
-              return const Center(child: Text('Student profile not found.'));
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: widget.isPersonalView ? null : () => context.pop(),
+                        child: Text(
+                          'Sanctions',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: widget.isPersonalView ? AppColors.primary : Colors.grey[600],
+                            fontWeight: widget.isPersonalView ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (!widget.isPersonalView) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Student Sanction Profile',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Center(child: Text('Student profile not found.')),
+                ],
+              );
             }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: widget.isPersonalView ? null : () => context.pop(),
+                      child: Text(
+                        'Sanctions',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: widget.isPersonalView ? AppColors.primary : Colors.grey[600],
+                          fontWeight: widget.isPersonalView ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (!widget.isPersonalView) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Student Sanction Profile',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
                 // 1. Student Information Card
                 Card(
                   elevation: 0,

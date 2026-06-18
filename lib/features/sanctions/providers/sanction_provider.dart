@@ -128,3 +128,34 @@ final sanctionRulesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
   return List<Map<String, dynamic>>.from(response);
 });
 
+final workspaceMandatoryEventsCountProvider = FutureProvider<int>((ref) async {
+  final workspace = ref.watch(workspaceProvider);
+  final term = ref.watch(activeTermProvider).value;
+  final org = workspace.selectedOrganization;
+
+  if (org == null || term == null) return 0;
+
+  String? scopeId = org.campusId;
+  String scopeType = 'Institutional';
+  if (org.type == 'faculty-based') {
+    scopeId = org.facultyId;
+    scopeType = 'Faculty';
+  } else if (org.type == 'program-based') {
+    scopeId = org.programId;
+    scopeType = 'Program';
+  }
+
+  if (scopeId == null) return 0;
+
+  final client = SupabaseConfig.client;
+  final response = await client
+      .from('events')
+      .select('id')
+      .eq('scope_id', scopeId)
+      .eq('scope_type', scopeType)
+      .eq('academic_term_id', term.id)
+      .eq('is_mandatory', true);
+
+  return (response as List).length;
+});
+
