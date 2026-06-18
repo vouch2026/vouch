@@ -31,7 +31,7 @@ class MySanctionsPage extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
+                          Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.2)),
                           const SizedBox(height: AppSpacing.md),
                           const Text('Great job! You have no sanctions.', style: TextStyle(color: AppColors.textGrey)),
                         ],
@@ -55,7 +55,7 @@ class MySanctionsPage extends ConsumerWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: isReceived ? AppColors.success.withOpacity(0.2) : AppColors.border),
+                    side: BorderSide(color: isReceived ? AppColors.success.withValues(alpha: 0.2) : AppColors.border),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
@@ -145,9 +145,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         status.toUpperCase(),

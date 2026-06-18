@@ -20,6 +20,9 @@ abstract class SanctionModel with _$SanctionModel {
     
     // Join fields
     @JsonKey(name: 'student_name') String? studentName,
+    @JsonKey(name: 'student_id_number') String? studentIdNumber,
+    @JsonKey(name: 'program_name') String? programName,
+    @JsonKey(name: 'year_level') int? yearLevel,
     @JsonKey(name: 'received_by_name') String? receivedByName,
   }) = _SanctionModel;
 

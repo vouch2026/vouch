@@ -11,8 +11,6 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/sanction_provider.dart';
-import '../models/sanction_model.dart';
-import '../repositories/sanction_repository.dart';
 
 class SanctionProfilePage extends ConsumerStatefulWidget {
   final String studentId;
@@ -83,7 +81,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -255,7 +253,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                               constraints: BoxConstraints(minWidth: constraints.maxWidth),
                               child: DataTable(
                                 columnSpacing: AppSpacing.lg,
-                                headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
+                                headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
                                 columns: const [
                                   DataColumn(label: Text('Date')),
                                   DataColumn(label: Text('Event Name')),
@@ -296,9 +294,9 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: scoreColor.withOpacity(0.1),
+                                            color: scoreColor.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: scoreColor.withOpacity(0.2)),
+                                            border: Border.all(color: scoreColor.withValues(alpha: 0.2)),
                                           ),
                                           child: Text(
                                             eventScore % 1 == 0 ? eventScore.toInt().toString() : eventScore.toStringAsFixed(1),
@@ -343,7 +341,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.md),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.1),
+                                  color: AppColors.success.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
@@ -374,7 +372,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: isReceived ? AppColors.success.withOpacity(0.2) : AppColors.border),
+                        side: BorderSide(color: isReceived ? AppColors.success.withValues(alpha: 0.2) : AppColors.border),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -397,9 +395,9 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: (isReceived ? AppColors.success : AppColors.warning).withOpacity(0.1),
+                                    color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: (isReceived ? AppColors.success : AppColors.warning).withOpacity(0.2)),
+                                    border: Border.all(color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.2)),
                                   ),
                                   child: Text(
                                     sanction.status.toUpperCase(),
@@ -431,9 +429,9 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.md),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.05),
+                                  color: AppColors.success.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.success.withOpacity(0.1)),
+                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.1)),
                                 ),
                                 child: Row(
                                   children: [

@@ -78,7 +78,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                 const Text('Rule Application Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textGrey)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: ruleType,
+                  initialValue: ruleType,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
@@ -224,6 +224,8 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                   }
                 }
 
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
                 try {
                   await _client.from('sanction_rules').insert({
                     'scope_id': scopeId,
@@ -238,11 +240,11 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                   });
                   if (mounted) {
                     setState(() {});
-                    Navigator.pop(context);
+                    navigator.pop();
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
                   }
                 }
               },
@@ -288,6 +290,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                           final term = ref.read(activeTermProvider).value;
                           if (org == null || term == null) return;
 
+                          final messenger = ScaffoldMessenger.of(context);
                           setState(() => _isSyncing = true);
                           try {
                             await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, org.id, org.type);
@@ -295,11 +298,11 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                             ref.invalidate(mySanctionsProvider);
                             
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sanction records synchronized successfully.')));
+                              messenger.showSnackBar(const SnackBar(content: Text('Sanction records synchronized successfully.')));
                             }
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error syncing: $e')));
+                              messenger.showSnackBar(SnackBar(content: Text('Error syncing: $e')));
                             }
                           } finally {
                             if (mounted) {
@@ -339,7 +342,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.rule_folder_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.2)),
+                          Icon(Icons.rule_folder_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.2)),
                           const SizedBox(height: AppSpacing.md),
                           const Text('No sanction rules defined yet.', style: TextStyle(color: AppColors.textGrey)),
                         ],
@@ -360,7 +363,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                             child: const Icon(Icons.rule_rounded, color: AppColors.primary),
                           ),
                           title: Text(_formatScoreRange(rule['min_absence'], rule['max_absence']), style: const TextStyle(fontWeight: FontWeight.bold)),

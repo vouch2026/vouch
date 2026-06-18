@@ -13,7 +13,13 @@ class SanctionRepository {
         .from('student_sanction_records')
         .select('''
           *,
-          student:users!student_id (first_name, last_name),
+          student:users!student_id (
+            first_name, 
+            last_name, 
+            student_id_number, 
+            year,
+            program:programs!users_program_id_fkey (name)
+          ),
           received_by:users!received_by_user_id (first_name, last_name)
         ''')
         .eq('scope_id', scopeId)
@@ -23,9 +29,13 @@ class SanctionRepository {
     return (response as List).map((json) {
       final student = json['student'];
       final receivedBy = json['received_by'];
+      final program = student != null ? student['program'] : null;
       return SanctionModel.fromJson({
         ...json,
         'student_name': student != null ? '${student['first_name']} ${student['last_name']}' : 'Unknown Student',
+        'student_id_number': student != null ? student['student_id_number'] : null,
+        'program_name': program != null ? program['name'] : null,
+        'year_level': student != null ? student['year'] : null,
         'received_by_name': receivedBy != null ? '${receivedBy['first_name']} ${receivedBy['last_name']}' : null,
       });
     }).toList();
@@ -39,7 +49,13 @@ class SanctionRepository {
         .from('student_sanction_records')
         .select('''
           *,
-          student:users!student_id (first_name, last_name),
+          student:users!student_id (
+            first_name, 
+            last_name, 
+            student_id_number, 
+            year,
+            program:programs!users_program_id_fkey (name)
+          ),
           received_by:users!received_by_user_id (first_name, last_name)
         ''');
     
@@ -63,7 +79,13 @@ class SanctionRepository {
             .from('student_sanction_records')
             .select('''
               *,
-              student:users!student_id (first_name, last_name),
+              student:users!student_id (
+                first_name, 
+                last_name, 
+                student_id_number, 
+                year,
+                program:programs!users_program_id_fkey (name)
+              ),
               received_by:users!received_by_user_id (first_name, last_name)
             ''');
         
@@ -78,9 +100,13 @@ class SanctionRepository {
     return (response as List).map((json) {
       final student = json['student'];
       final receivedBy = json['received_by'];
+      final program = student != null ? student['program'] : null;
       return SanctionModel.fromJson({
         ...json,
         'student_name': student != null ? '${student['first_name']} ${student['last_name']}' : 'Unknown Student',
+        'student_id_number': student != null ? student['student_id_number'] : null,
+        'program_name': program != null ? program['name'] : null,
+        'year_level': student != null ? student['year'] : null,
         'received_by_name': receivedBy != null ? '${receivedBy['first_name']} ${receivedBy['last_name']}' : null,
       });
     }).toList();

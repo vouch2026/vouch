@@ -24,6 +24,9 @@ _SanctionModel _$SanctionModelFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['updated_at'] as String),
       studentName: json['student_name'] as String?,
+      studentIdNumber: json['student_id_number'] as String?,
+      programName: json['program_name'] as String?,
+      yearLevel: (json['year_level'] as num?)?.toInt(),
       receivedByName: json['received_by_name'] as String?,
     );
 
@@ -41,5 +44,8 @@ Map<String, dynamic> _$SanctionModelToJson(_SanctionModel instance) =>
       'received_at': instance.receivedAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
       'student_name': instance.studentName,
+      'student_id_number': instance.studentIdNumber,
+      'program_name': instance.programName,
+      'year_level': instance.yearLevel,
       'received_by_name': instance.receivedByName,
     };
