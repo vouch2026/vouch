@@ -9,6 +9,7 @@ import '../providers/sanction_provider.dart';
 import '../models/sanction_model.dart';
 import 'package:go_router/go_router.dart';
 import '../../../routes/route_names.dart';
+import '../../../routes/route_paths.dart';
 import 'package:intl/intl.dart';
 import 'package:excel/excel.dart' as excel_lib;
 import '../../../core/utils/file_saver_helper.dart';
@@ -17,7 +18,6 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../users/widgets/user_management_header.dart';
 import 'package:vouch_v2/shared/widgets/loading_overlay.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
@@ -165,207 +165,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
     }
   }
 
-  void _showAddRuleDialog() {
-    final minScoreController = TextEditingController();
-    final maxScoreController = TextEditingController();
-    final worthController = TextEditingController();
-    final itemController = TextEditingController();
-    String ruleType = 'single'; // 'single', 'range', 'above'
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Sanction Rule'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Rule Application Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textGrey)),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: ruleType,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'single', child: Text('Single Score (e.g. exactly 1)')),
-                    DropdownMenuItem(value: 'range', child: Text('Score Range (e.g. 1 - 2)')),
-                    DropdownMenuItem(value: 'above', child: Text('Score and Above (e.g. 3+)')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setDialogState(() {
-                        ruleType = val;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (ruleType == 'single') ...[
-                  TextField(
-                    controller: minScoreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Sanction Score',
-                      hintText: 'e.g. 1 or 1.5',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                ] else if (ruleType == 'range') ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: minScoreController,
-                          decoration: const InputDecoration(
-                            labelText: 'Min Score',
-                            hintText: 'e.g. 1',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: TextField(
-                          controller: maxScoreController,
-                          decoration: const InputDecoration(
-                            labelText: 'Max Score',
-                            hintText: 'e.g. 2',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        ),
-                      ),
-                    ],
-                  ),
-                ] else if (ruleType == 'above') ...[
-                  TextField(
-                    controller: minScoreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Threshold Score (And Above)',
-                      hintText: 'e.g. 3',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: worthController,
-                  decoration: const InputDecoration(
-                    labelText: 'Monetary Worth (PHP) - Optional',
-                    hintText: 'e.g. 100.00',
-                    border: OutlineInputBorder(),
-                    prefixText: '₱ ',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: itemController,
-                  decoration: const InputDecoration(
-                    labelText: 'Item/Donation Description',
-                    hintText: 'e.g. Donate supplies / pay dues',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final workspace = ref.read(workspaceProvider);
-                final org = workspace.selectedOrganization;
-                final term = ref.read(activeTermProvider).value;
-                final user = ref.read(userProfileProvider).value;
-
-                if (org == null || term == null || user == null) return;
-                if (minScoreController.text.isEmpty) return;
-                if (ruleType == 'range' && maxScoreController.text.isEmpty) return;
-                if (itemController.text.isEmpty) return;
-
-                final String scopeId = org.id;
-                String scopeType = 'Institutional';
-                if (org.type == 'faculty-based') {
-                  scopeType = 'Faculty';
-                } else if (org.type == 'program-based') {
-                  scopeType = 'Program';
-                }
-
-                final double? minVal = double.tryParse(minScoreController.text);
-                if (minVal == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid sanction score')));
-                  return;
-                }
-
-                double? maxVal;
-                if (ruleType == 'single') {
-                  maxVal = minVal;
-                } else if (ruleType == 'range') {
-                  maxVal = double.tryParse(maxScoreController.text);
-                  if (maxVal == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid max score')));
-                    return;
-                  }
-                  if (maxVal < minVal) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Max score cannot be less than min score')));
-                    return;
-                  }
-                }
-
-                double? worthVal;
-                if (worthController.text.isNotEmpty) {
-                  worthVal = double.tryParse(worthController.text);
-                  if (worthVal == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid numeric worth value')));
-                    return;
-                  }
-                }
-
-                final navigator = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
-                try {
-                  await _client.from('sanction_rules').insert({
-                    'scope_id': scopeId,
-                    'scope_type': scopeType,
-                    'academic_term_id': term.id,
-                    'min_absence': minVal,
-                    'max_absence': maxVal,
-                    'required_value': worthVal,
-                    'item_description': itemController.text,
-                    'sanction_type': 'Donation',
-                    'created_by_user_id': user.id,
-                  });
-                  ref.invalidate(sanctionRulesProvider);
-                  ref.invalidate(workspaceSanctionsProvider);
-                  ref.invalidate(mySanctionsProvider);
-                  ref.invalidate(workspaceMandatoryEventsCountProvider);
-                  if (mounted) {
-                    setState(() {});
-                    navigator.pop();
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
-                  }
-                }
-              },
-              child: const Text('Add Rule'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildStatCard({
     required String title,
@@ -863,7 +663,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                     HeaderActionButton(
                       icon: Icons.add_rounded,
                       label: 'Add Rule',
-                      onPressed: _showAddRuleDialog,
+                      onPressed: () => context.push(RoutePaths.workspaceCreateSanctionRule),
                       isPrimary: true,
                     ),
                   ],

@@ -45,6 +45,7 @@ import '../features/governor/views/activity_cards/governor_activity_cards_page.d
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
 import '../features/sanctions/views/sanction_redirector.dart';
 import '../features/sanctions/views/sanction_profile_page.dart';
+import '../features/sanctions/views/workspace_create_sanction_rule_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 
@@ -382,6 +383,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final studentId = state.pathParameters['studentId']!;
           return SanctionProfilePage(studentId: studentId);
         },
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceCreateSanctionRule,
+        name: RouteNames.workspaceCreateSanctionRule,
+        builder: (context, state) => const WorkspaceCreateSanctionRulePage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceParticipation,
