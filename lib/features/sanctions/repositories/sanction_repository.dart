@@ -346,7 +346,7 @@ class SanctionRepository {
         .eq('scope_type', scopeType)
         .eq('academic_term_id', termId)
         .eq('is_mandatory', true)
-        .order('date', ascending: true);
+        .order('event_date', ascending: true);
 
     final List<Map<String, dynamic>> events = List<Map<String, dynamic>>.from(eventsResponse);
     if (events.isEmpty) return [];
@@ -393,7 +393,7 @@ class SanctionRepository {
       return {
         'event_id': eventId,
         'name': event['name'],
-        'date': event['date'],
+        'date': event['event_date'],
         'time_in': timeIn,
         'time_out': timeOut,
         'sanction_score': score,
