@@ -257,6 +257,18 @@ class SanctionRepository {
         }
       }
 
+      // Fetch existing sanction records for this organization and term to preserve status if unchanged
+      final existingRecordsResponse = await _client
+          .from('student_sanction_records')
+          .select('student_id, status, total_absences, required_item')
+          .eq('scope_id', orgId)
+          .eq('academic_term_id', termId);
+
+      final List<Map<String, dynamic>> existingRecords = List<Map<String, dynamic>>.from(existingRecordsResponse);
+      final Map<String, Map<String, dynamic>> existingMap = {
+        for (var r in existingRecords) r['student_id'] as String: r
+      };
+
       // 6. For each student with a sanction score > 0, find the matching sanction rule and create a record
       List<Map<String, dynamic>> sanctionRecords = [];
 
@@ -286,6 +298,19 @@ class SanctionRepository {
           final rule = matchingRules.first;
           final worthVal = rule['required_value'];
           final worth = worthVal != null ? ' (Worth: ₱${(worthVal as num).toStringAsFixed(2)})' : '';
+          final requiredItemText = '${rule['item_description']}$worth';
+
+          final existing = existingMap[studentId];
+          String status = 'Pending Item';
+          if (existing != null) {
+            final String existingStatus = existing['status'] as String? ?? 'Pending Item';
+            final double existingAbsences = (existing['total_absences'] as num?)?.toDouble() ?? 0.0;
+            final String existingItem = existing['required_item'] as String? ?? '';
+
+            if (existingStatus == 'Item Received' && score == existingAbsences && requiredItemText == existingItem) {
+              status = 'Item Received';
+            }
+          }
 
           sanctionRecords.add({
             'student_id': studentId,
@@ -293,14 +318,31 @@ class SanctionRepository {
             'scope_id': orgId,
             'academic_term_id': termId,
             'total_absences': score,
-            'required_item': '${rule['item_description']}$worth',
-            'status': 'Pending Item',
+            'required_item': requiredItemText,
+            'status': status,
           });
         }
       });
 
+      // Delete any obsolete records for students in this organization and term who are no longer sanctioned
+      final List<String> activeSanctionStudentIds = sanctionRecords.map((r) => r['student_id'] as String).toList();
+      if (activeSanctionStudentIds.isNotEmpty) {
+        await _client
+            .from('student_sanction_records')
+            .delete()
+            .eq('scope_id', orgId)
+            .eq('academic_term_id', termId)
+            .not('student_id', 'in', activeSanctionStudentIds);
+      } else {
+        await _client
+            .from('student_sanction_records')
+            .delete()
+            .eq('scope_id', orgId)
+            .eq('academic_term_id', termId);
+      }
+
       if (sanctionRecords.isNotEmpty) {
-        // Upsert to avoid duplicates for the same student/organization/term
+        // Upsert current records to update scores/items/statuses
         await _client.from('student_sanction_records').upsert(
           sanctionRecords,
           onConflict: 'student_id, scope_id, academic_term_id'

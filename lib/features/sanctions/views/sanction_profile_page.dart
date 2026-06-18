@@ -522,18 +522,50 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                               SizedBox(
                                 width: double.infinity,
                                 child: FilledButton.icon(
-                                  onPressed: () async {
+                                  onPressed: () {
                                     if (currentUser == null) return;
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    try {
-                                      await ref.read(sanctionRepositoryProvider).receiveSanctionItem(sanction.id, currentUser.id!);
-                                      ref.invalidate(studentSanctionRecordProvider(widget.studentId));
-                                      ref.invalidate(workspaceSanctionsProvider);
-                                      ref.invalidate(workspaceComplianceProvider);
-                                      messenger.showSnackBar(const SnackBar(content: Text('Sanction marked as received.')));
-                                    } catch (e) {
-                                      messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
-                                    }
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        title: Text(
+                                          'Confirm Sanction Receipt',
+                                          style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                        ),
+                                        content: Text(
+                                          'Are you sure you want to mark this sanction as received?\n\n'
+                                          'Required Item:\n"${sanction.requiredItem}"\n\n'
+                                          'This action will mark the student\'s sanction as settled.',
+                                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: Text('Cancel', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+                                          ),
+                                          FilledButton(
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: AppColors.success,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                            onPressed: () async {
+                                              Navigator.pop(context);
+                                              final messenger = ScaffoldMessenger.of(context);
+                                              try {
+                                                await ref.read(sanctionRepositoryProvider).receiveSanctionItem(sanction.id, currentUser.id!);
+                                                ref.invalidate(studentSanctionRecordProvider(widget.studentId));
+                                                ref.invalidate(workspaceSanctionsProvider);
+                                                ref.invalidate(workspaceComplianceProvider);
+                                                messenger.showSnackBar(const SnackBar(content: Text('Sanction marked as received.')));
+                                              } catch (e) {
+                                                messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+                                              }
+                                            },
+                                            child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
                                   },
                                   icon: const Icon(Icons.how_to_reg_rounded),
                                   label: const Text('Mark as Received'),

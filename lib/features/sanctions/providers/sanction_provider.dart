@@ -20,6 +20,13 @@ final workspaceSanctionsProvider = FutureProvider<List<SanctionModel>>((ref) asy
   if (org == null || term == null) return [];
 
   final repository = ref.watch(sanctionRepositoryProvider);
+  
+  try {
+    await repository.generateSanctionsForTerm(term.id, org.id, org.type);
+  } catch (e) {
+    debugPrint('Error auto-syncing sanctions: $e');
+  }
+
   return repository.getWorkspaceSanctions(org.id, term.id);
 });
 

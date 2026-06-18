@@ -15,6 +15,7 @@ import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
+import '../../sanctions/providers/sanction_provider.dart';
 
 class GovernorCreateEventPage extends ConsumerStatefulWidget {
   final EventModel? eventToEdit;
@@ -259,6 +260,8 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
 
         if (mounted) {
           ref.invalidate(workspaceEventsProvider);
+          ref.invalidate(workspaceSanctionsProvider);
+          ref.invalidate(workspaceMandatoryEventsCountProvider);
           context.pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Event updated successfully')),
@@ -361,6 +364,8 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       
       if (mounted) {
         ref.invalidate(workspaceEventsProvider);
+        ref.invalidate(workspaceSanctionsProvider);
+        ref.invalidate(workspaceMandatoryEventsCountProvider);
         context.pop();
         final count = eventsToCreate.length;
         final message = count > 1 
