@@ -508,9 +508,9 @@ BEGIN
         AND p.action = p_action
         AND om.status = 'active'
         AND (
-            (o.type = 'campus-based' AND p_scope_type::text = 'Institutional' AND o.campus_id = p_scope_id) OR
-            (o.type = 'faculty-based' AND p_scope_type::text = 'Faculty' AND o.faculty_id = p_scope_id) OR
-            (o.type = 'program-based' AND p_scope_type::text = 'Program' AND o.program_id = p_scope_id)
+            (o.type = 'campus-based' AND p_scope_type::text = 'Institutional' AND (o.campus_id = p_scope_id OR o.id = p_scope_id)) OR
+            (o.type = 'faculty-based' AND p_scope_type::text = 'Faculty' AND (o.faculty_id = p_scope_id OR o.id = p_scope_id)) OR
+            (o.type = 'program-based' AND p_scope_type::text = 'Program' AND (o.program_id = p_scope_id OR o.id = p_scope_id))
         )
     ) THEN RETURN TRUE; END IF;
 

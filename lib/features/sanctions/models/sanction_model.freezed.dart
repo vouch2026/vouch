@@ -15,8 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SanctionModel {
 
- String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'scope_type') String get scopeType;@JsonKey(name: 'scope_id') String get scopeId;@JsonKey(name: 'academic_term_id') String get academicTermId;@JsonKey(name: 'total_absences') int get totalAbsences;@JsonKey(name: 'required_item') String get requiredItem; String get status;@JsonKey(name: 'received_by_user_id') String? get receivedByUserId;@JsonKey(name: 'received_at') DateTime? get receivedAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;// Join fields
-@JsonKey(name: 'student_name') String? get studentName;@JsonKey(name: 'received_by_name') String? get receivedByName;
+ String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'scope_type') String get scopeType;@JsonKey(name: 'scope_id') String get scopeId;@JsonKey(name: 'academic_term_id') String get academicTermId;@JsonKey(name: 'total_absences') double get totalAbsences;@JsonKey(name: 'required_item') String get requiredItem; String get status;@JsonKey(name: 'received_by_user_id') String? get receivedByUserId;@JsonKey(name: 'received_at') DateTime? get receivedAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;// Join fields
+@JsonKey(name: 'student_name') String? get studentName;@JsonKey(name: 'student_id_number') String? get studentIdNumber;@JsonKey(name: 'program_name') String? get programName;@JsonKey(name: 'year_level') int? get yearLevel;@JsonKey(name: 'received_by_name') String? get receivedByName;
 /// Create a copy of SanctionModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +29,16 @@ $SanctionModelCopyWith<SanctionModel> get copyWith => _$SanctionModelCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SanctionModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.totalAbsences, totalAbsences) || other.totalAbsences == totalAbsences)&&(identical(other.requiredItem, requiredItem) || other.requiredItem == requiredItem)&&(identical(other.status, status) || other.status == status)&&(identical(other.receivedByUserId, receivedByUserId) || other.receivedByUserId == receivedByUserId)&&(identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.studentName, studentName) || other.studentName == studentName)&&(identical(other.receivedByName, receivedByName) || other.receivedByName == receivedByName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SanctionModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.totalAbsences, totalAbsences) || other.totalAbsences == totalAbsences)&&(identical(other.requiredItem, requiredItem) || other.requiredItem == requiredItem)&&(identical(other.status, status) || other.status == status)&&(identical(other.receivedByUserId, receivedByUserId) || other.receivedByUserId == receivedByUserId)&&(identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.studentName, studentName) || other.studentName == studentName)&&(identical(other.studentIdNumber, studentIdNumber) || other.studentIdNumber == studentIdNumber)&&(identical(other.programName, programName) || other.programName == programName)&&(identical(other.yearLevel, yearLevel) || other.yearLevel == yearLevel)&&(identical(other.receivedByName, receivedByName) || other.receivedByName == receivedByName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,studentId,scopeType,scopeId,academicTermId,totalAbsences,requiredItem,status,receivedByUserId,receivedAt,updatedAt,studentName,receivedByName);
+int get hashCode => Object.hash(runtimeType,id,studentId,scopeType,scopeId,academicTermId,totalAbsences,requiredItem,status,receivedByUserId,receivedAt,updatedAt,studentName,studentIdNumber,programName,yearLevel,receivedByName);
 
 @override
 String toString() {
-  return 'SanctionModel(id: $id, studentId: $studentId, scopeType: $scopeType, scopeId: $scopeId, academicTermId: $academicTermId, totalAbsences: $totalAbsences, requiredItem: $requiredItem, status: $status, receivedByUserId: $receivedByUserId, receivedAt: $receivedAt, updatedAt: $updatedAt, studentName: $studentName, receivedByName: $receivedByName)';
+  return 'SanctionModel(id: $id, studentId: $studentId, scopeType: $scopeType, scopeId: $scopeId, academicTermId: $academicTermId, totalAbsences: $totalAbsences, requiredItem: $requiredItem, status: $status, receivedByUserId: $receivedByUserId, receivedAt: $receivedAt, updatedAt: $updatedAt, studentName: $studentName, studentIdNumber: $studentIdNumber, programName: $programName, yearLevel: $yearLevel, receivedByName: $receivedByName)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $SanctionModelCopyWith<$Res>  {
   factory $SanctionModelCopyWith(SanctionModel value, $Res Function(SanctionModel) _then) = _$SanctionModelCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') int totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'received_by_name') String? receivedByName
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') double totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'student_id_number') String? studentIdNumber,@JsonKey(name: 'program_name') String? programName,@JsonKey(name: 'year_level') int? yearLevel,@JsonKey(name: 'received_by_name') String? receivedByName
 });
 
 
@@ -66,7 +66,7 @@ class _$SanctionModelCopyWithImpl<$Res>
 
 /// Create a copy of SanctionModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? studentId = null,Object? scopeType = null,Object? scopeId = null,Object? academicTermId = null,Object? totalAbsences = null,Object? requiredItem = null,Object? status = null,Object? receivedByUserId = freezed,Object? receivedAt = freezed,Object? updatedAt = freezed,Object? studentName = freezed,Object? receivedByName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? studentId = null,Object? scopeType = null,Object? scopeId = null,Object? academicTermId = null,Object? totalAbsences = null,Object? requiredItem = null,Object? status = null,Object? receivedByUserId = freezed,Object? receivedAt = freezed,Object? updatedAt = freezed,Object? studentName = freezed,Object? studentIdNumber = freezed,Object? programName = freezed,Object? yearLevel = freezed,Object? receivedByName = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
@@ -74,13 +74,16 @@ as String,scopeType: null == scopeType ? _self.scopeType : scopeType // ignore: 
 as String,scopeId: null == scopeId ? _self.scopeId : scopeId // ignore: cast_nullable_to_non_nullable
 as String,academicTermId: null == academicTermId ? _self.academicTermId : academicTermId // ignore: cast_nullable_to_non_nullable
 as String,totalAbsences: null == totalAbsences ? _self.totalAbsences : totalAbsences // ignore: cast_nullable_to_non_nullable
-as int,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
+as double,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,receivedByUserId: freezed == receivedByUserId ? _self.receivedByUserId : receivedByUserId // ignore: cast_nullable_to_non_nullable
 as String?,receivedAt: freezed == receivedAt ? _self.receivedAt : receivedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,studentName: freezed == studentName ? _self.studentName : studentName // ignore: cast_nullable_to_non_nullable
-as String?,receivedByName: freezed == receivedByName ? _self.receivedByName : receivedByName // ignore: cast_nullable_to_non_nullable
+as String?,studentIdNumber: freezed == studentIdNumber ? _self.studentIdNumber : studentIdNumber // ignore: cast_nullable_to_non_nullable
+as String?,programName: freezed == programName ? _self.programName : programName // ignore: cast_nullable_to_non_nullable
+as String?,yearLevel: freezed == yearLevel ? _self.yearLevel : yearLevel // ignore: cast_nullable_to_non_nullable
+as int?,receivedByName: freezed == receivedByName ? _self.receivedByName : receivedByName // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -166,10 +169,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  int totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  double totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'student_id_number')  String? studentIdNumber, @JsonKey(name: 'program_name')  String? programName, @JsonKey(name: 'year_level')  int? yearLevel, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SanctionModel() when $default != null:
-return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.receivedByName);case _:
+return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.studentIdNumber,_that.programName,_that.yearLevel,_that.receivedByName);case _:
   return orElse();
 
 }
@@ -187,10 +190,10 @@ return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.aca
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  int totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  double totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'student_id_number')  String? studentIdNumber, @JsonKey(name: 'program_name')  String? programName, @JsonKey(name: 'year_level')  int? yearLevel, @JsonKey(name: 'received_by_name')  String? receivedByName)  $default,) {final _that = this;
 switch (_that) {
 case _SanctionModel():
-return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.receivedByName);case _:
+return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.studentIdNumber,_that.programName,_that.yearLevel,_that.receivedByName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +210,10 @@ return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.aca
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  int totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  double totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'student_id_number')  String? studentIdNumber, @JsonKey(name: 'program_name')  String? programName, @JsonKey(name: 'year_level')  int? yearLevel, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,) {final _that = this;
 switch (_that) {
 case _SanctionModel() when $default != null:
-return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.receivedByName);case _:
+return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.studentIdNumber,_that.programName,_that.yearLevel,_that.receivedByName);case _:
   return null;
 
 }
@@ -222,7 +225,7 @@ return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.aca
 @JsonSerializable()
 
 class _SanctionModel implements SanctionModel {
-  const _SanctionModel({required this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'scope_type') required this.scopeType, @JsonKey(name: 'scope_id') required this.scopeId, @JsonKey(name: 'academic_term_id') required this.academicTermId, @JsonKey(name: 'total_absences') required this.totalAbsences, @JsonKey(name: 'required_item') required this.requiredItem, this.status = 'Pending Item', @JsonKey(name: 'received_by_user_id') this.receivedByUserId, @JsonKey(name: 'received_at') this.receivedAt, @JsonKey(name: 'updated_at') this.updatedAt, @JsonKey(name: 'student_name') this.studentName, @JsonKey(name: 'received_by_name') this.receivedByName});
+  const _SanctionModel({required this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'scope_type') required this.scopeType, @JsonKey(name: 'scope_id') required this.scopeId, @JsonKey(name: 'academic_term_id') required this.academicTermId, @JsonKey(name: 'total_absences') required this.totalAbsences, @JsonKey(name: 'required_item') required this.requiredItem, this.status = 'Pending Item', @JsonKey(name: 'received_by_user_id') this.receivedByUserId, @JsonKey(name: 'received_at') this.receivedAt, @JsonKey(name: 'updated_at') this.updatedAt, @JsonKey(name: 'student_name') this.studentName, @JsonKey(name: 'student_id_number') this.studentIdNumber, @JsonKey(name: 'program_name') this.programName, @JsonKey(name: 'year_level') this.yearLevel, @JsonKey(name: 'received_by_name') this.receivedByName});
   factory _SanctionModel.fromJson(Map<String, dynamic> json) => _$SanctionModelFromJson(json);
 
 @override final  String id;
@@ -230,7 +233,7 @@ class _SanctionModel implements SanctionModel {
 @override@JsonKey(name: 'scope_type') final  String scopeType;
 @override@JsonKey(name: 'scope_id') final  String scopeId;
 @override@JsonKey(name: 'academic_term_id') final  String academicTermId;
-@override@JsonKey(name: 'total_absences') final  int totalAbsences;
+@override@JsonKey(name: 'total_absences') final  double totalAbsences;
 @override@JsonKey(name: 'required_item') final  String requiredItem;
 @override@JsonKey() final  String status;
 @override@JsonKey(name: 'received_by_user_id') final  String? receivedByUserId;
@@ -238,6 +241,9 @@ class _SanctionModel implements SanctionModel {
 @override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
 // Join fields
 @override@JsonKey(name: 'student_name') final  String? studentName;
+@override@JsonKey(name: 'student_id_number') final  String? studentIdNumber;
+@override@JsonKey(name: 'program_name') final  String? programName;
+@override@JsonKey(name: 'year_level') final  int? yearLevel;
 @override@JsonKey(name: 'received_by_name') final  String? receivedByName;
 
 /// Create a copy of SanctionModel
@@ -253,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SanctionModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.totalAbsences, totalAbsences) || other.totalAbsences == totalAbsences)&&(identical(other.requiredItem, requiredItem) || other.requiredItem == requiredItem)&&(identical(other.status, status) || other.status == status)&&(identical(other.receivedByUserId, receivedByUserId) || other.receivedByUserId == receivedByUserId)&&(identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.studentName, studentName) || other.studentName == studentName)&&(identical(other.receivedByName, receivedByName) || other.receivedByName == receivedByName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SanctionModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.totalAbsences, totalAbsences) || other.totalAbsences == totalAbsences)&&(identical(other.requiredItem, requiredItem) || other.requiredItem == requiredItem)&&(identical(other.status, status) || other.status == status)&&(identical(other.receivedByUserId, receivedByUserId) || other.receivedByUserId == receivedByUserId)&&(identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.studentName, studentName) || other.studentName == studentName)&&(identical(other.studentIdNumber, studentIdNumber) || other.studentIdNumber == studentIdNumber)&&(identical(other.programName, programName) || other.programName == programName)&&(identical(other.yearLevel, yearLevel) || other.yearLevel == yearLevel)&&(identical(other.receivedByName, receivedByName) || other.receivedByName == receivedByName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,studentId,scopeType,scopeId,academicTermId,totalAbsences,requiredItem,status,receivedByUserId,receivedAt,updatedAt,studentName,receivedByName);
+int get hashCode => Object.hash(runtimeType,id,studentId,scopeType,scopeId,academicTermId,totalAbsences,requiredItem,status,receivedByUserId,receivedAt,updatedAt,studentName,studentIdNumber,programName,yearLevel,receivedByName);
 
 @override
 String toString() {
-  return 'SanctionModel(id: $id, studentId: $studentId, scopeType: $scopeType, scopeId: $scopeId, academicTermId: $academicTermId, totalAbsences: $totalAbsences, requiredItem: $requiredItem, status: $status, receivedByUserId: $receivedByUserId, receivedAt: $receivedAt, updatedAt: $updatedAt, studentName: $studentName, receivedByName: $receivedByName)';
+  return 'SanctionModel(id: $id, studentId: $studentId, scopeType: $scopeType, scopeId: $scopeId, academicTermId: $academicTermId, totalAbsences: $totalAbsences, requiredItem: $requiredItem, status: $status, receivedByUserId: $receivedByUserId, receivedAt: $receivedAt, updatedAt: $updatedAt, studentName: $studentName, studentIdNumber: $studentIdNumber, programName: $programName, yearLevel: $yearLevel, receivedByName: $receivedByName)';
 }
 
 
@@ -273,7 +279,7 @@ abstract mixin class _$SanctionModelCopyWith<$Res> implements $SanctionModelCopy
   factory _$SanctionModelCopyWith(_SanctionModel value, $Res Function(_SanctionModel) _then) = __$SanctionModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') int totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'received_by_name') String? receivedByName
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') double totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'student_id_number') String? studentIdNumber,@JsonKey(name: 'program_name') String? programName,@JsonKey(name: 'year_level') int? yearLevel,@JsonKey(name: 'received_by_name') String? receivedByName
 });
 
 
@@ -290,7 +296,7 @@ class __$SanctionModelCopyWithImpl<$Res>
 
 /// Create a copy of SanctionModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? studentId = null,Object? scopeType = null,Object? scopeId = null,Object? academicTermId = null,Object? totalAbsences = null,Object? requiredItem = null,Object? status = null,Object? receivedByUserId = freezed,Object? receivedAt = freezed,Object? updatedAt = freezed,Object? studentName = freezed,Object? receivedByName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? studentId = null,Object? scopeType = null,Object? scopeId = null,Object? academicTermId = null,Object? totalAbsences = null,Object? requiredItem = null,Object? status = null,Object? receivedByUserId = freezed,Object? receivedAt = freezed,Object? updatedAt = freezed,Object? studentName = freezed,Object? studentIdNumber = freezed,Object? programName = freezed,Object? yearLevel = freezed,Object? receivedByName = freezed,}) {
   return _then(_SanctionModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
@@ -298,13 +304,16 @@ as String,scopeType: null == scopeType ? _self.scopeType : scopeType // ignore: 
 as String,scopeId: null == scopeId ? _self.scopeId : scopeId // ignore: cast_nullable_to_non_nullable
 as String,academicTermId: null == academicTermId ? _self.academicTermId : academicTermId // ignore: cast_nullable_to_non_nullable
 as String,totalAbsences: null == totalAbsences ? _self.totalAbsences : totalAbsences // ignore: cast_nullable_to_non_nullable
-as int,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
+as double,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,receivedByUserId: freezed == receivedByUserId ? _self.receivedByUserId : receivedByUserId // ignore: cast_nullable_to_non_nullable
 as String?,receivedAt: freezed == receivedAt ? _self.receivedAt : receivedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,studentName: freezed == studentName ? _self.studentName : studentName // ignore: cast_nullable_to_non_nullable
-as String?,receivedByName: freezed == receivedByName ? _self.receivedByName : receivedByName // ignore: cast_nullable_to_non_nullable
+as String?,studentIdNumber: freezed == studentIdNumber ? _self.studentIdNumber : studentIdNumber // ignore: cast_nullable_to_non_nullable
+as String?,programName: freezed == programName ? _self.programName : programName // ignore: cast_nullable_to_non_nullable
+as String?,yearLevel: freezed == yearLevel ? _self.yearLevel : yearLevel // ignore: cast_nullable_to_non_nullable
+as int?,receivedByName: freezed == receivedByName ? _self.receivedByName : receivedByName // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

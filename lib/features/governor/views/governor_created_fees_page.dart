@@ -48,6 +48,12 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
   @override
   Widget build(BuildContext context) {
     final feesAsync = ref.watch(workspaceFeesProvider);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final isTablet = size.width >= 768 && size.width < 1024;
+    final padding = isMobile 
+        ? AppSpacing.md 
+        : (isTablet ? AppSpacing.lg : AppSpacing.xl);
 
     return DashboardLayout(
       title: 'Manage Fees',
@@ -57,7 +63,7 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
         }
       },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -105,13 +111,18 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.lg),
             
             feesAsync.when(
               data: (fees) {
                 if (fees.isEmpty) {
                   return _buildEmptyState();
                 }
+
+                // Stats calculation
+                final totalFees = fees.length;
+                final mandatoryCount = fees.where((f) => f.isMandatory).length;
+                final activeCount = fees.where((f) => _isFeeActive(f.dueDate)).length;
 
                 // Apply filtering
                 final filteredFees = fees.where((fee) {
@@ -154,112 +165,206 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Search Bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                    // Stats Cards Dashboard
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isSmall = constraints.maxWidth < 600;
+                        final crossCount = isSmall ? 1 : 3;
+                        final ratio = isSmall ? 3.5 : 2.5;
+                        
+                        return GridView(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossCount,
+                            crossAxisSpacing: AppSpacing.md,
+                            mainAxisSpacing: AppSpacing.md,
+                            childAspectRatio: ratio,
                           ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search by fee name or description...',
-                          hintStyle: AppTextStyles.bodySmall.copyWith(
-                            color: Colors.grey[400],
-                          ),
-                          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 18, color: Colors.grey),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() {
-                                      _searchQuery = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        style: AppTextStyles.bodyMedium,
-                      ),
+                          children: [
+                            _buildStatCard(
+                              title: 'Total Fees',
+                              value: totalFees.toString(),
+                              icon: Icons.payments_rounded,
+                              color: AppColors.primary,
+                            ),
+                            _buildStatCard(
+                              title: 'Active Requirements',
+                              value: activeCount.toString(),
+                              icon: Icons.pending_actions_rounded,
+                              color: Colors.green,
+                            ),
+                            _buildStatCard(
+                              title: 'Mandatory Fees',
+                              value: mandatoryCount.toString(),
+                              icon: Icons.assignment_late_rounded,
+                              color: Colors.orange,
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    // Filters Row
-                    Row(
-                      children: [
-                        // Category Filter
-                        PopupMenuButton<String>(
-                          onSelected: (val) {
-                            setState(() {
-                              _selectedCategory = val;
-                            });
-                          },
-                          shape: RoundedRectangleBorder(
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Search & Filters Row
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isSmallScreen = constraints.maxWidth < 768;
+                        
+                        final searchField = Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'All', child: Text('All Types')),
-                            const PopupMenuItem(value: 'Mandatory', child: Text('Mandatory')),
-                            const PopupMenuItem(value: 'Non-Mandatory', child: Text('Non-Mandatory')),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Search by fee name or description...',
+                              hintStyle: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.grey[400],
+                              ),
+                              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear_rounded, size: 18, color: Colors.grey),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _searchQuery = '';
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                        );
+
+                        final filterChips = [
+                          PopupMenuButton<String>(
+                            onSelected: (val) {
+                              setState(() {
+                                _selectedCategory = val;
+                              });
+                            },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(value: 'All', child: Text('All Types')),
+                              const PopupMenuItem(value: 'Mandatory', child: Text('Mandatory')),
+                              const PopupMenuItem(value: 'Non-Mandatory', child: Text('Non-Mandatory')),
+                            ],
+                            child: _buildFilterChip(
+                              label: _selectedCategory == 'All' ? 'Type: All' : _selectedCategory,
+                              isSelected: _selectedCategory != 'All',
+                              trailingIcon: Icons.arrow_drop_down_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          PopupMenuButton<String>(
+                            onSelected: (val) {
+                              setState(() {
+                                _selectedDeadline = val;
+                              });
+                            },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(value: 'All', child: Text('All Statuses')),
+                              const PopupMenuItem(value: 'Active', child: Text('Active')),
+                              const PopupMenuItem(value: 'Past Deadline', child: Text('Past Deadline')),
+                            ],
+                            child: _buildFilterChip(
+                              label: _selectedDeadline == 'All' ? 'Status: All' : _selectedDeadline,
+                              isSelected: _selectedDeadline != 'All',
+                              trailingIcon: Icons.arrow_drop_down_rounded,
+                            ),
+                          ),
+                        ];
+
+                        if (isSmallScreen) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              searchField,
+                              const SizedBox(height: AppSpacing.md),
+                              Row(
+                                children: filterChips,
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: searchField,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            ...filterChips,
                           ],
-                          child: _buildFilterChip(
-                            label: _selectedCategory == 'All' ? 'Type: All' : _selectedCategory,
-                            isSelected: _selectedCategory != 'All',
-                            trailingIcon: Icons.arrow_drop_down_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Deadline Status Filter
-                        PopupMenuButton<String>(
-                          onSelected: (val) {
-                            setState(() {
-                              _selectedDeadline = val;
-                            });
-                          },
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'All', child: Text('All Statuses')),
-                            const PopupMenuItem(value: 'Active', child: Text('Active')),
-                            const PopupMenuItem(value: 'Past Deadline', child: Text('Past Deadline')),
-                          ],
-                          child: _buildFilterChip(
-                            label: _selectedDeadline == 'All' ? 'Status: All' : _selectedDeadline,
-                            isSelected: _selectedDeadline != 'All',
-                            trailingIcon: Icons.arrow_drop_down_rounded,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     
                     if (filteredFees.isEmpty)
                       _buildNoResultsState()
                     else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredFees.length,
-                        separatorBuilder: (_, index) => const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, index) {
-                          final fee = filteredFees[index];
-                          return _buildFeeCard(context, fee);
+                      LayoutBuilder(
+                        builder: (context, gridConstraints) {
+                          int crossAxisCount = 1;
+                          if (gridConstraints.maxWidth > 1200) {
+                            crossAxisCount = 3;
+                          } else if (gridConstraints.maxWidth > 768) {
+                            crossAxisCount = 2;
+                          }
+
+                          if (crossAxisCount == 1) {
+                            return ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: filteredFees.length,
+                              separatorBuilder: (_, index) => const SizedBox(height: AppSpacing.md),
+                              itemBuilder: (context, index) {
+                                final fee = filteredFees[index];
+                                return _buildFeeCard(context, fee);
+                              },
+                            );
+                          } else {
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: AppSpacing.md,
+                                mainAxisSpacing: AppSpacing.md,
+                                mainAxisExtent: 260,
+                              ),
+                              itemCount: filteredFees.length,
+                              itemBuilder: (context, index) {
+                                final fee = filteredFees[index];
+                                return _buildFeeCard(context, fee);
+                              },
+                            );
+                          }
                         },
                       ),
                   ],
@@ -270,6 +375,68 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -344,22 +511,29 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isCardNarrow = constraints.maxWidth < 460;
+              final hasDesc = fee.description != null && fee.description!.isNotEmpty;
+              final isBounded = constraints.maxHeight.isFinite;
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fee.name,
-                          style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              fee.name,
+                              style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -385,88 +559,145 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '₱${fee.amount.toStringAsFixed(2)}',
-                    style: AppTextStyles.titleLarge.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  PopupMenuButton<String>(
-                    onSelected: (val) {
-                      if (val == 'edit') {
-                        _navigateToEdit(context, fee);
-                      } else if (val == 'delete') {
-                        _deleteFee(context, fee);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit Fee')),
-                      const PopupMenuItem(value: 'delete', child: Text('Delete Fee', style: TextStyle(color: Colors.red))),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '₱${fee.amount.toStringAsFixed(2)}',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        onSelected: (val) {
+                          if (val == 'edit') {
+                            _navigateToEdit(context, fee);
+                          } else if (val == 'delete') {
+                            _deleteFee(context, fee);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(value: 'edit', child: Text('Edit Fee')),
+                          const PopupMenuItem(value: 'delete', child: Text('Delete Fee', style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (hasDesc) ...[
+                    Text(
+                      fee.description!,
+                      style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[700], height: 1.4),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (isBounded) const Spacer(),
+                  if (!isBounded) const SizedBox(height: AppSpacing.lg),
+                  const Divider(height: 1),
+                  const SizedBox(height: AppSpacing.md),
+                  if (isCardNarrow) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Due: ${DateFormat.yMMMd().format(fee.dueDate)}',
+                          style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isActive 
+                                ? Colors.green.withValues(alpha: 0.1) 
+                                : Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isActive 
+                                  ? Colors.green.withValues(alpha: 0.2) 
+                                  : Colors.red.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Text(
+                            isActive ? 'ACTIVE' : 'PAST DEADLINE',
+                            style: TextStyle(
+                              color: isActive ? Colors.green[700] : Colors.red[700],
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => GovernorFeeReportPage(fee: fee),
+                          ),
+                        ),
+                        child: const Text('View Payment Report'),
+                      ),
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Due: ${DateFormat.yMMMd().format(fee.dueDate)}',
+                          style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isActive 
+                                ? Colors.green.withValues(alpha: 0.1) 
+                                : Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isActive 
+                                  ? Colors.green.withValues(alpha: 0.2) 
+                                  : Colors.red.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Text(
+                            isActive ? 'ACTIVE' : 'PAST DEADLINE',
+                            style: TextStyle(
+                              color: isActive ? Colors.green[700] : Colors.red[700],
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        FilledButton.tonal(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GovernorFeeReportPage(fee: fee),
+                            ),
+                          ),
+                          child: const Text('View Payment Report'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              if (fee.description != null && fee.description!.isNotEmpty)
-                Text(
-                  fee.description!,
-                  style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[700], height: 1.4),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(height: AppSpacing.lg),
-              const Divider(height: 1),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Due: ${DateFormat.yMMMd().format(fee.dueDate)}',
-                    style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isActive 
-                          ? Colors.green.withValues(alpha: 0.1) 
-                          : Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isActive 
-                            ? Colors.green.withValues(alpha: 0.2) 
-                            : Colors.red.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Text(
-                      isActive ? 'ACTIVE' : 'PAST DEADLINE',
-                      style: TextStyle(
-                        color: isActive ? Colors.green[700] : Colors.red[700],
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  FilledButton.tonal(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => GovernorFeeReportPage(fee: fee),
-                      ),
-                    ),
-                    child: const Text('View Payment Report'),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
