@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SanctionModel {
 
- String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'scope_type') String get scopeType;@JsonKey(name: 'scope_id') String get scopeId;@JsonKey(name: 'academic_term_id') String get academicTermId;@JsonKey(name: 'total_absences') int get totalAbsences;@JsonKey(name: 'required_item') String get requiredItem; String get status;@JsonKey(name: 'received_by_user_id') String? get receivedByUserId;@JsonKey(name: 'received_at') DateTime? get receivedAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;// Join fields
+ String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'scope_type') String get scopeType;@JsonKey(name: 'scope_id') String get scopeId;@JsonKey(name: 'academic_term_id') String get academicTermId;@JsonKey(name: 'total_absences') double get totalAbsences;@JsonKey(name: 'required_item') String get requiredItem; String get status;@JsonKey(name: 'received_by_user_id') String? get receivedByUserId;@JsonKey(name: 'received_at') DateTime? get receivedAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;// Join fields
 @JsonKey(name: 'student_name') String? get studentName;@JsonKey(name: 'received_by_name') String? get receivedByName;
 /// Create a copy of SanctionModel
 /// with the given fields replaced by the non-null parameter values.
@@ -49,7 +49,7 @@ abstract mixin class $SanctionModelCopyWith<$Res>  {
   factory $SanctionModelCopyWith(SanctionModel value, $Res Function(SanctionModel) _then) = _$SanctionModelCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') int totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'received_by_name') String? receivedByName
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') double totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'received_by_name') String? receivedByName
 });
 
 
@@ -74,7 +74,7 @@ as String,scopeType: null == scopeType ? _self.scopeType : scopeType // ignore: 
 as String,scopeId: null == scopeId ? _self.scopeId : scopeId // ignore: cast_nullable_to_non_nullable
 as String,academicTermId: null == academicTermId ? _self.academicTermId : academicTermId // ignore: cast_nullable_to_non_nullable
 as String,totalAbsences: null == totalAbsences ? _self.totalAbsences : totalAbsences // ignore: cast_nullable_to_non_nullable
-as int,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
+as double,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,receivedByUserId: freezed == receivedByUserId ? _self.receivedByUserId : receivedByUserId // ignore: cast_nullable_to_non_nullable
 as String?,receivedAt: freezed == receivedAt ? _self.receivedAt : receivedAt // ignore: cast_nullable_to_non_nullable
@@ -166,7 +166,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  int totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  double totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SanctionModel() when $default != null:
 return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.receivedByName);case _:
@@ -187,7 +187,7 @@ return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.aca
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  int totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  double totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)  $default,) {final _that = this;
 switch (_that) {
 case _SanctionModel():
 return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.receivedByName);case _:
@@ -207,7 +207,7 @@ return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.aca
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  int totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'academic_term_id')  String academicTermId, @JsonKey(name: 'total_absences')  double totalAbsences, @JsonKey(name: 'required_item')  String requiredItem,  String status, @JsonKey(name: 'received_by_user_id')  String? receivedByUserId, @JsonKey(name: 'received_at')  DateTime? receivedAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'student_name')  String? studentName, @JsonKey(name: 'received_by_name')  String? receivedByName)?  $default,) {final _that = this;
 switch (_that) {
 case _SanctionModel() when $default != null:
 return $default(_that.id,_that.studentId,_that.scopeType,_that.scopeId,_that.academicTermId,_that.totalAbsences,_that.requiredItem,_that.status,_that.receivedByUserId,_that.receivedAt,_that.updatedAt,_that.studentName,_that.receivedByName);case _:
@@ -230,7 +230,7 @@ class _SanctionModel implements SanctionModel {
 @override@JsonKey(name: 'scope_type') final  String scopeType;
 @override@JsonKey(name: 'scope_id') final  String scopeId;
 @override@JsonKey(name: 'academic_term_id') final  String academicTermId;
-@override@JsonKey(name: 'total_absences') final  int totalAbsences;
+@override@JsonKey(name: 'total_absences') final  double totalAbsences;
 @override@JsonKey(name: 'required_item') final  String requiredItem;
 @override@JsonKey() final  String status;
 @override@JsonKey(name: 'received_by_user_id') final  String? receivedByUserId;
@@ -273,7 +273,7 @@ abstract mixin class _$SanctionModelCopyWith<$Res> implements $SanctionModelCopy
   factory _$SanctionModelCopyWith(_SanctionModel value, $Res Function(_SanctionModel) _then) = __$SanctionModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') int totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'received_by_name') String? receivedByName
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'academic_term_id') String academicTermId,@JsonKey(name: 'total_absences') double totalAbsences,@JsonKey(name: 'required_item') String requiredItem, String status,@JsonKey(name: 'received_by_user_id') String? receivedByUserId,@JsonKey(name: 'received_at') DateTime? receivedAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'student_name') String? studentName,@JsonKey(name: 'received_by_name') String? receivedByName
 });
 
 
@@ -298,7 +298,7 @@ as String,scopeType: null == scopeType ? _self.scopeType : scopeType // ignore: 
 as String,scopeId: null == scopeId ? _self.scopeId : scopeId // ignore: cast_nullable_to_non_nullable
 as String,academicTermId: null == academicTermId ? _self.academicTermId : academicTermId // ignore: cast_nullable_to_non_nullable
 as String,totalAbsences: null == totalAbsences ? _self.totalAbsences : totalAbsences // ignore: cast_nullable_to_non_nullable
-as int,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
+as double,requiredItem: null == requiredItem ? _self.requiredItem : requiredItem // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,receivedByUserId: freezed == receivedByUserId ? _self.receivedByUserId : receivedByUserId // ignore: cast_nullable_to_non_nullable
 as String?,receivedAt: freezed == receivedAt ? _self.receivedAt : receivedAt // ignore: cast_nullable_to_non_nullable

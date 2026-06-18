@@ -59,6 +59,59 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     }
   }
 
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.textGrey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: AppTextStyles.headlineMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -69,6 +122,12 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
 
     final activeRole = ref.watch(workspaceProvider).activeRole;
     final canManageSanctions = activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false;
+
+    final attendanceEvents = attendanceAsync.value ?? [];
+    final double totalSanctionScore = attendanceEvents.fold<double>(
+      0.0,
+      (sum, event) => sum + (event['sanction_score'] as num).toDouble(),
+    );
 
     return DashboardLayout(
       title: 'Student Sanction Profile',
@@ -126,7 +185,35 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.md),
+
+                // Stats cards Row
+                if (attendanceAsync.hasValue) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          title: 'Total Sanction Score',
+                          value: totalSanctionScore % 1 == 0
+                              ? totalSanctionScore.toInt().toString()
+                              : totalSanctionScore.toStringAsFixed(1),
+                          color: totalSanctionScore == 0.0 ? AppColors.success : AppColors.error,
+                          icon: Icons.gavel_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: _buildStatCard(
+                          title: 'Mandatory Events',
+                          value: attendanceEvents.length.toString(),
+                          color: AppColors.primary,
+                          icon: Icons.event_note_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
 
                 // 2. Attendance & Event Contribution Section
                 Text('Attendance History & Contributions', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
@@ -296,7 +383,10 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Requirement Details', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-                                    Text('${sanction.totalAbsences} Absences Triggered', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
+                                    Text(
+                                      '${sanction.totalAbsences % 1 == 0 ? sanction.totalAbsences.toInt().toString() : sanction.totalAbsences.toStringAsFixed(1)} Sanction Score Triggered',
+                                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
+                                    ),
                                   ],
                                 ),
                                 Container(

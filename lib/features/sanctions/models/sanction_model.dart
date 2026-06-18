@@ -11,7 +11,7 @@ abstract class SanctionModel with _$SanctionModel {
     @JsonKey(name: 'scope_type') required String scopeType,
     @JsonKey(name: 'scope_id') required String scopeId,
     @JsonKey(name: 'academic_term_id') required String academicTermId,
-    @JsonKey(name: 'total_absences') required int totalAbsences,
+    @JsonKey(name: 'total_absences') required double totalAbsences,
     @JsonKey(name: 'required_item') required String requiredItem,
     @Default('Pending Item') String status,
     @JsonKey(name: 'received_by_user_id') String? receivedByUserId,

@@ -13,7 +13,7 @@ _SanctionModel _$SanctionModelFromJson(Map<String, dynamic> json) =>
       scopeType: json['scope_type'] as String,
       scopeId: json['scope_id'] as String,
       academicTermId: json['academic_term_id'] as String,
-      totalAbsences: (json['total_absences'] as num).toInt(),
+      totalAbsences: (json['total_absences'] as num).toDouble(),
       requiredItem: json['required_item'] as String,
       status: json['status'] as String? ?? 'Pending Item',
       receivedByUserId: json['received_by_user_id'] as String?,

@@ -342,7 +342,10 @@ class _SanctionRecordCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(sanction.studentName ?? 'Unknown Student', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-                    Text('${sanction.totalAbsences} Absences', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
+                    Text(
+                      '${sanction.totalAbsences % 1 == 0 ? sanction.totalAbsences.toInt().toString() : sanction.totalAbsences.toStringAsFixed(1)} Sanction Score',
+                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
+                    ),
                   ],
                 ),
                 _StatusBadge(status: sanction.status),

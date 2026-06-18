@@ -68,7 +68,10 @@ class MySanctionsPage extends ConsumerWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${sanction.totalAbsences} Absences', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+                                Text(
+                                  '${sanction.totalAbsences % 1 == 0 ? sanction.totalAbsences.toInt().toString() : sanction.totalAbsences.toStringAsFixed(1)} Sanction Score',
+                                  style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                                ),
                                 Text('Workspace: ${sanction.scopeType}', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
                               ],
                             ),
