@@ -809,19 +809,9 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                 children: [
                   Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 8),
-                  Text(
-                    'Sanctions',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Manage Sanctions',
+                      'Sanctions',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.bodySmall.copyWith(
