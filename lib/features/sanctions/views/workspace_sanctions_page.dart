@@ -22,20 +22,8 @@ class WorkspaceSanctionsPage extends ConsumerStatefulWidget {
   ConsumerState<WorkspaceSanctionsPage> createState() => _WorkspaceSanctionsPageState();
 }
 
-class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage> {
+  String _currentView = 'records'; // 'records' or 'rules'
 
   @override
   Widget build(BuildContext context) {
@@ -43,238 +31,32 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
       title: 'Compliance & Sanctions',
       child: Column(
         children: [
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Compliance'),
-              Tab(text: 'Sanctions'),
-            ],
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textGrey,
-            indicatorColor: AppColors.primary,
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                _ComplianceTab(),
-                _SanctionsManagementTab(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+            child: Row(
+              children: [
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'records', label: Text('Sanction Records'), icon: Icon(Icons.gavel_rounded)),
+                    ButtonSegment(value: 'rules', label: Text('Sanction Rules'), icon: Icon(Icons.rule_rounded)),
+                  ],
+                  selected: {_currentView},
+                  onSelectionChanged: (val) {
+                    setState(() {
+                      _currentView = val.first;
+                    });
+                  },
+                ),
               ],
             ),
+          ),
+          Expanded(
+            child: _currentView == 'records'
+                ? const _SanctionRecordsTab()
+                : const SanctionRulesPage(),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ComplianceTab extends ConsumerStatefulWidget {
-  const _ComplianceTab();
-
-  @override
-  ConsumerState<_ComplianceTab> createState() => _ComplianceTabState();
-}
-
-class _ComplianceTabState extends ConsumerState<_ComplianceTab> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  String _getYearDisplay(int? year) {
-    if (year == null) return 'N/A';
-    switch (year) {
-      case 1:
-        return '1st Year';
-      case 2:
-        return '2nd Year';
-      case 3:
-        return '3rd Year';
-      case 4:
-        return '4th Year';
-      default:
-        return '$year\'th Year';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final complianceAsync = ref.watch(workspaceComplianceProvider);
-
-    return complianceAsync.when(
-      data: (members) {
-        if (members.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.assignment_turned_in_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.2)),
-                const SizedBox(height: AppSpacing.md),
-                const Text('No members found.', style: TextStyle(color: AppColors.textGrey)),
-              ],
-            ),
-          );
-        }
-
-        final filteredMembers = members.where((m) {
-          final query = _searchQuery.toLowerCase();
-          return m.name.toLowerCase().contains(query) ||
-              m.schoolId.toLowerCase().contains(query) ||
-              m.program.toLowerCase().contains(query);
-        }).toList();
-
-        return Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search input
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search members by name, ID, or program...',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                ),
-                onChanged: (val) {
-                  setState(() {
-                    _searchQuery = val;
-                  });
-                },
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              
-              // Members list table
-              Expanded(
-                child: Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              showCheckboxColumn: false,
-                              columnSpacing: AppSpacing.lg,
-                              headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
-                              columns: const [
-                                DataColumn(label: Text('Student ID no.')),
-                                DataColumn(label: Text('Name')),
-                                DataColumn(label: Text('Program')),
-                                DataColumn(label: Text('Year')),
-                                DataColumn(label: Text('Event Attended')),
-                                DataColumn(label: Text('Sanction Score')),
-                              ],
-                              rows: filteredMembers.map((member) {
-                                final isCompliant = member.sanctionScore == 0;
-                                final scoreColor = isCompliant ? AppColors.success : AppColors.error;
-                                
-                                return DataRow(
-                                  onSelectChanged: (_) {
-                                    context.pushNamed(
-                                      RouteNames.workspaceSanctionProfile,
-                                      pathParameters: {'studentId': member.studentId},
-                                    );
-                                  },
-                                  cells: [
-                                    DataCell(Text(member.schoolId, style: AppTextStyles.bodyMedium)),
-                                    DataCell(Text(member.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold))),
-                                    DataCell(Text(member.program, style: AppTextStyles.bodyMedium)),
-                                    DataCell(Text(_getYearDisplay(member.year), style: AppTextStyles.bodyMedium)),
-                                    DataCell(Text('${member.attendedEvents} / ${member.totalMandatoryEvents}', style: AppTextStyles.bodyMedium)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: scoreColor.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: scoreColor.withValues(alpha: 0.2)),
-                                        ),
-                                        child: Text(
-                                          member.sanctionScore % 1 == 0
-                                              ? member.sanctionScore.toInt().toString()
-                                              : member.sanctionScore.toStringAsFixed(1),
-                                          style: TextStyle(
-                                            color: scoreColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error: $err')),
-    );
-  }
-}
-
-class _SanctionsManagementTab extends StatefulWidget {
-  const _SanctionsManagementTab();
-
-  @override
-  State<_SanctionsManagementTab> createState() => _SanctionsManagementTabState();
-}
-
-class _SanctionsManagementTabState extends State<_SanctionsManagementTab> {
-  String _currentView = 'records'; // 'records' or 'rules'
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
-          child: Row(
-            children: [
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'records', label: Text('Sanction Records'), icon: Icon(Icons.gavel_rounded)),
-                  ButtonSegment(value: 'rules', label: Text('Sanction Rules'), icon: Icon(Icons.rule_rounded)),
-                ],
-                selected: {_currentView},
-                onSelectionChanged: (val) {
-                  setState(() {
-                    _currentView = val.first;
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _currentView == 'records'
-              ? const _SanctionRecordsTab()
-              : const SanctionRulesPage(),
-        ),
-      ],
     );
   }
 }
