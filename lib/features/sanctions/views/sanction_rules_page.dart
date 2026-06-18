@@ -31,22 +31,13 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
 
     if (org == null || term == null) return [];
 
-    String? scopeId = org.campusId;
-    if (org.type == 'faculty-based') {
-      scopeId = org.facultyId;
-    } else if (org.type == 'program-based') {
-      scopeId = org.programId;
-    }
-
-    if (scopeId == null) return [];
-
     final response = await _client
         .from('sanction_rules')
         .select()
-        .eq('scope_id', scopeId)
+        .eq('scope_id', org.id)
         .eq('academic_term_id', term.id)
         .order('min_absence', ascending: true);
-    
+
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -195,13 +186,11 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
                 if (ruleType == 'range' && maxScoreController.text.isEmpty) return;
                 if (itemController.text.isEmpty) return;
 
-                String? scopeId = org.campusId;
+                final String scopeId = org.id;
                 String scopeType = 'Institutional';
                 if (org.type == 'faculty-based') {
-                  scopeId = org.facultyId;
                   scopeType = 'Faculty';
                 } else if (org.type == 'program-based') {
-                  scopeId = org.programId;
                   scopeType = 'Program';
                 }
 
@@ -301,17 +290,7 @@ class _SanctionRulesPageState extends ConsumerState<SanctionRulesPage> {
 
                           setState(() => _isSyncing = true);
                           try {
-                            String? scopeId = org.campusId;
-                            String scopeType = 'Institutional';
-                            if (org.type == 'faculty-based') {
-                              scopeId = org.facultyId;
-                              scopeType = 'Faculty';
-                            } else if (org.type == 'program-based') {
-                              scopeId = org.programId;
-                              scopeType = 'Program';
-                            }
-                            
-                            await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, scopeId!, scopeType);
+                            await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, org.id, org.type);
                             ref.invalidate(workspaceSanctionsProvider);
                             ref.invalidate(mySanctionsProvider);
                             

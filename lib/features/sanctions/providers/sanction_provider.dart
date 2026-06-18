@@ -19,17 +19,8 @@ final workspaceSanctionsProvider = FutureProvider<List<SanctionModel>>((ref) asy
 
   if (org == null || term == null) return [];
 
-  String? scopeId = org.campusId;
-  if (org.type == 'faculty-based') {
-    scopeId = org.facultyId;
-  } else if (org.type == 'program-based') {
-    scopeId = org.programId;
-  }
-
-  if (scopeId == null) return [];
-
   final repository = ref.watch(sanctionRepositoryProvider);
-  return repository.getWorkspaceSanctions(scopeId, term.id);
+  return repository.getWorkspaceSanctions(org.id, term.id);
 });
 
 final mySanctionsProvider = FutureProvider<List<SanctionModel>>((ref) async {
@@ -111,20 +102,11 @@ final studentSanctionRecordProvider = FutureProvider.family<SanctionModel?, Stri
 
   if (org == null || term == null) return null;
 
-  String? scopeId = org.campusId;
-  if (org.type == 'faculty-based') {
-    scopeId = org.facultyId;
-  } else if (org.type == 'program-based') {
-    scopeId = org.programId;
-  }
-
-  if (scopeId == null) return null;
-
   final repository = ref.watch(sanctionRepositoryProvider);
   return repository.getStudentSanctionRecord(
     studentId: studentId,
     termId: term.id,
-    scopeId: scopeId,
+    scopeId: org.id,
   );
 });
 

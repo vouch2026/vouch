@@ -16,7 +16,12 @@ import '../repositories/sanction_repository.dart';
 
 class SanctionProfilePage extends ConsumerStatefulWidget {
   final String studentId;
-  const SanctionProfilePage({super.key, required this.studentId});
+  final bool isPersonalView;
+  const SanctionProfilePage({
+    super.key,
+    required this.studentId,
+    this.isPersonalView = false,
+  });
 
   @override
   ConsumerState<SanctionProfilePage> createState() => _SanctionProfilePageState();
@@ -130,8 +135,8 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     );
 
     return DashboardLayout(
-      title: 'Student Sanction Profile',
-      onBack: () => context.pop(),
+      title: widget.isPersonalView ? 'My Sanctions' : 'Student Sanction Profile',
+      onBack: widget.isPersonalView ? null : () => context.pop(),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: profileAsync.when(

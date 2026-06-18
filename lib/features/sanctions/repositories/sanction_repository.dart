@@ -88,174 +88,198 @@ class SanctionRepository {
 
   /// Auto-generates sanction records for students with absences in mandatory events based on calculated sanction score.
   Future<void> generateSanctionsForTerm(String termId, String scopeId, String scopeType) async {
-    // 1. Get all mandatory events for this scope and term
-    final eventsResponse = await _client
-        .from('events')
-        .select('id')
-        .eq('scope_id', scopeId)
-        .eq('scope_type', scopeType)
-        .eq('academic_term_id', termId)
-        .eq('is_mandatory', true);
-    
-    final eventIds = (eventsResponse as List).map((e) => e['id'] as String).toList();
-    if (eventIds.isEmpty) return;
+    // scopeId can be either an organization_id (when synced from UI) or a subdivision_id (when triggered from excuse reviews).
+    List<Map<String, dynamic>> targetOrgs = [];
 
-    // 2. Get all sanction rules for this scope and term
-    final rulesResponse = await _client
-        .from('sanction_rules')
-        .select()
-        .eq('scope_id', scopeId)
-        .eq('academic_term_id', termId);
-    
-    final rules = rulesResponse as List;
-    if (rules.isEmpty) return;
+    // Try to lookup scopeId as an organization ID first
+    final directOrg = await _client.from('organizations').select().eq('id', scopeId).maybeSingle();
 
-    // 3. Lookup organization ID matching the scope
-    var orgQuery = _client.from('organizations').select('id');
-    if (scopeType == 'Institutional') {
-      orgQuery = orgQuery.eq('campus_id', scopeId);
-    } else if (scopeType == 'Faculty') {
-      orgQuery = orgQuery.eq('faculty_id', scopeId);
-    } else if (scopeType == 'Program') {
-      orgQuery = orgQuery.eq('program_id', scopeId);
-    }
-    final orgResult = await orgQuery.limit(1).maybeSingle();
-    if (orgResult == null) return;
-    final String orgId = orgResult['id'] as String;
-
-    // Get all standard members of this organization (exclude officers)
-    final membersResponse = await _client
-        .from('organization_members')
-        .select('''
-          user_id,
-          role:roles (name)
-        ''')
-        .eq('organization_id', orgId);
-
-    final List<Map<String, dynamic>> memberRows = List<Map<String, dynamic>>.from(membersResponse);
-    final List<String> allStudentIds = [];
-    for (var row in memberRows) {
-      final roleData = row['role'];
-      final roleName = roleData != null ? roleData['name'] as String? ?? 'Member' : 'Member';
-      if (roleName == 'Member' || roleName == 'Students') {
-        allStudentIds.add(row['user_id'] as String);
+    if (directOrg != null) {
+      targetOrgs.add(directOrg);
+    } else {
+      // Otherwise, lookup organizations matching the subdivision scopeId
+      var orgQuery = _client.from('organizations').select();
+      if (scopeType == 'Institutional' || scopeType == 'campus-based') {
+        orgQuery = orgQuery.eq('campus_id', scopeId);
+      } else if (scopeType == 'Faculty' || scopeType == 'faculty-based') {
+        orgQuery = orgQuery.eq('faculty_id', scopeId);
+      } else if (scopeType == 'Program' || scopeType == 'program-based') {
+        orgQuery = orgQuery.eq('program_id', scopeId);
       }
+      final orgs = await orgQuery;
+      targetOrgs = List<Map<String, dynamic>>.from(orgs);
     }
 
-    if (allStudentIds.isEmpty) {
-      // Clear all sanction records in this scope and term if there are no members
-      await _client
-          .from('student_sanction_records')
-          .delete()
-          .eq('scope_id', scopeId)
+    if (targetOrgs.isEmpty) return;
+
+    for (var org in targetOrgs) {
+      final String orgId = org['id'] as String;
+
+      // Resolve subdivision scope for fetching events
+      String subdivisionScopeId = org['campus_id'] as String;
+      String subdivisionScopeType = 'Institutional';
+      final String orgTypeStr = org['type'] as String;
+      if (orgTypeStr == 'faculty-based' || orgTypeStr == 'Faculty') {
+        subdivisionScopeId = org['faculty_id'] as String;
+        subdivisionScopeType = 'Faculty';
+      } else if (orgTypeStr == 'program-based' || orgTypeStr == 'Program') {
+        subdivisionScopeId = org['program_id'] as String;
+        subdivisionScopeType = 'Program';
+      }
+
+      // 1. Get all mandatory events for this subdivision scope and term
+      final eventsResponse = await _client
+          .from('events')
+          .select('id')
+          .eq('scope_id', subdivisionScopeId)
+          .eq('scope_type', subdivisionScopeType)
+          .eq('academic_term_id', termId)
+          .eq('is_mandatory', true);
+
+      final eventIds = (eventsResponse as List).map((e) => e['id'] as String).toList();
+      if (eventIds.isEmpty) continue;
+
+      // 2. Get all sanction rules for this specific organization and term
+      final rulesResponse = await _client
+          .from('sanction_rules')
+          .select()
+          .eq('scope_id', orgId)
           .eq('academic_term_id', termId);
-      return;
-    }
 
-    // Clean up/delete any existing sanction records for users who are no longer standard members
-    await _client
-        .from('student_sanction_records')
-        .delete()
-        .eq('scope_id', scopeId)
-        .eq('academic_term_id', termId)
-        .not('student_id', 'in', allStudentIds);
+      final rules = rulesResponse as List;
+      if (rules.isEmpty) continue;
 
-    // 4. Fetch all attendance records for these events
-    final attendanceResponse = await _client
-        .from('student_attendance')
-        .select('student_id, event_id, actual_time_in, actual_time_out')
-        .filter('event_id', 'in', eventIds);
-    
-    final List<Map<String, dynamic>> attendanceData = List<Map<String, dynamic>>.from(attendanceResponse);
-    final Map<String, Map<String, Map<String, dynamic>>> studentAttendanceMap = {};
-    for (var row in attendanceData) {
-      final studentId = row['student_id'] as String;
-      final eventId = row['event_id'] as String;
-      studentAttendanceMap.putIfAbsent(studentId, () => {})[eventId] = row;
-    }
+      // 3. Get all standard members of this organization (exclude officers)
+      final membersResponse = await _client
+          .from('organization_members')
+          .select('''
+            user_id,
+            role:roles (name)
+          ''')
+          .eq('organization_id', orgId);
 
-    // 5. Calculate total sanction score for each student across all mandatory events
-    final Map<String, double> studentSanctionScores = {};
-    for (var studentId in allStudentIds) {
-      double score = 0.0;
-      final studentAtt = studentAttendanceMap[studentId];
-
-      for (var eventId in eventIds) {
-        final attRecord = studentAtt?[eventId];
-
-        if (attRecord != null) {
-          final hasTimeIn = attRecord['actual_time_in'] != null;
-          final hasTimeOut = attRecord['actual_time_out'] != null;
-
-          if (hasTimeIn && hasTimeOut) {
-            // Present: 0 points
-          } else if (hasTimeIn || hasTimeOut) {
-            // Partially present: 0.5 points
-            score += 0.5;
-          } else {
-            // Both null: 1.0 point
-            score += 1.0;
-          }
-        } else {
-          // No attendance record: 1.0 point
-          score += 1.0;
+      final List<Map<String, dynamic>> memberRows = List<Map<String, dynamic>>.from(membersResponse);
+      final List<String> allStudentIds = [];
+      for (var row in memberRows) {
+        final roleData = row['role'];
+        final roleName = roleData != null ? roleData['name'] as String? ?? 'Member' : 'Member';
+        if (roleName == 'Member' || roleName == 'Students') {
+          allStudentIds.add(row['user_id'] as String);
         }
       }
 
-      if (score > 0) {
-        studentSanctionScores[studentId] = score;
+      if (allStudentIds.isEmpty) {
+        // Clear all sanction records in this org scope and term if there are no members
+        await _client
+            .from('student_sanction_records')
+            .delete()
+            .eq('scope_id', orgId)
+            .eq('academic_term_id', termId);
+        continue;
       }
-    }
 
-    // 6. For each student with a sanction score > 0, find the matching sanction rule and create a record
-    List<Map<String, dynamic>> sanctionRecords = [];
+      // Clean up/delete any existing sanction records for users who are no longer standard members of this organization
+      await _client
+          .from('student_sanction_records')
+          .delete()
+          .eq('scope_id', orgId)
+          .eq('academic_term_id', termId)
+          .not('student_id', 'in', allStudentIds);
 
-    studentSanctionScores.forEach((studentId, score) {
-      // Find matching rules: min_absence <= score && (max_absence == null || score <= max_absence)
-      final matchingRules = rules.where((r) {
-        final double minAbs = (r['min_absence'] as num?)?.toDouble() ?? 0.0;
-        final double? maxAbs = r['max_absence'] != null ? (r['max_absence'] as num).toDouble() : null;
-        return score >= minAbs && (maxAbs == null || score <= maxAbs);
-      }).toList();
+      // 4. Fetch all attendance records for these events
+      final attendanceResponse = await _client
+          .from('student_attendance')
+          .select('student_id, event_id, actual_time_in, actual_time_out')
+          .filter('event_id', 'in', eventIds)
+          .filter('student_id', 'in', allStudentIds);
 
-      if (matchingRules.isNotEmpty) {
-        // Sort descending by min_absence, and ascending by max_absence to select the most specific matching rule
-        matchingRules.sort((a, b) {
-          final double minA = (a['min_absence'] as num?)?.toDouble() ?? 0.0;
-          final double minB = (b['min_absence'] as num?)?.toDouble() ?? 0.0;
-          final minCompare = minB.compareTo(minA);
-          if (minCompare != 0) return minCompare;
-
-          final double? maxA = a['max_absence'] != null ? (a['max_absence'] as num).toDouble() : null;
-          final double? maxB = b['max_absence'] != null ? (b['max_absence'] as num).toDouble() : null;
-          if (maxA == null && maxB != null) return 1;
-          if (maxA != null && maxB == null) return -1;
-          if (maxA != null && maxB != null) return maxA.compareTo(maxB);
-          return 0;
-        });
-
-        final rule = matchingRules.first;
-        final worthVal = rule['required_value'];
-        final worth = worthVal != null ? ' (Worth: ₱${(worthVal as num).toStringAsFixed(2)})' : '';
-        
-        sanctionRecords.add({
-          'student_id': studentId,
-          'scope_type': scopeType,
-          'scope_id': scopeId,
-          'academic_term_id': termId,
-          'total_absences': score, // Stores the computed sanction score
-          'required_item': '${rule['item_description']}$worth',
-          'status': 'Pending Item',
-        });
+      final List<Map<String, dynamic>> attendanceData = List<Map<String, dynamic>>.from(attendanceResponse);
+      final Map<String, Map<String, Map<String, dynamic>>> studentAttendanceMap = {};
+      for (var row in attendanceData) {
+        final studentId = row['student_id'] as String;
+        final eventId = row['event_id'] as String;
+        studentAttendanceMap.putIfAbsent(studentId, () => {})[eventId] = row;
       }
-    });
 
-    if (sanctionRecords.isNotEmpty) {
-      // Upsert to avoid duplicates for the same student/scope/term
-      await _client.from('student_sanction_records').upsert(
-        sanctionRecords, 
-        onConflict: 'student_id, scope_id, academic_term_id'
-      );
+      // 5. Calculate total sanction score for each student across all mandatory events
+      final Map<String, double> studentSanctionScores = {};
+      for (var studentId in allStudentIds) {
+        double score = 0.0;
+        final studentAtt = studentAttendanceMap[studentId];
+
+        for (var eventId in eventIds) {
+          final attRecord = studentAtt?[eventId];
+
+          if (attRecord != null) {
+            final hasTimeIn = attRecord['actual_time_in'] != null;
+            final hasTimeOut = attRecord['actual_time_out'] != null;
+
+            if (hasTimeIn && hasTimeOut) {
+              // Present: 0 points
+            } else if (hasTimeIn || hasTimeOut) {
+              score += 0.5;
+            } else {
+              score += 1.0;
+            }
+          } else {
+            score += 1.0;
+          }
+        }
+
+        if (score > 0) {
+          studentSanctionScores[studentId] = score;
+        }
+      }
+
+      // 6. For each student with a sanction score > 0, find the matching sanction rule and create a record
+      List<Map<String, dynamic>> sanctionRecords = [];
+
+      studentSanctionScores.forEach((studentId, score) {
+        final matchingRules = rules.where((r) {
+          final double minAbs = (r['min_absence'] as num?)?.toDouble() ?? 0.0;
+          final double? maxAbs = r['max_absence'] != null ? (r['max_absence'] as num).toDouble() : null;
+          return score >= minAbs && (maxAbs == null || score <= maxAbs);
+        }).toList();
+
+        if (matchingRules.isNotEmpty) {
+          // Sort descending by min_absence, and ascending by max_absence to select the most specific matching rule
+          matchingRules.sort((a, b) {
+            final double minA = (a['min_absence'] as num?)?.toDouble() ?? 0.0;
+            final double minB = (b['min_absence'] as num?)?.toDouble() ?? 0.0;
+            final minCompare = minB.compareTo(minA);
+            if (minCompare != 0) return minCompare;
+
+            final double? maxA = a['max_absence'] != null ? (a['max_absence'] as num).toDouble() : null;
+            final double? maxB = b['max_absence'] != null ? (b['max_absence'] as num).toDouble() : null;
+            if (maxA == null && maxB != null) return 1;
+            if (maxA != null && maxB == null) return -1;
+            if (maxA != null && maxB != null) return maxA.compareTo(maxB);
+            return 0;
+          });
+
+          final rule = matchingRules.first;
+          final worthVal = rule['required_value'];
+          final worth = worthVal != null ? ' (Worth: ₱${(worthVal as num).toStringAsFixed(2)})' : '';
+
+          sanctionRecords.add({
+            'student_id': studentId,
+            'scope_type': subdivisionScopeType,
+            'scope_id': orgId,
+            'academic_term_id': termId,
+            'total_absences': score,
+            'required_item': '${rule['item_description']}$worth',
+            'status': 'Pending Item',
+          });
+        }
+      });
+
+      if (sanctionRecords.isNotEmpty) {
+        // Upsert to avoid duplicates for the same student/organization/term
+        await _client.from('student_sanction_records').upsert(
+          sanctionRecords,
+          onConflict: 'student_id, scope_id, academic_term_id'
+        );
+      }
     }
   }
 
