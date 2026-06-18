@@ -110,3 +110,21 @@ final studentSanctionRecordProvider = FutureProvider.family<SanctionModel?, Stri
   );
 });
 
+final sanctionRulesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final workspace = ref.watch(workspaceProvider);
+  final term = ref.watch(activeTermProvider).value;
+  final org = workspace.selectedOrganization;
+
+  if (org == null || term == null) return [];
+
+  final client = SupabaseConfig.client;
+  final response = await client
+      .from('sanction_rules')
+      .select()
+      .eq('scope_id', org.id)
+      .eq('academic_term_id', term.id)
+      .order('min_absence', ascending: true);
+
+  return List<Map<String, dynamic>>.from(response);
+});
+

@@ -6,7 +6,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../providers/sanction_provider.dart';
-import 'sanction_rules_page.dart';
 import '../models/sanction_model.dart';
 import 'package:go_router/go_router.dart';
 import '../../../routes/route_names.dart';
@@ -14,6 +13,13 @@ import 'package:intl/intl.dart';
 import 'package:excel/excel.dart' as excel_lib;
 import '../../../core/utils/file_saver_helper.dart';
 import 'dart:typed_data';
+import '../../../core/permissions/app_permissions.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../users/widgets/user_management_header.dart';
+import 'package:vouch_v2/shared/widgets/loading_overlay.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 class WorkspaceSanctionsPage extends ConsumerStatefulWidget {
   const WorkspaceSanctionsPage({super.key});
@@ -23,54 +29,10 @@ class WorkspaceSanctionsPage extends ConsumerStatefulWidget {
 }
 
 class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage> {
-  String _currentView = 'records'; // 'records' or 'rules'
-
-  @override
-  Widget build(BuildContext context) {
-    return DashboardLayout(
-      title: 'Compliance & Sanctions',
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
-            child: Row(
-              children: [
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'records', label: Text('Sanction Records'), icon: Icon(Icons.gavel_rounded)),
-                    ButtonSegment(value: 'rules', label: Text('Sanction Rules'), icon: Icon(Icons.rule_rounded)),
-                  ],
-                  selected: {_currentView},
-                  onSelectionChanged: (val) {
-                    setState(() {
-                      _currentView = val.first;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _currentView == 'records'
-                ? const _SanctionRecordsTab()
-                : const SanctionRulesPage(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SanctionRecordsTab extends ConsumerStatefulWidget {
-  const _SanctionRecordsTab();
-
-  @override
-  ConsumerState<_SanctionRecordsTab> createState() => _SanctionRecordsTabState();
-}
-
-class _SanctionRecordsTabState extends ConsumerState<_SanctionRecordsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isSyncing = false;
+  final _client = SupabaseConfig.client;
 
   @override
   void dispose() {
@@ -91,6 +53,36 @@ class _SanctionRecordsTabState extends ConsumerState<_SanctionRecordsTab> {
         return '4th Year';
       default:
         return '$year\'th Year';
+    }
+  }
+
+  String _formatScoreRange(dynamic min, dynamic max) {
+    final double minVal = (min as num?)?.toDouble() ?? 0.0;
+    final String minStr = minVal % 1 == 0 ? minVal.toInt().toString() : minVal.toString();
+
+    if (max == null) {
+      return '$minStr+';
+    }
+
+    final double maxVal = (max as num).toDouble();
+    if (minVal == maxVal) {
+      return minStr;
+    }
+
+    final String maxStr = maxVal % 1 == 0 ? maxVal.toInt().toString() : maxVal.toString();
+    return '$minStr - $maxStr';
+  }
+
+  Future<void> _deleteRule(BuildContext context, String ruleId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _client.from('sanction_rules').delete().eq('id', ruleId);
+      ref.invalidate(sanctionRulesProvider);
+      ref.invalidate(workspaceSanctionsProvider);
+      ref.invalidate(mySanctionsProvider);
+      messenger.showSnackBar(const SnackBar(content: Text('Rule deleted successfully.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -172,22 +164,472 @@ class _SanctionRecordsTabState extends ConsumerState<_SanctionRecordsTab> {
     }
   }
 
+  void _showAddRuleDialog() {
+    final minScoreController = TextEditingController();
+    final maxScoreController = TextEditingController();
+    final worthController = TextEditingController();
+    final itemController = TextEditingController();
+    String ruleType = 'single'; // 'single', 'range', 'above'
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Sanction Rule'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Rule Application Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textGrey)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  initialValue: ruleType,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'single', child: Text('Single Score (e.g. exactly 1)')),
+                    DropdownMenuItem(value: 'range', child: Text('Score Range (e.g. 1 - 2)')),
+                    DropdownMenuItem(value: 'above', child: Text('Score and Above (e.g. 3+)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        ruleType = val;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (ruleType == 'single') ...[
+                  TextField(
+                    controller: minScoreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Sanction Score',
+                      hintText: 'e.g. 1 or 1.5',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ] else if (ruleType == 'range') ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: minScoreController,
+                          decoration: const InputDecoration(
+                            labelText: 'Min Score',
+                            hintText: 'e.g. 1',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: TextField(
+                          controller: maxScoreController,
+                          decoration: const InputDecoration(
+                            labelText: 'Max Score',
+                            hintText: 'e.g. 2',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else if (ruleType == 'above') ...[
+                  TextField(
+                    controller: minScoreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Threshold Score (And Above)',
+                      hintText: 'e.g. 3',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: worthController,
+                  decoration: const InputDecoration(
+                    labelText: 'Monetary Worth (PHP) - Optional',
+                    hintText: 'e.g. 100.00',
+                    border: OutlineInputBorder(),
+                    prefixText: '₱ ',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: itemController,
+                  decoration: const InputDecoration(
+                    labelText: 'Item/Donation Description',
+                    hintText: 'e.g. Donate supplies / pay dues',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final workspace = ref.read(workspaceProvider);
+                final org = workspace.selectedOrganization;
+                final term = ref.read(activeTermProvider).value;
+                final user = ref.read(userProfileProvider).value;
+
+                if (org == null || term == null || user == null) return;
+                if (minScoreController.text.isEmpty) return;
+                if (ruleType == 'range' && maxScoreController.text.isEmpty) return;
+                if (itemController.text.isEmpty) return;
+
+                final String scopeId = org.id;
+                String scopeType = 'Institutional';
+                if (org.type == 'faculty-based') {
+                  scopeType = 'Faculty';
+                } else if (org.type == 'program-based') {
+                  scopeType = 'Program';
+                }
+
+                final double? minVal = double.tryParse(minScoreController.text);
+                if (minVal == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid sanction score')));
+                  return;
+                }
+
+                double? maxVal;
+                if (ruleType == 'single') {
+                  maxVal = minVal;
+                } else if (ruleType == 'range') {
+                  maxVal = double.tryParse(maxScoreController.text);
+                  if (maxVal == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid max score')));
+                    return;
+                  }
+                  if (maxVal < minVal) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Max score cannot be less than min score')));
+                    return;
+                  }
+                }
+
+                double? worthVal;
+                if (worthController.text.isNotEmpty) {
+                  worthVal = double.tryParse(worthController.text);
+                  if (worthVal == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid numeric worth value')));
+                    return;
+                  }
+                }
+
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await _client.from('sanction_rules').insert({
+                    'scope_id': scopeId,
+                    'scope_type': scopeType,
+                    'academic_term_id': term.id,
+                    'min_absence': minVal,
+                    'max_absence': maxVal,
+                    'required_value': worthVal,
+                    'item_description': itemController.text,
+                    'sanction_type': 'Donation',
+                    'created_by_user_id': user.id,
+                  });
+                  ref.invalidate(sanctionRulesProvider);
+                  ref.invalidate(workspaceSanctionsProvider);
+                  ref.invalidate(mySanctionsProvider);
+                  if (mounted) {
+                    setState(() {});
+                    navigator.pop();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }
+              },
+              child: const Text('Add Rule'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRuleCard(BuildContext context, Map<String, dynamic> rule, bool canManageRules) {
+    final theme = Theme.of(context);
+    final minAbsence = rule['min_absence'];
+    final maxAbsence = rule['max_absence'];
+    final worth = rule['required_value'] != null ? (rule['required_value'] as num).toDouble() : null;
+    final itemDesc = rule['item_description'] ?? 'No Description';
+    
+    String ruleTypeLabel = 'SINGLE SCORE';
+    if (maxAbsence == null) {
+      ruleTypeLabel = 'SCORE AND ABOVE';
+    } else if (minAbsence != maxAbsence) {
+      ruleTypeLabel = 'SCORE RANGE';
+    }
+    
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        itemDesc,
+                        style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Text(
+                          ruleTypeLabel,
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      worth != null ? '₱${worth.toStringAsFixed(2)}' : 'No Cash Worth',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: worth != null ? theme.colorScheme.primary : Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+                if (canManageRules) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    onSelected: (val) {
+                      if (val == 'delete') {
+                        _deleteRule(context, rule['id']);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete Rule', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+            const Spacer(),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Absence Range: ${_formatScoreRange(minAbsence, maxAbsence)}',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final sanctionsAsync = ref.watch(workspaceSanctionsProvider);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final isTablet = size.width >= 768 && size.width < 1024;
+    final padding = isMobile 
+        ? AppSpacing.md 
+        : (isTablet ? AppSpacing.lg : AppSpacing.xl);
 
-    return sanctionsAsync.when(
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    final canManageRules = activeRole?.hasPermission(AppPermissions.createSanctionRules) ?? false;
+    final canSync = activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false;
+
+    final sanctionsAsync = ref.watch(workspaceSanctionsProvider);
+    final rulesAsync = ref.watch(sanctionRulesProvider);
+
+    int totalRules = rulesAsync.value?.length ?? 0;
+    int activeSanctions = sanctionsAsync.value?.where((s) => s.status != 'Item Received').length ?? 0;
+    int clearedSanctions = sanctionsAsync.value?.where((s) => s.status == 'Item Received').length ?? 0;
+
+    final rulesWidget = rulesAsync.when(
+      data: (rules) {
+        if (rules.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Icon(Icons.rule_folder_rounded, size: 48, color: Colors.grey[400]),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text('No sanction rules defined yet.', style: TextStyle(color: Colors.grey[600])),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return LayoutBuilder(
+          builder: (context, gridConstraints) {
+            int crossAxisCount = 1;
+            if (gridConstraints.maxWidth > 1200) {
+              crossAxisCount = 3;
+            } else if (gridConstraints.maxWidth > 768) {
+              crossAxisCount = 2;
+            }
+
+            if (crossAxisCount == 1) {
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: rules.length,
+                separatorBuilder: (_, index) => const SizedBox(height: AppSpacing.md),
+                itemBuilder: (context, index) => _buildRuleCard(context, rules[index], canManageRules),
+              );
+            } else {
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.md,
+                  mainAxisExtent: 160,
+                ),
+                itemCount: rules.length,
+                itemBuilder: (context, index) => _buildRuleCard(context, rules[index], canManageRules),
+              );
+            }
+          },
+        );
+      },
+      loading: () => const Center(child: FlickrLoader()),
+      error: (err, _) => Center(child: Text('Error loading rules: $err')),
+    );
+
+    final sanctionsWidget = sanctionsAsync.when(
       data: (sanctions) {
         if (sanctions.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.2)),
-                const SizedBox(height: AppSpacing.md),
-                const Text('No sanction records found.', style: TextStyle(color: AppColors.textGrey)),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 64),
+              child: Column(
+                children: [
+                  Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.2)),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('No sanction records found.', style: TextStyle(color: AppColors.textGrey)),
+                ],
+              ),
             ),
           );
         }
@@ -199,24 +641,50 @@ class _SanctionRecordsTabState extends ConsumerState<_SanctionRecordsTab> {
               (s.programName ?? '').toLowerCase().contains(query);
         }).toList();
 
-        return Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
+        final theme = Theme.of(context);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: 'Search sanctions by name, ID, or program...',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        hintStyle: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.grey[400],
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
+                      style: AppTextStyles.bodyMedium,
                       onChanged: (val) {
                         setState(() {
                           _searchQuery = val;
@@ -224,110 +692,243 @@ class _SanctionRecordsTabState extends ConsumerState<_SanctionRecordsTab> {
                       },
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  OutlinedButton.icon(
-                    onPressed: () => _downloadExcelReport(filteredSanctions),
-                    icon: const Icon(Icons.download_rounded),
-                    label: const Text('Download Excel'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                OutlinedButton.icon(
+                  onPressed: () => _downloadExcelReport(filteredSanctions),
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Download Excel'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          showCheckboxColumn: false,
+                          columnSpacing: AppSpacing.lg,
+                          headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
+                          columns: const [
+                            DataColumn(label: Text('Student ID no.')),
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Program')),
+                            DataColumn(label: Text('Year Level')),
+                            DataColumn(label: Text('Sanction Score')),
+                            DataColumn(label: Text('Assigned Sanction')),
+                            DataColumn(label: Text('Status')),
+                          ],
+                          rows: filteredSanctions.map((sanction) {
+                            final scoreColor = sanction.totalAbsences == 0 ? AppColors.success : AppColors.error;
+
+                            return DataRow(
+                              onSelectChanged: (_) {
+                                context.pushNamed(
+                                  RouteNames.workspaceSanctionProfile,
+                                  pathParameters: {'studentId': sanction.studentId},
+                                );
+                              },
+                              cells: [
+                                DataCell(Text(sanction.studentIdNumber ?? 'N/A', style: AppTextStyles.bodyMedium)),
+                                DataCell(Text(sanction.studentName ?? 'Unknown', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold))),
+                                DataCell(Text(sanction.programName ?? 'N/A', style: AppTextStyles.bodyMedium)),
+                                DataCell(Text(_getYearDisplay(sanction.yearLevel), style: AppTextStyles.bodyMedium)),
+                                DataCell(
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: scoreColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: scoreColor.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Text(
+                                      sanction.totalAbsences % 1 == 0
+                                          ? sanction.totalAbsences.toInt().toString()
+                                          : sanction.totalAbsences.toStringAsFixed(1),
+                                      style: TextStyle(
+                                        color: scoreColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    sanction.requiredItem,
+                                    style: AppTextStyles.bodyMedium,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                DataCell(
+                                  _StatusBadge(status: sanction.status),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: FlickrLoader()),
+      error: (err, _) => Center(child: Text('Error loading sanctions: $err')),
+    );
+
+    return DashboardLayout(
+      title: 'Compliance & Sanctions',
+      child: LoadingOverlay(
+        isLoading: _isSyncing,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Sanctions',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Manage Sanctions',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Expanded(
-                child: Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              showCheckboxColumn: false,
-                              columnSpacing: AppSpacing.lg,
-                              headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
-                              columns: const [
-                                DataColumn(label: Text('Student ID no.')),
-                                DataColumn(label: Text('Name')),
-                                DataColumn(label: Text('Program')),
-                                DataColumn(label: Text('Year Level')),
-                                DataColumn(label: Text('Sanction Score')),
-                                DataColumn(label: Text('Assigned Sanction')),
-                                DataColumn(label: Text('Status')),
-                              ],
-                              rows: filteredSanctions.map((sanction) {
-                                final scoreColor = sanction.totalAbsences == 0 ? AppColors.success : AppColors.error;
+              const SizedBox(height: AppSpacing.md),
+              UserManagementHeader(
+                title: 'Manage Sanctions',
+                subtitle: 'Define rules and view compliance records of students.',
+                actions: [
+                  if (canSync)
+                    HeaderActionButton(
+                      icon: Icons.sync_rounded,
+                      label: 'Sync Sanctions',
+                      onPressed: () async {
+                        final workspace = ref.read(workspaceProvider);
+                        final org = workspace.selectedOrganization;
+                        final term = ref.read(activeTermProvider).value;
+                        if (org == null || term == null) return;
 
-                                return DataRow(
-                                  onSelectChanged: (_) {
-                                    context.pushNamed(
-                                      RouteNames.workspaceSanctionProfile,
-                                      pathParameters: {'studentId': sanction.studentId},
-                                    );
-                                  },
-                                  cells: [
-                                    DataCell(Text(sanction.studentIdNumber ?? 'N/A', style: AppTextStyles.bodyMedium)),
-                                    DataCell(Text(sanction.studentName ?? 'Unknown', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold))),
-                                    DataCell(Text(sanction.programName ?? 'N/A', style: AppTextStyles.bodyMedium)),
-                                    DataCell(Text(_getYearDisplay(sanction.yearLevel), style: AppTextStyles.bodyMedium)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: scoreColor.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: scoreColor.withValues(alpha: 0.2)),
-                                        ),
-                                        child: Text(
-                                          sanction.totalAbsences % 1 == 0
-                                              ? sanction.totalAbsences.toInt().toString()
-                                              : sanction.totalAbsences.toStringAsFixed(1),
-                                          style: TextStyle(
-                                            color: scoreColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        sanction.requiredItem,
-                                        style: AppTextStyles.bodyMedium,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    DataCell(
-                                      _StatusBadge(status: sanction.status),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                        final messenger = ScaffoldMessenger.of(context);
+                        setState(() => _isSyncing = true);
+                        try {
+                          await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, org.id, org.type);
+                          ref.invalidate(workspaceSanctionsProvider);
+                          ref.invalidate(mySanctionsProvider);
+                          ref.invalidate(sanctionRulesProvider);
+                          
+                          messenger.showSnackBar(const SnackBar(content: Text('Sanction records synchronized successfully.')));
+                        } catch (e) {
+                          messenger.showSnackBar(SnackBar(content: Text('Error syncing: $e')));
+                        } finally {
+                          setState(() => _isSyncing = false);
+                        }
+                      },
+                    ),
+                  if (canManageRules) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    HeaderActionButton(
+                      icon: Icons.add_rounded,
+                      label: 'Add Rule',
+                      onPressed: _showAddRuleDialog,
+                      isPrimary: true,
+                    ),
+                  ],
+                ],
               ),
+              const SizedBox(height: AppSpacing.lg),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isSmall = constraints.maxWidth < 600;
+                  final crossCount = isSmall ? 1 : 3;
+                  final ratio = isSmall ? 3.5 : 2.5;
+
+                  return GridView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossCount,
+                      crossAxisSpacing: AppSpacing.md,
+                      mainAxisSpacing: AppSpacing.md,
+                      childAspectRatio: ratio,
+                    ),
+                    children: [
+                      _buildStatCard(
+                        title: 'Total Rules',
+                        value: totalRules.toString(),
+                        icon: Icons.rule_rounded,
+                        color: AppColors.primary,
+                      ),
+                      _buildStatCard(
+                        title: 'Active Sanctions',
+                        value: activeSanctions.toString(),
+                        icon: Icons.pending_actions_rounded,
+                        color: Colors.orange,
+                      ),
+                      _buildStatCard(
+                        title: 'Cleared Sanctions',
+                        value: clearedSanctions.toString(),
+                        icon: Icons.check_circle_rounded,
+                        color: Colors.green,
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text('Sanction Rules', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text('Rules defining required items to clear sanction scores.', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+              const SizedBox(height: AppSpacing.md),
+              rulesWidget,
+              const SizedBox(height: AppSpacing.xxl),
+              Text('Sanction Records', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text('View and manage students who have outstanding or cleared sanctions.', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+              const SizedBox(height: AppSpacing.md),
+              sanctionsWidget,
             ],
           ),
-        );
-      },
-      loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error: $err')),
+        ),
+      ),
     );
   }
 }
