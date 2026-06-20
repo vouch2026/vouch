@@ -17,6 +17,7 @@ Operations
    Announcements
 
 Student Affairs
+   Excuse Requests
    Sanctions
    Activity Clearances
 

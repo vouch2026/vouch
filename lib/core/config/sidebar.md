@@ -34,7 +34,7 @@ This document outlines the visibility requirements for the Organization Workspac
 
 ### Member / Student
 - **Permissions**: `view_events`, `view_announcements`, `view_fees`, `view_activity_cards`, `view_sanctions`.
-- **Visible Items**: Dashboard, Events, Activity Cards (Personal), Announcements, Sanctions (Personal), My Records (Attendance, Fees).
+- **Visible Items**: Dashboard, Events, Announcements, Excuse Requests, Sanctions (Personal), Activity Clearances (Personal), My Records (Attendance, Fees).
 
 ---
 

@@ -64,6 +64,7 @@ class ActivityCardRepository {
           ''')
           .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
+          .eq('is_mandatory', true)
           .eq('attendance.student_id', studentId),
       _client
           .from('fees')
@@ -315,6 +316,7 @@ class ActivityCardRepository {
         .from('events')
         .select('id, name, scope_type, event_date')
         .eq('scope_id', scopeId)
+        .eq('is_mandatory', true)
         .eq('academic_term_id', termId);
     
     final feesResponse = await _client
