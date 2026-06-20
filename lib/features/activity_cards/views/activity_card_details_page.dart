@@ -1,8 +1,6 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -141,6 +139,25 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
           final isNotStarted = activityCard.id.startsWith('temp-');
           final isRejected = activityCard.status == ActivityCardStatus.rejected;
 
+          final adjustedSignatures = activityCard.signatures.map((sig) {
+            if (isLocked && (sig.roleName.toLowerCase() == 'governor' || 
+                             sig.roleName.toLowerCase() == 'president' || 
+                             sig.roleName.toLowerCase() == 'adviser' || 
+                             sig.roleName.toLowerCase() == 'instructor')) {
+              return ActivityCardSignature(
+                id: sig.id,
+                roleName: sig.roleName,
+                signedByUserId: sig.signedByUserId,
+                signedByUserName: sig.signedByUserName,
+                status: SignatureStatus.locked,
+                signedAt: sig.signedAt,
+                rejectionReason: sig.rejectionReason,
+                order: sig.order,
+              );
+            }
+            return sig;
+          }).toList();
+
           return studentProfileAsync.when(
             data: (studentProfile) {
               return Stack(
@@ -154,6 +171,31 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (isLocked) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                                child: Container(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'Clearance Request Locked: $lockReason',
+                                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                             _buildStudentInfo(context, studentProfile, activityCard),
                             const SizedBox(height: AppSpacing.xl),
                             if (isCurrentUser && (isNotStarted || isRejected)) ...[
@@ -164,7 +206,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                                     width: 320,
                                     height: 52,
                                     child: ElevatedButton.icon(
-                                      onPressed: _isRequesting ? null : () => _handleRequestClearance(activityCard),
+                                      onPressed: (_isRequesting || isLocked) ? null : () => _handleRequestClearance(activityCard),
                                       icon: _isRequesting 
                                         ? const SizedBox(width: 18, height: 18, child: FlickrLoader())
                                         : const Icon(Icons.send_rounded),
@@ -214,7 +256,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                             ],
                             const SizedBox(height: AppSpacing.xxl),
                             Center(
-                              child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                              child: SignatureWorkflowTimeline(signatures: adjustedSignatures),
                             ),
                             const SizedBox(height: AppSpacing.xxl),
                             _buildOrganizationInfo(activityCard),
@@ -224,82 +266,6 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                       ),
                     ),
                   ),
-                  if (isLocked)
-                    Positioned.fill(
-                      child: ClipRRect(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
-                          child: Container(
-                            color: AppColors.white.withValues(alpha: 0.85),
-                            child: Center(
-                              child: Container(
-                                constraints: const BoxConstraints(maxWidth: 420),
-                                padding: const EdgeInsets.all(AppSpacing.xxl),
-                                decoration: BoxDecoration(
-                                  color: AppColors.white,
-                                  borderRadius: BorderRadius.circular(28),
-                                  border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.12),
-                                      blurRadius: 32,
-                                      offset: const Offset(0, 12),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.error.withValues(alpha: 0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.lock_rounded, size: 64, color: AppColors.error),
-                                    ),
-                                    const SizedBox(height: AppSpacing.xl),
-                                    Text(
-                                      'CARD LOCKED', 
-                                      style: AppTextStyles.displaySmall.copyWith(
-                                        fontWeight: FontWeight.bold, 
-                                        color: AppColors.error,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.md),
-                                    Text(
-                                      lockReason,
-                                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: AppSpacing.xl),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      height: 48,
-                                      child: OutlinedButton(
-                                        onPressed: () => context.pop(),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.primary,
-                                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Back to Dashboard',
-                                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                 ],
               );
             },

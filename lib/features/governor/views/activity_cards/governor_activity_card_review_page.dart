@@ -87,6 +87,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   Widget build(BuildContext context) {
     final activityCardAsync = ref.watch(reviewActivityCardProvider(widget.id));
     final studentProfileAsync = ref.watch(userProfileByIdProvider(widget.id));
+    final allStudentCardsAsync = ref.watch(studentActivityCardsByIdProvider(widget.id));
     final activeRole = ref.watch(workspaceProvider).activeRole;
 
     return LoadingOverlay(
@@ -99,8 +100,48 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
               return const Center(child: Text('Activity Card not found for this student in your organization.'));
             }
 
+            // Hierarchy Check
+            bool isPrerequisiteLocked = false;
+            String prerequisiteLockReason = '';
+
+            if (allStudentCardsAsync.hasValue && activityCard != null) {
+              final allCards = allStudentCardsAsync.value!;
+              if (activityCard.organizationType == 'faculty-based') {
+                final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
+                if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
+                  isPrerequisiteLocked = true;
+                  prerequisiteLockReason = 'Student must clear their Program Activity Card (${programCard.organizationName}) first.';
+                }
+              } else if (activityCard.organizationType == 'campus-based') {
+                final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
+                if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
+                  isPrerequisiteLocked = true;
+                  prerequisiteLockReason = 'Student must clear their Faculty Activity Card (${facultyCard.organizationName}) first.';
+                }
+              }
+            }
+
+            final adjustedSignatures = activityCard.signatures.map((sig) {
+              if (isPrerequisiteLocked && (sig.roleName.toLowerCase() == 'governor' || 
+                                           sig.roleName.toLowerCase() == 'president' || 
+                                           sig.roleName.toLowerCase() == 'adviser' || 
+                                           sig.roleName.toLowerCase() == 'instructor')) {
+                return ActivityCardSignature(
+                  id: sig.id,
+                  roleName: sig.roleName,
+                  signedByUserId: sig.signedByUserId,
+                  signedByUserName: sig.signedByUserName,
+                  status: SignatureStatus.locked,
+                  signedAt: sig.signedAt,
+                  rejectionReason: sig.rejectionReason,
+                  order: sig.order,
+                );
+              }
+              return sig;
+            }).toList();
+
             // Robust signature slot detection based on current viewer's role
-            final mySignatureSlot = activityCard.signatures.where((s) {
+            final mySignatureSlot = adjustedSignatures.where((s) {
               final requiredRoleName = s.roleName.toLowerCase().trim();
               final currentViewerRoleName = activeRole?.roleName.toLowerCase().trim();
               
@@ -162,13 +203,38 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                           ],
                           const SizedBox(height: AppSpacing.xxl),
                           Center(
-                            child: SignatureWorkflowTimeline(signatures: activityCard.signatures),
+                            child: SignatureWorkflowTimeline(signatures: adjustedSignatures),
                           ),
                           const SizedBox(height: AppSpacing.xxl),
                           if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[
                             _buildOfficerActions(context),
                             const SizedBox(height: AppSpacing.xxl),
                             _buildReviewActions(context, activityCard, mySignatureSlot.id),
+                          ] else if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.locked) ...[
+                            Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.lock_rounded, color: AppColors.error, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      prerequisiteLockReason.isNotEmpty 
+                                          ? prerequisiteLockReason 
+                                          : 'Signature locked until prerequisite clearances are cleared.',
+                                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ] else if (mySignatureSlot != null)
                             Center(
                               child: Text(
