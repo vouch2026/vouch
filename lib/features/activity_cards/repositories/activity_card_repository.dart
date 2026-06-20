@@ -82,7 +82,7 @@ class ActivityCardRepository {
       _client
           .from('student_sanction_records')
           .select()
-          .filter('scope_id', 'in', scopeIds.toList())
+          .filter('scope_id', 'in', orgIds)
           .eq('academic_term_id', termId)
           .eq('student_id', studentId),
       _client
@@ -132,7 +132,7 @@ class ActivityCardRepository {
       // Filter bulk results for this organization
       final eventsResponse = allEvents.where((e) => e['scope_id'] == scopeId).toList();
       final feesResponse = allFees.where((f) => f['scope_id'] == scopeId).toList();
-      final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == scopeId).toList();
+      final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == orgId).toList();
       final clearanceResponse = allClearanceRequests.where((c) => c['organization_id'] == orgId).firstOrNull;
 
       // Map to models
@@ -340,7 +340,7 @@ class ActivityCardRepository {
           .from('student_sanction_records')
           .select()
           .filter('student_id', 'in', studentIds)
-          .eq('scope_id', scopeId)
+          .eq('scope_id', organizationId)
           .eq('academic_term_id', termId),
       _client
           .from('activity_card_clearance_requests')
