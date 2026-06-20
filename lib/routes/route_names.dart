@@ -60,6 +60,7 @@ class RouteNames {
   static const String workspaceSanctions = 'workspace-sanctions';
   static const String workspaceSanctionProfile = 'workspace-sanction-profile';
   static const String workspaceCreateSanctionRule = 'workspace-create-sanction-rule';
+  static const String workspaceEditSanctionRule = 'workspace-edit-sanction-rule';
   static const String workspaceParticipation = 'workspace-participation';
   static const String workspaceAttendanceAnalytics = 'workspace-attendance-analytics';
   static const String workspaceFinancialAnalytics = 'workspace-financial-analytics';

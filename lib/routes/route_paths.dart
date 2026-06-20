@@ -61,6 +61,7 @@ class RoutePaths {
   static const String workspaceSanctions = '/workspace/sanctions';
   static const String workspaceSanctionProfile = '/workspace/sanctions/profile/:studentId';
   static const String workspaceCreateSanctionRule = '/workspace/sanctions/rules/create';
+  static const String workspaceEditSanctionRule = '/workspace/sanctions/rules/edit';
   static const String workspaceParticipation = '/workspace/participation';
   static const String workspaceAttendanceAnalytics = '/workspace/attendance-analytics';
   static const String workspaceFinancialAnalytics = '/workspace/financial-analytics';

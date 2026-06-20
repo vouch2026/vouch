@@ -308,11 +308,56 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                   PopupMenuButton<String>(
                     padding: EdgeInsets.zero,
                     onSelected: (val) {
-                      if (val == 'delete') {
-                        _deleteRule(context, rule['id']);
+                      if (val == 'edit') {
+                        context.push(RoutePaths.workspaceEditSanctionRule, extra: rule);
+                      } else if (val == 'delete') {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Text(
+                              'Delete Sanction Rule',
+                              style: AppTextStyles.titleLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            content: Text(
+                              'Are you sure you want to delete this sanction rule? This action cannot be undone.',
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                  _deleteRule(context, rule['id']);
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
                       }
                     },
                     itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit Rule'),
+                      ),
                       const PopupMenuItem(
                         value: 'delete',
                         child: Text('Delete Rule', style: TextStyle(color: Colors.red)),
@@ -634,7 +679,7 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
                   if (canSync)
                     HeaderActionButton(
                       icon: Icons.sync_rounded,
-                      label: 'Sync Sanctions',
+                      label: 'Assign Sanctions',
                       onPressed: () async {
                         final workspace = ref.read(workspaceProvider);
                         final org = workspace.selectedOrganization;
