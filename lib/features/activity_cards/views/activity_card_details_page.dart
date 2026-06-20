@@ -411,7 +411,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
         if (totalSanctions > 0)
           _ComplianceItem(
             label: 'Sanctions',
-            value: isSanctionsMet ? 'Fulfilled' : '$fulfilledSanctions/$totalSanctions',
+            value: isSanctionsMet ? 'Cleared' : '$fulfilledSanctions/$totalSanctions',
             isMet: isSanctionsMet,
           ),
       ],
@@ -577,7 +577,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        s.isFulfilled ? 'Fulfilled' : 'Pending', 
+                        s.isFulfilled ? 'Cleared' : 'Pending', 
                         style: AppTextStyles.labelSmall.copyWith(
                           color: statusColor,
                           fontWeight: FontWeight.bold,

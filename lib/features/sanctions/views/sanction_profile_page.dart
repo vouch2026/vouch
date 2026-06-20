@@ -67,6 +67,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     required String value,
     required Color color,
     required IconData icon,
+    Widget? suffix,
   }) {
     return Card(
       elevation: 0,
@@ -99,12 +100,21 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: AppTextStyles.headlineMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        value,
+                        style: AppTextStyles.headlineMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      if (suffix != null) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        suffix,
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -131,6 +141,32 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
       0.0,
       (sum, event) => sum + (event['sanction_score'] as num).toDouble(),
     );
+
+    Widget? statusBadge;
+    if (recordAsync.hasValue) {
+      final sanction = recordAsync.value;
+      final isComplied = sanction == null || sanction.status == 'Item Received' || totalSanctionScore == 0.0;
+      final statusLabel = isComplied ? 'CLEARED' : 'PENDING';
+      final badgeColor = isComplied ? AppColors.success : AppColors.warning;
+
+      statusBadge = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: badgeColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: badgeColor.withValues(alpha: 0.2)),
+        ),
+        child: Text(
+          statusLabel,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: badgeColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 9,
+            letterSpacing: 0.5,
+          ),
+        ),
+      );
+    }
 
     return DashboardLayout(
       title: widget.isPersonalView ? 'My Sanctions' : 'Student Sanction Profile',
@@ -273,6 +309,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                               : totalSanctionScore.toStringAsFixed(1),
                           color: totalSanctionScore == 0.0 ? AppColors.success : AppColors.error,
                           icon: Icons.gavel_rounded,
+                          suffix: statusBadge,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
@@ -471,7 +508,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                                     border: Border.all(color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.2)),
                                   ),
                                   child: Text(
-                                    sanction.status.toUpperCase(),
+                                    isReceived ? 'CLEARED' : 'PENDING',
                                     style: TextStyle(
                                       color: isReceived ? AppColors.success : AppColors.warning,
                                       fontSize: 10,
