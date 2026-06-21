@@ -11,6 +11,8 @@ import '../../events/models/event_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../providers/excuse_provider.dart';
+import '../../../shared/layouts/dashboard_layout.dart';
+import '../../users/widgets/user_management_header.dart';
 
 class ExcuseRequestFormPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -138,14 +140,17 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Submit Excuse Request'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.textDark,
-      ),
-      body: _isSubmitting
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+
+    return DashboardLayout(
+      title: 'Submit Excuse Request',
+      onBack: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
+      child: _isSubmitting
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -157,20 +162,81 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Breadcrumbs Row
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context); // Pop back to Event Details
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context); // Pop back to Events
+                              }
+                            }
+                          },
+                          child: Text(
+                            'Events',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey[500]),
+                        Flexible(
+                          child: InkWell(
+                            onTap: () {
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context); // Pop back to Event Details
+                              }
+                            },
+                            child: Text(
+                              widget.event.name,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textGrey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey[500]),
+                        Text(
+                          'Submit Request',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    
+                    const UserManagementHeader(
+                      title: 'Submit Excuse Request',
+                      subtitle: 'Fill out the details below and upload supporting document evidence to justify your absence.',
+                      actions: [],
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
                     // Event Card Detail Header
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.04),
+                        color: AppColors.primary.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +265,7 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
                     Text('Reason Type *', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<String>(
-                      value: _selectedReasonType,
+                      initialValue: _selectedReasonType,
                       decoration: InputDecoration(
                         hintText: 'Select reason category',
                         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
@@ -292,7 +358,7 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
                                   ),
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.3),
+                                      color: Colors.black.withValues(alpha: 0.3),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
@@ -318,7 +384,7 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.cloud_upload_outlined, color: AppColors.primary.withOpacity(0.7), size: 48),
+                                  Icon(Icons.cloud_upload_outlined, color: AppColors.primary.withValues(alpha: 0.7), size: 48),
                                   const SizedBox(height: AppSpacing.xs),
                                   Text('Upload Medical Certificate / Official Letter', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary)),
                                   const SizedBox(height: 2.0),
