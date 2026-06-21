@@ -16,11 +16,23 @@ final excuseRepositoryProvider = Provider<ExcuseRepository>((ref) {
 });
 
 final studentExcusesProvider = FutureProvider.family<List<ExcuseRequestModel>, String>((ref, studentId) async {
+  final workspace = ref.watch(workspaceProvider);
+  final org = workspace.selectedOrganization;
   final term = ref.watch(activeTermProvider).value;
-  if (term == null) return [];
+  
+  if (org == null || term == null) return [];
+  
+  String? scopeId = org.campusId;
+  if (org.type == 'faculty-based') {
+    scopeId = org.facultyId;
+  } else if (org.type == 'program-based') {
+    scopeId = org.programId;
+  }
+  
+  if (scopeId == null) return [];
   
   final repo = ref.watch(excuseRepositoryProvider);
-  return repo.getStudentExcuses(studentId, term.id);
+  return repo.getStudentExcuses(studentId, term.id, scopeId);
 });
 
 final workspaceExcuseRequestsProvider = FutureProvider<List<ExcuseRequestModel>>((ref) async {
@@ -46,9 +58,21 @@ final workspaceExcuseRequestsProvider = FutureProvider<List<ExcuseRequestModel>>
 final studentEventExcuseProvider = FutureProvider.family<ExcuseRequestModel?, String>((ref, eventId) async {
   final user = ref.watch(userProfileProvider).value;
   final term = ref.watch(activeTermProvider).value;
-  if (user == null || term == null) return null;
+  final workspace = ref.watch(workspaceProvider);
+  final org = workspace.selectedOrganization;
+  
+  if (user == null || term == null || org == null) return null;
+  
+  String? scopeId = org.campusId;
+  if (org.type == 'faculty-based') {
+    scopeId = org.facultyId;
+  } else if (org.type == 'program-based') {
+    scopeId = org.programId;
+  }
+  
+  if (scopeId == null) return null;
   
   final repo = ref.watch(excuseRepositoryProvider);
-  final excuses = await repo.getStudentExcuses(user.id!, term.id);
+  final excuses = await repo.getStudentExcuses(user.id!, term.id, scopeId);
   return excuses.where((e) => e.eventId == eventId).firstOrNull;
 });

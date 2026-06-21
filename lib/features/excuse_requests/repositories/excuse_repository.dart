@@ -39,7 +39,7 @@ class ExcuseRepository {
     }, onConflict: 'student_id, event_id');
   }
 
-  Future<List<ExcuseRequestModel>> getStudentExcuses(String studentId, String termId) async {
+  Future<List<ExcuseRequestModel>> getStudentExcuses(String studentId, String termId, String scopeId) async {
     final response = await _client
         .from('excuse_requests')
         .select('''
@@ -49,6 +49,7 @@ class ExcuseRepository {
         ''')
         .eq('student_id', studentId)
         .eq('academic_term_id', termId)
+        .eq('scope_id', scopeId)
         .order('created_at', ascending: false);
 
     return (response as List).map((json) {
