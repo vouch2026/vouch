@@ -55,14 +55,14 @@ class DashboardLayout extends ConsumerWidget {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 350),
                 curve: Curves.easeInOut,
-                width: (isDesktop && isSidebarVisible) ? 280.0 : 0.0,
+                width: (isDesktop && isSidebarVisible) ? 250.0 : 0.0,
                 child: ClipRect(
                   child: OverflowBox(
-                    minWidth: 280.0,
-                    maxWidth: 280.0,
+                    minWidth: 250.0,
+                    maxWidth: 250.0,
                     alignment: Alignment.topLeft,
                     child: const SizedBox(
-                      width: 280.0,
+                      width: 250.0,
                       child: DynamicSidebar(),
                     ),
                   ),
@@ -246,10 +246,10 @@ class DashboardLayout extends ConsumerWidget {
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 350),
                     curve: Curves.easeOutBack,
-                    left: isSidebarVisible ? 0.0 : -280.0,
+                    left: isSidebarVisible ? 0.0 : -250.0,
                     top: 0,
                     bottom: 0,
-                    width: 280,
+                    width: 250,
                     child: const DynamicSidebar(),
                   ),
                 ],

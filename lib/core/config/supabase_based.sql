@@ -1106,6 +1106,45 @@ WHERE u.email = 'vouch.app.admin@gmail.com' AND r.name = 'Super Admin'
 AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id);
 
 UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
-;
 
-UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
+-- ==========================================
+-- 9. EXCUSE REQUESTS
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS excuse_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  supporting_document_url VARCHAR(512) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+  rejection_reason TEXT,
+  scope_type VARCHAR(50) NOT NULL,
+  scope_id UUID NOT NULL,
+  academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE CASCADE,
+  reviewed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(student_id, event_id)
+);
+
+CREATE TRIGGER update_excuse_requests_updated_at BEFORE UPDATE ON excuse_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE excuse_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Students can view their own excuse requests" ON excuse_requests FOR SELECT
+  USING (student_id = public.get_my_id());
+
+CREATE POLICY "Students can insert their own excuse requests" ON excuse_requests FOR INSERT TO authenticated
+  WITH CHECK (student_id = public.get_my_id());
+
+CREATE POLICY "Students can delete their own excuse requests" ON excuse_requests FOR DELETE TO authenticated
+  USING (student_id = public.get_my_id() AND status = 'Pending');
+
+CREATE POLICY "Officers can view excuse requests in their scope" ON excuse_requests FOR SELECT
+  USING (public.has_scope_permission('view_events', scope_type, scope_id));
+
+CREATE POLICY "Officers can review excuse requests in their scope" ON excuse_requests FOR UPDATE TO authenticated
+  USING (public.has_scope_permission('override_attendance', scope_type, scope_id));
+

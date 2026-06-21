@@ -17,7 +17,7 @@ class ActivityCardOverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final completedEvents = activityCard.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
+    final completedEvents = activityCard.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
     final totalEvents = activityCard.events.length;
     final paidFees = activityCard.fees.where((f) => f.isPaid).length;
     final totalFees = activityCard.fees.length;

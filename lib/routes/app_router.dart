@@ -43,6 +43,8 @@ import '../features/governor/views/governor_collections_page.dart';
 import '../features/governor/views/governor_settings_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
+import '../features/excuse_requests/views/workspace_excuse_requests_page.dart';
+import '../features/excuse_requests/views/my_excuse_requests_page.dart';
 import '../features/sanctions/views/sanction_redirector.dart';
 import '../features/sanctions/views/sanction_profile_page.dart';
 import '../features/sanctions/views/workspace_create_sanction_rule_page.dart';
@@ -444,7 +446,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.workspaceExcuseRequests,
         name: RouteNames.workspaceExcuseRequests,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Excuse Requests'),
+        builder: (context, state) => const WorkspaceExcuseRequestsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.myExcuseRequests,
+        name: RouteNames.myExcuseRequests,
+        builder: (context, state) => const MyExcuseRequestsPage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceOfficerAppointments,

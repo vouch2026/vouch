@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/providers/storage_provider.dart';
-import '../../sanctions/repositories/sanction_repository.dart';
 import '../../sanctions/providers/sanction_provider.dart';
 import '../models/excuse_request_model.dart';
 import '../repositories/excuse_repository.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 final excuseRepositoryProvider = Provider<ExcuseRepository>((ref) {
   final client = SupabaseConfig.client;
@@ -41,4 +41,14 @@ final workspaceExcuseRequestsProvider = FutureProvider<List<ExcuseRequestModel>>
   
   final repo = ref.watch(excuseRepositoryProvider);
   return repo.getWorkspaceExcuses(scopeId, term.id);
+});
+
+final studentEventExcuseProvider = FutureProvider.family<ExcuseRequestModel?, String>((ref, eventId) async {
+  final user = ref.watch(userProfileProvider).value;
+  final term = ref.watch(activeTermProvider).value;
+  if (user == null || term == null) return null;
+  
+  final repo = ref.watch(excuseRepositoryProvider);
+  final excuses = await repo.getStudentExcuses(user.id!, term.id);
+  return excuses.where((e) => e.eventId == eventId).firstOrNull;
 });
