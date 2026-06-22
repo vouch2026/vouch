@@ -94,6 +94,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
       isLoading: _isActionLoading,
       child: DashboardLayout(
         title: 'Review Activity Card',
+        onBack: () => context.pop(),
         child: activityCardAsync.when(
           data: (activityCard) {
             if (activityCard == null) {
@@ -104,7 +105,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
             bool isPrerequisiteLocked = false;
             String prerequisiteLockReason = '';
 
-            if (allStudentCardsAsync.hasValue && activityCard != null) {
+            if (allStudentCardsAsync.hasValue) {
               final allCards = allStudentCardsAsync.value!;
               if (activityCard.organizationType == 'faculty-based') {
                 final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
@@ -172,6 +173,35 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6.0, bottom: AppSpacing.lg),
+                            child: Row(
+                              children: [
+                                Icon(Icons.card_membership_rounded, size: 14, color: Colors.grey[500]),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () => context.pop(),
+                                  child: Text(
+                                    'Activity Cards',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Review Card',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           _buildStudentInfo(context, activityCard, studentProfile),
                           const SizedBox(height: AppSpacing.xl),
                           LayoutBuilder(

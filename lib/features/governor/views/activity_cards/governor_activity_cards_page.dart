@@ -51,12 +51,43 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
 
     return DashboardLayout(
       title: 'Organization Activity Cards',
+      onBack: () => context.pop(),
       child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: horizontalPadding,
+                    right: horizontalPadding,
+                    top: AppSpacing.lg,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.card_membership_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Workspace',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Activity Cards',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: horizontalPadding,
