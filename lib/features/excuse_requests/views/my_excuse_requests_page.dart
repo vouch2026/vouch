@@ -430,10 +430,15 @@ class _ExcuseDetailsDialog extends StatelessWidget {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 650;
     final dialogWidth = screenWidth > 650 ? 600.0 : screenWidth * 0.95;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? AppSpacing.lg : 40.0,
+        vertical: 24.0,
+      ),
       child: Container(
         width: dialogWidth,
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -444,17 +449,23 @@ class _ExcuseDetailsDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Excuse Request Details', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(
+                      'Excuse Request Details',
+                      style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                 ],
               ),
               const Divider(),
               const SizedBox(height: AppSpacing.sm),
 
-              _buildRowDetail('Target Event:', request.eventName ?? 'Unknown Event'),
-              _buildRowDetail('Reason Type:', reasonType),
-              _buildRowDetail('Explanation:', explanation),
-              _buildRowDetail('Submitted:', request.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(request.createdAt!.toLocal()) : '—'),
+              _buildRowDetail('Target Event:', request.eventName ?? 'Unknown Event', isMobile: isMobile),
+              _buildRowDetail('Reason Type:', reasonType, isMobile: isMobile),
+              _buildRowDetail('Explanation:', explanation, isMobile: isMobile),
+              _buildRowDetail('Submitted:', request.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(request.createdAt!.toLocal()) : '—', isMobile: isMobile),
               
               const SizedBox(height: AppSpacing.sm),
               _buildRowDetail(
@@ -463,13 +474,14 @@ class _ExcuseDetailsDialog extends StatelessWidget {
                 valueColor: request.status == 'Approved' 
                     ? AppColors.success 
                     : (request.status == 'Rejected' ? AppColors.error : AppColors.warning),
+                isMobile: isMobile,
               ),
               
               if (request.status != 'Pending') ...[
                 if (request.reviewedByName != null)
-                  _buildRowDetail('Reviewed By:', request.reviewedByName!),
+                  _buildRowDetail('Reviewed By:', request.reviewedByName!, isMobile: isMobile),
                 if (request.rejectionReason != null && request.rejectionReason!.isNotEmpty)
-                  _buildRowDetail('Remarks:', request.rejectionReason!),
+                  _buildRowDetail('Remarks:', request.rejectionReason!, isMobile: isMobile),
               ],
               const SizedBox(height: AppSpacing.lg),
 
@@ -520,7 +532,33 @@ class _ExcuseDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildRowDetail(String label, String value, {Color? valueColor}) {
+  Widget _buildRowDetail(String label, String value, {Color? valueColor, required bool isMobile}) {
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textGrey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: valueColor ?? AppColors.textDark,
+                fontWeight: valueColor != null ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(

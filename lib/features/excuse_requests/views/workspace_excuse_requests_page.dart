@@ -534,10 +534,15 @@ class _ExcuseReviewDialogState extends ConsumerState<_ExcuseReviewDialog> {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 650;
     final dialogWidth = screenWidth > 650 ? 600.0 : screenWidth * 0.95;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? AppSpacing.lg : 40.0,
+        vertical: 24.0,
+      ),
       child: Container(
         width: dialogWidth,
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -548,7 +553,13 @@ class _ExcuseReviewDialogState extends ConsumerState<_ExcuseReviewDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Review Excuse Request', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(
+                      'Review Excuse Request',
+                      style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                 ],
               ),
@@ -567,28 +578,34 @@ class _ExcuseReviewDialogState extends ConsumerState<_ExcuseReviewDialog> {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(req.studentName ?? 'Unknown Student', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-                      Text('Student ID: ${req.studentIdNumber ?? 'N/A'}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          req.studentName ?? 'Unknown Student',
+                          style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text('Student ID: ${req.studentIdNumber ?? 'N/A'}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                      ],
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
 
               // Event Info Card
-              _buildRowDetail('Target Event:', req.eventName ?? 'Unknown Event'),
-              _buildRowDetail('Reason Type:', reasonType),
-              _buildRowDetail('Explanation:', explanation),
-              _buildRowDetail('Submitted:', req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—'),
+              _buildRowDetail('Target Event:', req.eventName ?? 'Unknown Event', isMobile: isMobile),
+              _buildRowDetail('Reason Type:', reasonType, isMobile: isMobile),
+              _buildRowDetail('Explanation:', explanation, isMobile: isMobile),
+              _buildRowDetail('Submitted:', req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—', isMobile: isMobile),
               
               if (req.status != 'Pending') ...[
                 const SizedBox(height: AppSpacing.sm),
-                _buildRowDetail('Current Status:', req.status, valueColor: req.status == 'Approved' ? AppColors.success : AppColors.error),
+                _buildRowDetail('Current Status:', req.status, valueColor: req.status == 'Approved' ? AppColors.success : AppColors.error, isMobile: isMobile),
                 if (req.rejectionReason != null && req.rejectionReason!.isNotEmpty)
-                  _buildRowDetail('Remarks:', req.rejectionReason!),
+                  _buildRowDetail('Remarks:', req.rejectionReason!, isMobile: isMobile),
               ],
               const SizedBox(height: AppSpacing.lg),
 
@@ -704,7 +721,33 @@ class _ExcuseReviewDialogState extends ConsumerState<_ExcuseReviewDialog> {
     );
   }
 
-  Widget _buildRowDetail(String label, String value, {Color? valueColor}) {
+  Widget _buildRowDetail(String label, String value, {Color? valueColor, required bool isMobile}) {
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textGrey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: valueColor ?? AppColors.textDark,
+                fontWeight: valueColor != null ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
