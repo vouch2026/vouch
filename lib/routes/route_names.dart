@@ -45,6 +45,7 @@ class RouteNames {
   static const String comselecOfficials = 'comselec-officials';
 
   // Workspace Route Names
+  static const String workspaceDashboard = 'workspace-dashboard';
   static const String workspaceMembers = 'workspace-members';
   static const String workspaceOfficers = 'workspace-officers';
   static const String workspaceEvents = 'workspace-events';

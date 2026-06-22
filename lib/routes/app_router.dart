@@ -7,6 +7,7 @@ import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
+import '../features/dashboard/views/workspace_dashboard_page.dart';
 import '../features/activity_cards/views/activity_card_redirector.dart';
 import '../features/activity_cards/views/activity_card_details_page.dart';
 import '../features/organizations/views/organizations_page.dart';
@@ -315,6 +316,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Workspace Routes
+      GoRoute(
+        path: RoutePaths.workspaceDashboard,
+        name: RouteNames.workspaceDashboard,
+        builder: (context, state) => const WorkspaceDashboardPage(),
+      ),
       GoRoute(
         path: RoutePaths.workspaceMembers,
         name: RouteNames.workspaceMembers,

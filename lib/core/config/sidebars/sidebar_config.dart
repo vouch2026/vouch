@@ -74,7 +74,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -136,7 +136,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -175,7 +175,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -235,7 +235,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -275,7 +275,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -314,7 +314,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -367,7 +367,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -406,7 +406,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -450,7 +450,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
@@ -489,7 +489,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'WORKSPACE: DETAILS',
       items: [
-        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
       ],
     ),
     const SidebarSectionConfig(
