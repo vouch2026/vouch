@@ -137,5 +137,25 @@ class StorageService {
   String getPublicUrl(String bucket, String path) {
     return _client.storage.from(bucket).getPublicUrl(path);
   }
+
+  Future<String> uploadExcuseDocument({
+    required XFile file,
+    required String studentId,
+    required String eventId,
+  }) async {
+    final bytes = await file.readAsBytes();
+    final extension = p.extension(file.name);
+    final fileName = 'excuse_${studentId}_${eventId}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'excuses/$fileName';
+    final bucket = dotenv.get('SUPABASE_EXCUSE_BUCKET', fallback: 'excuse-pictures');
+
+    await _client.storage.from(bucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
 }
 

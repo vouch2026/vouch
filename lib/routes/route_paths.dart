@@ -61,6 +61,7 @@ class RoutePaths {
   static const String workspaceSanctions = '/workspace/sanctions';
   static const String workspaceSanctionProfile = '/workspace/sanctions/profile/:studentId';
   static const String workspaceCreateSanctionRule = '/workspace/sanctions/rules/create';
+  static const String workspaceEditSanctionRule = '/workspace/sanctions/rules/edit';
   static const String workspaceParticipation = '/workspace/participation';
   static const String workspaceAttendanceAnalytics = '/workspace/attendance-analytics';
   static const String workspaceFinancialAnalytics = '/workspace/financial-analytics';
@@ -72,6 +73,8 @@ class RoutePaths {
   static const String tasks = '/tasks';
   static const String schedule = '/schedule';
   static const String workspaceExcuseRequests = '/workspace/excuse-requests';
+  static const String workspaceExcuseRequestReview = '/workspace/excuse-requests/:id/review';
+  static const String myExcuseRequests = '/workspace/excuse-requests/my';
   static const String workspaceOfficerAppointments = '/workspace/officer-appointments';
   static const String workspaceCollectionsAudit = '/workspace/collections-audit';
   static const String workspaceAuditLogs = '/workspace/audit-logs';

@@ -40,3 +40,8 @@ final reviewActivityCardProvider = FutureProvider.family<ActivityCard?, String>(
   final repository = ref.watch(activityCardRepositoryProvider);
   return repository.getStudentActivityCardForOrganization(studentId, selectedOrg.id!);
 });
+
+final studentActivityCardsByIdProvider = FutureProvider.family<List<ActivityCard>, String>((ref, studentId) async {
+  final repository = ref.watch(activityCardRepositoryProvider);
+  return repository.getStudentActivityCards(studentId);
+});

@@ -248,6 +248,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'STUDENT AFFAIRS',
       items: [
+        SidebarItemConfig(label: 'Excuse Requests', icon: Icons.note_alt_outlined, path: RoutePaths.myExcuseRequests),
         SidebarItemConfig(label: 'Sanctions', icon: Icons.gavel_rounded, path: RoutePaths.workspaceSanctions),
         SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.activityCards),
       ],

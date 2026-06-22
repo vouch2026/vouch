@@ -26,6 +26,7 @@ echo "SUPABASE_ANNOUNCEMENTS_BUCKET=${SUPABASE_ANNOUNCEMENTS_BUCKET:-announcemen
 echo "SUPABASE_EVENT_BUCKET=${SUPABASE_EVENT_BUCKET:-event-pictures}" >> .env
 echo "SUPABASE_RECEIPTS_BUCKET=${SUPABASE_RECEIPTS_BUCKET:-receipt-pictures}" >> .env
 echo "SUPABASE_HIGHLIGHTS_BUCKET=${SUPABASE_HIGHLIGHTS_BUCKET:-highlight-pictures}" >> .env
+echo "SUPABASE_EXCUSE_BUCKET=${SUPABASE_EXCUSE_BUCKET:-excuse-pictures}" >> .env
 
 # 5. Get Dependencies
 echo "Getting dependencies..."

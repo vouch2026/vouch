@@ -54,7 +54,7 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
     final overallCompliance = cards.isEmpty ? 0.0 : cards.map((c) => c.completionPercentage).reduce((a, b) => a + b) / cards.length;
     final pendingSignatures = cards.fold(0, (sum, c) => sum + c.signatures.where((s) => s.status == SignatureStatus.pending).length);
     final totalEvents = cards.fold(0, (sum, c) => sum + c.events.length);
-    final attendedEvents = cards.fold(0, (sum, c) => sum + c.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length);
+    final attendedEvents = cards.fold(0, (sum, c) => sum + c.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length);
     final attendanceRate = totalEvents == 0 ? 0.0 : attendedEvents / totalEvents;
     final rejectedCards = cards.where((c) => c.status == ActivityCardStatus.rejected).length;
 
@@ -218,7 +218,7 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
     final eventStats = <String, List<bool>>{};
     for (var card in cards) {
       for (var event in card.events) {
-        eventStats.putIfAbsent(event.title, () => []).add(event.attendanceStatus == AttendanceStatus.completed);
+        eventStats.putIfAbsent(event.title, () => []).add(event.attendanceStatus == AttendanceStatus.completed || event.attendanceStatus == AttendanceStatus.excused);
       }
     }
 

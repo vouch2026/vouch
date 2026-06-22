@@ -242,7 +242,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     final program = card.studentProgram ?? 'N/A';
     
     final totalEvents = card.events.length;
-    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
+    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
     final eventsDisplay = '$completedEvents/$totalEvents';
     
     final totalFees = card.fees.length;

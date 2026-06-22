@@ -60,6 +60,7 @@ class RouteNames {
   static const String workspaceSanctions = 'workspace-sanctions';
   static const String workspaceSanctionProfile = 'workspace-sanction-profile';
   static const String workspaceCreateSanctionRule = 'workspace-create-sanction-rule';
+  static const String workspaceEditSanctionRule = 'workspace-edit-sanction-rule';
   static const String workspaceParticipation = 'workspace-participation';
   static const String workspaceAttendanceAnalytics = 'workspace-attendance-analytics';
   static const String workspaceFinancialAnalytics = 'workspace-financial-analytics';
@@ -71,6 +72,8 @@ class RouteNames {
   static const String tasks = 'tasks';
   static const String schedule = 'schedule';
   static const String workspaceExcuseRequests = 'workspace-excuse-requests';
+  static const String workspaceExcuseRequestReview = 'workspace-excuse-request-review';
+  static const String myExcuseRequests = 'my-excuse-requests';
   static const String workspaceOfficerAppointments = 'workspace-officer-appointments';
   static const String workspaceCollectionsAudit = 'workspace-collections-audit';
   static const String workspaceAuditLogs = 'workspace-audit-logs';

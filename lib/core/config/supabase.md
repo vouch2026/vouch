@@ -17,9 +17,14 @@ Before running the script, you must remove old data from the auth system:
 5. Ensure you see a "Success" message.
 
 ### Step 3: Create Storage Buckets (CRITICAL)
-For images to work, you must create these buckets in **Storage**:
-1.  **ids**: Set to **Private**. (For user verification IDs)
-2.  **org-pictures**: Set to **Public**. (For organization logos and banners)
+For all uploads to work correctly, you must create the following buckets in **Storage** in your Supabase project:
+1.  **ids**: Set to **Private** (For student/user verification IDs).
+2.  **org-pictures**: Set to **Public** (For organization logos and banners).
+3.  **announcement-pictures**: Set to **Public** (For announcement attachments).
+4.  **event-pictures**: Set to **Public** (For event thumbnail/cover images).
+5.  **receipt-pictures**: Set to **Private** (For payment receipt uploads).
+6.  **highlight-pictures**: Set to **Public** (For event highlights/gallery pictures).
+7.  **excuse-pictures**: Set to **Private** (For student excuse letters and supporting documents).
 
 ### Step 4: Restart Your Flutter App (CRITICAL)
 1. **Fully stop and restart** your Flutter application.

@@ -14,6 +14,8 @@ import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../attendance/providers/attendance_provider.dart';
+import '../../excuse_requests/providers/excuse_provider.dart';
+import '../../excuse_requests/views/excuse_request_form_page.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
@@ -268,12 +270,15 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         const SizedBox(height: AppSpacing.lg),
                         _buildDescriptionSection(event),
                         const SizedBox(height: AppSpacing.xxl),
-                        if (!isOfficer && !isUpcoming)
+                        if (!isOfficer && !isUpcoming) ...[
                           highlightsAsync.when(
                             data: (count) => _buildHighlightsSection(count),
                             loading: () => const Center(child: FlickrLoader()),
                             error: (_, __) => const SizedBox.shrink(),
                           ),
+                          const SizedBox(height: AppSpacing.xxl),
+                          _buildStudentExcuseAction(context, event),
+                        ],
                         if (isOfficer && event.isPastTimeout) ...[
                           _buildOfficerPastEventActions(context, event),
                         ],
@@ -480,6 +485,28 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                           color: Colors.red,
                         ),
                         const SizedBox(height: AppSpacing.md),
+                        ref.watch(studentEventExcuseProvider(event.id!)).when(
+                          data: (excuse) {
+                            if (excuse == null) return const SizedBox.shrink();
+                            Color excuseColor = Colors.orange;
+                            if (excuse.status == 'Approved') excuseColor = Colors.green;
+                            if (excuse.status == 'Rejected') excuseColor = Colors.red;
+                            
+                            return Column(
+                              children: [
+                                _buildInfoCard(
+                                  icon: Icons.info_outline_rounded,
+                                  title: 'Excuse Status',
+                                  content: excuse.status.toUpperCase(),
+                                  color: excuseColor,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                              ],
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
                       ],
                       _buildInfoCard(
                         icon: Icons.login_rounded,
@@ -839,6 +866,181 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildStudentExcuseAction(BuildContext context, EventModel event) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isPast = event.eventDate.isBefore(today);
+    
+    if (!isPast) return const SizedBox.shrink();
+
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole;
+    final isOfficer = activeRole != null && activeRole.roleName != 'Member';
+    
+    if (isOfficer) return const SizedBox.shrink();
+
+    final attendanceAsync = ref.watch(userEventAttendanceProvider(event.id!));
+    
+    return attendanceAsync.when(
+      data: (attendance) {
+        final isAbsent = attendance == null || attendance.status == 'Absent';
+        if (!isAbsent) return const SizedBox.shrink();
+
+        final excuseAsync = ref.watch(studentEventExcuseProvider(event.id!));
+        
+        return excuseAsync.when(
+          data: (excuse) {
+            final excuseStatus = excuse?.status;
+            final submissionCount = excuse?.submissionCount ?? 0;
+            final chancesLeft = 2 - submissionCount;
+            
+            String buttonText = 'Submit Excuse Request ($chancesLeft chances left)';
+            bool showButton = true;
+            bool isBtnEnabled = true;
+            
+            if (excuseStatus == 'Pending' || excuseStatus == 'Pending Review') {
+              buttonText = 'Excuse Request Pending';
+              showButton = false;
+            } else if (excuseStatus == 'Approved') {
+              buttonText = 'Excuse Approved';
+              showButton = false;
+            } else if (excuseStatus == 'Rejected') {
+              if (chancesLeft <= 0) {
+                buttonText = 'Submit Excuse Request (0 chances left)';
+                showButton = true;
+                isBtnEnabled = false;
+              } else {
+                buttonText = 'Resubmit Excuse Request ($chancesLeft chance left)';
+                showButton = true;
+                isBtnEnabled = true;
+              }
+            } else if (excuseStatus == 'Needs Revision') {
+              buttonText = 'Update Excuse (Needs Revision)';
+              showButton = true;
+              isBtnEnabled = true;
+            }
+            
+            if (!showButton) {
+              return Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: excuseStatus == 'Approved' ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: excuseStatus == 'Approved' ? AppColors.success.withValues(alpha: 0.3) : AppColors.warning.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      excuseStatus == 'Approved' ? Icons.check_circle_outline_rounded : Icons.access_time_rounded,
+                      color: excuseStatus == 'Approved' ? AppColors.success : AppColors.warning,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        excuseStatus == 'Approved' 
+                            ? 'Your excuse request has been approved. This event is cleared.'
+                            : 'Your excuse request has been submitted and is currently pending review.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: excuseStatus == 'Approved' ? AppColors.success : AppColors.warning,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            Widget? rejectionAlert;
+            if (excuseStatus == 'Rejected' && excuse?.rejectionReason != null && excuse!.rejectionReason!.isNotEmpty) {
+              rejectionAlert = Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: AppColors.error),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Excuse Request Rejected',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Remarks: ${excuse.rejectionReason!}',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (rejectionAlert != null) rejectionAlert,
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton.icon(
+                    onPressed: isBtnEnabled 
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ExcuseRequestFormPage(
+                              event: event,
+                            ),
+                          ),
+                        ).then((_) {
+                          ref.invalidate(studentEventExcuseProvider(event.id!));
+                        })
+                      : null,
+                    icon: const Icon(Icons.note_alt_rounded),
+                    label: Text(
+                      buttonText,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isBtnEnabled ? AppColors.primary : Colors.grey.shade400,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: FlickrLoader()),
+          error: (err, _) => Text('Error loading excuse status: $err'),
+        );
+      },
+      loading: () => const Center(child: FlickrLoader()),
+      error: (err, _) => Text('Error loading attendance: $err'),
     );
   }
 }

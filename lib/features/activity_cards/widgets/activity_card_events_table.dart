@@ -86,7 +86,7 @@ class ActivityCardEventsTable extends StatelessWidget {
                           ),
                           DataColumn(
                             label: Text(
-                              'ATTENDANCE', 
+                              'STATUS', 
                               style: AppTextStyles.labelSmall.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,

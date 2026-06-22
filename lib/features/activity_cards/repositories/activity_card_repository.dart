@@ -64,6 +64,7 @@ class ActivityCardRepository {
           ''')
           .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
+          .eq('is_mandatory', true)
           .eq('attendance.student_id', studentId),
       _client
           .from('fees')
@@ -82,7 +83,7 @@ class ActivityCardRepository {
       _client
           .from('student_sanction_records')
           .select()
-          .filter('scope_id', 'in', scopeIds.toList())
+          .filter('scope_id', 'in', orgIds)
           .eq('academic_term_id', termId)
           .eq('student_id', studentId),
       _client
@@ -132,7 +133,7 @@ class ActivityCardRepository {
       // Filter bulk results for this organization
       final eventsResponse = allEvents.where((e) => e['scope_id'] == scopeId).toList();
       final feesResponse = allFees.where((f) => f['scope_id'] == scopeId).toList();
-      final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == scopeId).toList();
+      final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == orgId).toList();
       final clearanceResponse = allClearanceRequests.where((c) => c['organization_id'] == orgId).firstOrNull;
 
       // Map to models
@@ -195,7 +196,7 @@ class ActivityCardRepository {
       }
 
       // Calculate completion
-      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
+      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
       final paidFees = fees.where((f) => f.isPaid).length;
       final fulfilledSanctions = sanctions.where((s) => s.isFulfilled).length;
       final totalItems = events.length + fees.length + sanctions.length;
@@ -315,6 +316,7 @@ class ActivityCardRepository {
         .from('events')
         .select('id, name, scope_type, event_date')
         .eq('scope_id', scopeId)
+        .eq('is_mandatory', true)
         .eq('academic_term_id', termId);
     
     final feesResponse = await _client
@@ -325,22 +327,26 @@ class ActivityCardRepository {
 
     // 5. Get all attendance, payments, and clearance requests for these students in bulk
     final List<Future<dynamic>> futures = [
-      _client
-          .from('student_attendance')
-          .select('student_id, event_id, status, actual_time_out')
-          .filter('student_id', 'in', studentIds)
-          .filter('event_id', 'in', eventsResponse.map((e) => e['id']).toList()),
-      _client
-          .from('student_payments')
-          .select('student_id, fee_id, status, amount_paid, paid_at, reference_number')
-          .filter('student_id', 'in', studentIds)
-          .filter('fee_id', 'in', feesResponse.map((f) => f['id']).toList())
-          .eq('status', 'Paid'),
+      eventsResponse.isEmpty
+          ? Future.value(<dynamic>[])
+          : _client
+              .from('student_attendance')
+              .select('student_id, event_id, status, actual_time_out')
+              .filter('student_id', 'in', studentIds)
+              .filter('event_id', 'in', eventsResponse.map((e) => e['id']).toList()),
+      feesResponse.isEmpty
+          ? Future.value(<dynamic>[])
+          : _client
+              .from('student_payments')
+              .select('student_id, fee_id, status, amount_paid, paid_at, reference_number')
+              .filter('student_id', 'in', studentIds)
+              .filter('fee_id', 'in', feesResponse.map((f) => f['id']).toList())
+              .eq('status', 'Paid'),
       _client
           .from('student_sanction_records')
           .select()
           .filter('student_id', 'in', studentIds)
-          .eq('scope_id', scopeId)
+          .eq('scope_id', organizationId)
           .eq('academic_term_id', termId),
       _client
           .from('activity_card_clearance_requests')
@@ -436,7 +442,7 @@ class ActivityCardRepository {
         }
       }
 
-      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed).length;
+      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
       final paidFees = fees.where((f) => f.isPaid).length;
       final fulfilledSanctions = sanctions.where((s) => s.isFulfilled).length;
       final totalItems = events.length + fees.length + sanctions.length;

@@ -32,6 +32,7 @@ jobs:
           echo "SUPABASE_EVENT_BUCKET=${{ secrets.SUPABASE_EVENT_BUCKET }}" >> .env
           echo "SUPABASE_RECEIPTS_BUCKET=${{ secrets.SUPABASE_RECEIPTS_BUCKET }}" >> .env
           echo "SUPABASE_HIGHLIGHTS_BUCKET=${{ secrets.SUPABASE_HIGHLIGHTS_BUCKET }}" >> .env
+          echo "SUPABASE_EXCUSE_BUCKET=${{ secrets.SUPABASE_EXCUSE_BUCKET }}" >> .env
 
       - name: Install dependencies
         run: flutter pub get

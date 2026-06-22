@@ -28,6 +28,7 @@ _ExcuseRequestModel _$ExcuseRequestModelFromJson(Map<String, dynamic> json) =>
       reviewedAt: json['reviewed_at'] == null
           ? null
           : DateTime.parse(json['reviewed_at'] as String),
+      submissionCount: (json['submission_count'] as num?)?.toInt() ?? 1,
       studentName: json['student_name'] as String?,
       studentIdNumber: json['student_id_number'] as String?,
       eventName: json['event_name'] as String?,
@@ -50,6 +51,7 @@ Map<String, dynamic> _$ExcuseRequestModelToJson(_ExcuseRequestModel instance) =>
       'updated_at': instance.updatedAt?.toIso8601String(),
       'reviewed_by_user_id': instance.reviewedByUserId,
       'reviewed_at': instance.reviewedAt?.toIso8601String(),
+      'submission_count': instance.submissionCount,
       'student_name': instance.studentName,
       'student_id_number': instance.studentIdNumber,
       'event_name': instance.eventName,

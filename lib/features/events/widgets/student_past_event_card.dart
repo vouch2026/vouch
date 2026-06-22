@@ -74,12 +74,19 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
                     ),
                     attendanceAsync.when(
                       data: (attendance) {
-                        final isAbsent = attendance == null || attendance.status == 'Absent';
-                        if (!isAbsent) return const SizedBox.shrink();
-                        return _StatusBadge(label: 'ABSENT', color: theme.colorScheme.error);
+                        if (attendance == null) {
+                          return _StatusBadge(label: 'ABSENT', color: theme.colorScheme.error);
+                        }
+                        if (attendance.status == 'Excused') {
+                          return _StatusBadge(label: 'EXCUSED', color: AppColors.success);
+                        }
+                        if (attendance.status == 'Absent') {
+                          return _StatusBadge(label: 'ABSENT', color: theme.colorScheme.error);
+                        }
+                        return const SizedBox.shrink();
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (err, stack) => const SizedBox.shrink(),
                     ),
                   ],
                 ),
@@ -118,7 +125,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
                     ],
                   ),
                   loading: () => const Center(child: FlickrLoader()),
-                  error: (_, __) => const Text('Error loading attendance'),
+                  error: (err, stack) => const Text('Error loading attendance'),
                 ),
                 const SizedBox(height: AppSpacing.xs),
               ],
@@ -134,7 +141,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -143,7 +150,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
           const SizedBox(width: AppSpacing.sm),
           Text(
             label,
-            style: AppTextStyles.labelMedium.copyWith(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8)),
+            style: AppTextStyles.labelMedium.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
           ),
           const Spacer(),
           Text(
@@ -170,9 +177,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         label,
