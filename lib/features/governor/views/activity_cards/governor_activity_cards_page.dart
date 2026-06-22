@@ -69,16 +69,6 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                       Icon(Icons.card_membership_rounded, size: 14, color: Colors.grey[500]),
                       const SizedBox(width: 8),
                       Text(
-                        'Workspace',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                      const SizedBox(width: 8),
-                      Text(
                         'Activity Cards',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.primary,
