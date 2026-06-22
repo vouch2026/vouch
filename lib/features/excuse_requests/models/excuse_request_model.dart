@@ -20,6 +20,7 @@ abstract class ExcuseRequestModel with _$ExcuseRequestModel {
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
     @JsonKey(name: 'reviewed_by_user_id') String? reviewedByUserId,
     @JsonKey(name: 'reviewed_at') DateTime? reviewedAt,
+    @JsonKey(name: 'submission_count') @Default(1) int submissionCount,
     
     // Join fields
     @JsonKey(name: 'student_name') String? studentName,

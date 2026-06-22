@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/loaders/flickr_loader.dart';
+import '../../../../routes/route_paths.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../models/excuse_request_model.dart';
@@ -282,7 +284,14 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
                       DataCell(_StatusBadge(status: req.status)),
                       DataCell(
                         TextButton(
-                          onPressed: () => _showReviewDialog(req),
+                          onPressed: () {
+                            if (isPending) {
+                              context.push(RoutePaths.workspaceExcuseRequestReview.replaceAll(':id', req.id))
+                                  .then((_) => ref.invalidate(workspaceExcuseRequestsProvider));
+                            } else {
+                              _showReviewDialog(req);
+                            }
+                          },
                           child: Text(isPending ? 'Review' : 'View Details'),
                         ),
                       ),
@@ -350,10 +359,17 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
                 _buildInfoRow('Explanation:', explanation, maxLines: 2),
                 _buildInfoRow('Submitted:', req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—'),
                 const SizedBox(height: AppSpacing.sm),
-                SizedBox(
+                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => _showReviewDialog(req),
+                    onPressed: () {
+                      if (isPending) {
+                        context.push(RoutePaths.workspaceExcuseRequestReview.replaceAll(':id', req.id))
+                            .then((_) => ref.invalidate(workspaceExcuseRequestsProvider));
+                      } else {
+                        _showReviewDialog(req);
+                      }
+                    },
                     child: Text(isPending ? 'Review Request' : 'View Details'),
                   ),
                 ),

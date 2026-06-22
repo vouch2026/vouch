@@ -73,6 +73,7 @@ class RoutePaths {
   static const String tasks = '/tasks';
   static const String schedule = '/schedule';
   static const String workspaceExcuseRequests = '/workspace/excuse-requests';
+  static const String workspaceExcuseRequestReview = '/workspace/excuse-requests/:id/review';
   static const String myExcuseRequests = '/workspace/excuse-requests/my';
   static const String workspaceOfficerAppointments = '/workspace/officer-appointments';
   static const String workspaceCollectionsAudit = '/workspace/collections-audit';

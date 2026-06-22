@@ -120,3 +120,12 @@ BEGIN
     RETURN FALSE;
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+-- 7. Add submission_count to excuse_requests and create student update policy (2 chances retry limit)
+ALTER TABLE excuse_requests ADD COLUMN IF NOT EXISTS submission_count INT DEFAULT 1;
+
+DROP POLICY IF EXISTS "Students can resubmit their excuses" ON excuse_requests;
+CREATE POLICY "Students can resubmit their excuses" ON excuse_requests
+  FOR UPDATE TO authenticated
+  USING (student_id = public.get_my_id() AND status = 'Rejected' AND submission_count < 2)
+  WITH CHECK (student_id = public.get_my_id() AND status = 'Pending' AND submission_count = 2);

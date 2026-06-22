@@ -894,8 +894,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         return excuseAsync.when(
           data: (excuse) {
             final excuseStatus = excuse?.status;
-            String buttonText = 'Submit Excuse Request';
+            final submissionCount = excuse?.submissionCount ?? 0;
+            final chancesLeft = 2 - submissionCount;
+            
+            String buttonText = 'Submit Excuse Request ($chancesLeft chances left)';
             bool showButton = true;
+            bool isBtnEnabled = true;
             
             if (excuseStatus == 'Pending' || excuseStatus == 'Pending Review') {
               buttonText = 'Excuse Request Pending';
@@ -903,9 +907,20 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             } else if (excuseStatus == 'Approved') {
               buttonText = 'Excuse Approved';
               showButton = false;
+            } else if (excuseStatus == 'Rejected') {
+              if (chancesLeft <= 0) {
+                buttonText = 'Submit Excuse Request (0 chances left)';
+                showButton = true;
+                isBtnEnabled = false;
+              } else {
+                buttonText = 'Resubmit Excuse Request ($chancesLeft chance left)';
+                showButton = true;
+                isBtnEnabled = true;
+              }
             } else if (excuseStatus == 'Needs Revision') {
               buttonText = 'Update Excuse (Needs Revision)';
               showButton = true;
+              isBtnEnabled = true;
             }
             
             if (!showButton) {
@@ -940,35 +955,84 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
               );
             }
 
-            return SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: FilledButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ExcuseRequestFormPage(
-                      event: event,
+            Widget? rejectionAlert;
+            if (excuseStatus == 'Rejected' && excuse?.rejectionReason != null && excuse!.rejectionReason!.isNotEmpty) {
+              rejectionAlert = Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: AppColors.error),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Excuse Request Rejected',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Remarks: ${excuse.rejectionReason!}',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (rejectionAlert != null) rejectionAlert,
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton.icon(
+                    onPressed: isBtnEnabled 
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ExcuseRequestFormPage(
+                              event: event,
+                            ),
+                          ),
+                        ).then((_) {
+                          ref.invalidate(studentEventExcuseProvider(event.id!));
+                        })
+                      : null,
+                    icon: const Icon(Icons.note_alt_rounded),
+                    label: Text(
+                      buttonText,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isBtnEnabled ? AppColors.primary : Colors.grey.shade400,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
-                icon: const Icon(Icons.note_alt_rounded),
-                label: Text(
-                  buttonText,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
+              ],
             );
           },
           loading: () => const Center(child: FlickrLoader()),

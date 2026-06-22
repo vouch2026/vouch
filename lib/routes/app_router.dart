@@ -45,6 +45,7 @@ import '../features/governor/views/activity_cards/governor_activity_cards_page.d
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
 import '../features/excuse_requests/views/workspace_excuse_requests_page.dart';
 import '../features/excuse_requests/views/my_excuse_requests_page.dart';
+import '../features/excuse_requests/views/workspace_excuse_request_review_page.dart';
 import '../features/sanctions/views/sanction_redirector.dart';
 import '../features/sanctions/views/sanction_profile_page.dart';
 import '../features/sanctions/views/workspace_create_sanction_rule_page.dart';
@@ -111,6 +112,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         if (workspace.selectedOrganization == null) {
           return RoutePaths.dashboard;
+        }
+
+        // Redirect member/student role from officer workspace excuse requests page to student's myExcuseRequests page
+        if (state.matchedLocation == RoutePaths.workspaceExcuseRequests) {
+          final role = workspace.activeRole?.roleName;
+          if (role == 'Student' || role == 'Member') {
+            return RoutePaths.myExcuseRequests;
+          }
         }
       }
 
@@ -447,6 +456,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.workspaceExcuseRequests,
         name: RouteNames.workspaceExcuseRequests,
         builder: (context, state) => const WorkspaceExcuseRequestsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceExcuseRequestReview,
+        name: RouteNames.workspaceExcuseRequestReview,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return WorkspaceExcuseRequestReviewPage(id: id);
+        },
       ),
       GoRoute(
         path: RoutePaths.myExcuseRequests,

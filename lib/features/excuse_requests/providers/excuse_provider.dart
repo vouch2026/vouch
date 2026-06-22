@@ -76,3 +76,8 @@ final studentEventExcuseProvider = FutureProvider.family<ExcuseRequestModel?, St
   final excuses = await repo.getStudentExcuses(user.id!, term.id, scopeId);
   return excuses.where((e) => e.eventId == eventId).firstOrNull;
 });
+
+final workspaceExcuseRequestByIdProvider = FutureProvider.family<ExcuseRequestModel?, String>((ref, id) async {
+  final repo = ref.watch(excuseRepositoryProvider);
+  return repo.getExcuseRequestById(id);
+});

@@ -1124,6 +1124,7 @@ CREATE TABLE IF NOT EXISTS excuse_requests (
   academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE CASCADE,
   reviewed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMP WITH TIME ZONE,
+  submission_count INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(student_id, event_id)
@@ -1138,6 +1139,10 @@ CREATE POLICY "Students can view their own excuse requests" ON excuse_requests F
 
 CREATE POLICY "Students can insert their own excuse requests" ON excuse_requests FOR INSERT TO authenticated
   WITH CHECK (student_id = public.get_my_id());
+
+CREATE POLICY "Students can update their own excuse requests (resubmit limit)" ON excuse_requests FOR UPDATE TO authenticated
+  USING (student_id = public.get_my_id() AND status = 'Rejected' AND submission_count < 2)
+  WITH CHECK (student_id = public.get_my_id() AND status = 'Pending' AND submission_count = 2);
 
 CREATE POLICY "Students can delete their own excuse requests" ON excuse_requests FOR DELETE TO authenticated
   USING (student_id = public.get_my_id() AND status = 'Pending');

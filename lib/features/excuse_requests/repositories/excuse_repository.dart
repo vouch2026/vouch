@@ -20,23 +20,66 @@ class ExcuseRepository {
     required String scopeId,
     required String termId,
   }) async {
-    final documentUrl = await _storageService.uploadExcuseDocument(
-      file: file,
-      studentId: studentId,
-      eventId: eventId,
-    );
+    // Check if an excuse request already exists for this event and student
+    final existing = await _client
+        .from('excuse_requests')
+        .select()
+        .eq('student_id', studentId)
+        .eq('event_id', eventId)
+        .maybeSingle();
 
-    await _client.from('excuse_requests').upsert({
-      'student_id': studentId,
-      'event_id': eventId,
-      'reason': reason,
-      'supporting_document_url': documentUrl,
-      'status': 'Pending',
-      'scope_type': scopeType,
-      'scope_id': scopeId,
-      'academic_term_id': termId,
-      'updated_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'student_id, event_id');
+    if (existing != null) {
+      final currentStatus = existing['status'];
+      final currentCount = existing['submission_count'] ?? 1;
+
+      if (currentStatus == 'Approved') {
+        throw Exception('This excuse request has already been approved.');
+      }
+      if (currentStatus == 'Pending') {
+        throw Exception('This excuse request is already pending review.');
+      }
+      if (currentStatus == 'Rejected') {
+        if (currentCount >= 2) {
+          throw Exception('You have already resubmitted this excuse request and exhausted your 2 chances.');
+        }
+
+        final documentUrl = await _storageService.uploadExcuseDocument(
+          file: file,
+          studentId: studentId,
+          eventId: eventId,
+        );
+
+        await _client.from('excuse_requests').update({
+          'reason': reason,
+          'supporting_document_url': documentUrl,
+          'status': 'Pending',
+          'submission_count': currentCount + 1,
+          'rejection_reason': null,
+          'reviewed_by_user_id': null,
+          'reviewed_at': null,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+      }
+    } else {
+      final documentUrl = await _storageService.uploadExcuseDocument(
+        file: file,
+        studentId: studentId,
+        eventId: eventId,
+      );
+
+      await _client.from('excuse_requests').insert({
+        'student_id': studentId,
+        'event_id': eventId,
+        'reason': reason,
+        'supporting_document_url': documentUrl,
+        'status': 'Pending',
+        'scope_type': scopeType,
+        'scope_id': scopeId,
+        'academic_term_id': termId,
+        'submission_count': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    }
   }
 
   Future<List<ExcuseRequestModel>> getStudentExcuses(String studentId, String termId, String scopeId) async {
@@ -88,6 +131,32 @@ class ExcuseRepository {
         'reviewed_by_name': reviewedBy != null ? '${reviewedBy['first_name']} ${reviewedBy['last_name']}' : null,
       });
     }).toList();
+  }
+
+  Future<ExcuseRequestModel?> getExcuseRequestById(String excuseId) async {
+    final response = await _client
+        .from('excuse_requests')
+        .select('''
+          *,
+          student:users!student_id (first_name, last_name, student_id_number),
+          event:events!event_id (name),
+          reviewed_by:users!reviewed_by_user_id (first_name, last_name)
+        ''')
+        .eq('id', excuseId)
+        .maybeSingle();
+
+    if (response == null) return null;
+
+    final student = response['student'];
+    final event = response['event'];
+    final reviewedBy = response['reviewed_by'];
+    return ExcuseRequestModel.fromJson({
+      ...response,
+      'student_name': student != null ? '${student['first_name']} ${student['last_name']}' : 'Unknown Student',
+      'student_id_number': student?['student_id_number'] ?? 'N/A',
+      'event_name': event?['name'] ?? 'Unknown Event',
+      'reviewed_by_name': reviewedBy != null ? '${reviewedBy['first_name']} ${reviewedBy['last_name']}' : null,
+    });
   }
 
   Future<void> reviewExcuseRequest({
