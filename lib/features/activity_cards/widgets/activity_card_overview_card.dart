@@ -17,7 +17,7 @@ class ActivityCardOverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final completedEvents = activityCard.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
+    final completedEvents = activityCard.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
     final totalEvents = activityCard.events.length;
     final paidFees = activityCard.fees.where((f) => f.isPaid).length;
     final totalFees = activityCard.fees.length;
@@ -153,6 +153,30 @@ class _StatusBadge extends StatelessWidget {
       case ActivityCardStatus.cleared:
         color = Colors.green;
         label = 'CLEARED';
+        break;
+      case ActivityCardStatus.draft:
+        color = Colors.grey;
+        label = 'DRAFT';
+        break;
+      case ActivityCardStatus.inProgress:
+        color = Colors.blue;
+        label = 'IN PROGRESS';
+        break;
+      case ActivityCardStatus.secretaryReview:
+        color = Colors.amber.shade700;
+        label = 'SECRETARY REVIEW';
+        break;
+      case ActivityCardStatus.treasurerReview:
+        color = Colors.amber.shade700;
+        label = 'TREASURER REVIEW';
+        break;
+      case ActivityCardStatus.governorReview:
+        color = Colors.amber.shade700;
+        label = 'GOVERNOR REVIEW';
+        break;
+      case ActivityCardStatus.adviserReview:
+        color = Colors.amber.shade700;
+        label = 'ADVISER REVIEW';
         break;
       case ActivityCardStatus.partiallySigned:
         color = AppColors.primary;

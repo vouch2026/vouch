@@ -215,7 +215,7 @@ class SanctionRepository {
       // 4. Fetch all attendance records for these events
       final attendanceResponse = await _client
           .from('student_attendance')
-          .select('student_id, event_id, actual_time_in, actual_time_out')
+          .select('student_id, event_id, status, actual_time_in, actual_time_out')
           .filter('event_id', 'in', eventIds)
           .filter('student_id', 'in', allStudentIds);
 
@@ -237,15 +237,20 @@ class SanctionRepository {
           final attRecord = studentAtt?[eventId];
 
           if (attRecord != null) {
-            final hasTimeIn = attRecord['actual_time_in'] != null;
-            final hasTimeOut = attRecord['actual_time_out'] != null;
-
-            if (hasTimeIn && hasTimeOut) {
-              // Present: 0 points
-            } else if (hasTimeIn || hasTimeOut) {
-              score += 0.5;
+            final status = attRecord['status'] as String?;
+            if (status == 'Excused') {
+              // Excused absence: 0 point sanction penalty
             } else {
-              score += 1.0;
+              final hasTimeIn = attRecord['actual_time_in'] != null;
+              final hasTimeOut = attRecord['actual_time_out'] != null;
+
+              if (hasTimeIn && hasTimeOut) {
+                // Present: 0 points
+              } else if (hasTimeIn || hasTimeOut) {
+                score += 0.5;
+              } else {
+                score += 1.0;
+              }
             }
           } else {
             score += 1.0;
@@ -417,7 +422,7 @@ class SanctionRepository {
     if (eventIds.isNotEmpty) {
       final attendanceResponse = await _client
           .from('student_attendance')
-          .select('student_id, event_id, actual_time_in, actual_time_out')
+          .select('student_id, event_id, status, actual_time_in, actual_time_out')
           .filter('event_id', 'in', eventIds)
           .filter('student_id', 'in', studentIds);
       
@@ -451,19 +456,25 @@ class SanctionRepository {
         final attRecord = studentAtt?[eventId];
 
         if (attRecord != null) {
-          final hasTimeIn = attRecord['actual_time_in'] != null;
-          final hasTimeOut = attRecord['actual_time_out'] != null;
-
-          if (hasTimeIn && hasTimeOut) {
-            // Present: 0 points
-            attendedCount++;
-          } else if (hasTimeIn || hasTimeOut) {
-            // Partially present: 0.5 points
-            computedSanctionScore += 0.5;
+          final status = attRecord['status'] as String?;
+          if (status == 'Excused') {
+            // Excused: 0 points, and we count it as complied (contributing to attendedEvents)
             attendedCount++;
           } else {
-            // Both null: 1.0 point
-            computedSanctionScore += 1.0;
+            final hasTimeIn = attRecord['actual_time_in'] != null;
+            final hasTimeOut = attRecord['actual_time_out'] != null;
+
+            if (hasTimeIn && hasTimeOut) {
+              // Present: 0 points
+              attendedCount++;
+            } else if (hasTimeIn || hasTimeOut) {
+              // Partially present: 0.5 points
+              computedSanctionScore += 0.5;
+              attendedCount++;
+            } else {
+              // Both null: 1.0 point
+              computedSanctionScore += 1.0;
+            }
           }
         } else {
           // No attendance record: 1.0 point
@@ -530,18 +541,23 @@ class SanctionRepository {
       double score = 1.0;
 
       if (attendance != null) {
-        timeIn = attendance['actual_time_in'];
-        timeOut = attendance['actual_time_out'];
-        
-        final hasTimeIn = timeIn != null;
-        final hasTimeOut = timeOut != null;
-
-        if (hasTimeIn && hasTimeOut) {
+        final status = attendance['status'] as String?;
+        if (status == 'Excused') {
           score = 0.0;
-        } else if (hasTimeIn || hasTimeOut) {
-          score = 0.5;
         } else {
-          score = 1.0;
+          timeIn = attendance['actual_time_in'];
+          timeOut = attendance['actual_time_out'];
+          
+          final hasTimeIn = timeIn != null;
+          final hasTimeOut = timeOut != null;
+
+          if (hasTimeIn && hasTimeOut) {
+            score = 0.0;
+          } else if (hasTimeIn || hasTimeOut) {
+            score = 0.5;
+          } else {
+            score = 1.0;
+          }
         }
       }
 

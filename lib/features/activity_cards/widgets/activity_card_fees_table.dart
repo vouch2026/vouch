@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 
 class ActivityCardFeesTable extends StatelessWidget {
   final List<ActivityCardFee> fees;
+  final bool useHorizontalPadding;
 
   const ActivityCardFeesTable({
     super.key,
     required this.fees,
+    this.useHorizontalPadding = true,
   });
 
   @override
@@ -19,12 +21,13 @@ class ActivityCardFeesTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 6.0),
+          padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
+          child: const Padding(
+            padding: EdgeInsets.only(left: 6.0),
             child: Text(
               'MANDATORY FEES COMPLIANCE',
-              style: AppTextStyles.labelSmall.copyWith(
+              style: TextStyle(
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textGrey,
                 letterSpacing: 1.2,
@@ -35,7 +38,7 @@ class ActivityCardFeesTable extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Container(
           width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          margin: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(24),

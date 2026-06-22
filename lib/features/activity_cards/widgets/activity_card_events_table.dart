@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 
 class ActivityCardEventsTable extends StatelessWidget {
   final List<ActivityCardEvent> events;
+  final bool useHorizontalPadding;
 
   const ActivityCardEventsTable({
     super.key,
     required this.events,
+    this.useHorizontalPadding = true,
   });
 
   @override
@@ -19,12 +21,13 @@ class ActivityCardEventsTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 6.0),
+          padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
+          child: const Padding(
+            padding: EdgeInsets.only(left: 6.0),
             child: Text(
               'MANDATORY EVENTS COMPLIANCE',
-              style: AppTextStyles.labelSmall.copyWith(
+              style: TextStyle(
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textGrey,
                 letterSpacing: 1.2,
@@ -35,7 +38,7 @@ class ActivityCardEventsTable extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Container(
           width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          margin: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(24),
@@ -153,6 +156,11 @@ class _AttendanceStatusBadge extends StatelessWidget {
         color = AppColors.success;
         icon = Icons.check_circle_outline_rounded;
         label = 'Completed';
+        break;
+      case AttendanceStatus.sanctionCleared:
+        color = AppColors.success;
+        icon = Icons.assignment_turned_in_rounded;
+        label = 'Sanction Cleared';
         break;
       case AttendanceStatus.pending:
         color = AppColors.warning;

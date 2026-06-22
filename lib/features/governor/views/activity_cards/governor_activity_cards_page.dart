@@ -43,26 +43,41 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isLargeScreen = screenWidth > 1200;
-    final horizontalPadding = isLargeScreen ? AppSpacing.md : AppSpacing.lg;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final padding = EdgeInsets.symmetric(
+      horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+      vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+    );
 
     final cardsAsync = ref.watch(organizationActivityCardsProvider);
 
     return DashboardLayout(
       title: 'Organization Activity Cards',
-      child: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: AppSpacing.lg,
+      onBack: () => context.pop(),
+      child: Padding(
+        padding: padding,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.card_membership_rounded, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Activity Cards',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: UserManagementHeader(
+                  const SizedBox(height: AppSpacing.md),
+                  UserManagementHeader(
                     title: 'Activity Cards',
                     subtitle: 'Manage student clearances, signatures, and compliance',
                     actions: [
@@ -73,14 +88,12 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                       ),
                     ],
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: Container(
+                  const SizedBox(height: AppSpacing.lg),
+                  Container(
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                     ),
                     child: TabBar(
                       controller: _tabController,
@@ -96,85 +109,82 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-              ],
-            ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            cardsAsync.when(
-              data: (cards) {
-                final query = _searchController.text.toLowerCase();
-                final filteredCards = cards.where((card) {
-                  // Only display students who have actually requested for clearance
-                  final hasRequested = !card.id.startsWith('temp-');
-                  if (!hasRequested) return false;
-
-                  final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
-                  final matchesStatus = _selectedStatus == 'All' || 
-                      card.status.name.toLowerCase() == _selectedStatus.toLowerCase().replaceAll(' ', '');
-                  return matchesSearch && matchesStatus;
-                }).toList();
-                
-                return _buildClearanceList(context, horizontalPadding, filteredCards);
-              },
-              loading: () => const Center(child: FlickrLoader()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-            ),
-            cardsAsync.when(
-              data: (cards) => ComplianceAnalyticsDashboard(cards: cards),
-              loading: () => const Center(child: FlickrLoader()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+              ),
             ),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              cardsAsync.when(
+                data: (cards) {
+                  final query = _searchController.text.toLowerCase();
+                  final filteredCards = cards.where((card) {
+                    // Only display students who have actually requested for clearance
+                    final hasRequested = !card.id.startsWith('temp-');
+                    if (!hasRequested) return false;
+  
+                    final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
+                    final matchesStatus = _selectedStatus == 'All' || 
+                        card.status.name.toLowerCase() == _selectedStatus.toLowerCase().replaceAll(' ', '');
+                    return matchesSearch && matchesStatus;
+                  }).toList();
+                  
+                  return _buildClearanceList(context, filteredCards);
+                },
+                loading: () => const Center(child: FlickrLoader()),
+                error: (err, stack) => Center(child: Text('Error: $err')),
+              ),
+              cardsAsync.when(
+                data: (cards) => ComplianceAnalyticsDashboard(cards: cards),
+                loading: () => const Center(child: FlickrLoader()),
+                error: (err, stack) => Center(child: Text('Error: $err')),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildClearanceList(BuildContext context, double horizontalPadding, List<ActivityCard> cards) {
+  Widget _buildClearanceList(BuildContext context, List<ActivityCard> cards) {
     return Column(
       children: [
-        _buildFilters(horizontalPadding),
+        _buildFilters(),
         const SizedBox(height: AppSpacing.lg),
-        Expanded(child: _buildStudentsTable(horizontalPadding, cards)),
+        Expanded(child: _buildStudentsTable(cards)),
       ],
     );
   }
 
-  Widget _buildFilters(double horizontalPadding) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 600;
+  Widget _buildFilters() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 600;
 
-          return Flex(
-            direction: isCompact ? Axis.vertical : Axis.horizontal,
-            children: [
-              Expanded(
-                flex: isCompact ? 0 : 1,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by student name or ID...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+        return Flex(
+          direction: isCompact ? Axis.vertical : Axis.horizontal,
+          children: [
+            Expanded(
+              flex: isCompact ? 0 : 1,
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search by student name or ID...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              SizedBox(width: isCompact ? 0 : AppSpacing.md, height: isCompact ? AppSpacing.md : 0),
-              SizedBox(
-                width: isCompact ? double.infinity : null,
-                child: _buildStatusDropdown(),
-              ),
-            ],
-          );
-        },
-      ),
+            ),
+            SizedBox(width: isCompact ? 0 : AppSpacing.md, height: isCompact ? AppSpacing.md : 0),
+            SizedBox(
+              width: isCompact ? double.infinity : null,
+              child: _buildStatusDropdown(),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -197,9 +207,9 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     );
   }
 
-  Widget _buildStudentsTable(double horizontalPadding, List<ActivityCard> cards) {
+  Widget _buildStudentsTable(List<ActivityCard> cards) {
     return Card(
-      margin: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, AppSpacing.lg),
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -242,7 +252,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     final program = card.studentProgram ?? 'N/A';
     
     final totalEvents = card.events.length;
-    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
+    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
     final eventsDisplay = '$completedEvents/$totalEvents';
     
     final totalFees = card.fees.length;
@@ -327,6 +337,30 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
         color = Colors.green;
         label = 'CLEARED';
         break;
+      case ActivityCardStatus.draft:
+        color = Colors.grey;
+        label = 'DRAFT';
+        break;
+      case ActivityCardStatus.inProgress:
+        color = Colors.blue;
+        label = 'IN PROGRESS';
+        break;
+      case ActivityCardStatus.secretaryReview:
+        color = Colors.amber.shade700;
+        label = 'SECRETARY REVIEW';
+        break;
+      case ActivityCardStatus.treasurerReview:
+        color = Colors.amber.shade700;
+        label = 'TREASURER REVIEW';
+        break;
+      case ActivityCardStatus.governorReview:
+        color = Colors.amber.shade700;
+        label = 'GOVERNOR REVIEW';
+        break;
+      case ActivityCardStatus.adviserReview:
+        color = Colors.amber.shade700;
+        label = 'ADVISER REVIEW';
+        break;
       case ActivityCardStatus.partiallySigned:
         color = AppColors.primary;
         label = 'PARTIALLY';
@@ -334,6 +368,10 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
       case ActivityCardStatus.rejected:
         color = Colors.red;
         label = 'REJECTED';
+        break;
+      case ActivityCardStatus.inReview:
+        color = Colors.blue;
+        label = 'IN REVIEW';
         break;
       default:
         color = Colors.orange;

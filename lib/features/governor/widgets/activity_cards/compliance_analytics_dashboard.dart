@@ -17,7 +17,7 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -54,7 +54,7 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
     final overallCompliance = cards.isEmpty ? 0.0 : cards.map((c) => c.completionPercentage).reduce((a, b) => a + b) / cards.length;
     final pendingSignatures = cards.fold(0, (sum, c) => sum + c.signatures.where((s) => s.status == SignatureStatus.pending).length);
     final totalEvents = cards.fold(0, (sum, c) => sum + c.events.length);
-    final attendedEvents = cards.fold(0, (sum, c) => sum + c.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length);
+    final attendedEvents = cards.fold(0, (sum, c) => sum + c.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length);
     final attendanceRate = totalEvents == 0 ? 0.0 : attendedEvents / totalEvents;
     final rejectedCards = cards.where((c) => c.status == ActivityCardStatus.rejected).length;
 
@@ -172,7 +172,15 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
   Widget _buildStatusDistribution() {
     final cleared = cards.where((c) => c.status == ActivityCardStatus.cleared).length;
     final partiallySigned = cards.where((c) => c.status == ActivityCardStatus.partiallySigned).length;
-    final pending = cards.where((c) => c.status == ActivityCardStatus.pending).length;
+    final pending = cards.where((c) => 
+      c.status == ActivityCardStatus.pending ||
+      c.status == ActivityCardStatus.draft ||
+      c.status == ActivityCardStatus.inProgress ||
+      c.status == ActivityCardStatus.secretaryReview ||
+      c.status == ActivityCardStatus.treasurerReview ||
+      c.status == ActivityCardStatus.governorReview ||
+      c.status == ActivityCardStatus.adviserReview
+    ).length;
     final rejected = cards.where((c) => c.status == ActivityCardStatus.rejected).length;
     final total = cards.length;
 
@@ -218,7 +226,7 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
     final eventStats = <String, List<bool>>{};
     for (var card in cards) {
       for (var event in card.events) {
-        eventStats.putIfAbsent(event.title, () => []).add(event.attendanceStatus == AttendanceStatus.completed || event.attendanceStatus == AttendanceStatus.excused);
+        eventStats.putIfAbsent(event.title, () => []).add(event.attendanceStatus == AttendanceStatus.completed || event.attendanceStatus == AttendanceStatus.excused || event.attendanceStatus == AttendanceStatus.sanctionCleared);
       }
     }
 

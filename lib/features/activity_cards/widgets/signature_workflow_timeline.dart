@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 
 class SignatureWorkflowTimeline extends StatelessWidget {
   final List<ActivityCardSignature> signatures;
+  final bool useHorizontalPadding;
 
   const SignatureWorkflowTimeline({
     super.key,
     required this.signatures,
+    this.useHorizontalPadding = true,
   });
 
   @override
@@ -25,12 +27,13 @@ class SignatureWorkflowTimeline extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 6.0),
+          padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
+          child: const Padding(
+            padding: EdgeInsets.only(left: 6.0),
             child: Text(
               'CLEARANCE WORKFLOW',
-              style: AppTextStyles.labelSmall.copyWith(
+              style: TextStyle(
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textGrey,
                 letterSpacing: 1.2,
@@ -44,7 +47,7 @@ class SignatureWorkflowTimeline extends StatelessWidget {
             height: 180,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(sortedSignatures.length * 2 - 1, (index) {
@@ -102,82 +105,126 @@ class _SignatureCard extends StatelessWidget {
       statusLabel = 'Pending';
     }
 
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isPending 
-              ? AppColors.accent.withValues(alpha: 0.8) 
-              : (isSigned ? AppColors.success.withValues(alpha: 0.4) : AppColors.border),
-          width: isSigned || isPending ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isPending 
-                ? AppColors.accent.withValues(alpha: 0.12)
-                : Colors.black.withValues(alpha: 0.04),
-            blurRadius: isPending ? 12 : 8,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            signature.roleName.toUpperCase(),
-            style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isLocked ? AppColors.textGrey : AppColors.primary,
-              fontSize: 9,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            signature.signedByUserName ?? 'Not yet signed',
-            style: AppTextStyles.titleSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isLocked ? AppColors.textGrey : AppColors.textDark,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: statusColor.withValues(alpha: 0.15), width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(statusIcon, size: 12, color: statusColor),
-                const SizedBox(width: 4),
-                Text(
-                  statusLabel,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: statusColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+    final hasRejectionReason = isRejected && signature.rejectionReason != null && signature.rejectionReason!.trim().isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: hasRejectionReason
+            ? () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: AppColors.error),
+                        const SizedBox(width: 8),
+                        Text('Rejection Reason - ${signature.roleName}'),
+                      ],
+                    ),
+                    content: Text(signature.rejectionReason!),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
                   ),
+                );
+              }
+            : null,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 180,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isPending 
+                  ? AppColors.accent.withValues(alpha: 0.8) 
+                  : (isSigned ? AppColors.success.withValues(alpha: 0.4) : AppColors.border),
+              width: isSigned || isPending ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isPending 
+                    ? AppColors.accent.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.04),
+                blurRadius: isPending ? 12 : 8,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                signature.roleName.toUpperCase(),
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isLocked ? AppColors.textGrey : AppColors.primary,
+                  fontSize: 9,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                signature.signedByUserName ?? 'Not yet signed',
+                style: AppTextStyles.titleSmall.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isLocked ? AppColors.textGrey : AppColors.textDark,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Spacer(),
+              if (hasRejectionReason) ...[
+                Text(
+                  'Reason: ${signature.rejectionReason}',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.error,
+                    fontSize: 9,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+              ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.15), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, size: 12, color: statusColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      statusLabel,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSigned && signature.signedAt != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('MMM d, yyyy').format(signature.signedAt!),
+                  style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: AppColors.textGrey),
                 ),
               ],
-            ),
+            ],
           ),
-          if (isSigned && signature.signedAt != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('MMM d, yyyy').format(signature.signedAt!),
-              style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: AppColors.textGrey),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
