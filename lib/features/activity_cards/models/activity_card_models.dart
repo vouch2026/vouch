@@ -1,9 +1,16 @@
 enum ActivityCardStatus {
+  draft,
+  inProgress,
+  secretaryReview,
+  treasurerReview,
+  governorReview,
+  adviserReview,
+  cleared,
+  rejected,
+  // Retaining legacy values for compile compatibility
   pending,
   inReview,
   partiallySigned,
-  cleared,
-  rejected,
   expired
 }
 
@@ -12,7 +19,8 @@ enum AttendanceStatus {
   pending,
   absent,
   excused,
-  rejected
+  rejected,
+  sanctionCleared
 }
 
 enum SignatureStatus {

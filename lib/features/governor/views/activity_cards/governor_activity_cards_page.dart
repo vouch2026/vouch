@@ -242,7 +242,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     final program = card.studentProgram ?? 'N/A';
     
     final totalEvents = card.events.length;
-    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
+    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
     final eventsDisplay = '$completedEvents/$totalEvents';
     
     final totalFees = card.fees.length;
@@ -327,6 +327,30 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
         color = Colors.green;
         label = 'CLEARED';
         break;
+      case ActivityCardStatus.draft:
+        color = Colors.grey;
+        label = 'DRAFT';
+        break;
+      case ActivityCardStatus.inProgress:
+        color = Colors.blue;
+        label = 'IN PROGRESS';
+        break;
+      case ActivityCardStatus.secretaryReview:
+        color = Colors.amber.shade700;
+        label = 'SECRETARY REVIEW';
+        break;
+      case ActivityCardStatus.treasurerReview:
+        color = Colors.amber.shade700;
+        label = 'TREASURER REVIEW';
+        break;
+      case ActivityCardStatus.governorReview:
+        color = Colors.amber.shade700;
+        label = 'GOVERNOR REVIEW';
+        break;
+      case ActivityCardStatus.adviserReview:
+        color = Colors.amber.shade700;
+        label = 'ADVISER REVIEW';
+        break;
       case ActivityCardStatus.partiallySigned:
         color = AppColors.primary;
         label = 'PARTIALLY';
@@ -334,6 +358,10 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
       case ActivityCardStatus.rejected:
         color = Colors.red;
         label = 'REJECTED';
+        break;
+      case ActivityCardStatus.inReview:
+        color = Colors.blue;
+        label = 'IN REVIEW';
         break;
       default:
         color = Colors.orange;

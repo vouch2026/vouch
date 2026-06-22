@@ -382,7 +382,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
   }
 
   Widget _buildQuickCompliance(ActivityCard card) {
-    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
+    final completedEvents = card.events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
     final totalEvents = card.events.length;
     final isEventsMet = completedEvents == totalEvents && totalEvents > 0;
 

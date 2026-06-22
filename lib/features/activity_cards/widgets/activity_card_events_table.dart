@@ -154,6 +154,11 @@ class _AttendanceStatusBadge extends StatelessWidget {
         icon = Icons.check_circle_outline_rounded;
         label = 'Completed';
         break;
+      case AttendanceStatus.sanctionCleared:
+        color = AppColors.success;
+        icon = Icons.assignment_turned_in_rounded;
+        label = 'Sanction Cleared';
+        break;
       case AttendanceStatus.pending:
         color = AppColors.warning;
         icon = Icons.access_time_rounded;

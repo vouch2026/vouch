@@ -1,4 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/activity_card_models.dart';
+import 'activity_card_repository.dart';
 
 class ClearanceRepository {
   final SupabaseClient _client;
@@ -164,9 +166,68 @@ class ClearanceRepository {
     final scopeId = sigResponse['required_scope_id'];
     final requestId = sigResponse['clearance_request_id'];
 
-    // 2. Enforce hierarchy for high-level officers
-    if (roleName == 'Governor' || roleName == 'President') {
-      // Find the organization for this scope to determine its type
+    // 2. Retrieve organization_id from the clearance request
+    final reqResponse = await _client
+        .from('activity_card_clearance_requests')
+        .select('organization_id')
+        .eq('id', requestId)
+        .single();
+    final organizationId = reqResponse['organization_id'];
+
+    // 3. Get the student's activity card using ActivityCardRepository
+    final cardRepo = ActivityCardRepository(_client);
+    final card = await cardRepo.getStudentActivityCardForOrganization(studentId, organizationId);
+    if (card == null) {
+      throw Exception('Student activity card not found.');
+    }
+
+    // 4. Get all signatures for this clearance request to verify sequence compliance
+    final sigsResponse = await _client
+        .from('activity_card_clearance_signatures')
+        .select('*, roles(name)')
+        .eq('clearance_request_id', requestId);
+    
+    final sigList = sigsResponse as List;
+
+    // 5. Enforce role-based clearance validations
+    if (roleName == 'Secretary') {
+      final allEventsComplied = card.events.every((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared);
+      if (!allEventsComplied) {
+        throw Exception('Cannot sign. Not all mandatory events are complied with.');
+      }
+    } else if (roleName == 'Treasurer') {
+      final allFeesPaid = card.fees.every((f) => f.isPaid);
+      if (!allFeesPaid) {
+        throw Exception('Cannot sign. Not all mandatory fees are paid.');
+      }
+    } else if (roleName == 'Governor' || roleName == 'President') {
+      // Secretary must have signed
+      final secretarySig = sigList.firstWhere(
+        (s) {
+          final r = s['roles'];
+          final rName = r is List ? r.first['name'] : r['name'];
+          return rName == 'Secretary';
+        },
+        orElse: () => null,
+      );
+      if (secretarySig != null && secretarySig['status'] != 'Signed') {
+        throw Exception('Cannot sign. Secretary has not signed this clearance card yet.');
+      }
+
+      // Treasurer must have signed
+      final treasurerSig = sigList.firstWhere(
+        (s) {
+          final r = s['roles'];
+          final rName = r is List ? r.first['name'] : r['name'];
+          return rName == 'Treasurer';
+        },
+        orElse: () => null,
+      );
+      if (treasurerSig != null && treasurerSig['status'] != 'Signed') {
+        throw Exception('Cannot sign. Treasurer has not signed this clearance card yet.');
+      }
+
+      // Lower-level organization clearance check
       final orgResponse = await _client
           .from('organizations')
           .select('type')
@@ -186,9 +247,22 @@ class ClearanceRepository {
       if (!isEligible) {
         throw Exception('Student must clear the lower hierarchy organization first.');
       }
+    } else if (roleName == 'Instructor' || roleName == 'Adviser') {
+      // Governor/President must have signed before Adviser can sign
+      final govSig = sigList.firstWhere(
+        (s) {
+          final r = s['roles'];
+          final rName = r is List ? r.first['name'] : r['name'];
+          return rName == 'Governor' || rName == 'President';
+        },
+        orElse: () => null,
+      );
+      if (govSig != null && govSig['status'] != 'Signed') {
+        throw Exception('Cannot sign. Governor/President signature is required first.');
+      }
     }
 
-    // 3. Update the signature
+    // 6. Update the signature status to Signed
     await _client.from('activity_card_clearance_signatures').update({
       'status': 'Signed',
       'signed_by_user_id': userId,
@@ -196,7 +270,7 @@ class ClearanceRepository {
       'remarks': remarks,
     }).eq('id', signatureId);
 
-    // 4. Check if fully signed
+    // 7. Check if fully signed
     final allSignatures = await _client
         .from('activity_card_clearance_signatures')
         .select('status')

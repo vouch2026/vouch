@@ -136,22 +136,39 @@ class ActivityCardRepository {
       final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == orgId).toList();
       final clearanceResponse = allClearanceRequests.where((c) => c['organization_id'] == orgId).firstOrNull;
 
-      // Map to models
+      // 1. Map sanctions first
+      final List<ActivityCardSanction> sanctions = sanctionsResponse.map((s) {
+        return ActivityCardSanction(
+          id: s['id'],
+          description: s['required_item'],
+          isFulfilled: s['status'] == 'Item Received',
+          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
+        );
+      }).toList();
+
+      final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
+
+      // 2. Map events (applying sanctionCleared if all sanctions are completed)
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = (e['attendance'] as List).firstOrNull;
+        var status = _mapAttendanceStatus(attendance?['status']);
+        if (status == AttendanceStatus.absent && sanctionsCleared) {
+          status = AttendanceStatus.sanctionCleared;
+        }
         return ActivityCardEvent(
           id: e['id'],
           eventId: e['id'],
           title: e['name'],
           category: e['scope_type'],
           date: DateTime.parse(e['event_date']),
-          attendanceStatus: _mapAttendanceStatus(attendance?['status']),
+          attendanceStatus: status,
           completedAt: attendance?['actual_time_out'] != null 
             ? DateTime.parse(attendance!['actual_time_out']) 
             : null,
         );
       }).toList();
 
+      // 3. Map fees
       final List<ActivityCardFee> fees = feesResponse.map((f) {
         final payment = (f['payments'] as List).where((p) => p['status'] == 'Paid').firstOrNull;
         return ActivityCardFee(
@@ -166,15 +183,7 @@ class ActivityCardRepository {
         );
       }).toList();
 
-      final List<ActivityCardSanction> sanctions = sanctionsResponse.map((s) {
-        return ActivityCardSanction(
-          id: s['id'],
-          description: s['required_item'],
-          isFulfilled: s['status'] == 'Item Received',
-          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
-        );
-      }).toList();
-
+      // 4. Map signatures
       final List<ActivityCardSignature> signatures = [];
       if (clearanceResponse != null && clearanceResponse['activity_card_clearance_signatures'] != null) {
         final sigList = clearanceResponse['activity_card_clearance_signatures'] as List;
@@ -195,14 +204,20 @@ class ActivityCardRepository {
         }
       }
 
-      // Calculate completion
-      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
+      // 5. Calculate completion
+      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
       final paidFees = fees.where((f) => f.isPaid).length;
       final fulfilledSanctions = sanctions.where((s) => s.isFulfilled).length;
       final totalItems = events.length + fees.length + sanctions.length;
       final completionPercentage = totalItems > 0 
         ? (completedEvents + paidFees + fulfilledSanctions) / totalItems 
         : 0.0;
+
+      final cardStatus = _determineActivityCardStatus(
+        clearanceResponse?['status'],
+        signatures,
+        completionPercentage,
+      );
 
       cards.add(ActivityCard(
         id: clearanceResponse?['id'] ?? 'temp-$orgId',
@@ -213,7 +228,7 @@ class ActivityCardRepository {
         organizationType: orgType,
         academicYear: academicYear,
         semester: semester,
-        status: _mapClearanceStatus(clearanceResponse?['status']),
+        status: cardStatus,
         isOfficer: isOfficer,
         completionPercentage: completionPercentage,
         events: events,
@@ -224,6 +239,52 @@ class ActivityCardRepository {
     }
 
     return cards;
+  }
+
+  ActivityCardStatus _determineActivityCardStatus(
+    String? dbStatus, 
+    List<ActivityCardSignature> signatures, 
+    double completionPercentage
+  ) {
+    if (dbStatus == null) {
+      return completionPercentage > 0 
+          ? ActivityCardStatus.inProgress 
+          : ActivityCardStatus.draft;
+    }
+
+    if (dbStatus == 'Rejected') {
+      return ActivityCardStatus.rejected;
+    }
+
+    if (dbStatus == 'Cleared') {
+      return ActivityCardStatus.cleared;
+    }
+
+    // If Pending in the database, determine based on signatures:
+    final hasSecretary = signatures.any((s) => s.roleName == 'Secretary');
+    final hasTreasurer = signatures.any((s) => s.roleName == 'Treasurer');
+    final hasGovernor = signatures.any((s) => s.roleName == 'Governor' || s.roleName == 'President');
+    final hasAdviser = signatures.any((s) => s.roleName == 'Instructor' || s.roleName == 'Adviser');
+
+    final isSecretarySigned = !hasSecretary || signatures.where((s) => s.roleName == 'Secretary').every((s) => s.status == SignatureStatus.signed);
+    final isTreasurerSigned = !hasTreasurer || signatures.where((s) => s.roleName == 'Treasurer').every((s) => s.status == SignatureStatus.signed);
+    final isGovernorSigned = !hasGovernor || signatures.where((s) => s.roleName == 'Governor' || s.roleName == 'President').every((s) => s.status == SignatureStatus.signed);
+    final isAdviserSigned = !hasAdviser || signatures.where((s) => s.roleName == 'Instructor' || s.roleName == 'Adviser').every((s) => s.status == SignatureStatus.signed);
+
+    if (!isSecretarySigned) {
+      return ActivityCardStatus.secretaryReview;
+    }
+    if (!isTreasurerSigned) {
+      return ActivityCardStatus.treasurerReview;
+    }
+    if (!isGovernorSigned) {
+      return ActivityCardStatus.governorReview;
+    }
+    if (!isAdviserSigned) {
+      return ActivityCardStatus.adviserReview;
+    }
+
+    return ActivityCardStatus.cleared;
   }
 
   AttendanceStatus _mapAttendanceStatus(String? status) {
@@ -386,19 +447,37 @@ class ActivityCardRepository {
       final studentSanctions = allSanctions.where((s) => s['student_id'] == studentId).toList();
       final studentClearance = allClearances.where((c) => c['student_id'] == studentId).firstOrNull;
 
+      // 1. Map sanctions first
+      final List<ActivityCardSanction> sanctions = studentSanctions.map((s) {
+        return ActivityCardSanction(
+          id: s['id'],
+          description: s['required_item'],
+          isFulfilled: s['status'] == 'Item Received',
+          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
+        );
+      }).toList();
+
+      final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
+
+      // 2. Map events (applying sanctionCleared if all sanctions are completed)
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = studentAttendance.where((a) => a['event_id'] == e['id']).firstOrNull;
+        var status = _mapAttendanceStatus(attendance?['status']);
+        if (status == AttendanceStatus.absent && sanctionsCleared) {
+          status = AttendanceStatus.sanctionCleared;
+        }
         return ActivityCardEvent(
           id: e['id'],
           eventId: e['id'],
           title: e['name'],
           category: e['scope_type'],
           date: DateTime.parse(e['event_date']),
-          attendanceStatus: _mapAttendanceStatus(attendance?['status']),
+          attendanceStatus: status,
           completedAt: attendance?['actual_time_out'] != null ? DateTime.parse(attendance!['actual_time_out']) : null,
         );
       }).toList();
 
+      // 3. Map fees
       final List<ActivityCardFee> fees = feesResponse.map((f) {
         final payment = studentPayments.where((p) => p['fee_id'] == f['id']).firstOrNull;
         return ActivityCardFee(
@@ -413,15 +492,7 @@ class ActivityCardRepository {
         );
       }).toList();
 
-      final List<ActivityCardSanction> sanctions = studentSanctions.map((s) {
-        return ActivityCardSanction(
-          id: s['id'],
-          description: s['required_item'],
-          isFulfilled: s['status'] == 'Item Received',
-          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
-        );
-      }).toList();
-
+      // 4. Map signatures
       final List<ActivityCardSignature> signatures = [];
       if (studentClearance != null && studentClearance['activity_card_clearance_signatures'] != null) {
         final sigList = studentClearance['activity_card_clearance_signatures'] as List;
@@ -442,11 +513,18 @@ class ActivityCardRepository {
         }
       }
 
-      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused).length;
+      // 5. Calculate completion
+      final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
       final paidFees = fees.where((f) => f.isPaid).length;
       final fulfilledSanctions = sanctions.where((s) => s.isFulfilled).length;
       final totalItems = events.length + fees.length + sanctions.length;
       final completionPercentage = totalItems > 0 ? (completedEvents + paidFees + fulfilledSanctions) / totalItems : 0.0;
+
+      final cardStatus = _determineActivityCardStatus(
+        studentClearance?['status'],
+        signatures,
+        completionPercentage,
+      );
 
       cards.add(ActivityCard(
         id: studentClearance?['id'] ?? 'temp-$studentId',
@@ -459,7 +537,7 @@ class ActivityCardRepository {
         organizationType: orgType,
         academicYear: academicYear,
         semester: semester,
-        status: _mapClearanceStatus(studentClearance?['status']),
+        status: cardStatus,
         isOfficer: isOfficer,
         completionPercentage: completionPercentage,
         events: events,
