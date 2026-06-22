@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 
 class SignatureWorkflowTimeline extends StatelessWidget {
   final List<ActivityCardSignature> signatures;
+  final bool useHorizontalPadding;
 
   const SignatureWorkflowTimeline({
     super.key,
     required this.signatures,
+    this.useHorizontalPadding = true,
   });
 
   @override
@@ -25,12 +27,13 @@ class SignatureWorkflowTimeline extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 6.0),
+          padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
+          child: const Padding(
+            padding: EdgeInsets.only(left: 6.0),
             child: Text(
               'CLEARANCE WORKFLOW',
-              style: AppTextStyles.labelSmall.copyWith(
+              style: TextStyle(
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textGrey,
                 letterSpacing: 1.2,
@@ -44,7 +47,7 @@ class SignatureWorkflowTimeline extends StatelessWidget {
             height: 180,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(sortedSignatures.length * 2 - 1, (index) {

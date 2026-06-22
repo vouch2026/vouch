@@ -90,201 +90,204 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
     final allStudentCardsAsync = ref.watch(studentActivityCardsByIdProvider(widget.id));
     final activeRole = ref.watch(workspaceProvider).activeRole;
 
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final padding = EdgeInsets.symmetric(
+      horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+      vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+    );
+
     return LoadingOverlay(
       isLoading: _isActionLoading,
       child: DashboardLayout(
         title: 'Review Activity Card',
         onBack: () => context.pop(),
-        child: activityCardAsync.when(
-          data: (activityCard) {
-            if (activityCard == null) {
-              return const Center(child: Text('Activity Card not found for this student in your organization.'));
-            }
-
-            // Hierarchy Check
-            bool isPrerequisiteLocked = false;
-            String prerequisiteLockReason = '';
-
-            if (allStudentCardsAsync.hasValue) {
-              final allCards = allStudentCardsAsync.value!;
-              if (activityCard.organizationType == 'faculty-based') {
-                final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
-                if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
-                  isPrerequisiteLocked = true;
-                  prerequisiteLockReason = 'Student must clear their Program Activity Card (${programCard.organizationName}) first.';
+        child: Padding(
+          padding: padding,
+          child: activityCardAsync.when(
+            data: (activityCard) {
+              if (activityCard == null) {
+                return const Center(child: Text('Activity Card not found for this student in your organization.'));
+              }
+  
+              // Hierarchy Check
+              bool isPrerequisiteLocked = false;
+              String prerequisiteLockReason = '';
+  
+              if (allStudentCardsAsync.hasValue) {
+                final allCards = allStudentCardsAsync.value!;
+                if (activityCard.organizationType == 'faculty-based') {
+                  final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
+                  if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
+                    isPrerequisiteLocked = true;
+                    prerequisiteLockReason = 'Student must clear their Program Activity Card (${programCard.organizationName}) first.';
+                  }
+                } else if (activityCard.organizationType == 'campus-based') {
+                  final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
+                  if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
+                    isPrerequisiteLocked = true;
+                    prerequisiteLockReason = 'Student must clear their Faculty Activity Card (${facultyCard.organizationName}) first.';
+                  }
                 }
-              } else if (activityCard.organizationType == 'campus-based') {
-                final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
-                if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
-                  isPrerequisiteLocked = true;
-                  prerequisiteLockReason = 'Student must clear their Faculty Activity Card (${facultyCard.organizationName}) first.';
+              }
+  
+              final adjustedSignatures = activityCard.signatures.map((sig) {
+                if (isPrerequisiteLocked && (sig.roleName.toLowerCase() == 'governor' || 
+                                             sig.roleName.toLowerCase() == 'president' || 
+                                             sig.roleName.toLowerCase() == 'adviser' || 
+                                             sig.roleName.toLowerCase() == 'instructor')) {
+                  return ActivityCardSignature(
+                    id: sig.id,
+                    roleName: sig.roleName,
+                    signedByUserId: sig.signedByUserId,
+                    signedByUserName: sig.signedByUserName,
+                    status: SignatureStatus.locked,
+                    signedAt: sig.signedAt,
+                    rejectionReason: sig.rejectionReason,
+                    order: sig.order,
+                  );
                 }
-              }
-            }
-
-            final adjustedSignatures = activityCard.signatures.map((sig) {
-              if (isPrerequisiteLocked && (sig.roleName.toLowerCase() == 'governor' || 
-                                           sig.roleName.toLowerCase() == 'president' || 
-                                           sig.roleName.toLowerCase() == 'adviser' || 
-                                           sig.roleName.toLowerCase() == 'instructor')) {
-                return ActivityCardSignature(
-                  id: sig.id,
-                  roleName: sig.roleName,
-                  signedByUserId: sig.signedByUserId,
-                  signedByUserName: sig.signedByUserName,
-                  status: SignatureStatus.locked,
-                  signedAt: sig.signedAt,
-                  rejectionReason: sig.rejectionReason,
-                  order: sig.order,
-                );
-              }
-              return sig;
-            }).toList();
-
-            // Robust signature slot detection based on current viewer's role
-            final mySignatureSlot = adjustedSignatures.where((s) {
-              final requiredRoleName = s.roleName.toLowerCase().trim();
-              final currentViewerRoleName = activeRole?.roleName.toLowerCase().trim();
-              
-              if (currentViewerRoleName == null) return false;
-
-              // Direct match (e.g. Secretary matches Secretary slot)
-              if (requiredRoleName == currentViewerRoleName) return true;
-              
-              // Governor/President overlap
-              if ((currentViewerRoleName == 'governor' || currentViewerRoleName == 'president') && 
-                  (requiredRoleName == 'governor' || requiredRoleName == 'president')) {
-                return true;
-              }
-
-              // Super Admin can sign anything
-              if (currentViewerRoleName == 'super admin') return true;
-
-              return false;
-            }).firstOrNull;
-
-            return studentProfileAsync.when(
-              data: (studentProfile) {
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1400),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 6.0, bottom: AppSpacing.lg),
-                            child: Row(
-                              children: [
-                                Icon(Icons.card_membership_rounded, size: 14, color: Colors.grey[500]),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: () => context.pop(),
-                                  child: Text(
-                                    'Activity Cards',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Review Card',
+                return sig;
+              }).toList();
+  
+              // Robust signature slot detection based on current viewer's role
+              final mySignatureSlot = adjustedSignatures.where((s) {
+                final requiredRoleName = s.roleName.toLowerCase().trim();
+                final currentViewerRoleName = activeRole?.roleName.toLowerCase().trim();
+                
+                if (currentViewerRoleName == null) return false;
+  
+                // Direct match (e.g. Secretary matches Secretary slot)
+                if (requiredRoleName == currentViewerRoleName) return true;
+                
+                // Governor/President overlap
+                if ((currentViewerRoleName == 'governor' || currentViewerRoleName == 'president') && 
+                    (requiredRoleName == 'governor' || requiredRoleName == 'president')) {
+                  return true;
+                }
+  
+                // Super Admin can sign anything
+                if (currentViewerRoleName == 'super admin') return true;
+  
+                return false;
+              }).firstOrNull;
+  
+              return studentProfileAsync.when(
+                data: (studentProfile) {
+                  return SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                          child: Row(
+                            children: [
+                              Icon(Icons.card_membership_rounded, size: 14, color: Colors.grey[500]),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () => context.pop(),
+                                child: Text(
+                                  'Activity Cards',
                                   style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          _buildStudentInfo(context, activityCard, studentProfile),
-                          const SizedBox(height: AppSpacing.xl),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final isWide = constraints.maxWidth > 1100;
-                              if (isWide) {
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: ActivityCardEventsTable(events: activityCard.events)),
-                                    const SizedBox(width: AppSpacing.xl),
-                                    Expanded(child: ActivityCardFeesTable(fees: activityCard.fees)),
-                                  ],
-                                );
-                              } else {
-                                return Column(
-                                  children: [
-                                    ActivityCardEventsTable(events: activityCard.events),
-                                    const SizedBox(height: AppSpacing.xxl),
-                                    ActivityCardFeesTable(fees: activityCard.fees),
-                                  ],
-                                );
-                              }
-                            },
-                          ),
-                          if (activityCard.sanctions.isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.xxl),
-                            _buildSanctionsTable(activityCard.sanctions),
-                          ],
-                          const SizedBox(height: AppSpacing.xxl),
-                          Center(
-                            child: SignatureWorkflowTimeline(signatures: adjustedSignatures),
-                          ),
-                          const SizedBox(height: AppSpacing.xxl),
-                          if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[
-                            _buildOfficerActions(context),
-                            const SizedBox(height: AppSpacing.xxl),
-                            _buildReviewActions(context, activityCard, mySignatureSlot.id),
-                          ] else if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.locked) ...[
-                            Center(
-                              child: Container(
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                                decoration: BoxDecoration(
-                                  color: AppColors.error.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.lock_rounded, color: AppColors.error, size: 18),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      prerequisiteLockReason.isNotEmpty 
-                                          ? prerequisiteLockReason 
-                                          : 'Signature locked until prerequisite clearances are cleared.',
-                                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Review Card',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                          ] else if (mySignatureSlot != null)
-                            Center(
-                              child: Text(
-                                'You have already ${mySignatureSlot.status == SignatureStatus.signed ? 'signed' : 'rejected'} this card.',
-                                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
-                              ),
-                            ),
+                            ],
+                          ),
+                        ),
+                        _buildStudentInfo(context, activityCard, studentProfile),
+                        const SizedBox(height: AppSpacing.xl),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isWide = constraints.maxWidth > 1100;
+                            if (isWide) {
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: ActivityCardEventsTable(events: activityCard.events, useHorizontalPadding: false)),
+                                  const SizedBox(width: AppSpacing.xl),
+                                  Expanded(child: ActivityCardFeesTable(fees: activityCard.fees, useHorizontalPadding: false)),
+                                ],
+                              );
+                            } else {
+                              return Column(
+                                children: [
+                                  ActivityCardEventsTable(events: activityCard.events, useHorizontalPadding: false),
+                                  const SizedBox(height: AppSpacing.xxl),
+                                  ActivityCardFeesTable(fees: activityCard.fees, useHorizontalPadding: false),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                        if (activityCard.sanctions.isNotEmpty) ...[
                           const SizedBox(height: AppSpacing.xxl),
+                          _buildSanctionsTable(activityCard.sanctions),
                         ],
-                      ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        Center(
+                          child: SignatureWorkflowTimeline(signatures: adjustedSignatures, useHorizontalPadding: false),
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[
+                          _buildOfficerActions(context),
+                          const SizedBox(height: AppSpacing.xxl),
+                          _buildReviewActions(context, activityCard, mySignatureSlot.id),
+                        ] else if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.locked) ...[
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.lock_rounded, color: AppColors.error, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    prerequisiteLockReason.isNotEmpty 
+                                        ? prerequisiteLockReason 
+                                        : 'Signature locked until prerequisite clearances are cleared.',
+                                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ] else if (mySignatureSlot != null)
+                          Center(
+                            child: Text(
+                              'You have already ${mySignatureSlot.status == SignatureStatus.signed ? 'signed' : 'rejected'} this card.',
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        const SizedBox(height: AppSpacing.xxl),
+                      ],
                     ),
-                  ),
-                );
-              },
-              loading: () => const Center(child: FlickrLoader()),
-              error: (err, _) => Center(child: Text('Error loading student profile: $err')),
-            );
-          },
-          loading: () => const Center(child: FlickrLoader()),
-          error: (err, _) => Center(child: Text('Error: $err')),
+                  );
+                },
+                loading: () => const Center(child: FlickrLoader()),
+                error: (err, _) => Center(child: Text('Error loading student profile: $err')),
+              );
+            },
+            loading: () => const Center(child: FlickrLoader()),
+            error: (err, _) => Center(child: Text('Error: $err')),
+          ),
         ),
       ),
     );
@@ -482,147 +485,143 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   }
 
   Widget _buildSanctionsTable(List<ActivityCardSanction> sanctions) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0),
-            child: Text(
-              'ABSENCE SANCTIONS', 
-              style: AppTextStyles.labelSmall.copyWith(
-                fontWeight: FontWeight.bold, 
-                color: AppColors.textGrey, 
-                letterSpacing: 1.2,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 6.0),
+          child: Text(
+            'ABSENCE SANCTIONS', 
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold, 
+              color: AppColors.textGrey, 
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            children: sanctions.map((s) {
+              final statusColor = s.isFulfilled ? AppColors.success : AppColors.warning;
+              return Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.1), width: 1),
                 ),
-              ],
-            ),
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              children: sanctions.map((s) {
-                final statusColor = s.isFulfilled ? AppColors.success : AppColors.warning;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.1), width: 1),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
+                      color: statusColor,
+                      size: 20,
+                    ),
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
-                    leading: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        s.isFulfilled ? Icons.check_circle_rounded : Icons.pending_actions_rounded, 
+                  title: Text(
+                    s.description, 
+                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      s.isFulfilled ? 'Cleared' : 'Pending', 
+                      style: AppTextStyles.labelSmall.copyWith(
                         color: statusColor,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      s.description, 
-                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        s.isFulfilled ? 'Cleared' : 'Pending', 
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            }).toList(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildOfficerActions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0),
-            child: Text(
-              'OFFICER NOTES & REASONS',
-              style: AppTextStyles.labelSmall.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textGrey,
-                letterSpacing: 1.2,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 6.0),
+          child: Text(
+            'OFFICER NOTES & REASONS',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textGrey,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: TextField(
-              controller: _notesController,
-              maxLines: 3,
-              style: AppTextStyles.bodyMedium,
-              decoration: InputDecoration(
-                hintText: 'Add a note or reason for rejection...',
-                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey.withValues(alpha: 0.6)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.15)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.15)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-                fillColor: AppColors.background,
-                filled: true,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: TextField(
+            controller: _notesController,
+            maxLines: 3,
+            style: AppTextStyles.bodyMedium,
+            decoration: InputDecoration(
+              hintText: 'Add a note or reason for rejection...',
+              hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey.withValues(alpha: 0.6)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.15)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.15)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              fillColor: AppColors.background,
+              filled: true,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
