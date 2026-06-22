@@ -200,6 +200,55 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                               ),
                             ),
                           ],
+                          if (isRejected) ...[
+                            Builder(
+                              builder: (context) {
+                                final rejectedSig = activityCard.signatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
+                                if (rejectedSig == null) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(AppSpacing.md),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.error_outline_rounded, color: AppColors.error),
+                                            const SizedBox(width: AppSpacing.sm),
+                                            Expanded(
+                                              child: Text(
+                                                'Activity Card Rejected by ${rejectedSig.roleName}',
+                                                style: AppTextStyles.bodyMedium.copyWith(
+                                                  color: AppColors.error, 
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (rejectedSig.rejectionReason != null && rejectedSig.rejectionReason!.trim().isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 32.0),
+                                            child: Text(
+                                              'Reason: ${rejectedSig.rejectionReason}',
+                                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDark),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+                            ),
+                          ],
                           _buildStudentInfo(context, studentProfile, activityCard),
                           const SizedBox(height: AppSpacing.xl),
                           if (isCurrentUser && (isNotStarted || isRejected)) ...[

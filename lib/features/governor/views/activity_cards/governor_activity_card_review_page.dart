@@ -33,6 +33,7 @@ class GovernorActivityCardReviewPage extends ConsumerStatefulWidget {
 class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivityCardReviewPage> {
   final TextEditingController _notesController = TextEditingController();
   bool _isActionLoading = false;
+  bool _showRejectionForm = false;
 
   @override
   void dispose() {
@@ -208,6 +209,55 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                           ),
                         ),
                         _buildStudentInfo(context, activityCard, studentProfile),
+                        if (activityCard.status == ActivityCardStatus.rejected) ...[
+                          Builder(
+                            builder: (context) {
+                              final rejectedSig = activityCard.signatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
+                              if (rejectedSig == null) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
+                                child: Container(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.error_outline_rounded, color: AppColors.error),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          Expanded(
+                                            child: Text(
+                                              'Activity Card Rejected by ${rejectedSig.roleName}',
+                                              style: AppTextStyles.bodyMedium.copyWith(
+                                                color: AppColors.error, 
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (rejectedSig.rejectionReason != null && rejectedSig.rejectionReason!.trim().isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Padding(
+                                          padding: const EdgeInsets.only(left: 32.0),
+                                          child: Text(
+                                            'Reason: ${rejectedSig.rejectionReason}',
+                                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDark),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.xl),
                         LayoutBuilder(
                           builder: (context, constraints) {
@@ -242,9 +292,13 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                         ),
                         const SizedBox(height: AppSpacing.xxl),
                         if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[
-                          _buildOfficerActions(context),
-                          const SizedBox(height: AppSpacing.xxl),
-                          _buildReviewActions(context, activityCard, mySignatureSlot.id),
+                          if (_showRejectionForm) ...[
+                            _buildOfficerActions(context),
+                            const SizedBox(height: AppSpacing.xxl),
+                            _buildRejectionFormActions(context, activityCard, mySignatureSlot.id),
+                          ] else ...[
+                            _buildReviewActions(context, activityCard, mySignatureSlot.id),
+                          ],
                         ] else if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.locked) ...[
                           Center(
                             child: Container(
@@ -309,7 +363,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                 'Reject Card',
                 style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.error),
               ),
-              onPressed: () => _handleSignature(card, signatureId, true),
+              onPressed: () => setState(() => _showRejectionForm = true),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.error, width: 1.5),
@@ -330,6 +384,56 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRejectionFormActions(BuildContext context, ActivityCard card, String signatureId) {
+    return Center(
+      child: Wrap(
+        spacing: AppSpacing.xl,
+        runSpacing: AppSpacing.md,
+        alignment: WrapAlignment.center,
+        children: [
+          SizedBox(
+            width: 220,
+            height: 52,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.arrow_back_rounded),
+              label: Text(
+                'Cancel',
+                style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textGrey),
+              ),
+              onPressed: () => setState(() {
+                _showRejectionForm = false;
+                _notesController.clear();
+              }),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textGrey,
+                side: const BorderSide(color: AppColors.border, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 220,
+            height: 52,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.close_rounded),
+              label: Text(
+                'Confirm Reject',
+                style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              onPressed: () => _handleSignature(card, signatureId, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: AppColors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
