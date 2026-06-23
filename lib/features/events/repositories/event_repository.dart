@@ -67,4 +67,12 @@ class EventRepository {
         .eq('id', id);
   }
 
+  Future<List<EventModel>> getAllEvents() async {
+    final response = await _client
+        .from('events')
+        .select()
+        .order('event_date', ascending: false);
+    
+    return (response as List).map((json) => EventModel.fromJson(json)).toList();
+  }
 }

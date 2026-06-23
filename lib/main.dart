@@ -12,6 +12,8 @@ void main() async {
   await SupabaseConfig.initialize();
   await Hive.initFlutter();
   await Hive.openBox('settings');
+  await Hive.openBox('tasks');
+  await Hive.openBox('schedules');
   
   runApp(
     const ProviderScope(

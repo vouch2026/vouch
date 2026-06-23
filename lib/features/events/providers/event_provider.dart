@@ -30,6 +30,10 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
   return ref.watch(eventRepositoryProvider).getEventsByScope(scopeType, scopeId);
 });
 
+final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
+  return ref.watch(eventRepositoryProvider).getAllEvents();
+});
+
 final eventProvider = FutureProvider.family<EventModel?, String>((ref, id) async {
   return ref.watch(eventRepositoryProvider).getEventById(id);
 });
