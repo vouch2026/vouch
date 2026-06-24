@@ -202,8 +202,9 @@ class ClearanceRepository {
       }
     } else if (roleName == 'Governor' || roleName == 'President') {
       // Secretary must have signed
-      final secretarySig = sigList.firstWhere(
+      final secretarySig = sigList.cast<Map<String, dynamic>?>().firstWhere(
         (s) {
+          if (s == null) return false;
           final r = s['roles'];
           final rName = r is List ? r.first['name'] : r['name'];
           return rName == 'Secretary';
@@ -215,8 +216,9 @@ class ClearanceRepository {
       }
 
       // Treasurer must have signed
-      final treasurerSig = sigList.firstWhere(
+      final treasurerSig = sigList.cast<Map<String, dynamic>?>().firstWhere(
         (s) {
+          if (s == null) return false;
           final r = s['roles'];
           final rName = r is List ? r.first['name'] : r['name'];
           return rName == 'Treasurer';
@@ -249,8 +251,9 @@ class ClearanceRepository {
       }
     } else if (roleName == 'Instructor' || roleName == 'Adviser') {
       // Governor/President must have signed before Adviser can sign
-      final govSig = sigList.firstWhere(
+      final govSig = sigList.cast<Map<String, dynamic>?>().firstWhere(
         (s) {
+          if (s == null) return false;
           final r = s['roles'];
           final rName = r is List ? r.first['name'] : r['name'];
           return rName == 'Governor' || rName == 'President';
