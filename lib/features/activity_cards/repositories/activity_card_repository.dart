@@ -152,7 +152,8 @@ class ActivityCardRepository {
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = (e['attendance'] as List).firstOrNull;
         var status = _mapAttendanceStatus(attendance?['status']);
-        if (status == AttendanceStatus.absent && sanctionsCleared) {
+        final isPast = _isPastEvent(e);
+        if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
           status = AttendanceStatus.sanctionCleared;
         }
         return ActivityCardEvent(
@@ -287,6 +288,26 @@ class ActivityCardRepository {
     return ActivityCardStatus.cleared;
   }
 
+  bool _isPastEvent(Map e) {
+    try {
+      final eventDate = DateTime.parse(e['event_date']);
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      if (eventDate.isBefore(todayStart)) return true;
+      if (eventDate.isAfter(todayStart)) return false;
+      
+      final timeOutEndStr = e['time_out_end'] as String?;
+      if (timeOutEndStr != null) {
+        final parts = timeOutEndStr.split(':');
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        final timeoutEnd = DateTime(today.year, today.month, today.day, hour, minute);
+        return today.isAfter(timeoutEnd);
+      }
+    } catch (_) {}
+    return false;
+  }
+
   AttendanceStatus _mapAttendanceStatus(String? status) {
     switch (status) {
       case 'Present': return AttendanceStatus.completed;
@@ -375,7 +396,7 @@ class ActivityCardRepository {
     // 4. Get events and fees for this scope
     final eventsResponse = await _client
         .from('events')
-        .select('id, name, scope_type, event_date')
+        .select('id, name, scope_type, event_date, time_out_end')
         .eq('scope_id', scopeId)
         .eq('is_mandatory', true)
         .eq('academic_term_id', termId);
@@ -463,7 +484,8 @@ class ActivityCardRepository {
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = studentAttendance.where((a) => a['event_id'] == e['id']).firstOrNull;
         var status = _mapAttendanceStatus(attendance?['status']);
-        if (status == AttendanceStatus.absent && sanctionsCleared) {
+        final isPast = _isPastEvent(e);
+        if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
           status = AttendanceStatus.sanctionCleared;
         }
         return ActivityCardEvent(
