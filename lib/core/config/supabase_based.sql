@@ -234,6 +234,9 @@ organization_id UUID PRIMARY KEY REFERENCES public.organizations(id) ON DELETE C
 requires_adviser_signature BOOLEAN NOT NULL DEFAULT FALSE,
 requires_dean_signature BOOLEAN NOT NULL DEFAULT FALSE,
 requires_program_head_signature BOOLEAN NOT NULL DEFAULT FALSE,
+allow_member_to_print BOOLEAN NOT NULL DEFAULT FALSE,
+clearance_period_start TIMESTAMPTZ,
+clearance_period_end TIMESTAMPTZ,
 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
