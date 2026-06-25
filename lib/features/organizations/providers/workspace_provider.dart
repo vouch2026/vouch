@@ -138,6 +138,12 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       state = state.copyWith(isLoading: false, isInitialized: true);
     }
   }
+
+  void updateSelectedOrganization(OrganizationModel org) {
+    if (state.selectedOrganization?.id == org.id) {
+      state = state.copyWith(selectedOrganization: org);
+    }
+  }
 }
 
 final workspaceProvider = StateNotifierProvider<WorkspaceNotifier, WorkspaceState>((ref) {

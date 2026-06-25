@@ -2,6 +2,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/organization_repository.dart';
 import '../providers/organization_provider.dart';
+import '../providers/workspace_provider.dart';
 import '../../../core/providers/storage_provider.dart';
 
 class OrganizationController extends AsyncNotifier<void> {
@@ -149,6 +150,14 @@ class OrganizationController extends AsyncNotifier<void> {
     if (result.hasError) {
       state = AsyncValue.error(result.error!, result.stackTrace!);
       return false;
+    }
+
+    final updatedOrg = await _repository.getOrganizationById(id);
+    if (updatedOrg != null) {
+      final currentWorkspace = ref.read(workspaceProvider);
+      if (currentWorkspace.selectedOrganization?.id == id) {
+        ref.read(workspaceProvider.notifier).updateSelectedOrganization(updatedOrg);
+      }
     }
 
     ref.invalidate(organizationProvider(id));

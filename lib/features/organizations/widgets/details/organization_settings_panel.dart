@@ -1045,9 +1045,16 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Adviser signature requirement updated successfully')),
                           );
+                        } else if (!success && mounted) {
+                          setState(() {
+                            _requiresAdviserSignature = org.requiresAdviserSignature;
+                          });
                         }
                       } catch (e) {
                         if (mounted) {
+                          setState(() {
+                            _requiresAdviserSignature = org.requiresAdviserSignature;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Error: $e')),
                           );
@@ -1075,9 +1082,16 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Faculty Dean signature requirement updated successfully')),
                           );
+                        } else if (!success && mounted) {
+                          setState(() {
+                            _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
+                          });
                         }
                       } catch (e) {
                         if (mounted) {
+                          setState(() {
+                            _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Error: $e')),
                           );
@@ -1109,9 +1123,16 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                                   : 'Member self-printing disabled. Only organization officers can print clearance cards.'),
                             ),
                           );
+                        } else if (!success && mounted) {
+                          setState(() {
+                            _allowMemberCardPrinting = org.allowMemberCardPrinting;
+                          });
                         }
                       } catch (e) {
                         if (mounted) {
+                          setState(() {
+                            _allowMemberCardPrinting = org.allowMemberCardPrinting;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Error: $e')),
                           );
