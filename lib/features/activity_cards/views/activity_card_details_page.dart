@@ -158,7 +158,9 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
               if (isLocked && (sig.roleName.toLowerCase() == 'governor' || 
                                sig.roleName.toLowerCase() == 'president' || 
                                sig.roleName.toLowerCase() == 'adviser' || 
-                               sig.roleName.toLowerCase() == 'instructor')) {
+                               sig.roleName.toLowerCase() == 'instructor' ||
+                               sig.roleName.toLowerCase() == 'faculty dean' ||
+                               sig.roleName.toLowerCase() == 'dean')) {
                 return ActivityCardSignature(
                   id: sig.id,
                   roleName: sig.roleName,

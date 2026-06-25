@@ -21,6 +21,7 @@ abstract class OrganizationModel with _$OrganizationModel {
     @JsonKey(name: 'program_id') String? programId,
     @Default(0) int memberCount,
     @JsonKey(name: 'requires_adviser_signature') @Default(false) bool requiresAdviserSignature,
+    @JsonKey(name: 'requires_faculty_dean_signature') @Default(false) bool requiresFacultyDeanSignature,
     @JsonKey(name: 'is_clearance_active') @Default(false) bool isClearanceActive,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _OrganizationModel;

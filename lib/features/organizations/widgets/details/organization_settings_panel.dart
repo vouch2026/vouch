@@ -36,6 +36,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   late final TextEditingController _bannerUrlController;
   
   bool? _requiresAdviserSignature;
+  bool? _requiresFacultyDeanSignature;
   bool? _isClearanceActive;
   int _activeTab = 0;
   
@@ -78,6 +79,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       _logoUrlController.text = org.logoUrl ?? '';
       _bannerUrlController.text = org.bannerUrl ?? '';
       _requiresAdviserSignature = org.requiresAdviserSignature;
+      _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
       _isClearanceActive = org.isClearanceActive;
       _logoImage = null;
       _bannerImage = null;
@@ -120,6 +122,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
         logoUrl: _logoUrlController.text,
         bannerUrl: _bannerUrlController.text,
         requiresAdviserSignature: _requiresAdviserSignature,
+        requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
         isClearanceActive: _isClearanceActive,
       );
       
@@ -152,6 +155,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       logoUrl: _logoUrlController.text,
       bannerUrl: _bannerUrlController.text,
       requiresAdviserSignature: _requiresAdviserSignature,
+      requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
       isClearanceActive: _isClearanceActive,
     );
     
@@ -832,6 +836,37 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                     },
                   ),
                   const Divider(height: AppSpacing.xl),
+                  _buildSwitchTilePremium(
+                    title: 'Require Faculty Dean Signature',
+                    subtitle: 'Students will need a signature from their Faculty Dean on their activity card after officers and adviser sign.',
+                    value: _requiresFacultyDeanSignature ?? org.requiresFacultyDeanSignature,
+                    icon: Icons.school_rounded,
+                    onChanged: (value) async {
+                      setState(() => _requiresFacultyDeanSignature = value);
+                      try {
+                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                          id: org.id,
+                          name: org.name,
+                          code: org.code,
+                          description: org.description ?? '',
+                          adviserName: org.adviserName,
+                          logoUrl: org.logoUrl,
+                          bannerUrl: org.bannerUrl,
+                          requiresFacultyDeanSignature: value,
+                        );
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Faculty Dean signature requirement updated successfully')),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    },
+                  ),
+                  const Divider(height: AppSpacing.xl),
                 ],
                 
                 if (activeMembership != null && (isGovernorOrAdviser || isSecretaryOrTreasurer)) ...[
@@ -891,7 +926,10 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _buildWorkflowDiagramCard(_requiresAdviserSignature ?? org.requiresAdviserSignature),
+        _buildWorkflowDiagramCard(
+          _requiresAdviserSignature ?? org.requiresAdviserSignature,
+          _requiresFacultyDeanSignature ?? org.requiresFacultyDeanSignature,
+        ),
       ],
     );
   }
@@ -936,7 +974,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
     );
   }
 
-  Widget _buildWorkflowDiagramCard(bool requiresAdviser) {
+  Widget _buildWorkflowDiagramCard(bool requiresAdviser, bool requiresFacultyDean) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -988,6 +1026,14 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                   ),
                   _buildWorkflowStep(
                     step: '4',
+                    title: 'Dean sign',
+                    subtitle: requiresFacultyDean ? 'Dean signature required' : 'Auto-approved',
+                    color: requiresFacultyDean ? AppColors.info : Colors.grey,
+                    isCompleted: requiresFacultyDean,
+                    isSkipped: !requiresFacultyDean,
+                  ),
+                  _buildWorkflowStep(
+                    step: '5',
                     title: 'Cleared',
                     subtitle: 'Card approved',
                     color: AppColors.success,
@@ -1006,6 +1052,8 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       Expanded(child: steps[2]),
                       _buildArrowConnector(),
                       Expanded(child: steps[3]),
+                      _buildArrowConnector(),
+                      Expanded(child: steps[4]),
                     ],
                   );
                 } else {
@@ -1018,6 +1066,8 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       steps[2],
                       _buildVerticalConnector(),
                       steps[3],
+                      _buildVerticalConnector(),
+                      steps[4],
                     ],
                   );
                 }
