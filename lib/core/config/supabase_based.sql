@@ -8,6 +8,8 @@
 -- 1. Drop all tables (CASCADE handles foreign key dependencies)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP TRIGGER IF EXISTS on_organization_created ON public.organizations;
+DROP FUNCTION IF EXISTS public.handle_new_organization() CASCADE;
 
 -- Drop legacy profiles table if it exists
 DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -32,6 +34,7 @@ DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS permissions CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS public.organization_settings CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 DROP TABLE IF EXISTS programs CASCADE;
 DROP TABLE IF EXISTS faculties CASCADE;
@@ -220,12 +223,22 @@ type VARCHAR(50) DEFAULT 'campus-based',
 campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
 faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
 program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
-requires_adviser_signature BOOLEAN DEFAULT false,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS public.organization_settings (
+organization_id UUID PRIMARY KEY REFERENCES public.organizations(id) ON DELETE CASCADE,
+requires_adviser_signature BOOLEAN NOT NULL DEFAULT FALSE,
+requires_dean_signature BOOLEAN NOT NULL DEFAULT FALSE,
+requires_program_head_signature BOOLEAN NOT NULL DEFAULT FALSE,
+created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_organization_settings_updated_at BEFORE UPDATE ON public.organization_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE organization_members (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -458,6 +471,7 @@ ALTER TABLE campuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organization_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
@@ -560,6 +574,21 @@ CREATE POLICY "Super admins can manage faculties" ON faculties FOR ALL TO authen
 CREATE POLICY "Super admins can manage programs" ON programs FOR ALL TO authenticated USING (public.is_super_admin());
 CREATE POLICY "Super admins can manage organizations" ON organizations FOR ALL TO authenticated USING (public.is_super_admin());
 CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
+
+-- Organization Settings
+CREATE POLICY "Organization settings are viewable by everyone" ON public.organization_settings FOR SELECT USING (true);
+CREATE POLICY "Officers can manage organization settings" ON public.organization_settings
+  FOR ALL TO authenticated
+  USING (
+    public.is_super_admin() OR
+    EXISTS (
+      SELECT 1 FROM public.organization_members om
+      WHERE om.user_id = public.get_my_id()
+      AND om.organization_id = organization_settings.organization_id
+      AND om.role_id IS NOT NULL
+      AND om.status = 'active'
+    )
+  );
 
 -- Organization Members
 CREATE POLICY "Members can view their own memberships" ON organization_members FOR SELECT 
@@ -966,6 +995,20 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+CREATE OR REPLACE FUNCTION public.handle_new_organization()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.organization_settings (organization_id)
+    VALUES (NEW.id)
+    ON CONFLICT (organization_id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_organization_created
+AFTER INSERT ON public.organizations
+FOR EACH ROW EXECUTE PROCEDURE public.handle_new_organization();
 
 -- ==============================================================================
 -- 11. DATA SEEDING
