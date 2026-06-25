@@ -12,6 +12,10 @@ DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 -- Drop legacy profiles table if it exists
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
+DROP TABLE IF EXISTS public.tasks CASCADE;
+DROP TABLE IF EXISTS public.subject_schedules CASCADE;
+DROP TABLE IF EXISTS excuse_requests CASCADE;
+
 DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
 DROP TABLE IF EXISTS student_sanction_records CASCADE;
@@ -484,21 +488,15 @@ RETURNS UUID AS $$
     SELECT id FROM public.users WHERE auth_id = auth.uid();
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION public.has_scope_permission(
-    p_action TEXT,
-    p_scope_type public.scope_type,
-    p_scope_id UUID
-) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION public.has_scope_permission(p_action TEXT, p_scope_type public.scope_type, p_scope_id UUID) RETURNS BOOLEAN AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
     SELECT id INTO v_user_id FROM public.users WHERE auth_id = auth.uid();
     IF v_user_id IS NULL THEN RETURN FALSE; END IF;
 
-    -- Check Super Admin
     IF public.is_super_admin() THEN RETURN TRUE; END IF;
 
-    -- Check Organization Members (Officers)
     IF EXISTS (
         SELECT 1 FROM public.organization_members om
         JOIN public.organizations o ON om.organization_id = o.id
@@ -514,7 +512,6 @@ BEGIN
         )
     ) THEN RETURN TRUE; END IF;
 
-    -- Check User Roles (System-wide roles like Dean, Program Head)
     IF EXISTS (
         SELECT 1 FROM public.user_roles ur
         JOIN public.role_permissions rp ON ur.role_id = rp.role_id
@@ -528,7 +525,7 @@ BEGIN
 
     RETURN FALSE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- ------------------------------------------------------------
 -- POLICIES
@@ -1152,4 +1149,86 @@ CREATE POLICY "Officers can view excuse requests in their scope" ON excuse_reque
 
 CREATE POLICY "Officers can review excuse requests in their scope" ON excuse_requests FOR UPDATE TO authenticated
   USING (public.has_scope_permission('override_attendance', scope_type, scope_id));
+
+-- ==========================================
+-- 10. TASKS & SCHEDULES
+-- ==========================================
+
+-- Tasks Table
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    due_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security (RLS) for tasks
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for RLS on tasks
+CREATE POLICY "Allow users to read their own tasks" 
+ON public.tasks
+FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to insert their own tasks" 
+ON public.tasks
+FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to update their own tasks" 
+ON public.tasks
+FOR UPDATE 
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to delete their own tasks" 
+ON public.tasks
+FOR DELETE 
+USING (auth.uid() = user_id);
+
+-- Subject Schedules Table
+CREATE TABLE IF NOT EXISTS public.subject_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    subject_code TEXT NOT NULL,
+    subject_name TEXT NOT NULL,
+    teacher TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    days TEXT[] NOT NULL,
+    room TEXT NOT NULL DEFAULT '',
+    academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security (RLS) for subject_schedules
+ALTER TABLE public.subject_schedules ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for RLS on subject_schedules
+CREATE POLICY "Allow users to read their own schedules"
+ON public.subject_schedules
+FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to insert their own schedules" 
+ON public.subject_schedules
+FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to update their own schedules" 
+ON public.subject_schedules
+FOR UPDATE 
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to delete their own schedules" 
+ON public.subject_schedules
+FOR DELETE 
+USING (auth.uid() = user_id);
 

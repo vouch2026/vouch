@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/organization_model.dart';
 import '../models/organization_membership_model.dart';
+import '../models/organization_settings_history_model.dart';
 import '../../auth/models/user_model.dart';
 
 class OrganizationRepository {
@@ -216,4 +217,15 @@ class OrganizationRepository {
     
     return organizations;
   }
+
+  Future<List<OrganizationSettingsHistoryModel>> getOrganizationSettingsHistory(String orgId) async {
+    final response = await _client
+        .from('organization_settings_history')
+        .select()
+        .eq('organization_id', orgId)
+        .order('changed_at', ascending: false);
+    
+    return (response as List).map((json) => OrganizationSettingsHistoryModel.fromJson(json)).toList();
+  }
 }
+
