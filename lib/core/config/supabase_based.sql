@@ -8,7 +8,15 @@
 -- 1. Drop all tables (CASCADE handles foreign key dependencies)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
-DROP TRIGGER IF EXISTS on_organization_created ON public.organizations;
+
+-- Wrap in DO block to avoid error if organizations table doesn't exist yet
+DO $$ 
+BEGIN
+    IF to_regclass('public.organizations') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS on_organization_created ON public.organizations;
+    END IF;
+END $$;
+
 DROP FUNCTION IF EXISTS public.handle_new_organization() CASCADE;
 
 -- Drop legacy profiles table if it exists
