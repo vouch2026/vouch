@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$OrganizationModel {
 
- String get id; String get name; String get code; String? get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl; String get status; String get type; String? get facultyProgram; String? get adviserName;@JsonKey(name: 'campus_id') String? get campusId;@JsonKey(name: 'faculty_id') String? get facultyId;@JsonKey(name: 'program_id') String? get programId; int get memberCount;@JsonKey(name: 'requires_adviser_signature') bool get requiresAdviserSignature;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ String get id; String get name; String get code; String? get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl; String get status; String get type; String? get facultyProgram; String? get adviserName;@JsonKey(name: 'campus_id') String? get campusId;@JsonKey(name: 'faculty_id') String? get facultyId;@JsonKey(name: 'program_id') String? get programId; int get memberCount;@JsonKey(name: 'requires_adviser_signature') bool get requiresAdviserSignature;@JsonKey(name: 'is_clearance_active') bool get isClearanceActive;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of OrganizationModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $OrganizationModelCopyWith<OrganizationModel> get copyWith => _$OrganizationMode
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrganizationModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.code, code) || other.code == code)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.type, type) || other.type == type)&&(identical(other.facultyProgram, facultyProgram) || other.facultyProgram == facultyProgram)&&(identical(other.adviserName, adviserName) || other.adviserName == adviserName)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.requiresAdviserSignature, requiresAdviserSignature) || other.requiresAdviserSignature == requiresAdviserSignature)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrganizationModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.code, code) || other.code == code)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.type, type) || other.type == type)&&(identical(other.facultyProgram, facultyProgram) || other.facultyProgram == facultyProgram)&&(identical(other.adviserName, adviserName) || other.adviserName == adviserName)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.requiresAdviserSignature, requiresAdviserSignature) || other.requiresAdviserSignature == requiresAdviserSignature)&&(identical(other.isClearanceActive, isClearanceActive) || other.isClearanceActive == isClearanceActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,code,description,logoUrl,bannerUrl,status,type,facultyProgram,adviserName,campusId,facultyId,programId,memberCount,requiresAdviserSignature,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,code,description,logoUrl,bannerUrl,status,type,facultyProgram,adviserName,campusId,facultyId,programId,memberCount,requiresAdviserSignature,isClearanceActive,createdAt);
 
 @override
 String toString() {
-  return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, requiresAdviserSignature: $requiresAdviserSignature, createdAt: $createdAt)';
+  return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, requiresAdviserSignature: $requiresAdviserSignature, isClearanceActive: $isClearanceActive, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $OrganizationModelCopyWith<$Res>  {
   factory $OrganizationModelCopyWith(OrganizationModel value, $Res Function(OrganizationModel) _then) = _$OrganizationModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String code, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl, String status, String type, String? facultyProgram, String? adviserName,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId, int memberCount,@JsonKey(name: 'requires_adviser_signature') bool requiresAdviserSignature,@JsonKey(name: 'created_at') DateTime? createdAt
+ String id, String name, String code, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl, String status, String type, String? facultyProgram, String? adviserName,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId, int memberCount,@JsonKey(name: 'requires_adviser_signature') bool requiresAdviserSignature,@JsonKey(name: 'is_clearance_active') bool isClearanceActive,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -65,7 +65,7 @@ class _$OrganizationModelCopyWithImpl<$Res>
 
 /// Create a copy of OrganizationModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? code = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? status = null,Object? type = null,Object? facultyProgram = freezed,Object? adviserName = freezed,Object? campusId = freezed,Object? facultyId = freezed,Object? programId = freezed,Object? memberCount = null,Object? requiresAdviserSignature = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? code = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? status = null,Object? type = null,Object? facultyProgram = freezed,Object? adviserName = freezed,Object? campusId = freezed,Object? facultyId = freezed,Object? programId = freezed,Object? memberCount = null,Object? requiresAdviserSignature = null,Object? isClearanceActive = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -82,6 +82,7 @@ as String?,facultyId: freezed == facultyId ? _self.facultyId : facultyId // igno
 as String?,programId: freezed == programId ? _self.programId : programId // ignore: cast_nullable_to_non_nullable
 as String?,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
 as int,requiresAdviserSignature: null == requiresAdviserSignature ? _self.requiresAdviserSignature : requiresAdviserSignature // ignore: cast_nullable_to_non_nullable
+as bool,isClearanceActive: null == isClearanceActive ? _self.isClearanceActive : isClearanceActive // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
@@ -168,10 +169,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String code,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status,  String type,  String? facultyProgram,  String? adviserName, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId,  int memberCount, @JsonKey(name: 'requires_adviser_signature')  bool requiresAdviserSignature, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String code,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status,  String type,  String? facultyProgram,  String? adviserName, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId,  int memberCount, @JsonKey(name: 'requires_adviser_signature')  bool requiresAdviserSignature, @JsonKey(name: 'is_clearance_active')  bool isClearanceActive, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OrganizationModel() when $default != null:
-return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.type,_that.facultyProgram,_that.adviserName,_that.campusId,_that.facultyId,_that.programId,_that.memberCount,_that.requiresAdviserSignature,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.type,_that.facultyProgram,_that.adviserName,_that.campusId,_that.facultyId,_that.programId,_that.memberCount,_that.requiresAdviserSignature,_that.isClearanceActive,_that.createdAt);case _:
   return orElse();
 
 }
@@ -189,10 +190,10 @@ return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String code,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status,  String type,  String? facultyProgram,  String? adviserName, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId,  int memberCount, @JsonKey(name: 'requires_adviser_signature')  bool requiresAdviserSignature, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String code,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status,  String type,  String? facultyProgram,  String? adviserName, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId,  int memberCount, @JsonKey(name: 'requires_adviser_signature')  bool requiresAdviserSignature, @JsonKey(name: 'is_clearance_active')  bool isClearanceActive, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _OrganizationModel():
-return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.type,_that.facultyProgram,_that.adviserName,_that.campusId,_that.facultyId,_that.programId,_that.memberCount,_that.requiresAdviserSignature,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.type,_that.facultyProgram,_that.adviserName,_that.campusId,_that.facultyId,_that.programId,_that.memberCount,_that.requiresAdviserSignature,_that.isClearanceActive,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +210,10 @@ return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String code,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status,  String type,  String? facultyProgram,  String? adviserName, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId,  int memberCount, @JsonKey(name: 'requires_adviser_signature')  bool requiresAdviserSignature, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String code,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status,  String type,  String? facultyProgram,  String? adviserName, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId,  int memberCount, @JsonKey(name: 'requires_adviser_signature')  bool requiresAdviserSignature, @JsonKey(name: 'is_clearance_active')  bool isClearanceActive, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _OrganizationModel() when $default != null:
-return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.type,_that.facultyProgram,_that.adviserName,_that.campusId,_that.facultyId,_that.programId,_that.memberCount,_that.requiresAdviserSignature,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.type,_that.facultyProgram,_that.adviserName,_that.campusId,_that.facultyId,_that.programId,_that.memberCount,_that.requiresAdviserSignature,_that.isClearanceActive,_that.createdAt);case _:
   return null;
 
 }
@@ -224,7 +225,7 @@ return $default(_that.id,_that.name,_that.code,_that.description,_that.logoUrl,_
 @JsonSerializable()
 
 class _OrganizationModel implements OrganizationModel {
-  const _OrganizationModel({required this.id, required this.name, required this.code, this.description, @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, this.status = 'active', this.type = 'campus-based', this.facultyProgram, this.adviserName, @JsonKey(name: 'campus_id') this.campusId, @JsonKey(name: 'faculty_id') this.facultyId, @JsonKey(name: 'program_id') this.programId, this.memberCount = 0, @JsonKey(name: 'requires_adviser_signature') this.requiresAdviserSignature = false, @JsonKey(name: 'created_at') this.createdAt});
+  const _OrganizationModel({required this.id, required this.name, required this.code, this.description, @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, this.status = 'active', this.type = 'campus-based', this.facultyProgram, this.adviserName, @JsonKey(name: 'campus_id') this.campusId, @JsonKey(name: 'faculty_id') this.facultyId, @JsonKey(name: 'program_id') this.programId, this.memberCount = 0, @JsonKey(name: 'requires_adviser_signature') this.requiresAdviserSignature = false, @JsonKey(name: 'is_clearance_active') this.isClearanceActive = false, @JsonKey(name: 'created_at') this.createdAt});
   factory _OrganizationModel.fromJson(Map<String, dynamic> json) => _$OrganizationModelFromJson(json);
 
 @override final  String id;
@@ -242,6 +243,7 @@ class _OrganizationModel implements OrganizationModel {
 @override@JsonKey(name: 'program_id') final  String? programId;
 @override@JsonKey() final  int memberCount;
 @override@JsonKey(name: 'requires_adviser_signature') final  bool requiresAdviserSignature;
+@override@JsonKey(name: 'is_clearance_active') final  bool isClearanceActive;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 
 /// Create a copy of OrganizationModel
@@ -257,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrganizationModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.code, code) || other.code == code)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.type, type) || other.type == type)&&(identical(other.facultyProgram, facultyProgram) || other.facultyProgram == facultyProgram)&&(identical(other.adviserName, adviserName) || other.adviserName == adviserName)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.requiresAdviserSignature, requiresAdviserSignature) || other.requiresAdviserSignature == requiresAdviserSignature)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrganizationModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.code, code) || other.code == code)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.type, type) || other.type == type)&&(identical(other.facultyProgram, facultyProgram) || other.facultyProgram == facultyProgram)&&(identical(other.adviserName, adviserName) || other.adviserName == adviserName)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.requiresAdviserSignature, requiresAdviserSignature) || other.requiresAdviserSignature == requiresAdviserSignature)&&(identical(other.isClearanceActive, isClearanceActive) || other.isClearanceActive == isClearanceActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,code,description,logoUrl,bannerUrl,status,type,facultyProgram,adviserName,campusId,facultyId,programId,memberCount,requiresAdviserSignature,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,code,description,logoUrl,bannerUrl,status,type,facultyProgram,adviserName,campusId,facultyId,programId,memberCount,requiresAdviserSignature,isClearanceActive,createdAt);
 
 @override
 String toString() {
-  return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, requiresAdviserSignature: $requiresAdviserSignature, createdAt: $createdAt)';
+  return 'OrganizationModel(id: $id, name: $name, code: $code, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, type: $type, facultyProgram: $facultyProgram, adviserName: $adviserName, campusId: $campusId, facultyId: $facultyId, programId: $programId, memberCount: $memberCount, requiresAdviserSignature: $requiresAdviserSignature, isClearanceActive: $isClearanceActive, createdAt: $createdAt)';
 }
 
 
@@ -277,7 +279,7 @@ abstract mixin class _$OrganizationModelCopyWith<$Res> implements $OrganizationM
   factory _$OrganizationModelCopyWith(_OrganizationModel value, $Res Function(_OrganizationModel) _then) = __$OrganizationModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String code, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl, String status, String type, String? facultyProgram, String? adviserName,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId, int memberCount,@JsonKey(name: 'requires_adviser_signature') bool requiresAdviserSignature,@JsonKey(name: 'created_at') DateTime? createdAt
+ String id, String name, String code, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl, String status, String type, String? facultyProgram, String? adviserName,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId, int memberCount,@JsonKey(name: 'requires_adviser_signature') bool requiresAdviserSignature,@JsonKey(name: 'is_clearance_active') bool isClearanceActive,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -294,7 +296,7 @@ class __$OrganizationModelCopyWithImpl<$Res>
 
 /// Create a copy of OrganizationModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? code = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? status = null,Object? type = null,Object? facultyProgram = freezed,Object? adviserName = freezed,Object? campusId = freezed,Object? facultyId = freezed,Object? programId = freezed,Object? memberCount = null,Object? requiresAdviserSignature = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? code = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? status = null,Object? type = null,Object? facultyProgram = freezed,Object? adviserName = freezed,Object? campusId = freezed,Object? facultyId = freezed,Object? programId = freezed,Object? memberCount = null,Object? requiresAdviserSignature = null,Object? isClearanceActive = null,Object? createdAt = freezed,}) {
   return _then(_OrganizationModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -311,6 +313,7 @@ as String?,facultyId: freezed == facultyId ? _self.facultyId : facultyId // igno
 as String?,programId: freezed == programId ? _self.programId : programId // ignore: cast_nullable_to_non_nullable
 as String?,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
 as int,requiresAdviserSignature: null == requiresAdviserSignature ? _self.requiresAdviserSignature : requiresAdviserSignature // ignore: cast_nullable_to_non_nullable
+as bool,isClearanceActive: null == isClearanceActive ? _self.isClearanceActive : isClearanceActive // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));

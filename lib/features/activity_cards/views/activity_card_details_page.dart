@@ -15,6 +15,7 @@ import '../widgets/activity_card_fees_table.dart';
 
 import '../../academic_structure/providers/term_provider.dart';
 import '../providers/clearance_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
@@ -115,11 +116,17 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
               return const Center(child: Text('Activity Card not found'));
             }
   
-            // Hierarchy Check
+            // Hierarchy & Settings Check
             bool isLocked = false;
             String lockReason = '';
             
-            if (allCardsAsync.hasValue) {
+            final orgAsync = ref.watch(organizationProvider(activityCard.organizationId));
+            final org = orgAsync.value;
+            
+            if (orgAsync.hasValue && org != null && !org.isClearanceActive) {
+              isLocked = true;
+              lockReason = 'Clearance requesting is currently closed/inactive for ${org.name}.';
+            } else if (allCardsAsync.hasValue) {
               final allCards = allCardsAsync.value!;
               if (activityCard.organizationType == 'faculty-based') {
                 final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;

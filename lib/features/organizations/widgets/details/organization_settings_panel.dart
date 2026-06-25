@@ -36,6 +36,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   late final TextEditingController _bannerUrlController;
   
   bool? _requiresAdviserSignature;
+  bool? _isClearanceActive;
   int _activeTab = 0;
   
   XFile? _logoImage;
@@ -77,6 +78,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       _logoUrlController.text = org.logoUrl ?? '';
       _bannerUrlController.text = org.bannerUrl ?? '';
       _requiresAdviserSignature = org.requiresAdviserSignature;
+      _isClearanceActive = org.isClearanceActive;
       _logoImage = null;
       _bannerImage = null;
     }
@@ -118,6 +120,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
         logoUrl: _logoUrlController.text,
         bannerUrl: _bannerUrlController.text,
         requiresAdviserSignature: _requiresAdviserSignature,
+        isClearanceActive: _isClearanceActive,
       );
       
       if (mounted) {
@@ -149,6 +152,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       logoUrl: _logoUrlController.text,
       bannerUrl: _bannerUrlController.text,
       requiresAdviserSignature: _requiresAdviserSignature,
+      isClearanceActive: _isClearanceActive,
     );
     
     if (mounted) {
@@ -762,6 +766,41 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                 const SizedBox(height: AppSpacing.xl),
                 
                 if (isGovernorOrAdviser) ...[
+                  _buildSwitchTilePremium(
+                    title: 'Clearance Period Active',
+                    subtitle: 'Allow student members to submit clearance requests. If disabled, members cannot request clearances.',
+                    value: _isClearanceActive ?? org.isClearanceActive,
+                    icon: Icons.power_settings_new_rounded,
+                    onChanged: (value) async {
+                      setState(() => _isClearanceActive = value);
+                      try {
+                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                          id: org.id,
+                          name: org.name,
+                          code: org.code,
+                          description: org.description ?? '',
+                          adviserName: org.adviserName,
+                          logoUrl: org.logoUrl,
+                          bannerUrl: org.bannerUrl,
+                          isClearanceActive: value,
+                        );
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(value 
+                                  ? 'Clearance requests are now enabled for all members.' 
+                                  : 'Clearance requests are now locked.'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    },
+                  ),
+                  const Divider(height: AppSpacing.xl),
                   _buildSwitchTilePremium(
                     title: 'Require Adviser Signature',
                     subtitle: 'Students will need a final signature from their Adviser/Instructor on their activity card after officers sign.',

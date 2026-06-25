@@ -24,6 +24,7 @@ _OrganizationModel _$OrganizationModelFromJson(Map<String, dynamic> json) =>
       memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
       requiresAdviserSignature:
           json['requires_adviser_signature'] as bool? ?? false,
+      isClearanceActive: json['is_clearance_active'] as bool? ?? false,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -46,5 +47,6 @@ Map<String, dynamic> _$OrganizationModelToJson(_OrganizationModel instance) =>
       'program_id': instance.programId,
       'memberCount': instance.memberCount,
       'requires_adviser_signature': instance.requiresAdviserSignature,
+      'is_clearance_active': instance.isClearanceActive,
       'created_at': instance.createdAt?.toIso8601String(),
     };

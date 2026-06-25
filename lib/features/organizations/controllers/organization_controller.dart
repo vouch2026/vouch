@@ -79,6 +79,7 @@ class OrganizationController extends AsyncNotifier<void> {
     String? logoUrl,
     String? bannerUrl,
     bool? requiresAdviserSignature,
+    bool? isClearanceActive,
   }) async {
     state = const AsyncLoading();
     final result = await AsyncValue.guard(() async {
@@ -112,6 +113,10 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (requiresAdviserSignature != null) {
         updateData['requires_adviser_signature'] = requiresAdviserSignature;
+      }
+
+      if (isClearanceActive != null) {
+        updateData['is_clearance_active'] = isClearanceActive;
       }
 
       await _repository.updateOrganization(id, updateData);
