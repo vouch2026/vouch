@@ -29,30 +29,39 @@ _OrganizationModel _$OrganizationModelFromJson(Map<String, dynamic> json) =>
       allowMemberCardPrinting:
           json['allow_member_card_printing'] as bool? ?? true,
       isClearanceActive: json['is_clearance_active'] as bool? ?? false,
+      clearancePeriodStart: json['clearance_period_start'] == null
+          ? null
+          : DateTime.parse(json['clearance_period_start'] as String),
+      clearancePeriodEnd: json['clearance_period_end'] == null
+          ? null
+          : DateTime.parse(json['clearance_period_end'] as String),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
     );
 
-Map<String, dynamic> _$OrganizationModelToJson(_OrganizationModel instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'code': instance.code,
-      'description': instance.description,
-      'logo_url': instance.logoUrl,
-      'banner_url': instance.bannerUrl,
-      'status': instance.status,
-      'type': instance.type,
-      'facultyProgram': instance.facultyProgram,
-      'adviserName': instance.adviserName,
-      'campus_id': instance.campusId,
-      'faculty_id': instance.facultyId,
-      'program_id': instance.programId,
-      'memberCount': instance.memberCount,
-      'requires_adviser_signature': instance.requiresAdviserSignature,
-      'requires_faculty_dean_signature': instance.requiresFacultyDeanSignature,
-      'allow_member_card_printing': instance.allowMemberCardPrinting,
-      'is_clearance_active': instance.isClearanceActive,
-      'created_at': instance.createdAt?.toIso8601String(),
-    };
+Map<String, dynamic> _$OrganizationModelToJson(
+  _OrganizationModel instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'code': instance.code,
+  'description': instance.description,
+  'logo_url': instance.logoUrl,
+  'banner_url': instance.bannerUrl,
+  'status': instance.status,
+  'type': instance.type,
+  'facultyProgram': instance.facultyProgram,
+  'adviserName': instance.adviserName,
+  'campus_id': instance.campusId,
+  'faculty_id': instance.facultyId,
+  'program_id': instance.programId,
+  'memberCount': instance.memberCount,
+  'requires_adviser_signature': instance.requiresAdviserSignature,
+  'requires_faculty_dean_signature': instance.requiresFacultyDeanSignature,
+  'allow_member_card_printing': instance.allowMemberCardPrinting,
+  'is_clearance_active': instance.isClearanceActive,
+  'clearance_period_start': instance.clearancePeriodStart?.toIso8601String(),
+  'clearance_period_end': instance.clearancePeriodEnd?.toIso8601String(),
+  'created_at': instance.createdAt?.toIso8601String(),
+};

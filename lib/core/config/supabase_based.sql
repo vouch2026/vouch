@@ -9,8 +9,23 @@
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
+-- Wrap in DO block to avoid error if organizations table doesn't exist yet
+DO $$ 
+BEGIN
+    IF to_regclass('public.organizations') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS on_organization_created ON public.organizations;
+    END IF;
+END $$;
+
+DROP FUNCTION IF EXISTS public.handle_new_organization() CASCADE;
+
 -- Drop legacy profiles table if it exists
 DROP TABLE IF EXISTS public.profiles CASCADE;
+
+DROP TABLE IF EXISTS public.tasks CASCADE;
+DROP TABLE IF EXISTS public.subject_schedules CASCADE;
+DROP TABLE IF EXISTS excuse_requests CASCADE;
+DROP TABLE IF EXISTS governance_audit_logs CASCADE;
 
 DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
@@ -27,6 +42,7 @@ DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS permissions CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS public.organization_settings CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 DROP TABLE IF EXISTS programs CASCADE;
 DROP TABLE IF EXISTS faculties CASCADE;
@@ -210,17 +226,31 @@ code VARCHAR(50) NOT NULL UNIQUE,
 description TEXT,
 logo_url VARCHAR(2048),
 banner_url VARCHAR(2048),
+adviser_name VARCHAR(255),
 status VARCHAR(20) DEFAULT 'active',
 type VARCHAR(50) DEFAULT 'campus-based',
 campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
 faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL,
 program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
-requires_adviser_signature BOOLEAN DEFAULT false,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS public.organization_settings (
+organization_id UUID PRIMARY KEY REFERENCES public.organizations(id) ON DELETE CASCADE,
+requires_adviser_signature BOOLEAN NOT NULL DEFAULT FALSE,
+requires_dean_signature BOOLEAN NOT NULL DEFAULT FALSE,
+requires_program_head_signature BOOLEAN NOT NULL DEFAULT FALSE,
+allow_member_to_print BOOLEAN NOT NULL DEFAULT FALSE,
+clearance_period_start TIMESTAMPTZ,
+clearance_period_end TIMESTAMPTZ,
+created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_organization_settings_updated_at BEFORE UPDATE ON public.organization_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE organization_members (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -324,10 +354,13 @@ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,
 academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
-absence_count INT NOT NULL, 
+min_absence NUMERIC(3,1) NOT NULL DEFAULT 0,
+max_absence NUMERIC(3,1),
+sanction_type VARCHAR(50) NOT NULL DEFAULT 'Donation',
+required_value DECIMAL(10,2),
 item_description VARCHAR(255) NOT NULL, 
 created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-UNIQUE(scope_id, academic_term_id, absence_count) 
+CONSTRAINT unique_scope_term_min_absence UNIQUE(scope_id, academic_term_id, min_absence)
 );
 
 -- ==========================================
@@ -386,7 +419,7 @@ student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,
 academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
-total_absences INT NOT NULL,
+total_absences NUMERIC(3,1) NOT NULL,
 required_item VARCHAR(255) NOT NULL, 
 status sanction_status DEFAULT 'Pending Item',
 received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, 
@@ -450,6 +483,7 @@ ALTER TABLE campuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organization_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
@@ -484,21 +518,15 @@ RETURNS UUID AS $$
     SELECT id FROM public.users WHERE auth_id = auth.uid();
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION public.has_scope_permission(
-    p_action TEXT,
-    p_scope_type public.scope_type,
-    p_scope_id UUID
-) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION public.has_scope_permission(p_action TEXT, p_scope_type public.scope_type, p_scope_id UUID) RETURNS BOOLEAN AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
     SELECT id INTO v_user_id FROM public.users WHERE auth_id = auth.uid();
     IF v_user_id IS NULL THEN RETURN FALSE; END IF;
 
-    -- Check Super Admin
     IF public.is_super_admin() THEN RETURN TRUE; END IF;
 
-    -- Check Organization Members (Officers)
     IF EXISTS (
         SELECT 1 FROM public.organization_members om
         JOIN public.organizations o ON om.organization_id = o.id
@@ -514,7 +542,6 @@ BEGIN
         )
     ) THEN RETURN TRUE; END IF;
 
-    -- Check User Roles (System-wide roles like Dean, Program Head)
     IF EXISTS (
         SELECT 1 FROM public.user_roles ur
         JOIN public.role_permissions rp ON ur.role_id = rp.role_id
@@ -528,7 +555,7 @@ BEGIN
 
     RETURN FALSE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- ------------------------------------------------------------
 -- POLICIES
@@ -559,6 +586,21 @@ CREATE POLICY "Super admins can manage faculties" ON faculties FOR ALL TO authen
 CREATE POLICY "Super admins can manage programs" ON programs FOR ALL TO authenticated USING (public.is_super_admin());
 CREATE POLICY "Super admins can manage organizations" ON organizations FOR ALL TO authenticated USING (public.is_super_admin());
 CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
+
+-- Organization Settings
+CREATE POLICY "Organization settings are viewable by everyone" ON public.organization_settings FOR SELECT USING (true);
+CREATE POLICY "Officers can manage organization settings" ON public.organization_settings
+  FOR ALL TO authenticated
+  USING (
+    public.is_super_admin() OR
+    EXISTS (
+      SELECT 1 FROM public.organization_members om
+      WHERE om.user_id = public.get_my_id()
+      AND om.organization_id = organization_settings.organization_id
+      AND om.role_id IS NOT NULL
+      AND om.status = 'active'
+    )
+  );
 
 -- Organization Members
 CREATE POLICY "Members can view their own memberships" ON organization_members FOR SELECT 
@@ -966,6 +1008,20 @@ CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+CREATE OR REPLACE FUNCTION public.handle_new_organization()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.organization_settings (organization_id)
+    VALUES (NEW.id)
+    ON CONFLICT (organization_id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_organization_created
+AFTER INSERT ON public.organizations
+FOR EACH ROW EXECUTE PROCEDURE public.handle_new_organization();
+
 -- ==============================================================================
 -- 11. DATA SEEDING
 -- ==============================================================================
@@ -1115,18 +1171,18 @@ CREATE TABLE IF NOT EXISTS excuse_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
-  reason TEXT NOT NULL,
-  supporting_document_url VARCHAR(512) NOT NULL,
-  status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-  rejection_reason TEXT,
-  scope_type VARCHAR(50) NOT NULL,
+  reason VARCHAR(500) NOT NULL,
+  supporting_document_url VARCHAR(2048) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+  rejection_reason VARCHAR(255),
+  scope_type scope_type NOT NULL,
   scope_id UUID NOT NULL,
-  academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE CASCADE,
-  reviewed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-  reviewed_at TIMESTAMP WITH TIME ZONE,
+  academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE RESTRICT,
   submission_count INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  reviewed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(student_id, event_id)
 );
 
@@ -1134,22 +1190,112 @@ CREATE TRIGGER update_excuse_requests_updated_at BEFORE UPDATE ON excuse_request
 
 ALTER TABLE excuse_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Students can view their own excuse requests" ON excuse_requests FOR SELECT
-  USING (student_id = public.get_my_id());
+CREATE POLICY "Students can view their own excuses" ON excuse_requests
+  FOR SELECT TO authenticated USING (student_id = public.get_my_id());
 
-CREATE POLICY "Students can insert their own excuse requests" ON excuse_requests FOR INSERT TO authenticated
-  WITH CHECK (student_id = public.get_my_id());
+CREATE POLICY "Students can submit excuses" ON excuse_requests
+  FOR INSERT TO authenticated WITH CHECK (student_id = public.get_my_id());
 
-CREATE POLICY "Students can update their own excuse requests (resubmit limit)" ON excuse_requests FOR UPDATE TO authenticated
+CREATE POLICY "Students can resubmit their excuses" ON excuse_requests
+  FOR UPDATE TO authenticated
   USING (student_id = public.get_my_id() AND status = 'Rejected' AND submission_count < 2)
   WITH CHECK (student_id = public.get_my_id() AND status = 'Pending' AND submission_count = 2);
 
-CREATE POLICY "Students can delete their own excuse requests" ON excuse_requests FOR DELETE TO authenticated
-  USING (student_id = public.get_my_id() AND status = 'Pending');
+CREATE POLICY "Students can delete their own excuses" ON excuse_requests
+  FOR DELETE TO authenticated USING (student_id = public.get_my_id() AND status = 'Pending');
 
-CREATE POLICY "Officers can view excuse requests in their scope" ON excuse_requests FOR SELECT
-  USING (public.has_scope_permission('view_events', scope_type, scope_id));
+CREATE POLICY "Officers can view excuses in their scope" ON excuse_requests
+  FOR SELECT TO authenticated USING (
+    public.has_scope_permission('view_events', scope_type, scope_id) OR
+    public.has_scope_permission('override_attendance', scope_type, scope_id) OR
+    public.has_scope_permission('receive_sanction_items', scope_type, scope_id)
+  );
 
-CREATE POLICY "Officers can review excuse requests in their scope" ON excuse_requests FOR UPDATE TO authenticated
-  USING (public.has_scope_permission('override_attendance', scope_type, scope_id));
+CREATE POLICY "Officers can review excuses in their scope" ON excuse_requests
+  FOR UPDATE TO authenticated USING (
+    public.has_scope_permission('override_attendance', scope_type, scope_id) OR
+    public.has_scope_permission('receive_sanction_items', scope_type, scope_id)
+  );
+
+-- ==========================================
+-- 10. TASKS & SCHEDULES
+-- ==========================================
+
+-- Tasks Table
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    due_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security (RLS) for tasks
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for RLS on tasks
+CREATE POLICY "Allow users to read their own tasks" 
+ON public.tasks
+FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to insert their own tasks" 
+ON public.tasks
+FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to update their own tasks" 
+ON public.tasks
+FOR UPDATE 
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to delete their own tasks" 
+ON public.tasks
+FOR DELETE 
+USING (auth.uid() = user_id);
+
+-- Subject Schedules Table
+CREATE TABLE IF NOT EXISTS public.subject_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    subject_code TEXT NOT NULL,
+    subject_name TEXT NOT NULL,
+    teacher TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    days TEXT[] NOT NULL,
+    room TEXT NOT NULL DEFAULT '',
+    academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security (RLS) for subject_schedules
+ALTER TABLE public.subject_schedules ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for RLS on subject_schedules
+CREATE POLICY "Allow users to read their own schedules"
+ON public.subject_schedules
+FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to insert their own schedules" 
+ON public.subject_schedules
+FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to update their own schedules" 
+ON public.subject_schedules
+FOR UPDATE 
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to delete their own schedules" 
+ON public.subject_schedules
+FOR DELETE 
+USING (auth.uid() = user_id);
 

@@ -118,13 +118,13 @@ class ClearanceRepository {
 
     // Identify required signatures based on roles and settings
     final orgResponse = await _client
-        .from('organizations')
-        .select('requires_adviser_signature, requires_faculty_dean_signature')
-        .eq('id', organizationId)
-        .single();
+        .from('organization_settings')
+        .select('requires_adviser_signature, requires_dean_signature')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
     
     final bool requiresAdviser = orgResponse?['requires_adviser_signature'] ?? false;
-    final bool requiresFacultyDean = orgResponse?['requires_faculty_dean_signature'] ?? false;
+    final bool requiresFacultyDean = orgResponse?['requires_dean_signature'] ?? false;
 
     final rolesResponse = await _client.from('roles').select('id, name');
     final roles = rolesResponse as List;

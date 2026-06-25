@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/organization_repository.dart';
 import '../models/organization_model.dart';
 import '../models/organization_membership_model.dart';
+import '../models/organization_settings_history_model.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
@@ -30,6 +31,10 @@ final organizationMembersProvider = FutureProvider.family<List<UserModel>, Strin
 
 final organizationOfficersProvider = FutureProvider.family<List<OrganizationMembershipModel>, String>((ref, orgId) async {
   return ref.watch(organizationRepositoryProvider).getOrganizationOfficers(orgId);
+});
+
+final organizationSettingsHistoryProvider = FutureProvider.family<List<OrganizationSettingsHistoryModel>, String>((ref, orgId) async {
+  return ref.watch(organizationRepositoryProvider).getOrganizationSettingsHistory(orgId);
 });
 
 final availableRolesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
