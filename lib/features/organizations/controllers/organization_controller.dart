@@ -70,9 +70,9 @@ class OrganizationController extends AsyncNotifier<void> {
 
   Future<bool> updateOrganization({
     required String id,
-    required String name,
-    required String code,
-    required String description,
+    String? name,
+    String? code,
+    String? description,
     String? adviserName,
     XFile? logoFile,
     XFile? bannerFile,
@@ -82,6 +82,9 @@ class OrganizationController extends AsyncNotifier<void> {
     bool? requiresFacultyDeanSignature,
     bool? allowMemberCardPrinting,
     bool? isClearanceActive,
+    DateTime? clearancePeriodStart,
+    DateTime? clearancePeriodEnd,
+    bool clearClearancePeriod = false,
   }) async {
     state = const AsyncLoading();
     final result = await AsyncValue.guard(() async {
@@ -90,7 +93,7 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (logoFile != null) {
         finalLogoUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
-          code: code,
+          code: code ?? '',
           file: logoFile,
           isLogo: true,
         );
@@ -98,20 +101,19 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (bannerFile != null) {
         finalBannerUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
-          code: code,
+          code: code ?? '',
           file: bannerFile,
           isLogo: false,
         );
       }
 
-      final Map<String, dynamic> updateData = {
-        'name': name,
-        'code': code,
-        'description': description,
-        'adviser_name': adviserName,
-        'logo_url': finalLogoUrl,
-        'banner_url': finalBannerUrl,
-      };
+      final Map<String, dynamic> updateData = {};
+      if (name != null) updateData['name'] = name;
+      if (code != null) updateData['code'] = code;
+      if (description != null) updateData['description'] = description;
+      if (adviserName != null) updateData['adviser_name'] = adviserName;
+      if (finalLogoUrl != null) updateData['logo_url'] = finalLogoUrl;
+      if (finalBannerUrl != null) updateData['banner_url'] = finalBannerUrl;
 
       if (requiresAdviserSignature != null) {
         updateData['requires_adviser_signature'] = requiresAdviserSignature;
@@ -127,6 +129,18 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (isClearanceActive != null) {
         updateData['is_clearance_active'] = isClearanceActive;
+      }
+
+      if (clearClearancePeriod) {
+        updateData['clearance_period_start'] = null;
+        updateData['clearance_period_end'] = null;
+      } else {
+        if (clearancePeriodStart != null) {
+          updateData['clearance_period_start'] = clearancePeriodStart.toUtc().toIso8601String();
+        }
+        if (clearancePeriodEnd != null) {
+          updateData['clearance_period_end'] = clearancePeriodEnd.toUtc().toIso8601String();
+        }
       }
 
       await _repository.updateOrganization(id, updateData);

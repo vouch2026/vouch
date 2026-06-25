@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -39,6 +40,8 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   bool? _requiresFacultyDeanSignature;
   bool? _allowMemberCardPrinting;
   bool? _isClearanceActive;
+  DateTime? _clearancePeriodStart;
+  DateTime? _clearancePeriodEnd;
   int _activeTab = 0;
   
   XFile? _logoImage;
@@ -83,6 +86,8 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
       _allowMemberCardPrinting = org.allowMemberCardPrinting;
       _isClearanceActive = org.isClearanceActive;
+      _clearancePeriodStart = org.clearancePeriodStart;
+      _clearancePeriodEnd = org.clearancePeriodEnd;
       _logoImage = null;
       _bannerImage = null;
     }
@@ -112,6 +117,46 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
     }
   }
 
+  Future<void> _pickClearanceDateTime({required bool isStart}) async {
+    final initialDate = isStart 
+        ? (_clearancePeriodStart ?? DateTime.now()) 
+        : (_clearancePeriodEnd ?? DateTime.now().add(const Duration(days: 7)));
+    
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+    );
+    
+    if (pickedDate == null) return;
+    
+    if (!mounted) return;
+    final initialTime = TimeOfDay.fromDateTime(initialDate);
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    
+    if (pickedTime == null) return;
+    
+    final finalDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+    
+    setState(() {
+      if (isStart) {
+        _clearancePeriodStart = finalDateTime;
+      } else {
+        _clearancePeriodEnd = finalDateTime;
+      }
+    });
+  }
+
   void _saveGeneralInfo(String orgId) async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSaving = true);
@@ -136,6 +181,9 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       if (success && mounted) {
         final updatedOrg = await ref.read(organizationRepositoryProvider).getOrganizationById(orgId);
         if (updatedOrg != null && mounted) {
+          setState(() {
+            _initializedOrgId = null;
+          });
           await ref.read(workspaceProvider.notifier).selectOrganization(updatedOrg);
         }
         ScaffoldMessenger.of(context).showSnackBar(
@@ -170,12 +218,13 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
     if (success && mounted) {
       final updatedOrg = await ref.read(organizationRepositoryProvider).getOrganizationById(orgId);
       if (updatedOrg != null && mounted) {
+        setState(() {
+          _initializedOrgId = null;
+          _logoImage = null;
+          _bannerImage = null;
+        });
         await ref.read(workspaceProvider.notifier).selectOrganization(updatedOrg);
       }
-      setState(() {
-        _logoImage = null;
-        _bannerImage = null;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Branding assets updated successfully')),
       );
@@ -774,39 +823,207 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                 const SizedBox(height: AppSpacing.xl),
                 
                 if (isGovernorOrAdviser) ...[
-                  _buildSwitchTilePremium(
-                    title: 'Clearance Period Active',
-                    subtitle: 'Allow student members to submit clearance requests. If disabled, members cannot request clearances.',
-                    value: _isClearanceActive ?? org.isClearanceActive,
-                    icon: Icons.power_settings_new_rounded,
-                    onChanged: (value) async {
-                      setState(() => _isClearanceActive = value);
-                      try {
-                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                          id: org.id,
-                          name: org.name,
-                          code: org.code,
-                          description: org.description ?? '',
-                          adviserName: org.adviserName,
-                          logoUrl: org.logoUrl,
-                          bannerUrl: org.bannerUrl,
-                          isClearanceActive: value,
-                        );
-                        if (success && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(value 
-                                  ? 'Clearance requests are now enabled for all members.' 
-                                  : 'Clearance requests are now locked.'),
+                  // Clearance Period Card
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.date_range_rounded, color: AppColors.primary, size: 18),
                             ),
-                          );
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
-                    },
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Clearance Period',
+                                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Define when student members can submit clearance requests. Clear or leave empty to disable requests.',
+                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _pickClearanceDateTime(isStart: true),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Start Date & Time',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textGrey,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _clearancePeriodStart != null
+                                            ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodStart!)
+                                            : 'Not set',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: _clearancePeriodStart != null ? AppColors.textDark : AppColors.textGrey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _pickClearanceDateTime(isStart: false),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'End Date & Time',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textGrey,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _clearancePeriodEnd != null
+                                            ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodEnd!)
+                                            : 'Not set',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: _clearancePeriodEnd != null ? AppColors.textDark : AppColors.textGrey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            if (_clearancePeriodStart != null || _clearancePeriodEnd != null)
+                              TextButton.icon(
+                                onPressed: () async {
+                                  setState(() {
+                                    _clearancePeriodStart = null;
+                                    _clearancePeriodEnd = null;
+                                    _isClearanceActive = false;
+                                  });
+                                  try {
+                                    final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                      id: org.id,
+                                      isClearanceActive: false,
+                                      clearClearancePeriod: true,
+                                    );
+                                    if (success && mounted) {
+                                      setState(() {
+                                        _initializedOrgId = null;
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Clearance period cleared and disabled.')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error clearing schedule: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.clear_rounded, size: 16, color: AppColors.error),
+                                label: const Text('Clear Schedule', style: TextStyle(color: AppColors.error)),
+                              ),
+                            const Spacer(),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                if (_clearancePeriodStart == null || _clearancePeriodEnd == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please select both start and end date')),
+                                  );
+                                  return;
+                                }
+                                if (_clearancePeriodStart!.isAfter(_clearancePeriodEnd!)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Start date must be before end date')),
+                                  );
+                                  return;
+                                }
+                                try {
+                                  final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                    id: org.id,
+                                    isClearanceActive: true,
+                                    clearancePeriodStart: _clearancePeriodStart,
+                                    clearancePeriodEnd: _clearancePeriodEnd,
+                                  );
+                                  if (success && mounted) {
+                                    setState(() {
+                                      _initializedOrgId = null;
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Clearance period schedule saved successfully')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error saving schedule: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.check_rounded, size: 16),
+                              label: const Text('Apply Schedule'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const Divider(height: AppSpacing.xl),
                   _buildSwitchTilePremium(
@@ -819,23 +1036,22 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       try {
                         final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                           id: org.id,
-                          name: org.name,
-                          code: org.code,
-                          description: org.description ?? '',
-                          adviserName: org.adviserName,
-                          logoUrl: org.logoUrl,
-                          bannerUrl: org.bannerUrl,
                           requiresAdviserSignature: value,
                         );
                         if (success && mounted) {
+                          setState(() {
+                            _initializedOrgId = null;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Adviser signature requirement updated successfully')),
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
                       }
                     },
                   ),
@@ -850,23 +1066,22 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       try {
                         final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                           id: org.id,
-                          name: org.name,
-                          code: org.code,
-                          description: org.description ?? '',
-                          adviserName: org.adviserName,
-                          logoUrl: org.logoUrl,
-                          bannerUrl: org.bannerUrl,
                           requiresFacultyDeanSignature: value,
                         );
                         if (success && mounted) {
+                          setState(() {
+                            _initializedOrgId = null;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Faculty Dean signature requirement updated successfully')),
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
                       }
                     },
                   ),
@@ -881,15 +1096,12 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       try {
                         final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                           id: org.id,
-                          name: org.name,
-                          code: org.code,
-                          description: org.description ?? '',
-                          adviserName: org.adviserName,
-                          logoUrl: org.logoUrl,
-                          bannerUrl: org.bannerUrl,
                           allowMemberCardPrinting: value,
                         );
                         if (success && mounted) {
+                          setState(() {
+                            _initializedOrgId = null;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(value 
@@ -899,9 +1111,11 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
                       }
                     },
                   ),
@@ -927,9 +1141,11 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error updating preferences: $e')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error updating preferences: $e')),
+                          );
+                        }
                       }
                     },
                   ),

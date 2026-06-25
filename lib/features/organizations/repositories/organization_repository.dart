@@ -14,6 +14,14 @@ class OrganizationRepository {
         .from('organizations')
         .select('''
           *,
+          organization_settings (
+            requires_adviser_signature,
+            requires_dean_signature,
+            requires_program_head_signature,
+            allow_member_to_print,
+            clearance_period_start,
+            clearance_period_end
+          ),
           member_count:organization_members(count)
         ''')
         .order('name');
@@ -24,9 +32,34 @@ class OrganizationRepository {
           ? countData.first['count'] as int 
           : 0;
       
+      final settingsData = json['organization_settings'];
+      final settings = settingsData is List 
+          ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
+          : settingsData as Map<String, dynamic>?;
+      
+      final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+      final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
+      final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+      final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+      
+      final now = DateTime.now();
+      bool isClearanceActive = false;
+      if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+        final start = DateTime.parse(clearancePeriodStartStr);
+        final end = DateTime.parse(clearancePeriodEndStr);
+        isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      }
+
       return OrganizationModel.fromJson({
         ...json,
         'memberCount': count,
+        'requires_adviser_signature': requiresAdviser,
+        'requires_faculty_dean_signature': requiresFacultyDean,
+        'allow_member_card_printing': allowMemberCardPrinting,
+        'clearance_period_start': clearancePeriodStartStr,
+        'clearance_period_end': clearancePeriodEndStr,
+        'is_clearance_active': isClearanceActive,
       });
     }).toList();
   }
@@ -34,12 +67,50 @@ class OrganizationRepository {
   Future<OrganizationModel?> getOrganizationById(String id) async {
     final response = await _client
         .from('organizations')
-        .select()
+        .select('''
+          *,
+          organization_settings (
+            requires_adviser_signature,
+            requires_dean_signature,
+            requires_program_head_signature,
+            allow_member_to_print,
+            clearance_period_start,
+            clearance_period_end
+          )
+        ''')
         .eq('id', id)
         .maybeSingle();
     
     if (response == null) return null;
-    return OrganizationModel.fromJson(response);
+
+    final settingsData = response['organization_settings'];
+    final settings = settingsData is List 
+        ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
+        : settingsData as Map<String, dynamic>?;
+    
+    final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+    final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
+    final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+    final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+    final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+    
+    final now = DateTime.now();
+    bool isClearanceActive = false;
+    if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+      final start = DateTime.parse(clearancePeriodStartStr);
+      final end = DateTime.parse(clearancePeriodEndStr);
+      isClearanceActive = now.isAfter(start) && now.isBefore(end);
+    }
+
+    return OrganizationModel.fromJson({
+      ...response,
+      'requires_adviser_signature': requiresAdviser,
+      'requires_faculty_dean_signature': requiresFacultyDean,
+      'allow_member_card_printing': allowMemberCardPrinting,
+      'clearance_period_start': clearancePeriodStartStr,
+      'clearance_period_end': clearancePeriodEndStr,
+      'is_clearance_active': isClearanceActive,
+    });
   }
 
   Future<String> createOrganization({
@@ -71,10 +142,42 @@ class OrganizationRepository {
   }
 
   Future<void> updateOrganization(String id, Map<String, dynamic> data) async {
-    await _client
-        .from('organizations')
-        .update(data)
-        .eq('id', id);
+    final orgKeys = ['name', 'code', 'description', 'adviser_name', 'logo_url', 'banner_url', 'status', 'type', 'campus_id', 'faculty_id', 'program_id'];
+    
+    final orgData = <String, dynamic>{};
+    final settingsData = <String, dynamic>{};
+    
+    data.forEach((key, value) {
+      if (orgKeys.contains(key)) {
+        orgData[key] = value;
+      } else if (key == 'requires_adviser_signature') {
+        settingsData['requires_adviser_signature'] = value;
+      } else if (key == 'requires_faculty_dean_signature') {
+        settingsData['requires_dean_signature'] = value;
+      } else if (key == 'allow_member_card_printing') {
+        settingsData['allow_member_to_print'] = value;
+      } else if (key == 'clearance_period_start') {
+        settingsData['clearance_period_start'] = value;
+      } else if (key == 'clearance_period_end') {
+        settingsData['clearance_period_end'] = value;
+      }
+    });
+
+    if (orgData.isNotEmpty) {
+      await _client
+          .from('organizations')
+          .update(orgData)
+          .eq('id', id);
+    }
+    
+    if (settingsData.isNotEmpty) {
+      await _client
+          .from('organization_settings')
+          .upsert({
+            'organization_id': id,
+            ...settingsData,
+          });
+    }
   }
 
   Future<void> deleteOrganization(String id) async {
@@ -204,14 +307,55 @@ class OrganizationRepository {
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
     final response = await _client
         .from('organization_members')
-        .select('*, organizations(*)')
+        .select('''
+          *, 
+          organizations (
+            *,
+            organization_settings (
+              requires_adviser_signature,
+              requires_dean_signature,
+              requires_program_head_signature,
+              allow_member_to_print,
+              clearance_period_start,
+              clearance_period_end
+            )
+          )
+        ''')
         .eq('user_id', userId);
     
     final List<OrganizationModel> organizations = [];
     
     for (var json in (response as List)) {
-      if (json['organizations'] != null) {
-        organizations.add(OrganizationModel.fromJson(json['organizations'] as Map<String, dynamic>));
+      final orgJson = json['organizations'] as Map<String, dynamic>?;
+      if (orgJson != null) {
+        final settingsData = orgJson['organization_settings'];
+        final settings = settingsData is List 
+            ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
+            : settingsData as Map<String, dynamic>?;
+        
+        final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+        final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
+        final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+        final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+        final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+        
+        final now = DateTime.now();
+        bool isClearanceActive = false;
+        if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+          final start = DateTime.parse(clearancePeriodStartStr);
+          final end = DateTime.parse(clearancePeriodEndStr);
+          isClearanceActive = now.isAfter(start) && now.isBefore(end);
+        }
+
+        organizations.add(OrganizationModel.fromJson({
+          ...orgJson,
+          'requires_adviser_signature': requiresAdviser,
+          'requires_faculty_dean_signature': requiresFacultyDean,
+          'allow_member_card_printing': allowMemberCardPrinting,
+          'clearance_period_start': clearancePeriodStartStr,
+          'clearance_period_end': clearancePeriodEndStr,
+          'is_clearance_active': isClearanceActive,
+        }));
       }
     }
     
