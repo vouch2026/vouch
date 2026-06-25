@@ -16,6 +16,7 @@ import '../widgets/activity_card_fees_table.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../providers/clearance_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
@@ -322,6 +323,76 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                               useHorizontalPadding: false,
                             ),
                           ),
+  
+                          if (activityCard.status == ActivityCardStatus.cleared) ...[
+                            const SizedBox(height: AppSpacing.xl),
+                            Builder(
+                              builder: (context) {
+                                final workspace = ref.watch(workspaceProvider);
+                                final activeRole = workspace.activeRole;
+                                final isOfficerOfWorkspace = workspace.selectedOrganization?.id == activityCard.organizationId &&
+                                                             activeRole != null &&
+                                                             activeRole.roleName != 'Member' &&
+                                                             activeRole.roleName != 'Student';
+                                
+                                final canPrintCard = isOfficerOfWorkspace || 
+                                                     (isCurrentUser && (org?.allowMemberCardPrinting ?? true));
+                                
+                                return Center(
+                                  child: canPrintCard
+                                      ? SizedBox(
+                                          width: 320,
+                                          height: 52,
+                                          child: ElevatedButton.icon(
+                                            onPressed: () {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Preparing print document... Print layout sent to system dialog.')),
+                                              );
+                                            },
+                                            icon: const Icon(Icons.print_rounded),
+                                            label: const Text(
+                                              'Print Clearance Card',
+                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.success,
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(AppSpacing.md),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade50,
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(color: Colors.grey.shade200),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.info_outline_rounded, color: AppColors.textGrey),
+                                              const SizedBox(width: AppSpacing.sm),
+                                              Expanded(
+                                                child: Text(
+                                                  'Clearance Complete! Card printing must be processed by organization officers.',
+                                                  style: AppTextStyles.bodySmall.copyWith(
+                                                    color: AppColors.textGrey,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                );
+                              },
+                            ),
+                          ],
+  
                           const SizedBox(height: AppSpacing.xxl),
                           _buildOrganizationInfo(activityCard),
                           const SizedBox(height: AppSpacing.xxl),

@@ -37,6 +37,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   
   bool? _requiresAdviserSignature;
   bool? _requiresFacultyDeanSignature;
+  bool? _allowMemberCardPrinting;
   bool? _isClearanceActive;
   int _activeTab = 0;
   
@@ -80,6 +81,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       _bannerUrlController.text = org.bannerUrl ?? '';
       _requiresAdviserSignature = org.requiresAdviserSignature;
       _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
+      _allowMemberCardPrinting = org.allowMemberCardPrinting;
       _isClearanceActive = org.isClearanceActive;
       _logoImage = null;
       _bannerImage = null;
@@ -123,6 +125,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
         bannerUrl: _bannerUrlController.text,
         requiresAdviserSignature: _requiresAdviserSignature,
         requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
+        allowMemberCardPrinting: _allowMemberCardPrinting,
         isClearanceActive: _isClearanceActive,
       );
       
@@ -156,6 +159,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       bannerUrl: _bannerUrlController.text,
       requiresAdviserSignature: _requiresAdviserSignature,
       requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
+      allowMemberCardPrinting: _allowMemberCardPrinting,
       isClearanceActive: _isClearanceActive,
     );
     
@@ -857,6 +861,41 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                         if (success && mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Faculty Dean signature requirement updated successfully')),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    },
+                  ),
+                  const Divider(height: AppSpacing.xl),
+                  _buildSwitchTilePremium(
+                    title: 'Allow Member Card Printing',
+                    subtitle: 'Allow student members to download/print their activity card themselves once fully cleared. If disabled, only organization officers can print it.',
+                    value: _allowMemberCardPrinting ?? org.allowMemberCardPrinting,
+                    icon: Icons.print_rounded,
+                    onChanged: (value) async {
+                      setState(() => _allowMemberCardPrinting = value);
+                      try {
+                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                          id: org.id,
+                          name: org.name,
+                          code: org.code,
+                          description: org.description ?? '',
+                          adviserName: org.adviserName,
+                          logoUrl: org.logoUrl,
+                          bannerUrl: org.bannerUrl,
+                          allowMemberCardPrinting: value,
+                        );
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(value 
+                                  ? 'Members are now permitted to print their own cleared clearance cards.' 
+                                  : 'Member self-printing disabled. Only organization officers can print clearance cards.'),
+                            ),
                           );
                         }
                       } catch (e) {

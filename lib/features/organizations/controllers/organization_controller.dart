@@ -80,6 +80,7 @@ class OrganizationController extends AsyncNotifier<void> {
     String? bannerUrl,
     bool? requiresAdviserSignature,
     bool? requiresFacultyDeanSignature,
+    bool? allowMemberCardPrinting,
     bool? isClearanceActive,
   }) async {
     state = const AsyncLoading();
@@ -118,6 +119,10 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (requiresFacultyDeanSignature != null) {
         updateData['requires_faculty_dean_signature'] = requiresFacultyDeanSignature;
+      }
+
+      if (allowMemberCardPrinting != null) {
+        updateData['allow_member_card_printing'] = allowMemberCardPrinting;
       }
 
       if (isClearanceActive != null) {
