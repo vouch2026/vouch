@@ -1,27 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../models/activity_card_models.dart';
+import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/models/organization_membership_model.dart';
+import '../../academic_structure/providers/term_provider.dart';
 import 'package:intl/intl.dart';
 
-class SignatureWorkflowTimeline extends StatelessWidget {
+class SignatureWorkflowTimeline extends ConsumerWidget {
   final List<ActivityCardSignature> signatures;
+  final String? organizationId;
   final bool useHorizontalPadding;
 
   const SignatureWorkflowTimeline({
     super.key,
     required this.signatures,
+    this.organizationId,
     this.useHorizontalPadding = true,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (signatures.isEmpty) {
       return const SizedBox.shrink();
     }
     // Sort signatures by order
     final sortedSignatures = [...signatures]..sort((a, b) => a.order.compareTo(b.order));
+
+    final activeTerm = ref.watch(activeTermProvider).valueOrNull;
+    final officers = organizationId != null 
+        ? (ref.watch(organizationOfficersProvider(organizationId!)).valueOrNull ?? [])
+        : const <OrganizationMembershipModel>[];
+    final currentTermOfficers = officers.where((o) => 
+      o.status == 'active' && 
+      (activeTerm == null || o.academicTermId == activeTerm.id)
+    ).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +67,29 @@ class SignatureWorkflowTimeline extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(sortedSignatures.length * 2 - 1, (index) {
                   if (index.isEven) {
-                    return _SignatureCard(signature: sortedSignatures[index ~/ 2]);
+                    final sig = sortedSignatures[index ~/ 2];
+                    String? resolvedOfficerName;
+                    
+                    if (sig.signedByUserName == null || sig.signedByUserName!.trim().isEmpty) {
+                      final role = sig.roleName.toLowerCase().trim();
+                      if (role == 'treasurer' || role == 'secretary' || role == 'president' || role == 'governor') {
+                        final matchingOfficer = currentTermOfficers.where((o) {
+                          final oRole = (o.roleName ?? '').toLowerCase().trim();
+                          if (oRole == role) return true;
+                          if ((role == 'governor' || role == 'president') && 
+                              (oRole == 'governor' || oRole == 'president')) {
+                            return true;
+                          }
+                          return false;
+                        }).firstOrNull;
+                        resolvedOfficerName = matchingOfficer?.user?.fullName;
+                      }
+                    }
+
+                    return _SignatureCard(
+                      signature: sig,
+                      resolvedOfficerName: resolvedOfficerName,
+                    );
                   }
                   final signatureIndex = index ~/ 2;
                   return _WorkflowConnector(
@@ -73,8 +110,12 @@ class SignatureWorkflowTimeline extends StatelessWidget {
 
 class _SignatureCard extends StatelessWidget {
   final ActivityCardSignature signature;
+  final String? resolvedOfficerName;
 
-  const _SignatureCard({required this.signature});
+  const _SignatureCard({
+    required this.signature,
+    this.resolvedOfficerName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +211,7 @@ class _SignatureCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                signature.signedByUserName ?? 'Not yet signed',
+                signature.signedByUserName ?? resolvedOfficerName ?? 'Not yet signed',
                 style: AppTextStyles.titleSmall.copyWith(
                   fontWeight: FontWeight.bold,
                   color: isLocked ? AppColors.textGrey : AppColors.textDark,

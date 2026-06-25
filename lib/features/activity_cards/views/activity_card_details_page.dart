@@ -307,7 +307,11 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                           ],
                           const SizedBox(height: AppSpacing.xxl),
                           Center(
-                            child: SignatureWorkflowTimeline(signatures: adjustedSignatures, useHorizontalPadding: false),
+                            child: SignatureWorkflowTimeline(
+                              signatures: adjustedSignatures,
+                              organizationId: activityCard.organizationId,
+                              useHorizontalPadding: false,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.xxl),
                           _buildOrganizationInfo(activityCard),
