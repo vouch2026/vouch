@@ -895,32 +895,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                     },
                   ),
                 ],
-                
-                if (activeRole?.roleName == 'Secretary' || activeRole?.roleName == 'Governor' || activeRole?.roleName == 'President' || activeRole?.roleName == 'Super Admin') ...[
-                  const Divider(height: AppSpacing.xl),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.gavel_rounded, color: AppColors.primary, size: 20),
-                    ),
-                    title: Text('Configure Sanction Rules', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Define cash or item donations based on student attendance/absences.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-                    trailing: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.chevron_right_rounded, size: 18),
-                    ),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SanctionRulesPage())),
-                  ),
-                ],
+
               ],
             ),
           ),
