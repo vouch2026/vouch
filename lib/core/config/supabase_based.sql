@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP TABLE IF EXISTS public.tasks CASCADE;
 DROP TABLE IF EXISTS public.subject_schedules CASCADE;
 DROP TABLE IF EXISTS excuse_requests CASCADE;
+DROP TABLE IF EXISTS governance_audit_logs CASCADE;
 
 DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
@@ -328,10 +329,13 @@ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,
 academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
-absence_count INT NOT NULL, 
+min_absence NUMERIC(3,1) NOT NULL DEFAULT 0,
+max_absence NUMERIC(3,1),
+sanction_type VARCHAR(50) NOT NULL DEFAULT 'Donation',
+required_value DECIMAL(10,2),
 item_description VARCHAR(255) NOT NULL, 
 created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-UNIQUE(scope_id, academic_term_id, absence_count) 
+CONSTRAINT unique_scope_term_min_absence UNIQUE(scope_id, academic_term_id, min_absence)
 );
 
 -- ==========================================
@@ -390,7 +394,7 @@ student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 scope_type scope_type NOT NULL,
 scope_id UUID NOT NULL,
 academic_term_id UUID NOT NULL REFERENCES academic_terms(id) ON DELETE RESTRICT,
-total_absences INT NOT NULL,
+total_absences NUMERIC(3,1) NOT NULL,
 required_item VARCHAR(255) NOT NULL, 
 status sanction_status DEFAULT 'Pending Item',
 received_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, 
@@ -1112,18 +1116,18 @@ CREATE TABLE IF NOT EXISTS excuse_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
-  reason TEXT NOT NULL,
-  supporting_document_url VARCHAR(512) NOT NULL,
-  status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-  rejection_reason TEXT,
-  scope_type VARCHAR(50) NOT NULL,
+  reason VARCHAR(500) NOT NULL,
+  supporting_document_url VARCHAR(2048) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+  rejection_reason VARCHAR(255),
+  scope_type scope_type NOT NULL,
   scope_id UUID NOT NULL,
-  academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE CASCADE,
-  reviewed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-  reviewed_at TIMESTAMP WITH TIME ZONE,
+  academic_term_id UUID NOT NULL REFERENCES public.academic_terms(id) ON DELETE RESTRICT,
   submission_count INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  reviewed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(student_id, event_id)
 );
 
@@ -1131,24 +1135,32 @@ CREATE TRIGGER update_excuse_requests_updated_at BEFORE UPDATE ON excuse_request
 
 ALTER TABLE excuse_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Students can view their own excuse requests" ON excuse_requests FOR SELECT
-  USING (student_id = public.get_my_id());
+CREATE POLICY "Students can view their own excuses" ON excuse_requests
+  FOR SELECT TO authenticated USING (student_id = public.get_my_id());
 
-CREATE POLICY "Students can insert their own excuse requests" ON excuse_requests FOR INSERT TO authenticated
-  WITH CHECK (student_id = public.get_my_id());
+CREATE POLICY "Students can submit excuses" ON excuse_requests
+  FOR INSERT TO authenticated WITH CHECK (student_id = public.get_my_id());
 
-CREATE POLICY "Students can update their own excuse requests (resubmit limit)" ON excuse_requests FOR UPDATE TO authenticated
+CREATE POLICY "Students can resubmit their excuses" ON excuse_requests
+  FOR UPDATE TO authenticated
   USING (student_id = public.get_my_id() AND status = 'Rejected' AND submission_count < 2)
   WITH CHECK (student_id = public.get_my_id() AND status = 'Pending' AND submission_count = 2);
 
-CREATE POLICY "Students can delete their own excuse requests" ON excuse_requests FOR DELETE TO authenticated
-  USING (student_id = public.get_my_id() AND status = 'Pending');
+CREATE POLICY "Students can delete their own excuses" ON excuse_requests
+  FOR DELETE TO authenticated USING (student_id = public.get_my_id() AND status = 'Pending');
 
-CREATE POLICY "Officers can view excuse requests in their scope" ON excuse_requests FOR SELECT
-  USING (public.has_scope_permission('view_events', scope_type, scope_id));
+CREATE POLICY "Officers can view excuses in their scope" ON excuse_requests
+  FOR SELECT TO authenticated USING (
+    public.has_scope_permission('view_events', scope_type, scope_id) OR
+    public.has_scope_permission('override_attendance', scope_type, scope_id) OR
+    public.has_scope_permission('receive_sanction_items', scope_type, scope_id)
+  );
 
-CREATE POLICY "Officers can review excuse requests in their scope" ON excuse_requests FOR UPDATE TO authenticated
-  USING (public.has_scope_permission('override_attendance', scope_type, scope_id));
+CREATE POLICY "Officers can review excuses in their scope" ON excuse_requests
+  FOR UPDATE TO authenticated USING (
+    public.has_scope_permission('override_attendance', scope_type, scope_id) OR
+    public.has_scope_permission('receive_sanction_items', scope_type, scope_id)
+  );
 
 -- ==========================================
 -- 10. TASKS & SCHEDULES
