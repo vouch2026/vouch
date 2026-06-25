@@ -69,6 +69,13 @@ class OrganizationRepository {
     return response as String;
   }
 
+  Future<void> updateOrganization(String id, Map<String, dynamic> data) async {
+    await _client
+        .from('organizations')
+        .update(data)
+        .eq('id', id);
+  }
+
   Future<void> deleteOrganization(String id) async {
     final response = await _client
         .from('organizations')

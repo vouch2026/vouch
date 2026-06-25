@@ -68,6 +68,66 @@ class OrganizationController extends AsyncNotifier<void> {
     return true;
   }
 
+  Future<bool> updateOrganization({
+    required String id,
+    required String name,
+    required String code,
+    required String description,
+    String? adviserName,
+    XFile? logoFile,
+    XFile? bannerFile,
+    String? logoUrl,
+    String? bannerUrl,
+    bool? requiresAdviserSignature,
+  }) async {
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() async {
+      String? finalLogoUrl = logoUrl;
+      String? finalBannerUrl = bannerUrl;
+
+      if (logoFile != null) {
+        finalLogoUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
+          code: code,
+          file: logoFile,
+          isLogo: true,
+        );
+      }
+
+      if (bannerFile != null) {
+        finalBannerUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
+          code: code,
+          file: bannerFile,
+          isLogo: false,
+        );
+      }
+
+      final Map<String, dynamic> updateData = {
+        'name': name,
+        'code': code,
+        'description': description,
+        'adviser_name': adviserName,
+        'logo_url': finalLogoUrl,
+        'banner_url': finalBannerUrl,
+      };
+
+      if (requiresAdviserSignature != null) {
+        updateData['requires_adviser_signature'] = requiresAdviserSignature;
+      }
+
+      await _repository.updateOrganization(id, updateData);
+    });
+
+    if (result.hasError) {
+      state = AsyncValue.error(result.error!, result.stackTrace!);
+      return false;
+    }
+
+    ref.invalidate(organizationProvider(id));
+    ref.invalidate(organizationsProvider);
+    state = const AsyncData(null);
+    return true;
+  }
+
   Future<bool> deleteOrganization(String id) async {
     state = const AsyncLoading();
     final result = await AsyncValue.guard(() => _repository.deleteOrganization(id));
