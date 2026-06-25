@@ -288,7 +288,11 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                         ],
                         const SizedBox(height: AppSpacing.xxl),
                         Center(
-                          child: SignatureWorkflowTimeline(signatures: adjustedSignatures, useHorizontalPadding: false),
+                          child: SignatureWorkflowTimeline(
+                            signatures: adjustedSignatures,
+                            organizationId: activityCard.organizationId,
+                            useHorizontalPadding: false,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.xxl),
                         if (mySignatureSlot != null && mySignatureSlot.status == SignatureStatus.pending) ...[

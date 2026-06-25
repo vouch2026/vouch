@@ -1,9 +1,7 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
@@ -74,9 +72,6 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                 await ref.read(workspaceProvider.notifier).selectOrganization(org);
                 
                 if (mounted) {
-                  // Always navigate to dashboard when switching workspaces to ensure view resets
-                  context.go(RoutePaths.dashboard);
-                  
                   setState(() => _isSwitching = false);
                 }
               },

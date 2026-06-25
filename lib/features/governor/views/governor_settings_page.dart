@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/widgets/details/organization_settings_panel.dart';
 import '../../users/widgets/user_management_header.dart';
 
 class GovernorSettingsPage extends ConsumerWidget {
@@ -9,6 +12,10 @@ class GovernorSettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final workspace = ref.watch(workspaceProvider);
+    final org = workspace.selectedOrganization;
+    final isLoading = workspace.isLoading;
+
     return DashboardLayout(
       title: 'Organization Settings',
       child: SingleChildScrollView(
@@ -23,93 +30,45 @@ class GovernorSettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             
-            _buildSettingsSection(
-              title: 'General Information',
-              icon: Icons.info_outline_rounded,
-              children: [
-                _buildSettingTile(
-                  label: 'Organization Profile',
-                  subtitle: 'Update name, code, and description',
-                  onTap: () {},
+            if (isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: FlickrLoader(),
                 ),
-                _buildSettingTile(
-                  label: 'Branding',
-                  subtitle: 'Change logos and banners',
-                  onTap: () {},
+              )
+            else if (org == null)
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            
-            _buildSettingsSection(
-              title: 'Workspace Management',
-              icon: Icons.workspaces_outline,
-              children: [
-                _buildSettingTile(
-                  label: 'Membership Rules',
-                  subtitle: 'Configure join requirements',
-                  onTap: () {},
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    children: [
+                      Icon(Icons.business_rounded, size: 48, color: Colors.grey.shade300),
+                      const SizedBox(height: AppSpacing.md),
+                      const Text(
+                        'No Active Organization Selected',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Please select an organization workspace from the dashboard to configure settings.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
                 ),
-                _buildSettingTile(
-                  label: 'Role Permissions',
-                  subtitle: 'Fine-tune what officers can do',
-                  onTap: () {},
-                ),
-              ],
-            ),
+              )
+            else
+              OrganizationSettingsPanel(org: org),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSettingsSection({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 20, color: Colors.blueGrey),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueGrey,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            children: children,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingTile({
-    required String label,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
     );
   }
 }

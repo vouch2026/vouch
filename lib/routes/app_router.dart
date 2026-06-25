@@ -7,6 +7,10 @@ import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
+import '../features/dashboard/views/calendar_page.dart';
+import '../features/dashboard/views/workspace_dashboard_page.dart';
+import '../features/tasks/views/tasks_page.dart';
+import '../features/schedule/views/schedule_page.dart';
 import '../features/activity_cards/views/activity_card_redirector.dart';
 import '../features/activity_cards/views/activity_card_details_page.dart';
 import '../features/organizations/views/organizations_page.dart';
@@ -153,7 +157,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.calendar,
         name: RouteNames.calendar,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Calendar'),
+        builder: (context, state) => const CalendarPage(),
       ),
       GoRoute(
         path: RoutePaths.events,
@@ -316,6 +320,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Workspace Routes
       GoRoute(
+        path: RoutePaths.workspaceDashboard,
+        name: RouteNames.workspaceDashboard,
+        builder: (context, state) => const WorkspaceDashboardPage(),
+      ),
+      GoRoute(
         path: RoutePaths.workspaceMembers,
         name: RouteNames.workspaceMembers,
         builder: (context, state) => const GovernorMembersPage(),
@@ -445,12 +454,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.tasks,
         name: RouteNames.tasks,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Tasks'),
+        builder: (context, state) => const TasksPage(),
       ),
       GoRoute(
         path: RoutePaths.schedule,
         name: RouteNames.schedule,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Schedule'),
+        builder: (context, state) => const SchedulePage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceExcuseRequests,

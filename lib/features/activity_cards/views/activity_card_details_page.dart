@@ -15,6 +15,8 @@ import '../widgets/activity_card_fees_table.dart';
 
 import '../../academic_structure/providers/term_provider.dart';
 import '../providers/clearance_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
@@ -115,11 +117,17 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
               return const Center(child: Text('Activity Card not found'));
             }
   
-            // Hierarchy Check
+            // Hierarchy & Settings Check
             bool isLocked = false;
             String lockReason = '';
             
-            if (allCardsAsync.hasValue) {
+            final orgAsync = ref.watch(organizationProvider(activityCard.organizationId));
+            final org = orgAsync.value;
+            
+            if (orgAsync.hasValue && org != null && !org.isClearanceActive) {
+              isLocked = true;
+              lockReason = 'Clearance requesting is currently closed/inactive for ${org.name}.';
+            } else if (allCardsAsync.hasValue) {
               final allCards = allCardsAsync.value!;
               if (activityCard.organizationType == 'faculty-based') {
                 final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
@@ -151,7 +159,9 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
               if (isLocked && (sig.roleName.toLowerCase() == 'governor' || 
                                sig.roleName.toLowerCase() == 'president' || 
                                sig.roleName.toLowerCase() == 'adviser' || 
-                               sig.roleName.toLowerCase() == 'instructor')) {
+                               sig.roleName.toLowerCase() == 'instructor' ||
+                               sig.roleName.toLowerCase() == 'faculty dean' ||
+                               sig.roleName.toLowerCase() == 'dean')) {
                 return ActivityCardSignature(
                   id: sig.id,
                   roleName: sig.roleName,
@@ -307,8 +317,82 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                           ],
                           const SizedBox(height: AppSpacing.xxl),
                           Center(
-                            child: SignatureWorkflowTimeline(signatures: adjustedSignatures, useHorizontalPadding: false),
+                            child: SignatureWorkflowTimeline(
+                              signatures: adjustedSignatures,
+                              organizationId: activityCard.organizationId,
+                              useHorizontalPadding: false,
+                            ),
                           ),
+  
+                          if (activityCard.status == ActivityCardStatus.cleared) ...[
+                            const SizedBox(height: AppSpacing.xl),
+                            Builder(
+                              builder: (context) {
+                                final workspace = ref.watch(workspaceProvider);
+                                final activeRole = workspace.activeRole;
+                                final isOfficerOfWorkspace = workspace.selectedOrganization?.id == activityCard.organizationId &&
+                                                             activeRole != null &&
+                                                             activeRole.roleName != 'Member' &&
+                                                             activeRole.roleName != 'Student';
+                                
+                                final canPrintCard = isOfficerOfWorkspace || 
+                                                     (isCurrentUser && (org?.allowMemberCardPrinting ?? true));
+                                
+                                return Center(
+                                  child: canPrintCard
+                                      ? SizedBox(
+                                          width: 320,
+                                          height: 52,
+                                          child: ElevatedButton.icon(
+                                            onPressed: () {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Preparing print document... Print layout sent to system dialog.')),
+                                              );
+                                            },
+                                            icon: const Icon(Icons.print_rounded),
+                                            label: const Text(
+                                              'Print Clearance Card',
+                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.success,
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(AppSpacing.md),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade50,
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(color: Colors.grey.shade200),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.info_outline_rounded, color: AppColors.textGrey),
+                                              const SizedBox(width: AppSpacing.sm),
+                                              Expanded(
+                                                child: Text(
+                                                  'Clearance Complete! Card printing must be processed by organization officers.',
+                                                  style: AppTextStyles.bodySmall.copyWith(
+                                                    color: AppColors.textGrey,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                );
+                              },
+                            ),
+                          ],
+  
                           const SizedBox(height: AppSpacing.xxl),
                           _buildOrganizationInfo(activityCard),
                           const SizedBox(height: AppSpacing.xxl),

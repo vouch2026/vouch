@@ -14,6 +14,7 @@ import '../../../academic_structure/models/academic_term_model.dart';
 import '../../../../core/config/supabase_config.dart';
 import './assign_officer_dialog.dart';
 import '../../../sanctions/views/sanction_rules_page.dart';
+import './organization_settings_panel.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -822,128 +823,7 @@ class _SettingsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final workspace = ref.watch(workspaceProvider);
-    final activeRole = workspace.activeRole;
-    final activeMembership = workspace.activeMembership;
-    final isGovernor = activeRole?.roleName == 'Governor' || 
-                       activeRole?.roleName == 'President' || 
-                       activeRole?.roleName == 'Super Admin';
-    final isSecretaryOrTreasurer = activeRole?.roleName == 'Secretary' || 
-                                 activeRole?.roleName == 'Treasurer';
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Organization Settings', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.lg),
-          
-          if (isGovernor) ...[
-            _buildSettingSection(
-              title: 'Clearance Workflow',
-              description: 'Configure how clearances are processed for this organization.',
-              children: [
-                _buildSwitchTile(
-                  context,
-                  title: 'Require Adviser Signature',
-                  subtitle: 'If enabled, students will need an Adviser/Instructor signature on their activity card.',
-                  value: org.requiresAdviserSignature,
-                  onChanged: (value) async {
-                    try {
-                      await SupabaseConfig.client
-                          .from('organizations')
-                          .update({'requires_adviser_signature': value})
-                          .eq('id', org.id);
-                      ref.invalidate(organizationProvider(org.id));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Settings updated successfully')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-
-          if (isSecretaryOrTreasurer && activeMembership != null) ...[
-            _buildSettingSection(
-              title: 'Office Preferences',
-              description: 'Personalize how you manage your officer duties.',
-              children: [
-                _buildSwitchTile(
-                  context,
-                  title: 'Auto-Sign Clearances',
-                  subtitle: 'Automatically sign student clearances when they fulfill all requirements (no absences/zero balance).',
-                  value: activeMembership.autoSignClearance,
-                  onChanged: (value) async {
-                    try {
-                      await SupabaseConfig.client
-                          .from('organization_members')
-                          .update({'auto_sign_clearance': value})
-                          .eq('id', activeMembership.id);
-                      // Invalidate workspace to refresh the active role state
-                      ref.invalidate(workspaceProvider);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Preferences updated successfully')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
-                    }
-                  },
-                ),
-                if (activeRole?.roleName == 'Secretary') ...[
-                  const Divider(height: 1),
-                  ListTile(
-                    title: const Text('Configure Sanction Rules', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Define items for donation based on student absences.'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SanctionRulesPage())),
-                  ),
-                ],
-              ],
-            ),
-          ],
-
-          if (!isGovernor && !isSecretaryOrTreasurer)
-            const Center(child: Text('You do not have permission to modify settings.')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingSection({required String title, required String description, required List<Widget> children}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(description, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-        const SizedBox(height: AppSpacing.md),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-          child: Column(children: children),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSwitchTile(BuildContext context, {required String title, required String subtitle, required bool value, required Function(bool) onChanged}) {
-    return SwitchListTile(
-      title: Text(title, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle, style: AppTextStyles.bodySmall),
-      value: value,
-      onChanged: onChanged,
-      activeColor: AppColors.primary,
-    );
+    return OrganizationSettingsPanel(org: org);
   }
 }
 
