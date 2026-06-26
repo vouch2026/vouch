@@ -51,6 +51,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   bool _isSaving = false;
   bool _isSavingBranding = false;
   bool _isSavingClearance = false;
+  bool _isEditingClearance = false;
 
   @override
   void initState() {
@@ -91,6 +92,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       _clearancePeriodEnd = org.clearancePeriodEnd;
       _logoImage = null;
       _bannerImage = null;
+      _isEditingClearance = false;
     }
   }
 
@@ -169,7 +171,10 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
     setState(() {
       _clearancePeriodStart = org.clearancePeriodStart;
       _clearancePeriodEnd = org.clearancePeriodEnd;
+      _isEditingClearance = false;
+      _initializedOrgId = null;
     });
+    ref.invalidate(workspaceProvider);
   }
 
   Future<void> _applySchedule(OrganizationModel org) async {
@@ -200,6 +205,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       if (success && mounted) {
         setState(() {
           _initializedOrgId = null;
+          _isEditingClearance = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Clearance period schedule saved successfully')),
@@ -258,6 +264,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
             _clearancePeriodStart = null;
             _clearancePeriodEnd = null;
             _isClearanceActive = false;
+            _isEditingClearance = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Clearance period cleared and disabled.')),
@@ -946,276 +953,391 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                 
                 if (isGovernorOrAdviser) ...[
                   // Clearance Period Card
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.date_range_rounded, color: AppColors.primary, size: 18),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Clearance Period',
-                                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Define when student members can submit clearance requests.',
-                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        
-                        // Status Banner
-                        Builder(
-                          builder: (context) {
-                            final now = DateTime.now();
-                            final dbStart = org.clearancePeriodStart;
-                            final dbEnd = org.clearancePeriodEnd;
-                            
-                            String statusText = '';
-                            Color statusColor = AppColors.textGrey;
-                            IconData statusIcon = Icons.lock_outline_rounded;
-                            Color statusBg = Colors.grey.shade100;
-                            Color statusBorder = Colors.grey.shade200;
+                  Builder(
+                    builder: (context) {
+                      final dbStart = org.clearancePeriodStart;
+                      final dbEnd = org.clearancePeriodEnd;
+                      final localStart = _clearancePeriodStart;
+                      final localEnd = _clearancePeriodEnd;
+                      final bool hasSavedPeriod = dbStart != null || dbEnd != null;
+                      final bool isEditMode = _isEditingClearance;
 
-                            if (dbStart != null && dbEnd != null) {
-                              if (now.isBefore(dbStart)) {
-                                statusText = 'Scheduled (Starts ${DateFormat('MMM dd, yyyy - hh:mm a').format(dbStart)})';
-                                statusColor = AppColors.warning;
-                                statusIcon = Icons.schedule_rounded;
-                                statusBg = AppColors.warning.withOpacity(0.08);
-                                statusBorder = AppColors.warning.withOpacity(0.3);
-                              } else if (now.isAfter(dbEnd)) {
-                                statusText = 'Ended (Expired on ${DateFormat('MMM dd, yyyy - hh:mm a').format(dbEnd)})';
-                                statusColor = AppColors.error;
-                                statusIcon = Icons.history_rounded;
-                                statusBg = AppColors.error.withOpacity(0.08);
-                                statusBorder = AppColors.error.withOpacity(0.3);
-                              } else {
-                                statusText = 'Active (Ends ${DateFormat('MMM dd, yyyy - hh:mm a').format(dbEnd)})';
-                                statusColor = AppColors.success;
-                                statusIcon = Icons.check_circle_rounded;
-                                statusBg = AppColors.success.withOpacity(0.08);
-                                statusBorder = AppColors.success.withOpacity(0.3);
-                              }
-                            } else {
-                              statusText = 'Requests Disabled (No clearance period set)';
-                              statusColor = AppColors.textGrey;
-                              statusIcon = Icons.lock_outline_rounded;
-                              statusBg = Colors.grey.shade100;
-                              statusBorder = Colors.grey.shade200;
-                            }
-
-                            return Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: statusBg,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: statusBorder),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(statusIcon, color: statusColor, size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      statusText,
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: statusColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                      return Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: _isSavingClearance ? null : () => _pickClearanceDateTime(isStart: true),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
+                                    color: AppColors.primary.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
+                                  child: const Icon(Icons.date_range_rounded, color: AppColors.primary, size: 18),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Start Date & Time',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textGrey,
-                                          fontSize: 10,
-                                        ),
+                                        'Clearance Period',
+                                        style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 2),
                                       Text(
-                                        _clearancePeriodStart != null
-                                            ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodStart!)
-                                            : 'Not set',
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: _clearancePeriodStart != null ? AppColors.textDark : AppColors.textGrey,
-                                        ),
+                                        'Define when student members can submit clearance requests.',
+                                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: InkWell(
-                                onTap: _isSavingClearance ? null : () => _pickClearanceDateTime(isStart: false),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
+                            const SizedBox(height: AppSpacing.md),
+                            
+                            // Status Banner
+                            Builder(
+                              builder: (context) {
+                                final now = DateTime.now();
+                                
+                                String statusText = '';
+                                Color statusColor = AppColors.textGrey;
+                                IconData statusIcon = Icons.lock_outline_rounded;
+                                Color statusBg = Colors.grey.shade100;
+                                Color statusBorder = Colors.grey.shade200;
+
+                                if (dbStart != null && dbEnd != null) {
+                                  if (now.isBefore(dbStart)) {
+                                    statusText = 'Scheduled (Starts ${DateFormat('MMM dd, yyyy - hh:mm a').format(dbStart)})';
+                                    statusColor = AppColors.warning;
+                                    statusIcon = Icons.schedule_rounded;
+                                    statusBg = AppColors.warning.withOpacity(0.08);
+                                    statusBorder = AppColors.warning.withOpacity(0.3);
+                                  } else if (now.isAfter(dbEnd)) {
+                                    statusText = 'Ended (Expired on ${DateFormat('MMM dd, yyyy - hh:mm a').format(dbEnd)})';
+                                    statusColor = AppColors.error;
+                                    statusIcon = Icons.history_rounded;
+                                    statusBg = AppColors.error.withOpacity(0.08);
+                                    statusBorder = AppColors.error.withOpacity(0.3);
+                                  } else {
+                                    statusText = 'Active (Ends ${DateFormat('MMM dd, yyyy - hh:mm a').format(dbEnd)})';
+                                    statusColor = AppColors.success;
+                                    statusIcon = Icons.check_circle_rounded;
+                                    statusBg = AppColors.success.withOpacity(0.08);
+                                    statusBorder = AppColors.success.withOpacity(0.3);
+                                  }
+                                } else {
+                                  statusText = 'Requests Disabled (No clearance period set)';
+                                  statusColor = AppColors.textGrey;
+                                  statusIcon = Icons.lock_outline_rounded;
+                                  statusBg = Colors.grey.shade100;
+                                  statusBorder = Colors.grey.shade200;
+                                }
+
+                                return Container(
+                                  width: double.infinity,
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: statusBg,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
+                                    border: Border.all(color: statusBorder),
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        'End Date & Time',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textGrey,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        _clearancePeriodEnd != null
-                                            ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodEnd!)
-                                            : 'Not set',
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: _clearancePeriodEnd != null ? AppColors.textDark : AppColors.textGrey,
+                                      Icon(statusIcon, color: statusColor, size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          statusText,
+                                          style: AppTextStyles.bodySmall.copyWith(
+                                            color: statusColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        
-                        // Action buttons depending on changes
-                        Builder(
-                          builder: (context) {
-                            final dbStart = org.clearancePeriodStart;
-                            final dbEnd = org.clearancePeriodEnd;
-                            final localStart = _clearancePeriodStart;
-                            final localEnd = _clearancePeriodEnd;
-                            
-                            final bool hasChanges = !isSameDateTime(localStart, dbStart) || !isSameDateTime(localEnd, dbEnd);
-                            final bool hasSavedPeriod = dbStart != null || dbEnd != null;
+                            const SizedBox(height: AppSpacing.md),
 
-                            if (_isSavingClearance) {
-                              return const Padding(
-                                padding: EdgeInsets.only(top: AppSpacing.md),
-                                child: Center(
-                                  child: SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            if (hasChanges) {
-                              return Padding(
-                                padding: const EdgeInsets.only(top: AppSpacing.md),
-                                child: Row(
+                            if (!isEditMode) ...[
+                              if (hasSavedPeriod) ...[
+                                // Preview Mode (Display read-only schedule and Edit button)
+                                Row(
                                   children: [
-                                    OutlinedButton.icon(
-                                      onPressed: () => _discardClearanceChanges(org),
-                                      icon: const Icon(Icons.undo_rounded, size: 16, color: AppColors.textGrey),
-                                      label: const Text('Discard', style: TextStyle(color: AppColors.textGrey)),
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: AppColors.border),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Start Date & Time',
+                                              style: AppTextStyles.bodySmall.copyWith(
+                                                color: AppColors.textGrey,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              DateFormat('MMM dd, yyyy - hh:mm a').format(dbStart!),
+                                              style: AppTextStyles.bodyMedium.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: AppColors.textDark,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                    const Spacer(),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _applySchedule(org),
-                                      icon: const Icon(Icons.check_rounded, size: 16),
-                                      label: const Text('Apply Schedule'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'End Date & Time',
+                                              style: AppTextStyles.bodySmall.copyWith(
+                                                color: AppColors.textGrey,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              DateFormat('MMM dd, yyyy - hh:mm a').format(dbEnd!),
+                                              style: AppTextStyles.bodyMedium.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: AppColors.textDark,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              );
-                            }
-
-                            if (hasSavedPeriod) {
-                              return Padding(
-                                padding: const EdgeInsets.only(top: AppSpacing.md),
-                                child: Row(
+                                const SizedBox(height: AppSpacing.md),
+                                Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     OutlinedButton.icon(
-                                      onPressed: () => _confirmClearSchedule(context, org),
-                                      icon: const Icon(Icons.clear_rounded, size: 16, color: AppColors.error),
-                                      label: const Text('Clear Schedule', style: TextStyle(color: AppColors.error)),
+                                      onPressed: () {
+                                        setState(() {
+                                          _isEditingClearance = true;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+                                      label: const Text('Edit Schedule', style: TextStyle(color: AppColors.primary)),
                                       style: OutlinedButton.styleFrom(
-                                        side: BorderSide(color: AppColors.error.withOpacity(0.5)),
+                                        side: const BorderSide(color: AppColors.primary),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
                                     ),
                                   ],
                                 ),
-                              );
-                            }
+                              ] else ...[
+                                // Initial State: No schedule set, show Start button
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isEditingClearance = true;
+                                        _clearancePeriodStart = DateTime.now();
+                                        _clearancePeriodEnd = DateTime.now().add(const Duration(days: 7));
+                                      });
+                                    },
+                                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                    label: const Text('Start Clearance Period'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ] else ...[
+                              // Edit Mode (Clickable date pickers and complete actions)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: _isSavingClearance ? null : () => _pickClearanceDateTime(isStart: true),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Start Date & Time',
+                                              style: AppTextStyles.bodySmall.copyWith(
+                                                color: AppColors.textGrey,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _clearancePeriodStart != null
+                                                  ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodStart!)
+                                                  : 'Not set',
+                                              style: AppTextStyles.bodyMedium.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: _clearancePeriodStart != null ? AppColors.textDark : AppColors.textGrey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: _isSavingClearance ? null : () => _pickClearanceDateTime(isStart: false),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'End Date & Time',
+                                              style: AppTextStyles.bodySmall.copyWith(
+                                                color: AppColors.textGrey,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _clearancePeriodEnd != null
+                                                  ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodEnd!)
+                                                  : 'Not set',
+                                              style: AppTextStyles.bodyMedium.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: _clearancePeriodEnd != null ? AppColors.textDark : AppColors.textGrey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              // Action buttons in Edit Mode
+                              Builder(
+                                builder: (context) {
+                                  final bool hasChanges = !isSameDateTime(localStart, dbStart) || !isSameDateTime(localEnd, dbEnd);
 
-                            // No changes and no saved period
-                            return const SizedBox.shrink();
-                          },
+                                  if (_isSavingClearance) {
+                                    return const Padding(
+                                      padding: EdgeInsets.only(top: AppSpacing.md),
+                                      child: Center(
+                                        child: SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: AppSpacing.md),
+                                    child: Row(
+                                      children: [
+                                        // Discard/Cancel Button
+                                        OutlinedButton.icon(
+                                          onPressed: () => _discardClearanceChanges(org),
+                                          icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.textGrey),
+                                          label: Text(
+                                            hasSavedPeriod ? 'Cancel' : 'Clear', 
+                                            style: const TextStyle(color: AppColors.textGrey),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(color: AppColors.border),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        
+                                        // Clear Schedule Button (Only shown in edit mode if there is an existing saved schedule)
+                                        if (hasSavedPeriod)
+                                          OutlinedButton.icon(
+                                            onPressed: () => _confirmClearSchedule(context, org),
+                                            icon: const Icon(Icons.clear_rounded, size: 16, color: AppColors.error),
+                                            label: const Text('Clear Schedule', style: TextStyle(color: AppColors.error)),
+                                            style: OutlinedButton.styleFrom(
+                                              side: BorderSide(color: AppColors.error.withOpacity(0.5)),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                          ),
+                                          
+                                        const Spacer(),
+                                        
+                                        // Apply Schedule Button
+                                        ElevatedButton.icon(
+                                          onPressed: hasChanges ? () => _applySchedule(org) : null,
+                                          icon: const Icon(Icons.check_rounded, size: 16),
+                                          label: const Text('Apply Schedule'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            foregroundColor: Colors.white,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                   const Divider(height: AppSpacing.xl),
                   _buildSwitchTilePremium(
