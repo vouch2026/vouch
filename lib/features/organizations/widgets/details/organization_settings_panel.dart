@@ -49,7 +49,6 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   final ImagePicker _picker = ImagePicker();
 
   bool _isSaving = false;
-  bool _isSavingBranding = false;
   bool _isSavingClearance = false;
   bool _isEditingClearance = false;
 
@@ -295,6 +294,8 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
         code: _codeController.text.trim(),
         description: _descriptionController.text.trim(),
         adviserName: _adviserNameController.text.trim(),
+        logoFile: _logoImage,
+        bannerFile: _bannerImage,
         logoUrl: _logoUrlController.text,
         bannerUrl: _bannerUrlController.text,
         requiresAdviserSignature: _requiresAdviserSignature,
@@ -303,60 +304,24 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
         isClearanceActive: _isClearanceActive,
       );
       
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-      
       if (success && mounted) {
         final updatedOrg = await ref.read(organizationRepositoryProvider).getOrganizationById(orgId);
         if (updatedOrg != null && mounted) {
           setState(() {
             _initializedOrgId = null;
+            _logoImage = null;
+            _bannerImage = null;
           });
           await ref.read(workspaceProvider.notifier).selectOrganization(updatedOrg);
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Organization profile updated successfully')),
+          const SnackBar(content: Text('Organization settings updated successfully')),
         );
       }
-    }
-  }
-
-  void _saveBranding(String orgId) async {
-    setState(() => _isSavingBranding = true);
-    final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-      id: orgId,
-      name: _nameController.text.trim(),
-      code: _codeController.text.trim(),
-      description: _descriptionController.text.trim(),
-      adviserName: _adviserNameController.text.trim(),
-      logoFile: _logoImage,
-      bannerFile: _bannerImage,
-      logoUrl: _logoUrlController.text,
-      bannerUrl: _bannerUrlController.text,
-      requiresAdviserSignature: _requiresAdviserSignature,
-      requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
-      allowMemberCardPrinting: _allowMemberCardPrinting,
-      isClearanceActive: _isClearanceActive,
-    );
-    
-    if (mounted) {
-      setState(() => _isSavingBranding = false);
-    }
-    
-    if (success && mounted) {
-      final updatedOrg = await ref.read(organizationRepositoryProvider).getOrganizationById(orgId);
-      if (updatedOrg != null && mounted) {
-        setState(() {
-          _initializedOrgId = null;
-          _logoImage = null;
-          _bannerImage = null;
-        });
-        await ref.read(workspaceProvider.notifier).selectOrganization(updatedOrg);
+      
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Branding assets updated successfully')),
-      );
     }
   }
 
@@ -373,9 +338,6 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                        activeRole?.roleName == 'President' || 
                        activeRole?.roleName == 'Super Admin' ||
                        activeRole?.roleName == 'Adviser';
-                       
-    final isSecretaryOrTreasurer = activeRole?.roleName == 'Secretary' || 
-                                 activeRole?.roleName == 'Treasurer';
 
     final canEdit = isGovernor;
 
@@ -404,8 +366,6 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       case 0:
         return _buildGeneralInfoTab(org, canEdit);
       case 1:
-        return _buildBrandingTab(org, canEdit);
-      case 2:
         return _buildClearanceTab(org, activeRole, activeMembership);
       default:
         return const SizedBox.shrink();
@@ -595,7 +555,6 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   Widget _buildTabSelector() {
     final tabs = [
       {'icon': Icons.business_rounded, 'label': 'General Info'},
-      {'icon': Icons.image_rounded, 'label': 'Branding Assets'},
       {'icon': Icons.rule_rounded, 'label': 'Clearance & Rules'},
     ];
 
@@ -656,33 +615,164 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
   }
 
   Widget _buildGeneralInfoTab(OrganizationModel org, bool canEdit) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'General Information',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Branding Assets Card
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.border),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Configure your organization\'s primary identifier and details.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Form(
-              key: _formKey,
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Branding Assets',
+                    style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Upload or configure your organization\'s official logo and banner image.',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  
+                  Text('Organization Logo', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(11),
+                          child: _logoImage != null
+                              ? (kIsWeb
+                                  ? Image.network(_logoImage!.path, fit: BoxFit.cover)
+                                  : Image.file(File(_logoImage!.path), fit: BoxFit.cover))
+                              : (org.logoUrl != null && org.logoUrl!.isNotEmpty
+                                  ? Image.network(
+                                      org.logoUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(Icons.business_rounded),
+                                    )
+                                  : _buildImagePlaceholder(Icons.business_rounded)),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      if (canEdit) ...[
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () => _pickImage(true),
+                              icon: const Icon(Icons.upload_rounded, size: 16),
+                              label: const Text('Upload New Logo'),
+                              style: ElevatedButton.styleFrom(elevation: 0),
+                            ),
+                            const SizedBox(height: 8),
+                            if (_logoImage != null)
+                              TextButton.icon(
+                                onPressed: () => setState(() => _logoImage = null),
+                                icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
+                                label: const Text('Cancel Upload', style: TextStyle(color: AppColors.error)),
+                              ),
+                          ],
+                        ),
+                      ] else
+                        Text('Only administrators can update branding.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  
+                  Text('Organization Banner', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 140,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: _bannerImage != null
+                          ? (kIsWeb
+                              ? Image.network(_bannerImage!.path, fit: BoxFit.cover)
+                              : Image.file(File(_bannerImage!.path), fit: BoxFit.cover))
+                          : (org.bannerUrl != null && org.bannerUrl!.isNotEmpty
+                              ? Image.network(
+                                  org.bannerUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(Icons.add_photo_alternate_outlined),
+                                )
+                              : _buildImagePlaceholder(Icons.add_photo_alternate_rounded)),
+                    ),
+                  ),
+                  if (canEdit) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _pickImage(false),
+                          icon: const Icon(Icons.upload_rounded, size: 16),
+                          label: const Text('Upload New Banner'),
+                          style: ElevatedButton.styleFrom(elevation: 0),
+                        ),
+                        if (_bannerImage != null) ...[
+                          const SizedBox(width: AppSpacing.md),
+                          TextButton.icon(
+                            onPressed: () => setState(() => _bannerImage = null),
+                            icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
+                            label: const Text('Cancel Upload', style: TextStyle(color: AppColors.error)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // General Info Card
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'General Information',
+                    style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Configure your organization\'s primary identifier and details.',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
                   _buildFieldLabel('Organization Name'),
                   TextFormField(
                     controller: _nameController,
@@ -729,176 +819,33 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       alignLabelWithHint: true,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (canEdit)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: FilledButton.icon(
-                        onPressed: _isSaving ? null : () => _saveGeneralInfo(org.id),
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Icon(Icons.save_rounded, size: 18),
-                        label: Text(_isSaving ? 'Saving Changes...' : 'Save Settings'),
-                      ),
-                    ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBrandingTab(OrganizationModel org, bool canEdit) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Branding Assets',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Upload or configure your organization\'s official logo and banner image.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            Text('Organization Logo', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: _logoImage != null
-                        ? (kIsWeb
-                            ? Image.network(_logoImage!.path, fit: BoxFit.cover)
-                            : Image.file(File(_logoImage!.path), fit: BoxFit.cover))
-                        : (org.logoUrl != null && org.logoUrl!.isNotEmpty
-                            ? Image.network(
-                                org.logoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(Icons.business_rounded),
-                              )
-                            : _buildImagePlaceholder(Icons.business_rounded)),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                if (canEdit) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _pickImage(true),
-                        icon: const Icon(Icons.upload_rounded, size: 16),
-                        label: const Text('Upload New Logo'),
-                        style: ElevatedButton.styleFrom(elevation: 0),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_logoImage != null)
-                        TextButton.icon(
-                          onPressed: () => setState(() => _logoImage = null),
-                          icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
-                          label: const Text('Cancel Upload', style: TextStyle(color: AppColors.error)),
-                        ),
-                    ],
-                  ),
-                ] else
-                  Text('Only administrators can update branding.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            Text('Organization Banner', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Container(
-              height: 140,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          if (canEdit)
+            SizedBox(
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: _bannerImage != null
-                    ? (kIsWeb
-                        ? Image.network(_bannerImage!.path, fit: BoxFit.cover)
-                        : Image.file(File(_bannerImage!.path), fit: BoxFit.cover))
-                    : (org.bannerUrl != null && org.bannerUrl!.isNotEmpty
-                        ? Image.network(
-                            org.bannerUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(Icons.add_photo_alternate_outlined),
-                          )
-                        : _buildImagePlaceholder(Icons.add_photo_alternate_rounded)),
-              ),
-            ),
-            if (canEdit) ...[
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _pickImage(false),
-                    icon: const Icon(Icons.upload_rounded, size: 16),
-                    label: const Text('Upload New Banner'),
-                    style: ElevatedButton.styleFrom(elevation: 0),
-                  ),
-                  if (_bannerImage != null) ...[
-                    const SizedBox(width: AppSpacing.md),
-                    TextButton.icon(
-                      onPressed: () => setState(() => _bannerImage = null),
-                      icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
-                      label: const Text('Cancel Upload', style: TextStyle(color: AppColors.error)),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-            
-            const SizedBox(height: AppSpacing.xl),
-            if (canEdit && (_logoImage != null || _bannerImage != null))
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: FilledButton.icon(
-                  onPressed: _isSavingBranding ? null : () => _saveBranding(org.id),
-                  icon: _isSavingBranding
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Icon(Icons.cloud_upload_rounded, size: 18),
-                  label: Text(_isSavingBranding ? 'Saving Images...' : 'Upload & Save Branding'),
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: _isSaving ? null : () => _saveGeneralInfo(org.id),
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_rounded, size: 18),
+                label: Text(_isSaving ? 'Saving Changes...' : 'Save Settings'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
