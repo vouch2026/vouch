@@ -1,1168 +1,558 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../models/organization_model.dart';
-import '../../models/organization_membership_model.dart';
 import '../../providers/workspace_provider.dart';
-import '../../providers/organization_provider.dart';
 import '../../controllers/organization_controller.dart';
 import '../../../../core/config/supabase_config.dart';
-import '../../../sanctions/views/sanction_rules_page.dart';
-import '../../../../core/models/app_role.dart';
+import '../../../../core/widgets/loaders/flickr_loader.dart';
 
-class OrganizationSettingsPanel extends ConsumerStatefulWidget {
+class OrganizationSettingsPanel extends ConsumerWidget {
   final OrganizationModel org;
 
   const OrganizationSettingsPanel({super.key, required this.org});
 
-  @override
-  ConsumerState<OrganizationSettingsPanel> createState() => _OrganizationSettingsPanelState();
-}
-
-class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettingsPanel> {
-  final _formKey = GlobalKey<FormState>();
-  
-  String? _initializedOrgId;
-  late final TextEditingController _nameController;
-  late final TextEditingController _codeController;
-  late final TextEditingController _descriptionController;
-  late final TextEditingController _adviserNameController;
-  late final TextEditingController _logoUrlController;
-  late final TextEditingController _bannerUrlController;
-  
-  bool? _requiresAdviserSignature;
-  bool? _requiresFacultyDeanSignature;
-  bool? _allowMemberCardPrinting;
-  bool? _isClearanceActive;
-  DateTime? _clearancePeriodStart;
-  DateTime? _clearancePeriodEnd;
-  int _activeTab = 0;
-  
-  XFile? _logoImage;
-  XFile? _bannerImage;
-  final ImagePicker _picker = ImagePicker();
-
-  bool _isSaving = false;
-  bool _isSavingBranding = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController();
-    _codeController = TextEditingController();
-    _descriptionController = TextEditingController();
-    _adviserNameController = TextEditingController();
-    _logoUrlController = TextEditingController();
-    _bannerUrlController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _codeController.dispose();
-    _descriptionController.dispose();
-    _adviserNameController.dispose();
-    _logoUrlController.dispose();
-    _bannerUrlController.dispose();
-    super.dispose();
-  }
-
-  void _initControllersIfNeeded(OrganizationModel org) {
-    if (_initializedOrgId != org.id) {
-      _initializedOrgId = org.id;
-      _nameController.text = org.name;
-      _codeController.text = org.code;
-      _descriptionController.text = org.description ?? '';
-      _adviserNameController.text = org.adviserName ?? '';
-      _logoUrlController.text = org.logoUrl ?? '';
-      _bannerUrlController.text = org.bannerUrl ?? '';
-      _requiresAdviserSignature = org.requiresAdviserSignature;
-      _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
-      _allowMemberCardPrinting = org.allowMemberCardPrinting;
-      _isClearanceActive = org.isClearanceActive;
-      _clearancePeriodStart = org.clearancePeriodStart;
-      _clearancePeriodEnd = org.clearancePeriodEnd;
-      _logoImage = null;
-      _bannerImage = null;
-    }
-  }
-
-  Future<void> _pickImage(bool isLogo) async {
+  Future<void> _pickAndUploadLogo(BuildContext context, WidgetRef ref, String orgId, String orgCode) async {
+    final picker = ImagePicker();
     try {
-      final XFile? image = await _picker.pickImage(
+      final image = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: isLogo ? 500 : 1200,
-        maxHeight: isLogo ? 500 : 600,
+        maxWidth: 500,
+        maxHeight: 500,
         imageQuality: 85,
       );
-      if (image != null) {
-        setState(() {
-          if (isLogo) {
-            _logoImage = image;
-          } else {
-            _bannerImage = image;
-          }
-        });
+      if (image != null && context.mounted) {
+        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+          id: orgId,
+          code: orgCode,
+          logoFile: image,
+        );
+        if (success && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logo updated successfully'), backgroundColor: AppColors.success),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
-    }
-  }
-
-  Future<void> _pickClearanceDateTime({required bool isStart}) async {
-    final initialDate = isStart 
-        ? (_clearancePeriodStart ?? DateTime.now()) 
-        : (_clearancePeriodEnd ?? DateTime.now().add(const Duration(days: 7)));
-    
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-    );
-    
-    if (pickedDate == null) return;
-    
-    if (!mounted) return;
-    final initialTime = TimeOfDay.fromDateTime(initialDate);
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: initialTime,
-    );
-    
-    if (pickedTime == null) return;
-    
-    final finalDateTime = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-    
-    setState(() {
-      if (isStart) {
-        _clearancePeriodStart = finalDateTime;
-      } else {
-        _clearancePeriodEnd = finalDateTime;
-      }
-    });
-  }
-
-  void _saveGeneralInfo(String orgId) async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isSaving = true);
-      final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-        id: orgId,
-        name: _nameController.text.trim(),
-        code: _codeController.text.trim(),
-        description: _descriptionController.text.trim(),
-        adviserName: _adviserNameController.text.trim(),
-        logoUrl: _logoUrlController.text,
-        bannerUrl: _bannerUrlController.text,
-        requiresAdviserSignature: _requiresAdviserSignature,
-        requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
-        allowMemberCardPrinting: _allowMemberCardPrinting,
-        isClearanceActive: _isClearanceActive,
-      );
-      
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-      
-      if (success && mounted) {
-        final updatedOrg = await ref.read(organizationRepositoryProvider).getOrganizationById(orgId);
-        if (updatedOrg != null && mounted) {
-          setState(() {
-            _initializedOrgId = null;
-          });
-          await ref.read(workspaceProvider.notifier).selectOrganization(updatedOrg);
-        }
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Organization profile updated successfully')),
+          SnackBar(content: Text('Error picking/uploading logo: $e'), backgroundColor: AppColors.error),
         );
       }
     }
   }
 
-  void _saveBranding(String orgId) async {
-    setState(() => _isSavingBranding = true);
-    final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-      id: orgId,
-      name: _nameController.text.trim(),
-      code: _codeController.text.trim(),
-      description: _descriptionController.text.trim(),
-      adviserName: _adviserNameController.text.trim(),
-      logoFile: _logoImage,
-      bannerFile: _bannerImage,
-      logoUrl: _logoUrlController.text,
-      bannerUrl: _bannerUrlController.text,
-      requiresAdviserSignature: _requiresAdviserSignature,
-      requiresFacultyDeanSignature: _requiresFacultyDeanSignature,
-      allowMemberCardPrinting: _allowMemberCardPrinting,
-      isClearanceActive: _isClearanceActive,
-    );
-    
-    if (mounted) {
-      setState(() => _isSavingBranding = false);
-    }
-    
-    if (success && mounted) {
-      final updatedOrg = await ref.read(organizationRepositoryProvider).getOrganizationById(orgId);
-      if (updatedOrg != null && mounted) {
-        setState(() {
-          _initializedOrgId = null;
-          _logoImage = null;
-          _bannerImage = null;
-        });
-        await ref.read(workspaceProvider.notifier).selectOrganization(updatedOrg);
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Branding assets updated successfully')),
+  Future<void> _pickAndUploadBanner(BuildContext context, WidgetRef ref, String orgId, String orgCode) async {
+    final picker = ImagePicker();
+    try {
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 600,
+        imageQuality: 85,
       );
+      if (image != null && context.mounted) {
+        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+          id: orgId,
+          code: orgCode,
+          bannerFile: image,
+        );
+        if (success && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Banner updated successfully'), backgroundColor: AppColors.success),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking/uploading banner: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
+  }
+
+  Future<void> _showEditNameDialog(BuildContext context, WidgetRef ref, OrganizationModel org) async {
+    final controller = TextEditingController(text: org.name);
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Organization Name'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Organization Name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final val = controller.text.trim();
+              if (val.isEmpty) return;
+              final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                id: org.id,
+                code: org.code,
+                name: val,
+              );
+              if (success && context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Organization name updated successfully'), backgroundColor: AppColors.success),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditCodeDialog(BuildContext context, WidgetRef ref, OrganizationModel org) async {
+    final controller = TextEditingController(text: org.code);
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Organization Code'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Organization Code'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final val = controller.text.trim();
+              if (val.isEmpty) return;
+              final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                id: org.id,
+                code: val,
+              );
+              if (success && context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Organization code updated successfully'), backgroundColor: AppColors.success),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditAdviserDialog(BuildContext context, WidgetRef ref, OrganizationModel org) async {
+    final controller = TextEditingController(text: org.adviserName);
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Adviser Name'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Adviser Name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final val = controller.text.trim();
+              final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                id: org.id,
+                code: org.code,
+                adviserName: val,
+              );
+              if (success && context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Adviser name updated successfully'), backgroundColor: AppColors.success),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditDescriptionDialog(BuildContext context, WidgetRef ref, OrganizationModel org) async {
+    final controller = TextEditingController(text: org.description);
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Description'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: const InputDecoration(labelText: 'Description'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final val = controller.text.trim();
+              final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                id: org.id,
+                code: org.code,
+                description: val,
+              );
+              if (success && context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Description updated successfully'), backgroundColor: AppColors.success),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showClearancePeriodDialog(BuildContext context, WidgetRef ref, OrganizationModel org) async {
+    DateTime? tempStart = org.clearancePeriodStart ?? DateTime.now();
+    DateTime? tempEnd = org.clearancePeriodEnd ?? DateTime.now().add(const Duration(days: 7));
+    bool tempActive = org.isClearanceActive;
+
+    Future<void> pickDateTime(BuildContext context, StateSetter dialogSetState, bool isStart) async {
+      final initialDate = isStart ? tempStart : tempEnd;
+      final pickedDate = await showDatePicker(
+        context: context,
+        initialDate: initialDate ?? DateTime.now(),
+        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+        lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      );
+      if (pickedDate == null) return;
+
+      if (!context.mounted) return;
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(initialDate ?? DateTime.now()),
+      );
+      if (pickedTime == null) return;
+
+      dialogSetState(() {
+        final finalDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        if (isStart) {
+          tempStart = finalDateTime;
+        } else {
+          tempEnd = finalDateTime;
+        }
+      });
+    }
+
+    return showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, dialogSetState) => AlertDialog(
+          title: const Text('Configure Clearance Period'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SwitchListTile(
+                title: const Text('Enable Clearance Period', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('Students can submit requests during this period'),
+                value: tempActive,
+                onChanged: (val) => dialogSetState(() => tempActive = val),
+                activeColor: AppColors.primary,
+                contentPadding: EdgeInsets.zero,
+              ),
+              const Divider(),
+              const SizedBox(height: AppSpacing.sm),
+              const Text('Start Date & Time', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () => pickDateTime(context, dialogSetState, true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.calendar, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        tempStart != null ? DateFormat('MMM dd, yyyy - hh:mm a').format(tempStart!) : 'Select start date',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Text('End Date & Time', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () => pickDateTime(context, dialogSetState, false),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.calendar, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        tempEnd != null ? DateFormat('MMM dd, yyyy - hh:mm a').format(tempEnd!) : 'Select end date',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            if (org.clearancePeriodStart != null || org.clearancePeriodEnd != null)
+              TextButton(
+                onPressed: () async {
+                  final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                    id: org.id,
+                    code: org.code,
+                    isClearanceActive: false,
+                    clearClearancePeriod: true,
+                  );
+                  if (success && context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Clearance period cleared and disabled')),
+                    );
+                  }
+                },
+                child: const Text('Clear Schedule', style: TextStyle(color: AppColors.error)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (tempStart != null && tempEnd != null && tempStart!.isAfter(tempEnd!)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Start date must be before end date'), backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
+                final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                  id: org.id,
+                  code: org.code,
+                  isClearanceActive: tempActive,
+                  clearancePeriodStart: tempStart,
+                  clearancePeriodEnd: tempEnd,
+                );
+                if (success && context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Clearance period updated successfully'), backgroundColor: AppColors.success),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getClearancePeriodDisplay(OrganizationModel org) {
+    final start = org.clearancePeriodStart;
+    final end = org.clearancePeriodEnd;
+    final now = DateTime.now();
+
+    if (start != null && end != null) {
+      if (now.isBefore(start)) {
+        return 'Scheduled (Starts ${DateFormat('MMM dd, yyyy - hh:mm a').format(start)})';
+      } else if (now.isAfter(end)) {
+        return 'Ended (Expired on ${DateFormat('MMM dd, yyyy - hh:mm a').format(end)})';
+      } else {
+        return 'Active (Ends ${DateFormat('MMM dd, yyyy - hh:mm a').format(end)})';
+      }
+    }
+    return 'Disabled';
   }
 
   @override
-  Widget build(BuildContext context) {
-    _initControllersIfNeeded(widget.org);
-    
+  Widget build(BuildContext context, WidgetRef ref) {
     final workspace = ref.watch(workspaceProvider);
-    final isCurrentWorkspace = workspace.selectedOrganization?.id == widget.org.id;
+    final isCurrentWorkspace = workspace.selectedOrganization?.id == org.id;
     final activeRole = isCurrentWorkspace ? workspace.activeRole : null;
     final activeMembership = isCurrentWorkspace ? workspace.activeMembership : null;
-    
-    final isGovernor = activeRole?.roleName == 'Governor' || 
-                       activeRole?.roleName == 'President' || 
-                       activeRole?.roleName == 'Super Admin' ||
-                       activeRole?.roleName == 'Adviser';
-                       
-    final isSecretaryOrTreasurer = activeRole?.roleName == 'Secretary' || 
-                                 activeRole?.roleName == 'Treasurer';
+
+    final isGovernor = activeRole?.roleName == 'Governor' ||
+        activeRole?.roleName == 'President' ||
+        activeRole?.roleName == 'Super Admin' ||
+        activeRole?.roleName == 'Adviser';
+
+    final isSecretaryOrTreasurer = activeRole?.roleName == 'Secretary' ||
+        activeRole?.roleName == 'Treasurer';
 
     final canEdit = isGovernor;
+    final orgState = ref.watch(organizationControllerProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
       children: [
-        _buildOrgHeaderCard(widget.org),
-        const SizedBox(height: AppSpacing.lg),
-        _buildTabSelector(),
-        const SizedBox(height: AppSpacing.lg),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: _buildActiveTabContent(widget.org, canEdit, activeRole, activeMembership),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActiveTabContent(
-    OrganizationModel org, 
-    bool canEdit, 
-    AppRole? activeRole, 
-    OrganizationMembershipModel? activeMembership
-  ) {
-    switch (_activeTab) {
-      case 0:
-        return _buildGeneralInfoTab(org, canEdit);
-      case 1:
-        return _buildBrandingTab(org, canEdit);
-      case 2:
-        return _buildClearanceTab(org, activeRole, activeMembership);
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
-  Widget _buildOrgHeaderCard(OrganizationModel org) {
-    return Container(
-      height: 180,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [AppColors.primaryDark, AppColors.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            if (org.bannerUrl != null && org.bannerUrl!.isNotEmpty)
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.2,
-                  child: Image.network(
-                    org.bannerUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(),
-                  ),
-                ),
-              ),
-            Positioned(
-              right: -40,
-              top: -40,
-              child: Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.04),
-                ),
-              ),
-            ),
-            Positioned(
-              left: -10,
-              bottom: -40,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.02),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: org.logoUrl != null && org.logoUrl!.isNotEmpty
-                          ? Image.network(
-                              org.logoUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Icon(
-                                Icons.business_rounded,
-                                size: 36,
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.business_rounded,
-                              size: 36,
-                              color: AppColors.primary,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xl),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                org.name,
-                                style: AppTextStyles.headlineLarge.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                org.code,
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.textDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        if (org.description != null && org.description!.isNotEmpty)
-                          Text(
-                            org.description!,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.person_rounded, size: 12, color: Colors.white.withOpacity(0.7)),
-                            const SizedBox(width: 4),
-                            Text(
-                              org.adviserName != null && org.adviserName!.isNotEmpty
-                                  ? 'Adviser: ${org.adviserName}'
-                                  : 'No adviser assigned',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 11,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.lg),
-                            Icon(Icons.people_alt_rounded, size: 12, color: Colors.white.withOpacity(0.7)),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${org.memberCount} members',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabSelector() {
-    final tabs = [
-      {'icon': Icons.business_rounded, 'label': 'General Info'},
-      {'icon': Icons.image_rounded, 'label': 'Branding Assets'},
-      {'icon': Icons.rule_rounded, 'label': 'Clearance & Rules'},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: List.generate(tabs.length, (index) {
-          final active = _activeTab == index;
-          return Expanded(
-            child: InkWell(
-              onTap: () => setState(() => _activeTab = index),
-              borderRadius: BorderRadius.circular(8),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: active ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : [],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      tabs[index]['icon'] as IconData,
-                      size: 16,
-                      color: active ? AppColors.primary : AppColors.textGrey,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      tabs[index]['label'] as String,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                        color: active ? AppColors.primary : AppColors.textGrey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildGeneralInfoTab(OrganizationModel org, bool canEdit) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'General Information',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Configure your organization\'s primary identifier and details.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldLabel('Organization Name'),
-                  TextFormField(
-                    controller: _nameController,
-                    enabled: canEdit,
-                    style: AppTextStyles.bodyMedium,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter organization name',
-                      prefixIcon: Icon(Icons.business_rounded, size: 20),
-                    ),
-                    validator: (val) => val == null || val.isEmpty ? 'Name is required' : null,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildFieldLabel('Organization Code'),
-                  TextFormField(
-                    controller: _codeController,
-                    enabled: canEdit,
-                    style: AppTextStyles.bodyMedium,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. GDSC-VOUCH',
-                      prefixIcon: Icon(Icons.qr_code_rounded, size: 20),
-                    ),
-                    validator: (val) => val == null || val.isEmpty ? 'Code is required' : null,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildFieldLabel('Adviser Name'),
-                  TextFormField(
-                    controller: _adviserNameController,
-                    enabled: canEdit,
-                    style: AppTextStyles.bodyMedium,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter adviser name',
-                      prefixIcon: Icon(Icons.person_rounded, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildFieldLabel('Description'),
-                  TextFormField(
-                    controller: _descriptionController,
-                    enabled: canEdit,
-                    style: AppTextStyles.bodyMedium,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      hintText: 'Describe the organization\'s purpose and goals...',
-                      alignLabelWithHint: true,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (canEdit)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: FilledButton.icon(
-                        onPressed: _isSaving ? null : () => _saveGeneralInfo(org.id),
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Icon(Icons.save_rounded, size: 18),
-                        label: Text(_isSaving ? 'Saving Changes...' : 'Save Settings'),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBrandingTab(OrganizationModel org, bool canEdit) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Branding Assets',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Upload or configure your organization\'s official logo and banner image.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            Text('Organization Logo', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: _logoImage != null
-                        ? (kIsWeb
-                            ? Image.network(_logoImage!.path, fit: BoxFit.cover)
-                            : Image.file(File(_logoImage!.path), fit: BoxFit.cover))
-                        : (org.logoUrl != null && org.logoUrl!.isNotEmpty
-                            ? Image.network(
-                                org.logoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(Icons.business_rounded),
-                              )
-                            : _buildImagePlaceholder(Icons.business_rounded)),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                if (canEdit) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _pickImage(true),
-                        icon: const Icon(Icons.upload_rounded, size: 16),
-                        label: const Text('Upload New Logo'),
-                        style: ElevatedButton.styleFrom(elevation: 0),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_logoImage != null)
-                        TextButton.icon(
-                          onPressed: () => setState(() => _logoImage = null),
-                          icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
-                          label: const Text('Cancel Upload', style: TextStyle(color: AppColors.error)),
-                        ),
-                    ],
-                  ),
-                ] else
-                  Text('Only administrators can update branding.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            Text('Organization Banner', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Container(
-              height: 140,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: _bannerImage != null
-                    ? (kIsWeb
-                        ? Image.network(_bannerImage!.path, fit: BoxFit.cover)
-                        : Image.file(File(_bannerImage!.path), fit: BoxFit.cover))
-                    : (org.bannerUrl != null && org.bannerUrl!.isNotEmpty
-                        ? Image.network(
-                            org.bannerUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(Icons.add_photo_alternate_outlined),
-                          )
-                        : _buildImagePlaceholder(Icons.add_photo_alternate_rounded)),
-              ),
-            ),
-            if (canEdit) ...[
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildOrgHeader(context, ref, org, canEdit),
+              const SizedBox(height: AppSpacing.xl),
+              
+              _buildSectionTitle('General Information'),
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _pickImage(false),
-                    icon: const Icon(Icons.upload_rounded, size: 16),
-                    label: const Text('Upload New Banner'),
-                    style: ElevatedButton.styleFrom(elevation: 0),
-                  ),
-                  if (_bannerImage != null) ...[
-                    const SizedBox(width: AppSpacing.md),
-                    TextButton.icon(
-                      onPressed: () => setState(() => _bannerImage = null),
-                      icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
-                      label: const Text('Cancel Upload', style: TextStyle(color: AppColors.error)),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-            
-            const SizedBox(height: AppSpacing.xl),
-            if (canEdit && (_logoImage != null || _bannerImage != null))
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: FilledButton.icon(
-                  onPressed: _isSavingBranding ? null : () => _saveBranding(org.id),
-                  icon: _isSavingBranding
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Icon(Icons.cloud_upload_rounded, size: 18),
-                  label: Text(_isSavingBranding ? 'Saving Images...' : 'Upload & Save Branding'),
+              _buildInfoCard([
+                _buildInfoTile(
+                  label: 'Organization Name',
+                  value: org.name,
+                  icon: LucideIcons.building,
+                  canEdit: canEdit,
+                  onEdit: () => _showEditNameDialog(context, ref, org),
                 ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImagePlaceholder(IconData icon) {
-    return Container(
-      color: Colors.grey.shade50,
-      child: Center(
-        child: Icon(icon, size: 32, color: Colors.grey.shade300),
-      ),
-    );
-  }
-
-  Widget _buildClearanceTab(
-    OrganizationModel org, 
-    AppRole? activeRole, 
-    OrganizationMembershipModel? activeMembership
-  ) {
-    final isGovernorOrAdviser = activeRole?.roleName == 'Governor' || 
-                                activeRole?.roleName == 'President' || 
-                                activeRole?.roleName == 'Super Admin' ||
-                                activeRole?.roleName == 'Adviser';
-                                
-    final isSecretaryOrTreasurer = activeRole?.roleName == 'Secretary' || 
-                                   activeRole?.roleName == 'Treasurer';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.border),
-          ),
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Workflow Rules',
-                  style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                _buildInfoTile(
+                  label: 'Organization Code',
+                  value: org.code,
+                  icon: LucideIcons.hash,
+                  canEdit: canEdit,
+                  onEdit: () => _showEditCodeDialog(context, ref, org),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Define how student clearances are submitted, approved, and tracked.',
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                _buildInfoTile(
+                  label: 'Adviser Name',
+                  value: org.adviserName ?? 'N/A',
+                  icon: LucideIcons.userCheck,
+                  canEdit: canEdit,
+                  onEdit: () => _showEditAdviserDialog(context, ref, org),
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                
-                if (isGovernorOrAdviser) ...[
-                  // Clearance Period Card
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.date_range_rounded, color: AppColors.primary, size: 18),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Clearance Period',
-                                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Define when student members can submit clearance requests. Clear or leave empty to disable requests.',
-                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _pickClearanceDateTime(isStart: true),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Start Date & Time',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textGrey,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        _clearancePeriodStart != null
-                                            ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodStart!)
-                                            : 'Not set',
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: _clearancePeriodStart != null ? AppColors.textDark : AppColors.textGrey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _pickClearanceDateTime(isStart: false),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'End Date & Time',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textGrey,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        _clearancePeriodEnd != null
-                                            ? DateFormat('MMM dd, yyyy - hh:mm a').format(_clearancePeriodEnd!)
-                                            : 'Not set',
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: _clearancePeriodEnd != null ? AppColors.textDark : AppColors.textGrey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            if (_clearancePeriodStart != null || _clearancePeriodEnd != null)
-                              TextButton.icon(
-                                onPressed: () async {
-                                  setState(() {
-                                    _clearancePeriodStart = null;
-                                    _clearancePeriodEnd = null;
-                                    _isClearanceActive = false;
-                                  });
-                                  try {
-                                    final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                      id: org.id,
-                                      isClearanceActive: false,
-                                      clearClearancePeriod: true,
-                                    );
-                                    if (success && mounted) {
-                                      setState(() {
-                                        _initializedOrgId = null;
-                                      });
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Clearance period cleared and disabled.')),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error clearing schedule: $e')),
-                                      );
-                                    }
-                                  }
-                                },
-                                icon: const Icon(Icons.clear_rounded, size: 16, color: AppColors.error),
-                                label: const Text('Clear Schedule', style: TextStyle(color: AppColors.error)),
-                              ),
-                            const Spacer(),
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                if (_clearancePeriodStart == null || _clearancePeriodEnd == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please select both start and end date')),
-                                  );
-                                  return;
-                                }
-                                if (_clearancePeriodStart!.isAfter(_clearancePeriodEnd!)) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Start date must be before end date')),
-                                  );
-                                  return;
-                                }
-                                try {
-                                  final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                    id: org.id,
-                                    isClearanceActive: true,
-                                    clearancePeriodStart: _clearancePeriodStart,
-                                    clearancePeriodEnd: _clearancePeriodEnd,
-                                  );
-                                  if (success && mounted) {
-                                    setState(() {
-                                      _initializedOrgId = null;
-                                    });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Clearance period schedule saved successfully')),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error saving schedule: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                              icon: const Icon(Icons.check_rounded, size: 16),
-                              label: const Text('Apply Schedule'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: AppSpacing.xl),
-                  _buildSwitchTilePremium(
-                    title: 'Require Adviser Signature',
-                    subtitle: 'Students will need a final signature from their Adviser/Instructor on their activity card after officers sign.',
-                    value: _requiresAdviserSignature ?? org.requiresAdviserSignature,
-                    icon: Icons.assignment_turned_in_rounded,
-                    onChanged: (value) async {
-                      setState(() => _requiresAdviserSignature = value);
-                      try {
-                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                          id: org.id,
-                          requiresAdviserSignature: value,
-                        );
-                        if (success && mounted) {
-                          setState(() {
-                            _initializedOrgId = null;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Adviser signature requirement updated successfully')),
-                          );
-                        } else if (!success && mounted) {
-                          setState(() {
-                            _requiresAdviserSignature = org.requiresAdviserSignature;
-                          });
+                _buildInfoTile(
+                  label: 'Description',
+                  value: org.description ?? 'N/A',
+                  icon: LucideIcons.alignLeft,
+                  canEdit: canEdit,
+                  onEdit: () => _showEditDescriptionDialog(context, ref, org),
+                ),
+              ]),
+
+              const SizedBox(height: AppSpacing.xl),
+              _buildSectionTitle('Clearance Settings'),
+              const SizedBox(height: AppSpacing.md),
+              _buildInfoCard([
+                _buildInfoTile(
+                  label: 'Clearance Period',
+                  value: _getClearancePeriodDisplay(org),
+                  icon: LucideIcons.calendar,
+                  canEdit: canEdit,
+                  onEdit: () => _showClearancePeriodDialog(context, ref, org),
+                ),
+                _buildSwitchTile(
+                  label: 'Require Adviser Signature',
+                  subtitle: 'Adviser final signature required on activity card',
+                  value: org.requiresAdviserSignature,
+                  icon: LucideIcons.signature,
+                  onChanged: canEdit
+                      ? (val) async {
+                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                id: org.id,
+                                code: org.code,
+                                requiresAdviserSignature: val,
+                              );
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Adviser signature requirement ${val ? 'enabled' : 'disabled'}')),
+                            );
+                          }
                         }
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() {
-                            _requiresAdviserSignature = org.requiresAdviserSignature;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                      : null,
+                ),
+                _buildSwitchTile(
+                  label: 'Require Faculty Dean Signature',
+                  subtitle: 'Dean final signature required on activity card',
+                  value: org.requiresFacultyDeanSignature,
+                  icon: LucideIcons.graduationCap,
+                  onChanged: canEdit
+                      ? (val) async {
+                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                id: org.id,
+                                code: org.code,
+                                requiresFacultyDeanSignature: val,
+                              );
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Faculty Dean signature requirement ${val ? 'enabled' : 'disabled'}')),
+                            );
+                          }
                         }
-                      }
-                    },
-                  ),
-                  const Divider(height: AppSpacing.xl),
-                  _buildSwitchTilePremium(
-                    title: 'Require Faculty Dean Signature',
-                    subtitle: 'Students will need a signature from their Faculty Dean on their activity card after officers and adviser sign.',
-                    value: _requiresFacultyDeanSignature ?? org.requiresFacultyDeanSignature,
-                    icon: Icons.school_rounded,
-                    onChanged: (value) async {
-                      setState(() => _requiresFacultyDeanSignature = value);
-                      try {
-                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                          id: org.id,
-                          requiresFacultyDeanSignature: value,
-                        );
-                        if (success && mounted) {
-                          setState(() {
-                            _initializedOrgId = null;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Faculty Dean signature requirement updated successfully')),
-                          );
-                        } else if (!success && mounted) {
-                          setState(() {
-                            _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
-                          });
+                      : null,
+                ),
+                _buildSwitchTile(
+                  label: 'Allow Member Card Printing',
+                  subtitle: 'Allow student members to print cleared cards',
+                  value: org.allowMemberCardPrinting,
+                  icon: LucideIcons.printer,
+                  onChanged: canEdit
+                      ? (val) async {
+                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                id: org.id,
+                                code: org.code,
+                                allowMemberCardPrinting: val,
+                              );
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Member card printing ${val ? 'enabled' : 'disabled'}')),
+                            );
+                          }
                         }
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() {
-                            _requiresFacultyDeanSignature = org.requiresFacultyDeanSignature;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  const Divider(height: AppSpacing.xl),
-                  _buildSwitchTilePremium(
-                    title: 'Allow Member Card Printing',
-                    subtitle: 'Allow student members to download/print their activity card themselves once fully cleared. If disabled, only organization officers can print it.',
-                    value: _allowMemberCardPrinting ?? org.allowMemberCardPrinting,
-                    icon: Icons.print_rounded,
-                    onChanged: (value) async {
-                      setState(() => _allowMemberCardPrinting = value);
-                      try {
-                        final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                          id: org.id,
-                          allowMemberCardPrinting: value,
-                        );
-                        if (success && mounted) {
-                          setState(() {
-                            _initializedOrgId = null;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(value 
-                                  ? 'Members are now permitted to print their own cleared clearance cards.' 
-                                  : 'Member self-printing disabled. Only organization officers can print clearance cards.'),
-                            ),
-                          );
-                        } else if (!success && mounted) {
-                          setState(() {
-                            _allowMemberCardPrinting = org.allowMemberCardPrinting;
-                          });
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() {
-                            _allowMemberCardPrinting = org.allowMemberCardPrinting;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  const Divider(height: AppSpacing.xl),
-                ],
-                
-                if (activeMembership != null && (isGovernorOrAdviser || isSecretaryOrTreasurer)) ...[
-                  _buildSwitchTilePremium(
-                    title: 'Auto-Sign Clearances (My Office)',
-                    subtitle: 'Automatically sign clearances when students have zero outstanding balance and no absences.',
+                      : null,
+                ),
+                if (activeMembership != null && (isGovernor || isSecretaryOrTreasurer))
+                  _buildSwitchTile(
+                    label: 'Auto-Sign Clearances',
+                    subtitle: 'Auto-sign when student has zero balances/absences',
                     value: activeMembership.autoSignClearance,
-                    icon: Icons.bolt_rounded,
-                    onChanged: (value) async {
+                    icon: LucideIcons.zap,
+                    onChanged: (val) async {
                       try {
                         await SupabaseConfig.client
                             .from('organization_members')
-                            .update({'auto_sign_clearance': value})
+                            .update({'auto_sign_clearance': val})
                             .eq('id', activeMembership.id);
                         ref.invalidate(workspaceProvider);
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('My office signing preferences updated successfully')),
+                            const SnackBar(content: Text('Auto-sign preferences updated successfully')),
                           );
                         }
                       } catch (e) {
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Error updating preferences: $e')),
                           );
@@ -1170,69 +560,296 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
                       }
                     },
                   ),
-                ],
+              ]),
 
-              ],
-            ),
+              const SizedBox(height: AppSpacing.xl),
+              _buildWorkflowDiagramCard(
+                org.requiresAdviserSignature,
+                org.requiresFacultyDeanSignature,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        _buildWorkflowDiagramCard(
-          _requiresAdviserSignature ?? org.requiresAdviserSignature,
-          _requiresFacultyDeanSignature ?? org.requiresFacultyDeanSignature,
-        ),
+        if (orgState.isLoading)
+          const Center(child: FlickrLoader()),
       ],
     );
   }
 
-  Widget _buildSwitchTilePremium({
-    required String title,
+  Widget _buildOrgHeader(BuildContext context, WidgetRef ref, OrganizationModel org, bool canEdit) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Banner Placeholder
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Container(
+              height: 120,
+              width: double.infinity,
+              color: AppColors.primary,
+              child: org.bannerUrl != null && org.bannerUrl!.isNotEmpty
+                  ? Image.network(
+                      org.bannerUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Opacity(
+                        opacity: 0.1,
+                        child: Icon(LucideIcons.image, size: 100, color: Colors.white),
+                      ),
+                    )
+                  : const Opacity(
+                      opacity: 0.1,
+                      child: Icon(LucideIcons.image, size: 100, color: Colors.white),
+                    ),
+            ),
+          ),
+          
+          // Banner Edit Button
+          if (canEdit)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: GestureDetector(
+                onTap: () => _pickAndUploadBanner(context, ref, org.id, org.code),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(LucideIcons.camera, color: AppColors.white, size: 16),
+                ),
+              ),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 80, AppSpacing.xl, AppSpacing.xl),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Stack(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primary,
+                        backgroundImage: org.logoUrl != null && org.logoUrl!.isNotEmpty
+                            ? NetworkImage(org.logoUrl!)
+                            : null,
+                        child: org.logoUrl == null || org.logoUrl!.isEmpty
+                            ? const Icon(LucideIcons.building, color: Colors.white, size: 40)
+                            : null,
+                      ),
+                    ),
+                    if (canEdit)
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => _pickAndUploadLogo(context, ref, org.id, org.code),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(LucideIcons.camera, color: AppColors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        org.name,
+                        style: AppTextStyles.headlineSmall.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${org.memberCount} MEMBERS',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '• ${org.type.replaceAll('-', ' ').toUpperCase()}',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Text(
+        title,
+        style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildInfoTile({
+    required String label,
+    required String value,
+    required IconData icon,
+    bool canEdit = true,
+    VoidCallback? onEdit,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
+                ),
+                Text(
+                  value,
+                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.textDark),
+                ),
+              ],
+            ),
+          ),
+          if (canEdit)
+            IconButton(
+              onPressed: onEdit,
+              icon: const Icon(LucideIcons.edit3, size: 18, color: AppColors.textGrey),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile({
+    required String label,
     required String subtitle,
     required bool value,
     required IconData icon,
-    required Function(bool) onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10),
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 18),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-            ],
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.textDark),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: AppColors.primary,
-        ),
-      ],
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.primary,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildWorkflowDiagramCard(bool requiresAdviser, bool requiresFacultyDean) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
       ),
-      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
@@ -1240,7 +857,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
           children: [
             Text(
               'Clearance Approval Path',
-              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1251,7 +868,7 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
             LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 500;
-                
+
                 final steps = [
                   _buildWorkflowStep(
                     step: '1',
@@ -1342,12 +959,12 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
       padding: const EdgeInsets.all(AppSpacing.md),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isSkipped ? Colors.grey.shade50 : color.withOpacity(0.04),
+        color: isSkipped ? Colors.grey.shade50 : color.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSkipped
               ? Colors.grey.shade200
-              : (isCompleted ? color : color.withOpacity(0.2)),
+              : (isCompleted ? color : color.withValues(alpha: 0.2)),
           width: 1.5,
         ),
       ),
@@ -1401,19 +1018,6 @@ class _OrganizationSettingsPanelState extends ConsumerState<OrganizationSettings
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 4),
       child: Icon(Icons.arrow_downward_rounded, color: AppColors.border, size: 16),
-    );
-  }
-
-  Widget _buildFieldLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        label,
-        style: AppTextStyles.bodySmall.copyWith(
-          fontWeight: FontWeight.bold,
-          color: AppColors.textDark,
-        ),
-      ),
     );
   }
 }
