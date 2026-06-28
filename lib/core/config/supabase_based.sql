@@ -695,6 +695,21 @@ USING (public.has_scope_permission('create_sanction_rules', scope_type, scope_id
 CREATE POLICY "Audit logs are viewable by officers" ON governance_audit_logs FOR SELECT TO authenticated
 USING (public.is_super_admin() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL));
 
+-- ------------------------------------------------------------
+-- SYSTEM & EXTERNAL SERVICE GRANTS (e.g. Supabase Storage)
+-- ------------------------------------------------------------
+-- Grant schema usage permissions
+GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, supabase_storage_admin;
+
+-- Grant SELECT on all public tables to authenticated, anonymous, and storage manager roles
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated, anon, supabase_storage_admin;
+
+-- Grant SELECT on auth.users in case storage policies/triggers reference it directly
+GRANT SELECT ON auth.users TO authenticated, anon, supabase_storage_admin;
+
+-- Ensure all future tables automatically grant SELECT to authenticated, anon, and supabase_storage_admin
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated, anon, supabase_storage_admin;
+
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES
 -- ==============================================================================
