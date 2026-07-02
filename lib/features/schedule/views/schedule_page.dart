@@ -12,6 +12,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../models/schedule_model.dart';
 import '../providers/schedule_provider.dart';
+import '../../../shared/layouts/responsive_layout.dart';
 
 class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
@@ -99,9 +100,23 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
   Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(schedulesProvider);
     final activeTermAsync = ref.watch(activeTermProvider);
+    final isMobile = ResponsiveLayout.isMobile(context);
+    final isTablet = ResponsiveLayout.isTablet(context);
 
     return DashboardLayout(
       title: 'School Schedule',
+      floatingActionButton: (isMobile || isTablet)
+          ? FloatingActionButton(
+              onPressed: () => _showAddEditScheduleModal(),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: activeTermAsync.when(
         data: (activeTerm) {
           if (activeTerm == null) {
@@ -122,7 +137,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
                   const SizedBox(height: AppSpacing.md),
                   TabBar(
                     controller: _tabController,
-                    isScrollable: true,
+                    isScrollable: !isMobile,
+                    tabAlignment: isMobile ? TabAlignment.fill : TabAlignment.start,
+                    labelPadding: isMobile ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 16),
                     labelColor: AppColors.primary,
                     unselectedLabelColor: AppColors.textGrey,
                     indicatorColor: AppColors.primary,
@@ -204,6 +221,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
   }
 
   Widget _buildHeaderCard(String year, String semester, int totalCount) {
+    final isDesktop = ResponsiveLayout.isDesktop(context);
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -270,11 +289,14 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
                     : const Icon(Icons.sync_rounded, color: AppColors.primary),
                 tooltip: 'Sync Schedules',
               ),
-              FilledButton.icon(
-                onPressed: () => _showAddEditScheduleModal(),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Add Subject'),
-              ),
+              if (isDesktop) ...[
+                const SizedBox(width: AppSpacing.xs),
+                FilledButton.icon(
+                  onPressed: () => _showAddEditScheduleModal(),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add Subject'),
+                ),
+              ],
             ],
           ),
         ],
