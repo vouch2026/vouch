@@ -17,6 +17,113 @@ class OrganizationSwitcher extends ConsumerStatefulWidget {
 
 class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
   bool _isSwitching = false;
+  bool _isDropdownOpen = false;
+  final LayerLink _layerLink = LayerLink();
+  final GlobalKey _cardKey = GlobalKey();
+  OverlayEntry? _overlayEntry;
+  ScrollPosition? _scrollPosition;
+
+  @override
+  void dispose() {
+    _closeDropdown();
+    super.dispose();
+  }
+
+  void _toggleDropdown() {
+    if (_isDropdownOpen) {
+      _closeDropdown();
+    } else {
+      _openDropdown();
+    }
+  }
+
+  void _openDropdown() {
+    if (_isDropdownOpen) return;
+
+    final renderBox = _cardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final width = renderBox.size.width;
+
+    // Calculate position and available height to prevent overextending past screen/sidebar bottom
+    final position = renderBox.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final availableHeight = screenHeight - position.dy - renderBox.size.height - 16;
+    final maxHeight = availableHeight.clamp(80.0, 250.0);
+
+    final workspace = ref.read(workspaceProvider);
+    final selectedOrg = workspace.selectedOrganization;
+    final orgsAsyncValue = ref.read(userOrganizationsProvider);
+    final orgs = orgsAsyncValue.value ?? [];
+
+    // Register scroll listener to dismiss dropdown on parent scroll
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null) {
+      _scrollPosition = scrollable.position;
+      _scrollPosition?.addListener(_closeDropdown);
+    }
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Translucent tap barrier to close the dropdown on outer clicks
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _closeDropdown,
+            child: const SizedBox.expand(),
+          ),
+          CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, -1.2), // Tiny negative offset to overlap borders seamlessly
+            child: Material(
+              color: Colors.transparent,
+              child: _DropdownMenu(
+                orgs: orgs,
+                selectedOrg: selectedOrg,
+                workspace: workspace,
+                width: width,
+                maxHeight: maxHeight,
+                onSelected: (org) async {
+                  _closeDropdown();
+                  if (org?.id == selectedOrg?.id && org != null) return;
+
+                  setState(() => _isSwitching = true);
+                  await ref.read(workspaceProvider.notifier).selectOrganization(org);
+                  if (mounted) {
+                    setState(() => _isSwitching = false);
+                  }
+                },
+                onClose: _closeDropdown,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+    setState(() {
+      _isDropdownOpen = true;
+    });
+  }
+
+  void _closeDropdown() {
+    if (!_isDropdownOpen) return;
+
+    // Remove scroll listener
+    _scrollPosition?.removeListener(_closeDropdown);
+    _scrollPosition = null;
+
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    if (mounted) {
+      setState(() {
+        _isDropdownOpen = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,123 +132,262 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
     final userOrgsAsync = ref.watch(userOrganizationsProvider);
 
     return userOrgsAsync.when(
-      data: (orgs) => Stack(
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: selectedOrg == null 
-                  ? AppColors.primary.withValues(alpha: 0.3) 
-                  : Colors.grey.shade200,
-                width: selectedOrg == null ? 1.5 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: PopupMenuButton<OrganizationModel?>(
-              offset: const Offset(0, 60),
-              padding: EdgeInsets.zero,
-              position: PopupMenuPosition.under,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              itemBuilder: (context) => [
-                ...orgs.map((org) => PopupMenuItem<OrganizationModel?>(
-                      value: org,
-                      child: _OrgItem(
-                        name: org.name,
-                        role: org.code,
-                        logoUrl: org.logoUrl,
-                        isSelected: selectedOrg?.id == org.id,
-                      ),
-                    )),
-              ],
-              onSelected: (org) async {
-                if (org?.id == selectedOrg?.id && org != null) return;
-                if (org == null) return;
-
-                setState(() => _isSwitching = true);
-                
-                // Wait for the state update to be processed
-                await ref.read(workspaceProvider.notifier).selectOrganization(org);
-                
-                if (mounted) {
-                  setState(() => _isSwitching = false);
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Row(
-                  children: [
-                    _OrgAvatar(
-                      logoUrl: selectedOrg?.logoUrl,
-                      isGlobal: selectedOrg == null,
+      data: (orgs) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+        child: Stack(
+          children: [
+            CompositedTransformTarget(
+              link: _layerLink,
+              child: Container(
+                key: _cardKey,
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: _isDropdownOpen
+                      ? const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        )
+                      : BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isDropdownOpen
+                        ? AppColors.primary.withValues(alpha: 0.3)
+                        : (selectedOrg == null ? AppColors.primary.withValues(alpha: 0.3) : Colors.grey.shade200),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: _isDropdownOpen ? 0.05 : 0.03),
+                      blurRadius: _isDropdownOpen ? 12 : 10,
+                      offset: const Offset(0, 4),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            selectedOrg?.name ?? 'Select Organization',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textDark,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            selectedOrg != null 
-                              ? (workspace.activeRole?.roleName ?? 'Member')
-                              : 'Switch Workspace',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: selectedOrg == null ? AppColors.primary : AppColors.textGrey,
-                              fontWeight: selectedOrg == null ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_isSwitching)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: FlickrLoader(),
-                      )
-                    else
-                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textGrey, size: 20),
                   ],
                 ),
-              ),
-            ),
-          ),
-          if (_isSwitching)
-            Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  onTap: _isSwitching ? null : _toggleDropdown,
+                  borderRadius: _isDropdownOpen
+                      ? const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        )
+                      : BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Row(
+                      children: [
+                        _OrgAvatar(
+                          logoUrl: selectedOrg?.logoUrl,
+                          isGlobal: selectedOrg == null,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                selectedOrg?.name ?? 'Select Organization',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textDark,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                selectedOrg != null
+                                    ? (workspace.activeRole?.roleName ?? 'Member')
+                                    : 'Switch Workspace',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: selectedOrg == null ? AppColors.primary : AppColors.textGrey,
+                                  fontWeight: selectedOrg == null ? FontWeight.w600 : FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_isSwitching)
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: FlickrLoader(),
+                          )
+                        else
+                          AnimatedRotation(
+                            turns: _isDropdownOpen ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.textGrey,
+                              size: 20,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-        ],
+            if (_isSwitching)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
       loading: () => const Padding(
         padding: EdgeInsets.all(AppSpacing.md),
         child: Center(child: SizedBox(width: 20, height: 20, child: FlickrLoader())),
       ),
       error: (err, _) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _DropdownMenu extends StatefulWidget {
+  final List<OrganizationModel> orgs;
+  final OrganizationModel? selectedOrg;
+  final WorkspaceState workspace;
+  final ValueChanged<OrganizationModel?> onSelected;
+  final double width;
+  final double maxHeight;
+  final VoidCallback onClose;
+
+  const _DropdownMenu({
+    required this.orgs,
+    required this.selectedOrg,
+    required this.workspace,
+    required this.onSelected,
+    required this.width,
+    required this.maxHeight,
+    required this.onClose,
+  });
+
+  @override
+  State<_DropdownMenu> createState() => _DropdownMenuState();
+}
+
+class _DropdownMenuState extends State<_DropdownMenu> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _slideAnimation = Tween<double>(begin: -8, end: 0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuad),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {}, // Consume taps inside the dropdown card
+        child: Container(
+          width: widget.width,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(16),
+              bottomRight: Radius.circular(16),
+            ),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: widget.maxHeight),
+                  child: widget.orgs.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Center(
+                            child: Text(
+                              'No workspaces found',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: AppColors.textGrey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                          itemCount: widget.orgs.length,
+                          itemBuilder: (context, index) {
+                            final org = widget.orgs[index];
+                            final isSelected = widget.selectedOrg?.id == org.id;
+                            return _OrgItem(
+                              name: org.name,
+                              role: org.code,
+                              logoUrl: org.logoUrl,
+                              isSelected: isSelected,
+                              onTap: () => widget.onSelected(org),
+                            );
+                          },
+                        ),
+                ),
+              ),
+              if (widget.selectedOrg != null) ...[
+                const Divider(height: 1, thickness: 0.5),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: _GlobalHubItem(
+                    onTap: () => widget.onSelected(null),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -179,52 +425,155 @@ class _OrgItem extends StatelessWidget {
   final String name;
   final String role;
   final String? logoUrl;
-  final bool isGlobal;
   final bool isSelected;
+  final VoidCallback onTap;
 
   const _OrgItem({
     required this.name,
     required this.role,
     this.logoUrl,
-    this.isGlobal = false,
     this.isSelected = false,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _OrgAvatar(logoUrl: logoUrl, isGlobal: isGlobal),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                name,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? AppColors.primary : AppColors.textDark,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.05)
+              : Colors.transparent,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            hoverColor: AppColors.primary.withValues(alpha: 0.02),
+            splashColor: AppColors.primary.withValues(alpha: 0.06),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+              child: Row(
+                children: [
+                  _OrgAvatar(logoUrl: logoUrl),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                            color: isSelected ? AppColors.primary : AppColors.textDark,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          role,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: isSelected ? AppColors.primary.withValues(alpha: 0.7) : AppColors.textGrey,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
+                ],
               ),
-              Text(
-                role,
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.7) : AppColors.textGrey,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        if (isSelected)
-          const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
-      ],
+      ),
+    );
+  }
+}
+
+class _GlobalHubItem extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _GlobalHubItem({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            hoverColor: AppColors.primary.withValues(alpha: 0.04),
+            splashColor: AppColors.primary.withValues(alpha: 0.08),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.grid_view_rounded,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Personal Hub',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Text(
+                          'Exit current workspace',
+                          style: GoogleFonts.poppins(
+                            fontSize: 9.5,
+                            color: AppColors.textGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_right_alt_rounded,
+                    color: AppColors.primary,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
