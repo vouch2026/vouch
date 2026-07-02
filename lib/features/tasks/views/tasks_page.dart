@@ -325,6 +325,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         ],
       ),
       child: ListTile(
+        isThreeLine: task.description.isNotEmpty || task.dueDate != null,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         leading: Transform.scale(
           scale: 1.1,
@@ -338,6 +339,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
         ),
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(
@@ -363,61 +365,61 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             ],
           ],
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (task.description.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                task.description,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textGrey,
-                  decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            if (task.dueDate != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isOverdue ? AppColors.error.withValues(alpha: 0.08) : AppColors.background,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 12,
-                      color: isOverdue ? AppColors.error : AppColors.textGrey,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
+        subtitle: (task.description.isNotEmpty || task.dueDate != null)
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (task.description.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
-                      DateFormat('MMM dd, yyyy').format(task.dueDate!),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: isOverdue ? AppColors.error : AppColors.textGrey,
-                        fontWeight: isOverdue ? FontWeight.bold : null,
+                      task.description,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textGrey,
+                        decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                       ),
                     ),
-                    if (isOverdue) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Overdue',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.error,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
                   ],
-                ),
-              ),
-            ],
-          ],
-        ),
+                  if (task.dueDate != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isOverdue ? AppColors.error.withValues(alpha: 0.08) : AppColors.background,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: isOverdue ? AppColors.error : AppColors.textGrey,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            DateFormat('MMM dd, yyyy').format(task.dueDate!),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: isOverdue ? AppColors.error : AppColors.textGrey,
+                              fontWeight: isOverdue ? FontWeight.bold : null,
+                            ),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              'Overdue',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              )
+            : null,
         trailing: PopupMenuButton<String>(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           onSelected: (val) {
