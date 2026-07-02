@@ -716,28 +716,9 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${org.memberCount} MEMBERS',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '• ${org.type.replaceAll('-', ' ').toUpperCase()}',
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-                          ),
-                        ],
+                      Text(
+                        org.type.replaceAll('-', ' ').toUpperCase(),
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
                       ),
                     ],
                   ),
