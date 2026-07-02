@@ -311,8 +311,14 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
   }
 
   Widget _buildSidebarHeader(BuildContext context) {
+    final double topPadding = MediaQuery.of(context).padding.top;
     return Container(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.sm),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        topPadding > 0 ? topPadding + AppSpacing.md : AppSpacing.xxl,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

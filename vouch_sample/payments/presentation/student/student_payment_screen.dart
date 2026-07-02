@@ -604,7 +604,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             child: Padding(
                               padding: const EdgeInsets.all(4),
                               child: Image.asset(
-                                'assets/logos/vouch_logo.png',
+                                'assets/logos/vouch.png',
                                 fit: BoxFit.cover,
                               ),
                             ),
