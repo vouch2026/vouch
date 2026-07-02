@@ -9,7 +9,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../models/organization_model.dart';
 import '../../providers/workspace_provider.dart';
 import '../../controllers/organization_controller.dart';
-import '../../../../core/config/supabase_config.dart';
 import '../../../../core/widgets/loaders/flickr_loader.dart';
 
 class OrganizationSettingsPanel extends ConsumerWidget {
@@ -558,30 +557,11 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 ),
                 if (activeMembership != null && (isGovernor || isSecretaryOrTreasurer))
                   _buildSwitchTile(
-                    label: 'Auto-Sign Clearances',
+                    label: 'Auto-Sign Clearances (Coming Soon)',
                     subtitle: 'Auto-sign when student has zero balances/absences',
                     value: activeMembership.autoSignClearance,
                     icon: LucideIcons.zap,
-                    onChanged: (val) async {
-                      try {
-                        await SupabaseConfig.client
-                            .from('organization_members')
-                            .update({'auto_sign_clearance': val})
-                            .eq('id', activeMembership.id);
-                        ref.invalidate(workspaceProvider);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Auto-sign preferences updated successfully')),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error updating preferences: $e')),
-                          );
-                        }
-                      }
-                    },
+                    onChanged: null,
                   ),
               ]),
 
