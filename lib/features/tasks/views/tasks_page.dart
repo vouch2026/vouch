@@ -97,6 +97,32 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         onRefresh: _handleRefresh,
         child: tasksAsync.when(
           data: (tasks) {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+
+            // Filter uncompleted tasks
+            final pastTasks = tasks.where((t) {
+              if (t.isCompleted || t.dueDate == null) return false;
+              final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+              return dueDay.isBefore(today);
+            }).toList();
+
+            final todayTasks = tasks.where((t) {
+              if (t.isCompleted || t.dueDate == null) return false;
+              final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+              return dueDay.isAtSameMomentAs(today);
+            }).toList();
+
+            final upcomingTasks = tasks.where((t) {
+              if (t.isCompleted) return false;
+              if (t.dueDate == null) return true;
+              final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+              return dueDay.isAfter(today);
+            }).toList();
+
+            // Filter completed tasks
+            final completedTasks = tasks.where((t) => t.isCompleted).toList();
+
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -111,12 +137,48 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         'Task List',
                         style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      if (isDesktop)
-                        TextButton.icon(
-                          onPressed: () => _showAddEditTaskModal(),
-                          icon: const Icon(Icons.add_rounded, size: 20),
-                          label: const Text('Add Task'),
-                        ),
+                      Row(
+                        children: [
+                          if (isDesktop) ...[
+                            TextButton.icon(
+                              onPressed: () => _showAddEditTaskModal(),
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              label: const Text('Add Task'),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert_rounded),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            onSelected: (val) {
+                              if (val == 'delete_completed') {
+                                _confirmDeleteAllCompletedTasks();
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'delete_completed',
+                                enabled: completedTasks.isNotEmpty,
+                                child: ListTile(
+                                  leading: Icon(
+                                    Icons.delete_sweep_rounded,
+                                    color: completedTasks.isNotEmpty ? AppColors.error : AppColors.textGrey,
+                                    size: 20,
+                                  ),
+                                  title: Text(
+                                    'Delete Completed',
+                                    style: TextStyle(
+                                      color: completedTasks.isNotEmpty ? AppColors.error : AppColors.textGrey,
+                                    ),
+                                  ),
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -124,17 +186,59 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   // Task items
                   if (tasks.isEmpty)
                     _buildEmptyState()
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: tasks.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return _buildTaskCard(task);
-                      },
-                    ),
+                  else ...[
+                    if (pastTasks.isEmpty && todayTasks.isEmpty && upcomingTasks.isEmpty)
+                      _buildAllDoneState()
+                    else ...[
+                      if (pastTasks.isNotEmpty) ...[
+                        _TaskGroupCard(
+                          title: 'Past Tasks',
+                          subtitle: '${pastTasks.length} task${pastTasks.length == 1 ? '' : 's'} overdue',
+                          icon: Icons.warning_amber_rounded,
+                          color: AppColors.error,
+                          tasks: pastTasks,
+                          taskBuilder: _buildTaskCard,
+                          initiallyExpanded: true,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (todayTasks.isNotEmpty) ...[
+                        _TaskGroupCard(
+                          title: "Today's Tasks",
+                          subtitle: '${todayTasks.length} task${todayTasks.length == 1 ? '' : 's'} due today',
+                          icon: Icons.today_rounded,
+                          color: AppColors.primary,
+                          tasks: todayTasks,
+                          taskBuilder: _buildTaskCard,
+                          initiallyExpanded: true,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (upcomingTasks.isNotEmpty) ...[
+                        _TaskGroupCard(
+                          title: 'Upcoming Tasks',
+                          subtitle: '${upcomingTasks.length} task${upcomingTasks.length == 1 ? '' : 's'} upcoming',
+                          icon: Icons.calendar_month_outlined,
+                          color: AppColors.info,
+                          tasks: upcomingTasks,
+                          taskBuilder: _buildTaskCard,
+                          initiallyExpanded: false,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                    ],
+                    if (completedTasks.isNotEmpty) ...[
+                      _TaskGroupCard(
+                        title: 'Completed Tasks',
+                        subtitle: '${completedTasks.length} task${completedTasks.length == 1 ? '' : 's'} completed',
+                        icon: Icons.check_circle_outline_rounded,
+                        color: AppColors.success,
+                        tasks: completedTasks,
+                        taskBuilder: _buildTaskCard,
+                        initiallyExpanded: false,
+                      ),
+                    ],
+                  ],
                 ],
               ),
             );
@@ -372,6 +476,71 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       ),
     );
   }
+
+  void _confirmDeleteAllCompletedTasks() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Completed Tasks'),
+        content: const Text('Are you sure you want to delete all completed tasks? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              ref.read(tasksProvider.notifier).deleteAllCompletedTasks();
+              Navigator.pop(context);
+            },
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAllDoneState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xxl),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.done_all_rounded,
+              size: 40,
+              color: AppColors.success,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'All tasks completed!',
+            style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Great job! You have no pending tasks.',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AddEditTaskModal extends ConsumerStatefulWidget {
@@ -599,6 +768,104 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskGroupCard extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final List<TaskModel> tasks;
+  final Widget Function(TaskModel) taskBuilder;
+  final bool initiallyExpanded;
+
+  const _TaskGroupCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.tasks,
+    required this.taskBuilder,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<_TaskGroupCard> createState() => _TaskGroupCardState();
+}
+
+class _TaskGroupCardState extends State<_TaskGroupCard> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.white,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
+        child: ExpansionTile(
+          initiallyExpanded: widget.initiallyExpanded,
+          onExpansionChanged: (expanded) => setState(() => _isExpanded = expanded),
+          leading: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(widget.icon, color: widget.color, size: 20),
+          ),
+          title: Text(
+            widget.title,
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+            ),
+          ),
+          subtitle: Text(
+            widget.subtitle,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+          ),
+          trailing: Icon(
+            _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textGrey,
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom: AppSpacing.md,
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: widget.tasks.length,
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+                itemBuilder: (context, index) {
+                  return widget.taskBuilder(widget.tasks[index]);
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

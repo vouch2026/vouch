@@ -49,6 +49,21 @@ class TasksNotifier extends AsyncNotifier<List<TaskModel>> {
     });
   }
 
+  Future<void> deleteAllCompletedTasks() async {
+    final repository = ref.read(taskRepositoryProvider);
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final currentTasks = state.value ?? await repository.getTasks();
+      final completedTasks = currentTasks.where((t) => t.isCompleted).toList();
+      for (final task in completedTasks) {
+        if (task.id != null) {
+          await repository.deleteTask(task.id!);
+        }
+      }
+      return repository.getTasks();
+    });
+  }
+
   Future<void> toggleTaskCompletion(TaskModel task) async {
     final repository = ref.read(taskRepositoryProvider);
     state = const AsyncValue.loading();
