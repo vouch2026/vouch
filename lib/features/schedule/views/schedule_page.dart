@@ -668,12 +668,16 @@ class _AddEditScheduleModalState extends ConsumerState<_AddEditScheduleModal> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.schedule != null;
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 16 : 24)),
+      insetPadding: isMobile
+          ? const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0)
+          : const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
       child: Container(
-        width: 520,
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        width: isMobile ? double.infinity : 520,
+        padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
