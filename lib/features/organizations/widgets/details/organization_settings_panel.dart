@@ -494,26 +494,48 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                         }
                       : null,
                 ),
-                _buildSwitchTile(
-                  label: 'Require Faculty Dean Signature',
-                  subtitle: 'Dean final signature required on activity card',
-                  value: activeOrg.requiresFacultyDeanSignature,
-                  icon: LucideIcons.graduationCap,
-                  onChanged: canEdit
-                      ? (val) async {
-                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: activeOrg.id,
-                                code: activeOrg.code,
-                                requiresFacultyDeanSignature: val,
+                if (activeOrg.type == 'program-based')
+                  _buildSwitchTile(
+                    label: 'Require Program Head Signature',
+                    subtitle: 'Program Head final signature required on activity card',
+                    value: activeOrg.requiresProgramHeadSignature,
+                    icon: LucideIcons.userCheck,
+                    onChanged: canEdit
+                        ? (val) async {
+                            final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                  id: activeOrg.id,
+                                  code: activeOrg.code,
+                                  requiresProgramHeadSignature: val,
+                                );
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Program Head signature requirement ${val ? 'enabled' : 'disabled'}')),
                               );
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Faculty Dean signature requirement ${val ? 'enabled' : 'disabled'}')),
-                            );
+                            }
                           }
-                        }
-                      : null,
-                ),
+                        : null,
+                  ),
+                if (activeOrg.type == 'faculty-based')
+                  _buildSwitchTile(
+                    label: 'Require Faculty Dean Signature',
+                    subtitle: 'Dean final signature required on activity card',
+                    value: activeOrg.requiresFacultyDeanSignature,
+                    icon: LucideIcons.graduationCap,
+                    onChanged: canEdit
+                        ? (val) async {
+                            final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                  id: activeOrg.id,
+                                  code: activeOrg.code,
+                                  requiresFacultyDeanSignature: val,
+                                );
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Faculty Dean signature requirement ${val ? 'enabled' : 'disabled'}')),
+                              );
+                            }
+                          }
+                        : null,
+                  ),
                 _buildSwitchTile(
                   label: 'Allow Member Card Printing',
                   subtitle: 'Allow student members to print cleared cards',
@@ -564,10 +586,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
               ]),
 
               const SizedBox(height: AppSpacing.xl),
-              _buildWorkflowDiagramCard(
-                activeOrg.requiresAdviserSignature,
-                activeOrg.requiresFacultyDeanSignature,
-              ),
+              _buildWorkflowDiagramCard(activeOrg),
               const SizedBox(height: AppSpacing.xxl),
             ],
           ),
@@ -844,7 +863,11 @@ class OrganizationSettingsPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildWorkflowDiagramCard(bool requiresAdviser, bool requiresFacultyDean) {
+  Widget _buildWorkflowDiagramCard(OrganizationModel activeOrg) {
+    final requiresAdviser = activeOrg.requiresAdviserSignature;
+    final requiresProgramHead = activeOrg.requiresProgramHeadSignature;
+    final requiresFacultyDean = activeOrg.requiresFacultyDeanSignature;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -868,9 +891,9 @@ class OrganizationSettingsPanel extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 500;
+                final isWide = constraints.maxWidth > 600;
 
-                final steps = [
+                final List<Widget> steps = [
                   _buildWorkflowStep(
                     step: '1',
                     title: 'Submission',
@@ -885,59 +908,72 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                     color: AppColors.info,
                     isCompleted: true,
                   ),
-                  _buildWorkflowStep(
-                    step: '3',
-                    title: 'Adviser sign',
-                    subtitle: requiresAdviser ? 'Final signature required' : 'Auto-approved',
-                    color: requiresAdviser ? AppColors.warning : Colors.grey,
-                    isCompleted: requiresAdviser,
-                    isSkipped: !requiresAdviser,
-                  ),
-                  _buildWorkflowStep(
-                    step: '4',
+                ];
+
+                int currentStep = 3;
+
+                // Adviser is applicable to all types
+                steps.add(_buildWorkflowStep(
+                  step: '${currentStep++}',
+                  title: 'Adviser sign',
+                  subtitle: requiresAdviser ? 'Final signature required' : 'Auto-approved',
+                  color: requiresAdviser ? AppColors.warning : Colors.grey,
+                  isCompleted: requiresAdviser,
+                  isSkipped: !requiresAdviser,
+                ));
+
+                if (activeOrg.type == 'program-based') {
+                  steps.add(_buildWorkflowStep(
+                    step: '${currentStep++}',
+                    title: 'Program Head sign',
+                    subtitle: requiresProgramHead ? 'Head signature required' : 'Auto-approved',
+                    color: requiresProgramHead ? AppColors.warning : Colors.grey,
+                    isCompleted: requiresProgramHead,
+                    isSkipped: !requiresProgramHead,
+                  ));
+                }
+
+                if (activeOrg.type == 'faculty-based') {
+                  steps.add(_buildWorkflowStep(
+                    step: '${currentStep++}',
                     title: 'Dean sign',
                     subtitle: requiresFacultyDean ? 'Dean signature required' : 'Auto-approved',
                     color: requiresFacultyDean ? AppColors.info : Colors.grey,
                     isCompleted: requiresFacultyDean,
                     isSkipped: !requiresFacultyDean,
-                  ),
-                  _buildWorkflowStep(
-                    step: '5',
-                    title: 'Cleared',
-                    subtitle: 'Card approved',
-                    color: AppColors.success,
-                    isCompleted: true,
-                  ),
-                ];
+                  ));
+                }
+
+                steps.add(_buildWorkflowStep(
+                  step: '$currentStep',
+                  title: 'Cleared',
+                  subtitle: 'Card approved',
+                  color: AppColors.success,
+                  isCompleted: true,
+                ));
 
                 if (isWide) {
+                  final List<Widget> rowChildren = [];
+                  for (int i = 0; i < steps.length; i++) {
+                    rowChildren.add(Expanded(child: steps[i]));
+                    if (i < steps.length - 1) {
+                      rowChildren.add(_buildArrowConnector());
+                    }
+                  }
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: steps[0]),
-                      _buildArrowConnector(),
-                      Expanded(child: steps[1]),
-                      _buildArrowConnector(),
-                      Expanded(child: steps[2]),
-                      _buildArrowConnector(),
-                      Expanded(child: steps[3]),
-                      _buildArrowConnector(),
-                      Expanded(child: steps[4]),
-                    ],
+                    children: rowChildren,
                   );
                 } else {
+                  final List<Widget> columnChildren = [];
+                  for (int i = 0; i < steps.length; i++) {
+                    columnChildren.add(steps[i]);
+                    if (i < steps.length - 1) {
+                      columnChildren.add(_buildVerticalConnector());
+                    }
+                  }
                   return Column(
-                    children: [
-                      steps[0],
-                      _buildVerticalConnector(),
-                      steps[1],
-                      _buildVerticalConnector(),
-                      steps[2],
-                      _buildVerticalConnector(),
-                      steps[3],
-                      _buildVerticalConnector(),
-                      steps[4],
-                    ],
+                    children: columnChildren,
                   );
                 }
               },

@@ -80,6 +80,7 @@ class OrganizationController extends AsyncNotifier<void> {
     String? logoUrl,
     String? bannerUrl,
     bool? requiresAdviserSignature,
+    bool? requiresProgramHeadSignature,
     bool? requiresFacultyDeanSignature,
     bool? allowMemberCardPrinting,
     bool? isClearanceActive,
@@ -128,6 +129,10 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (requiresAdviserSignature != null) {
         updateData['requires_adviser_signature'] = requiresAdviserSignature;
+      }
+
+      if (requiresProgramHeadSignature != null) {
+        updateData['requires_program_head_signature'] = requiresProgramHeadSignature;
       }
 
       if (requiresFacultyDeanSignature != null) {

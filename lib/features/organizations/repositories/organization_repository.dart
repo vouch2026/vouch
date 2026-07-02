@@ -38,6 +38,7 @@ class OrganizationRepository {
           : settingsData as Map<String, dynamic>?;
       
       final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+      final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
       final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
       final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
       final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
@@ -55,6 +56,7 @@ class OrganizationRepository {
         ...json,
         'memberCount': count,
         'requires_adviser_signature': requiresAdviser,
+        'requires_program_head_signature': requiresProgramHead,
         'requires_faculty_dean_signature': requiresFacultyDean,
         'allow_member_card_printing': allowMemberCardPrinting,
         'clearance_period_start': clearancePeriodStartStr,
@@ -89,6 +91,7 @@ class OrganizationRepository {
         : settingsData as Map<String, dynamic>?;
     
     final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+    final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
     final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
     final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
     final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
@@ -105,6 +108,7 @@ class OrganizationRepository {
     return OrganizationModel.fromJson({
       ...response,
       'requires_adviser_signature': requiresAdviser,
+      'requires_program_head_signature': requiresProgramHead,
       'requires_faculty_dean_signature': requiresFacultyDean,
       'allow_member_card_printing': allowMemberCardPrinting,
       'clearance_period_start': clearancePeriodStartStr,
@@ -152,6 +156,8 @@ class OrganizationRepository {
         orgData[key] = value;
       } else if (key == 'requires_adviser_signature') {
         settingsData['requires_adviser_signature'] = value;
+      } else if (key == 'requires_program_head_signature') {
+        settingsData['requires_program_head_signature'] = value;
       } else if (key == 'requires_faculty_dean_signature') {
         settingsData['requires_dean_signature'] = value;
       } else if (key == 'allow_member_card_printing') {
@@ -334,6 +340,7 @@ class OrganizationRepository {
             : settingsData as Map<String, dynamic>?;
         
         final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+        final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
         final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
         final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
         final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
@@ -350,6 +357,7 @@ class OrganizationRepository {
         organizations.add(OrganizationModel.fromJson({
           ...orgJson,
           'requires_adviser_signature': requiresAdviser,
+          'requires_program_head_signature': requiresProgramHead,
           'requires_faculty_dean_signature': requiresFacultyDean,
           'allow_member_card_printing': allowMemberCardPrinting,
           'clearance_period_start': clearancePeriodStartStr,
