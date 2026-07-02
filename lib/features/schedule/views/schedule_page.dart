@@ -134,27 +134,38 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'A.Y. ${activeTerm.academicYear} — ${activeTerm.semester}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textGrey,
+                          'Weekly Schedule',
+                          style: AppTextStyles.titleMedium.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
                           ),
                         ),
-                        if (isDesktop) ...[
-                          const SizedBox(width: AppSpacing.md),
-                          FilledButton.icon(
-                            onPressed: () => _showAddEditScheduleModal(),
-                            icon: const Icon(Icons.add_rounded, size: 16),
-                            label: const Text('Add Subject'),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
-                              minimumSize: const Size(0, 32),
+                        Row(
+                          children: [
+                            Text(
+                              'A.Y. ${activeTerm.academicYear} — ${activeTerm.semester}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textGrey,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                            if (isDesktop) ...[
+                              const SizedBox(width: AppSpacing.md),
+                              FilledButton.icon(
+                                onPressed: () => _showAddEditScheduleModal(),
+                                icon: const Icon(Icons.add_rounded, size: 16),
+                                label: const Text('Add Subject'),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
