@@ -54,7 +54,6 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
 
     return DashboardLayout(
       title: 'Organization Activity Cards',
-      onBack: () => context.pop(),
       child: Padding(
         padding: padding,
         child: NestedScrollView(
