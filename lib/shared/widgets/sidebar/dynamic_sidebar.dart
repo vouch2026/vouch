@@ -129,6 +129,9 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
       ];
     }
 
+    final personalHubSections = sections.where((s) => s.title == 'PERSONAL HUB').toList();
+    final workspaceSections = sections.where((s) => s.title != 'PERSONAL HUB').toList();
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.white,
@@ -150,25 +153,17 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
           Column(
             children: [
               _buildSidebarHeader(context),
-              if (!isSuperAdmin) const OrganizationSwitcher(),
               Expanded(
                 child: ListView(
                   controller: _scrollController,
                   padding: EdgeInsets.zero,
                   children: [
-                    ...sections.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final section = entry.value;
-                      final String title = section.title == 'WORKSPACE: DETAILS'
-                          ? 'WORKSPACE: ${selectedOrg?.code ?? ''}'
-                          : section.title;
-
+                    ...personalHubSections.map((section) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (index > 0) const _SectionDivider(),
-                          _SidebarHeader(label: title),
+                          _SidebarHeader(label: section.title),
                           ...section.items.map((item) {
                             return _SidebarItem(
                               icon: item.icon,
@@ -179,27 +174,91 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                         ],
                       );
                     }),
+                    if (!isSuperAdmin) ...[
+                      const _SectionDivider(),
+                      const _SidebarHeader(label: 'WORKSPACE'),
+                      const OrganizationSwitcher(),
+                      if (selectedOrg != null) ...[
+                        ...workspaceSections.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final section = entry.value;
+                          final String title = section.title == 'WORKSPACE: DETAILS'
+                              ? 'WORKSPACE: ${selectedOrg.code}'
+                              : section.title;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (idx > 0) const _SectionDivider(),
+                              _SidebarHeader(label: title),
+                              ...section.items.map((item) {
+                                return _SidebarItem(
+                                  icon: item.icon,
+                                  label: item.label,
+                                  path: item.path,
+                                );
+                              }),
+                            ],
+                          );
+                        }),
+                      ],
+                    ] else ...[
+                      if (workspaceSections.isNotEmpty) ...[
+                        const _SectionDivider(),
+                        ...workspaceSections.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final section = entry.value;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (idx > 0) const _SectionDivider(),
+                              _SidebarHeader(label: section.title),
+                              ...section.items.map((item) {
+                                return _SidebarItem(
+                                  icon: item.icon,
+                                  label: item.label,
+                                  path: item.path,
+                                );
+                              }),
+                            ],
+                          );
+                        }),
+                      ],
+                    ],
+                    const _SectionDivider(),
+                    const _SidebarHeader(label: 'VOUCH'),
+                    const _SidebarItem(
+                      icon: Icons.help_outline_rounded,
+                      label: 'Help & Support',
+                      path: RoutePaths.help,
+                    ),
+                    const _SidebarItem(
+                      icon: Icons.info_outline_rounded,
+                      label: 'About Us',
+                      path: RoutePaths.aboutUs,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                   ],
                 ),
               ),
               const Divider(height: 1),
-              const _SidebarItem(
-                icon: Icons.help_outline_rounded,
-                label: 'Help & Support',
-                path: RoutePaths.help,
-              ),
-              const _SidebarItem(
-                icon: Icons.info_outline_rounded,
-                label: 'About Us',
-                path: RoutePaths.aboutUs,
-              ),
               Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.lg, top: AppSpacing.sm),
+                padding: const EdgeInsets.only(bottom: AppSpacing.lg, top: AppSpacing.md),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    Image.asset(
+                      'assets/logos/vouch.png',
+                      width: 28,
+                      height: 28,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       '© ${DateTime.now().year} Jeslito G. Geverola. All rights reserved.',
+                      textAlign: TextAlign.center,
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
                     ),
                     const SizedBox(height: 4),
