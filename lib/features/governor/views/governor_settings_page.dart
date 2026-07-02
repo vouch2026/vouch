@@ -4,6 +4,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/widgets/details/organization_settings_panel.dart';
 
 class GovernorSettingsPage extends ConsumerWidget {
@@ -12,14 +13,14 @@ class GovernorSettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workspace = ref.watch(workspaceProvider);
-    final org = workspace.selectedOrganization;
+    final selectedOrg = workspace.selectedOrganization;
     final isLoading = workspace.isLoading;
 
     return DashboardLayout(
       title: 'Organization Settings',
       child: isLoading
           ? const Center(child: FlickrLoader())
-          : org == null
+          : selectedOrg == null
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.xl),
@@ -42,7 +43,16 @@ class GovernorSettingsPage extends ConsumerWidget {
                     ),
                   ),
                 )
-              : OrganizationSettingsPanel(org: org),
+              : ref.watch(organizationProvider(selectedOrg.id)).when(
+                    data: (org) {
+                      if (org == null) {
+                        return const Center(child: Text('Organization not found'));
+                      }
+                      return OrganizationSettingsPanel(org: org);
+                    },
+                    loading: () => const Center(child: FlickrLoader()),
+                    error: (error, stack) => Center(child: Text('Error: $error')),
+                  ),
     );
   }
 }

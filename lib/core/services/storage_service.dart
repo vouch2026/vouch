@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -40,10 +39,14 @@ class StorageService {
     final path = 'organizations/$fileName';
     final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
 
+    final contentType = extension.toLowerCase() == '.png'
+        ? 'image/png'
+        : (extension.toLowerCase() == '.gif' ? 'image/gif' : 'image/jpeg');
+
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(upsert: true, contentType: contentType),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);

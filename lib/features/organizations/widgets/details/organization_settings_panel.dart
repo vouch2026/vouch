@@ -405,6 +405,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workspace = ref.watch(workspaceProvider);
     final isCurrentWorkspace = workspace.selectedOrganization?.id == org.id;
+    final activeOrg = isCurrentWorkspace ? (workspace.selectedOrganization ?? org) : org;
     final activeRole = isCurrentWorkspace ? workspace.activeRole : null;
     final activeMembership = isCurrentWorkspace ? workspace.activeMembership : null;
 
@@ -426,7 +427,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildOrgHeader(context, ref, org, canEdit),
+              _buildOrgHeader(context, ref, activeOrg, canEdit),
               const SizedBox(height: AppSpacing.xl),
               
               _buildSectionTitle('General Information'),
@@ -434,31 +435,31 @@ class OrganizationSettingsPanel extends ConsumerWidget {
               _buildInfoCard([
                 _buildInfoTile(
                   label: 'Organization Name',
-                  value: org.name,
+                  value: activeOrg.name,
                   icon: LucideIcons.building,
                   canEdit: canEdit,
-                  onEdit: () => _showEditNameDialog(context, ref, org),
+                  onEdit: () => _showEditNameDialog(context, ref, activeOrg),
                 ),
                 _buildInfoTile(
                   label: 'Organization Code',
-                  value: org.code,
+                  value: activeOrg.code,
                   icon: LucideIcons.hash,
                   canEdit: canEdit,
-                  onEdit: () => _showEditCodeDialog(context, ref, org),
+                  onEdit: () => _showEditCodeDialog(context, ref, activeOrg),
                 ),
                 _buildInfoTile(
                   label: 'Adviser Name',
-                  value: org.adviserName ?? 'N/A',
+                  value: activeOrg.adviserName ?? 'N/A',
                   icon: LucideIcons.userCheck,
                   canEdit: canEdit,
-                  onEdit: () => _showEditAdviserDialog(context, ref, org),
+                  onEdit: () => _showEditAdviserDialog(context, ref, activeOrg),
                 ),
                 _buildInfoTile(
                   label: 'Description',
-                  value: org.description ?? 'N/A',
+                  value: activeOrg.description ?? 'N/A',
                   icon: LucideIcons.alignLeft,
                   canEdit: canEdit,
-                  onEdit: () => _showEditDescriptionDialog(context, ref, org),
+                  onEdit: () => _showEditDescriptionDialog(context, ref, activeOrg),
                 ),
               ]),
 
@@ -468,21 +469,21 @@ class OrganizationSettingsPanel extends ConsumerWidget {
               _buildInfoCard([
                 _buildInfoTile(
                   label: 'Clearance Period',
-                  value: _getClearancePeriodDisplay(org),
+                  value: _getClearancePeriodDisplay(activeOrg),
                   icon: LucideIcons.calendar,
                   canEdit: canEdit,
-                  onEdit: () => _showClearancePeriodDialog(context, ref, org),
+                  onEdit: () => _showClearancePeriodDialog(context, ref, activeOrg),
                 ),
                 _buildSwitchTile(
                   label: 'Require Adviser Signature',
                   subtitle: 'Adviser final signature required on activity card',
-                  value: org.requiresAdviserSignature,
+                  value: activeOrg.requiresAdviserSignature,
                   icon: LucideIcons.signature,
                   onChanged: canEdit
                       ? (val) async {
                           final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: org.id,
-                                code: org.code,
+                                id: activeOrg.id,
+                                code: activeOrg.code,
                                 requiresAdviserSignature: val,
                               );
                           if (success && context.mounted) {
@@ -496,13 +497,13 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 _buildSwitchTile(
                   label: 'Require Faculty Dean Signature',
                   subtitle: 'Dean final signature required on activity card',
-                  value: org.requiresFacultyDeanSignature,
+                  value: activeOrg.requiresFacultyDeanSignature,
                   icon: LucideIcons.graduationCap,
                   onChanged: canEdit
                       ? (val) async {
                           final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: org.id,
-                                code: org.code,
+                                id: activeOrg.id,
+                                code: activeOrg.code,
                                 requiresFacultyDeanSignature: val,
                               );
                           if (success && context.mounted) {
@@ -516,13 +517,13 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 _buildSwitchTile(
                   label: 'Allow Member Card Printing',
                   subtitle: 'Allow student members to print cleared cards',
-                  value: org.allowMemberCardPrinting,
+                  value: activeOrg.allowMemberCardPrinting,
                   icon: LucideIcons.printer,
                   onChanged: canEdit
                       ? (val) async {
                           final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: org.id,
-                                code: org.code,
+                                id: activeOrg.id,
+                                code: activeOrg.code,
                                 allowMemberCardPrinting: val,
                               );
                           if (success && context.mounted) {
@@ -564,8 +565,8 @@ class OrganizationSettingsPanel extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.xl),
               _buildWorkflowDiagramCard(
-                org.requiresAdviserSignature,
-                org.requiresFacultyDeanSignature,
+                activeOrg.requiresAdviserSignature,
+                activeOrg.requiresFacultyDeanSignature,
               ),
               const SizedBox(height: AppSpacing.xxl),
             ],

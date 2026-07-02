@@ -92,20 +92,30 @@ class OrganizationController extends AsyncNotifier<void> {
       String? finalLogoUrl = logoUrl;
       String? finalBannerUrl = bannerUrl;
 
-      if (logoFile != null) {
-        finalLogoUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
-          code: code ?? '',
-          file: logoFile,
-          isLogo: true,
-        );
-      }
+      if (logoFile != null || bannerFile != null) {
+        String activeCode = code ?? '';
+        if (activeCode.isEmpty) {
+          final org = await _repository.getOrganizationById(id);
+          if (org != null) {
+            activeCode = org.code;
+          }
+        }
 
-      if (bannerFile != null) {
-        finalBannerUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
-          code: code ?? '',
-          file: bannerFile,
-          isLogo: false,
-        );
+        if (logoFile != null) {
+          finalLogoUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
+            code: activeCode,
+            file: logoFile,
+            isLogo: true,
+          );
+        }
+
+        if (bannerFile != null) {
+          finalBannerUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
+            code: activeCode,
+            file: bannerFile,
+            isLogo: false,
+          );
+        }
       }
 
       final Map<String, dynamic> updateData = {};
