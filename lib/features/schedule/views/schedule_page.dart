@@ -23,7 +23,9 @@ class SchedulePage extends ConsumerStatefulWidget {
 
 class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  // ignore: unused_field
   bool _isOnline = true;
+  // ignore: unused_field
   bool _checkingConnectivity = false;
 
   final List<String> _weekdays = [
@@ -102,6 +104,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
     final activeTermAsync = ref.watch(activeTermProvider);
     final isMobile = ResponsiveLayout.isMobile(context);
     final isTablet = ResponsiveLayout.isTablet(context);
+    final isDesktop = ResponsiveLayout.isDesktop(context);
 
     return DashboardLayout(
       title: 'School Schedule',
@@ -127,10 +130,33 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
             data: (schedules) {
               return Column(
                 children: [
-                  // Header stats & Sync bar
+                  // Simple top row containing A.Y., status, sync and add button
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
-                    child: _buildHeaderCard(activeTerm.academicYear, activeTerm.semester, schedules.length),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'A.Y. ${activeTerm.academicYear} — ${activeTerm.semester}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textGrey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (isDesktop) ...[
+                          const SizedBox(width: AppSpacing.md),
+                          FilledButton.icon(
+                            onPressed: () => _showAddEditScheduleModal(),
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: const Text('Add Subject'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
+                              minimumSize: const Size(0, 32),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
 
                   // Weekday Tab Bar
@@ -220,89 +246,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
     );
   }
 
-  Widget _buildHeaderCard(String year, String semester, int totalCount) {
-    final isDesktop = ResponsiveLayout.isDesktop(context);
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Year / Sem info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _isOnline ? AppColors.success : AppColors.warning,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        'A.Y. $year — $semester',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  kIsWeb
-                      ? 'Online (Cloud)'
-                      : (_isOnline
-                          ? 'Schedules Synced ($totalCount Classes)'
-                          : 'Offline — Showing Cached Schedules'),
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          // Refresh & Add actions
-          Row(
-            children: [
-              IconButton(
-                onPressed: _handleRefresh,
-                icon: _checkingConnectivity
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                      )
-                    : const Icon(Icons.sync_rounded, color: AppColors.primary),
-                tooltip: 'Sync Schedules',
-              ),
-              if (isDesktop) ...[
-                const SizedBox(width: AppSpacing.xs),
-                FilledButton.icon(
-                  onPressed: () => _showAddEditScheduleModal(),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Add Subject'),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildDayScheduleList(String day, List<ScheduleModel> items) {
     if (items.isEmpty) {
