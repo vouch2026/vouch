@@ -12,6 +12,8 @@ import '../../../core/config/supabase_config.dart';
 import '../models/task_model.dart';
 import '../providers/task_provider.dart';
 
+import '../../../shared/layouts/responsive_layout.dart';
+
 class TasksPage extends ConsumerStatefulWidget {
   const TasksPage({super.key});
 
@@ -73,9 +75,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksProvider);
+    final isDesktop = ResponsiveLayout.isDesktop(context);
 
     return DashboardLayout(
       title: 'My Tasks',
+      floatingActionButton: !isDesktop
+          ? FloatingActionButton(
+              onPressed: () => _showAddEditTaskModal(),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: RefreshIndicator(
         onRefresh: _handleRefresh,
         child: tasksAsync.when(
@@ -101,11 +116,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         'Task List',
                         style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      TextButton.icon(
-                        onPressed: () => _showAddEditTaskModal(),
-                        icon: const Icon(Icons.add_rounded, size: 20),
-                        label: const Text('Add Task'),
-                      ),
+                      if (isDesktop)
+                        TextButton.icon(
+                          onPressed: () => _showAddEditTaskModal(),
+                          icon: const Icon(Icons.add_rounded, size: 20),
+                          label: const Text('Add Task'),
+                        ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
