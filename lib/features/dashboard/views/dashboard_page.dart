@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 
 class DashboardPage extends ConsumerWidget {
@@ -15,10 +16,12 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileAsync = ref.watch(userProfileProvider);
+    final activeTermAsync = ref.watch(activeTermProvider);
 
     return userProfileAsync.when(
       data: (profile) {
         final isSuperAdmin = profile?.role == 'super_admin';
+        final activeTerm = activeTermAsync.valueOrNull;
 
         return DashboardLayout(
           key: ValueKey(isSuperAdmin ? 'admin' : 'global'),
@@ -36,7 +39,7 @@ class DashboardPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Welcome Banner
-                      _buildWelcomeBanner(context, profile, parentWidth),
+                      _buildWelcomeBanner(context, profile, parentWidth, activeTerm),
                       const SizedBox(height: AppSpacing.xl),
                       
                       // Section Header
@@ -75,7 +78,7 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildWelcomeBanner(BuildContext context, dynamic profile, double parentWidth) {
+  Widget _buildWelcomeBanner(BuildContext context, dynamic profile, double parentWidth, dynamic activeTerm) {
     final bool isCompact = parentWidth < 650;
     final bool isMedium = parentWidth >= 650 && parentWidth < 1000;
 
@@ -142,33 +145,14 @@ class DashboardPage extends ConsumerWidget {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildBannerTextContent(profile, isCompact: true),
-                        const SizedBox(height: AppSpacing.lg),
-                        Center(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.05),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Image.asset(
-                              'assets/images/mascot.png',
-                              height: 120,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
+                        _buildBannerTextContent(profile, activeTerm, isCompact: true),
                       ],
                     )
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: _buildBannerTextContent(profile, isCompact: false),
+                          child: _buildBannerTextContent(profile, activeTerm, isCompact: false),
                         ),
                         const SizedBox(width: AppSpacing.lg),
                         Container(
@@ -190,56 +174,85 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
             ),
+            
+            // Mascot in right upper corner on mobile
+            if (isCompact)
+              Positioned(
+                top: AppSpacing.lg,
+                right: AppSpacing.lg,
+                child: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.03),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/images/mascot.png',
+                    height: 75,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBannerTextContent(dynamic profile, {required bool isCompact}) {
+  Widget _buildBannerTextContent(dynamic profile, dynamic activeTerm, {required bool isCompact}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Logo & Brand row
-        Row(
-          children: [
-            Image.asset(
-              'assets/logos/vouch.png',
-              width: isCompact ? 32 : 38,
-              height: isCompact ? 32 : 38,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            RichText(
-              text: TextSpan(
-                style: GoogleFonts.poppins(
-                  fontSize: isCompact ? 20 : 22,
-                  fontWeight: FontWeight.w700,
-                ),
-                children: const [
-                  TextSpan(
-                    text: 'Vou',
-                    style: TextStyle(color: AppColors.primary),
-                  ),
-                  TextSpan(
-                    text: 'ch',
-                    style: TextStyle(color: AppColors.accent),
-                  ),
-                ],
+        // Logo & Brand row (padded on mobile to avoid overlapping mascot)
+        Padding(
+          padding: EdgeInsets.only(right: isCompact ? 80.0 : 0.0),
+          child: Row(
+            children: [
+              Image.asset(
+                'assets/logos/vouch.png',
+                width: isCompact ? 32 : 38,
+                height: isCompact ? 32 : 38,
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.sm),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.poppins(
+                    fontSize: isCompact ? 20 : 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: 'Vou',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
+                    TextSpan(
+                      text: 'ch',
+                      style: TextStyle(color: AppColors.accent),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         SizedBox(height: isCompact ? AppSpacing.md : AppSpacing.lg),
         
-        // Welcome Message
-        Text(
-          'Welcome back, ${profile?.fullName ?? 'User'}!',
-          style: GoogleFonts.poppins(
-            fontSize: isCompact ? 20 : 26,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-            height: 1.2,
+        // Welcome Message (padded on mobile to avoid overlapping mascot)
+        Padding(
+          padding: EdgeInsets.only(right: isCompact ? 80.0 : 0.0),
+          child: Text(
+            'Welcome back, ${profile?.fullName ?? 'User'}!',
+            style: GoogleFonts.poppins(
+              fontSize: isCompact ? 20 : 26,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+              height: 1.2,
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -261,7 +274,9 @@ class DashboardPage extends ConsumerWidget {
             // Term Badge
             _buildBadge(
               icon: Icons.calendar_today_rounded,
-              label: 'AY 2025–2026 | 2nd Semester',
+              label: activeTerm != null
+                  ? 'AY ${activeTerm.academicYear} | ${activeTerm.semester} Semester'
+                  : 'AY 2025–2026 | 2nd Semester',
               backgroundColor: AppColors.primary.withValues(alpha: 0.08),
               textColor: AppColors.primary,
             ),
