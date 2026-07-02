@@ -12,6 +12,8 @@ import '../../../core/config/supabase_config.dart';
 import '../models/task_model.dart';
 import '../providers/task_provider.dart';
 
+import '../../../shared/layouts/responsive_layout.dart';
+
 class TasksPage extends ConsumerStatefulWidget {
   const TasksPage({super.key});
 
@@ -20,7 +22,9 @@ class TasksPage extends ConsumerStatefulWidget {
 }
 
 class _TasksPageState extends ConsumerState<TasksPage> {
+  // ignore: unused_field
   bool _isOnline = true;
+  // ignore: unused_field
   bool _checkingConnectivity = false;
 
   @override
@@ -73,15 +77,51 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksProvider);
+    final isDesktop = ResponsiveLayout.isDesktop(context);
 
     return DashboardLayout(
       title: 'My Tasks',
+      floatingActionButton: !isDesktop
+          ? FloatingActionButton(
+              onPressed: () => _showAddEditTaskModal(),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: RefreshIndicator(
         onRefresh: _handleRefresh,
         child: tasksAsync.when(
           data: (tasks) {
-            final completedCount = tasks.where((t) => t.isCompleted).length;
-            final pendingCount = tasks.length - completedCount;
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+
+            // Filter uncompleted tasks
+            final pastTasks = tasks.where((t) {
+              if (t.isCompleted || t.dueDate == null) return false;
+              final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+              return dueDay.isBefore(today);
+            }).toList();
+
+            final todayTasks = tasks.where((t) {
+              if (t.isCompleted || t.dueDate == null) return false;
+              final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+              return dueDay.isAtSameMomentAs(today);
+            }).toList();
+
+            final upcomingTasks = tasks.where((t) {
+              if (t.isCompleted) return false;
+              if (t.dueDate == null) return true;
+              final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+              return dueDay.isAfter(today);
+            }).toList();
+
+            // Filter completed tasks
+            final completedTasks = tasks.where((t) => t.isCompleted).toList();
 
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -89,10 +129,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Sync status header & quick actions
-                  _buildHeaderCard(tasks.length, completedCount, pendingCount),
-                  const SizedBox(height: AppSpacing.xl),
-
                   // Section Title
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -101,10 +137,47 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         'Task List',
                         style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      TextButton.icon(
-                        onPressed: () => _showAddEditTaskModal(),
-                        icon: const Icon(Icons.add_rounded, size: 20),
-                        label: const Text('Add Task'),
+                      Row(
+                        children: [
+                          if (isDesktop) ...[
+                            TextButton.icon(
+                              onPressed: () => _showAddEditTaskModal(),
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              label: const Text('Add Task'),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert_rounded),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            onSelected: (val) {
+                              if (val == 'delete_completed') {
+                                _confirmDeleteAllCompletedTasks();
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'delete_completed',
+                                enabled: completedTasks.isNotEmpty,
+                                child: ListTile(
+                                  leading: Icon(
+                                    Icons.delete_sweep_rounded,
+                                    color: completedTasks.isNotEmpty ? AppColors.error : AppColors.textGrey,
+                                    size: 20,
+                                  ),
+                                  title: Text(
+                                    'Delete Completed',
+                                    style: TextStyle(
+                                      color: completedTasks.isNotEmpty ? AppColors.error : AppColors.textGrey,
+                                    ),
+                                  ),
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -113,17 +186,59 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   // Task items
                   if (tasks.isEmpty)
                     _buildEmptyState()
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: tasks.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return _buildTaskCard(task);
-                      },
-                    ),
+                  else ...[
+                    if (pastTasks.isEmpty && todayTasks.isEmpty && upcomingTasks.isEmpty)
+                      _buildAllDoneState()
+                    else ...[
+                      if (pastTasks.isNotEmpty) ...[
+                        _TaskGroupCard(
+                          title: 'Past Tasks',
+                          subtitle: '${pastTasks.length} task${pastTasks.length == 1 ? '' : 's'} overdue',
+                          icon: Icons.warning_amber_rounded,
+                          color: AppColors.error,
+                          tasks: pastTasks,
+                          taskBuilder: _buildTaskCard,
+                          initiallyExpanded: true,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (todayTasks.isNotEmpty) ...[
+                        _TaskGroupCard(
+                          title: "Today's Tasks",
+                          subtitle: '${todayTasks.length} task${todayTasks.length == 1 ? '' : 's'} due today',
+                          icon: Icons.today_rounded,
+                          color: AppColors.primary,
+                          tasks: todayTasks,
+                          taskBuilder: _buildTaskCard,
+                          initiallyExpanded: true,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (upcomingTasks.isNotEmpty) ...[
+                        _TaskGroupCard(
+                          title: 'Upcoming Tasks',
+                          subtitle: '${upcomingTasks.length} task${upcomingTasks.length == 1 ? '' : 's'} upcoming',
+                          icon: Icons.calendar_month_outlined,
+                          color: AppColors.info,
+                          tasks: upcomingTasks,
+                          taskBuilder: _buildTaskCard,
+                          initiallyExpanded: false,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                    ],
+                    if (completedTasks.isNotEmpty) ...[
+                      _TaskGroupCard(
+                        title: 'Completed Tasks',
+                        subtitle: '${completedTasks.length} task${completedTasks.length == 1 ? '' : 's'} completed',
+                        icon: Icons.check_circle_outline_rounded,
+                        color: AppColors.success,
+                        tasks: completedTasks,
+                        taskBuilder: _buildTaskCard,
+                        initiallyExpanded: false,
+                      ),
+                    ],
+                  ],
                 ],
               ),
             );
@@ -146,95 +261,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeaderCard(int total, int completed, int pending) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Connectivity Status Badge
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _isOnline ? AppColors.success : AppColors.warning,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    kIsWeb
-                        ? 'Cloud Syncing (Web)'
-                        : (_isOnline ? 'Online (Synced)' : 'Offline (Local Only)'),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: _isOnline ? AppColors.success : AppColors.warning,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              // Refresh Icon
-              IconButton(
-                onPressed: _handleRefresh,
-                icon: _checkingConnectivity
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                      )
-                    : const Icon(Icons.sync_rounded, color: AppColors.primary),
-                tooltip: 'Sync and Refresh',
-              ),
-            ],
-          ),
-          const Divider(height: AppSpacing.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem('Total', total.toString(), Icons.playlist_add_check_rounded),
-              _buildStatItem('Pending', pending.toString(), Icons.hourglass_empty_rounded, color: AppColors.warning),
-              _buildStatItem('Completed', completed.toString(), Icons.check_circle_outline_rounded, color: AppColors.success),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String count, IconData icon, {Color color = AppColors.primary}) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(count, style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark)),
-        Text(label, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-      ],
     );
   }
 
@@ -299,6 +325,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         ],
       ),
       child: ListTile(
+        isThreeLine: task.description.isNotEmpty || task.dueDate != null,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         leading: Transform.scale(
           scale: 1.1,
@@ -312,6 +339,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
         ),
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(
@@ -337,61 +365,61 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             ],
           ],
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (task.description.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                task.description,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textGrey,
-                  decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            if (task.dueDate != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isOverdue ? AppColors.error.withValues(alpha: 0.08) : AppColors.background,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 12,
-                      color: isOverdue ? AppColors.error : AppColors.textGrey,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
+        subtitle: (task.description.isNotEmpty || task.dueDate != null)
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (task.description.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
-                      DateFormat('MMM dd, yyyy').format(task.dueDate!),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: isOverdue ? AppColors.error : AppColors.textGrey,
-                        fontWeight: isOverdue ? FontWeight.bold : null,
+                      task.description,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textGrey,
+                        decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                       ),
                     ),
-                    if (isOverdue) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Overdue',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.error,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
                   ],
-                ),
-              ),
-            ],
-          ],
-        ),
+                  if (task.dueDate != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isOverdue ? AppColors.error.withValues(alpha: 0.08) : AppColors.background,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: isOverdue ? AppColors.error : AppColors.textGrey,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            DateFormat('MMM dd, yyyy').format(task.dueDate!),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: isOverdue ? AppColors.error : AppColors.textGrey,
+                              fontWeight: isOverdue ? FontWeight.bold : null,
+                            ),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              'Overdue',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              )
+            : null,
         trailing: PopupMenuButton<String>(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           onSelected: (val) {
@@ -445,6 +473,71 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               Navigator.pop(context);
             },
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteAllCompletedTasks() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Completed Tasks'),
+        content: const Text('Are you sure you want to delete all completed tasks? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              ref.read(tasksProvider.notifier).deleteAllCompletedTasks();
+              Navigator.pop(context);
+            },
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAllDoneState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xxl),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.done_all_rounded,
+              size: 40,
+              color: AppColors.success,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'All tasks completed!',
+            style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Great job! You have no pending tasks.',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -544,12 +637,16 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.task != null;
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 16 : 24)),
+      insetPadding: isMobile
+          ? const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0)
+          : const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
       child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        width: isMobile ? double.infinity : 500,
+        padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
         child: Form(
           key: _formKey,
           child: Column(
@@ -673,6 +770,104 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskGroupCard extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final List<TaskModel> tasks;
+  final Widget Function(TaskModel) taskBuilder;
+  final bool initiallyExpanded;
+
+  const _TaskGroupCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.tasks,
+    required this.taskBuilder,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<_TaskGroupCard> createState() => _TaskGroupCardState();
+}
+
+class _TaskGroupCardState extends State<_TaskGroupCard> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.white,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
+        child: ExpansionTile(
+          initiallyExpanded: widget.initiallyExpanded,
+          onExpansionChanged: (expanded) => setState(() => _isExpanded = expanded),
+          leading: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(widget.icon, color: widget.color, size: 20),
+          ),
+          title: Text(
+            widget.title,
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+            ),
+          ),
+          subtitle: Text(
+            widget.subtitle,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+          ),
+          trailing: Icon(
+            _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textGrey,
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom: AppSpacing.md,
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: widget.tasks.length,
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+                itemBuilder: (context, index) {
+                  return widget.taskBuilder(widget.tasks[index]);
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

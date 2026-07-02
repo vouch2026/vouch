@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../routes/route_paths.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -13,35 +11,59 @@ class SplashPage extends ConsumerStatefulWidget {
   ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
+class _SplashPageState extends ConsumerState<SplashPage>
+    with TickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late AnimationController _opacityController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _initializeAnimations();
+  }
+
+  void _initializeAnimations() {
+    // Scale animation controller - shrinks/grows the logo
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
 
-    _controller.forward();
+    // Opacity animation controller - fades out the splash content
+    _opacityController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
 
-    // Navigate after a delay. The GoRouter redirect logic will take over 
-    // once we attempt to go to dashboard or if auth state changes.
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        context.go(RoutePaths.dashboard);
-      }
+    // Scale animation - logo grows into view with elastic curve
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
+
+    // Opacity animation - fade out after scale completes
+    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _opacityController,
+        curve: const Interval(0.1, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+
+    // Start animations and then navigate
+    _scaleController.forward().then((_) {
+      _opacityController.forward().then((_) {
+        if (mounted) {
+          context.go(RoutePaths.dashboard);
+        }
+      });
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _scaleController.dispose();
+    _opacityController.dispose();
     super.dispose();
   }
 
@@ -49,23 +71,47 @@ class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      body: Stack(
-        children: [
-          _buildBackgroundDecorations(),
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Hero(
-                tag: 'app_logo',
-                child: Image.asset(
-                  'assets/logos/vouch.png',
-                  width: 180,
-                  height: 180,
+      body: AnimatedBuilder(
+        animation: _opacityAnimation,
+        builder: (context, child) {
+          return Opacity(
+            opacity: _opacityAnimation.value,
+            child: Stack(
+              children: [
+                _buildBackgroundDecorations(),
+                Center(
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: _buildLogo(),
+                  ),
                 ),
-              ),
+              ],
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return Container(
+      width: 175,
+      height: 175,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16.0,
+            offset: const Offset(0, 8),
           ),
         ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        'assets/logos/vouch.png',
+        fit: BoxFit.fill,
       ),
     );
   }

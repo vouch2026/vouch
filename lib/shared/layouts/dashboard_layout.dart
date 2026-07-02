@@ -69,7 +69,9 @@ class DashboardLayout extends ConsumerWidget {
                 ),
               ),
               Expanded(
-                child: Scaffold(
+                child: SafeArea(
+                  bottom: false,
+                  child: Scaffold(
                   appBar: PreferredSize(
                     preferredSize: Size.fromHeight(totalAppBarHeight),
                     child: Container(
@@ -221,6 +223,7 @@ class DashboardLayout extends ConsumerWidget {
                   floatingActionButton: floatingActionButton,
                 ),
               ),
+            ),
             ],
           ),
           

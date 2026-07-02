@@ -585,6 +585,18 @@ CREATE POLICY "Super admins can manage campuses" ON campuses FOR ALL TO authenti
 CREATE POLICY "Super admins can manage faculties" ON faculties FOR ALL TO authenticated USING (public.is_super_admin());
 CREATE POLICY "Super admins can manage programs" ON programs FOR ALL TO authenticated USING (public.is_super_admin());
 CREATE POLICY "Super admins can manage organizations" ON organizations FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Officers can update their own organization details" ON public.organizations
+  FOR UPDATE TO authenticated
+  USING (
+    public.is_super_admin() OR
+    EXISTS (
+      SELECT 1 FROM public.organization_members om
+      WHERE om.user_id = public.get_my_id()
+      AND om.organization_id = organizations.id
+      AND om.role_id IS NOT NULL
+      AND om.status = 'active'
+    )
+  );
 CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
 
 -- Organization Settings
@@ -694,6 +706,92 @@ USING (public.has_scope_permission('create_sanction_rules', scope_type, scope_id
 -- Audit Logs
 CREATE POLICY "Audit logs are viewable by officers" ON governance_audit_logs FOR SELECT TO authenticated
 USING (public.is_super_admin() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL));
+
+-- ------------------------------------------------------------
+-- SYSTEM & EXTERNAL SERVICE GRANTS (e.g. Supabase Storage)
+-- ------------------------------------------------------------
+-- Grant schema usage permissions
+GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, supabase_storage_admin;
+
+-- Grant SELECT on all public tables to authenticated, anonymous, and storage manager roles
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated, anon, supabase_storage_admin;
+
+-- Grant SELECT on auth.users in case storage policies/triggers reference it directly
+GRANT SELECT ON auth.users TO authenticated, anon, supabase_storage_admin;
+
+-- Ensure all future tables automatically grant SELECT to authenticated, anon, and supabase_storage_admin
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated, anon, supabase_storage_admin;
+
+-- ------------------------------------------------------------
+-- SUPABASE STORAGE BUCKETS & POLICIES (e.g. Org Pictures)
+-- ------------------------------------------------------------
+-- Create the org-pictures bucket if it does not already exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('org-pictures', 'org-pictures', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy: Allow anyone (public) to view/read organization pictures
+DROP POLICY IF EXISTS "Allow public select on org pictures" ON storage.objects;
+CREATE POLICY "Allow public select on org pictures" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'org-pictures');
+
+-- Policy: Allow officers and super admins to upload new pictures (INSERT)
+DROP POLICY IF EXISTS "Allow officers and super admins to upload org pictures" ON storage.objects;
+CREATE POLICY "Allow officers and super admins to upload org pictures" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'org-pictures' AND
+    (
+      public.is_super_admin() OR
+      EXISTS (
+        SELECT 1 FROM public.organizations o
+        JOIN public.organization_members om ON om.organization_id = o.id
+        WHERE LOWER(o.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
+          AND om.user_id = public.get_my_id()
+          AND om.role_id IS NOT NULL
+          AND om.status = 'active'
+      )
+    )
+  );
+
+-- Policy: Allow officers and super admins to overwrite/update pictures (UPDATE)
+DROP POLICY IF EXISTS "Allow officers and super admins to update org pictures" ON storage.objects;
+CREATE POLICY "Allow officers and super admins to update org pictures" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'org-pictures' AND
+    (
+      public.is_super_admin() OR
+      EXISTS (
+        SELECT 1 FROM public.organizations o
+        JOIN public.organization_members om ON om.organization_id = o.id
+        WHERE LOWER(o.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
+          AND om.user_id = public.get_my_id()
+          AND om.role_id IS NOT NULL
+          AND om.status = 'active'
+      )
+    )
+  );
+
+-- Policy: Allow officers and super admins to delete pictures (DELETE)
+DROP POLICY IF EXISTS "Allow officers and super admins to delete org pictures" ON storage.objects;
+CREATE POLICY "Allow officers and super admins to delete org pictures" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'org-pictures' AND
+    (
+      public.is_super_admin() OR
+      EXISTS (
+        SELECT 1 FROM public.organizations o
+        JOIN public.organization_members om ON om.organization_id = o.id
+        WHERE LOWER(o.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
+          AND om.user_id = public.get_my_id()
+          AND om.role_id IS NOT NULL
+          AND om.status = 'active'
+      )
+    )
+  );
 
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES

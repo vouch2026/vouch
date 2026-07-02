@@ -6,6 +6,7 @@ import 'route_paths.dart';
 import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
+import '../features/auth/views/splash_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
 import '../features/dashboard/views/calendar_page.dart';
 import '../features/dashboard/views/workspace_dashboard_page.dart';
@@ -76,7 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
   
   return GoRouter(
-    initialLocation: RoutePaths.login,
+    initialLocation: RoutePaths.splash,
     debugLogDiagnostics: true,
     refreshListenable: notifier,
     redirect: (context, state) {
@@ -86,6 +87,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (authAsync.isLoading) return null;
 
       final auth = authAsync.value;
+
+      // Allow the splash screen to play its full animation on startup
+      if (state.matchedLocation == RoutePaths.splash) {
+        return null;
+      }
+
       final loggingIn = state.matchedLocation == RoutePaths.login ||
           state.matchedLocation == RoutePaths.register ||
           state.matchedLocation == RoutePaths.forgotPassword ||
@@ -130,7 +137,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-
+      GoRoute(
+        path: RoutePaths.splash,
+        name: RouteNames.splash,
+        builder: (context, state) => const SplashPage(),
+      ),
       GoRoute(
         path: RoutePaths.login,
         name: RouteNames.login,

@@ -80,6 +80,7 @@ class OrganizationController extends AsyncNotifier<void> {
     String? logoUrl,
     String? bannerUrl,
     bool? requiresAdviserSignature,
+    bool? requiresProgramHeadSignature,
     bool? requiresFacultyDeanSignature,
     bool? allowMemberCardPrinting,
     bool? isClearanceActive,
@@ -92,20 +93,30 @@ class OrganizationController extends AsyncNotifier<void> {
       String? finalLogoUrl = logoUrl;
       String? finalBannerUrl = bannerUrl;
 
-      if (logoFile != null) {
-        finalLogoUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
-          code: code ?? '',
-          file: logoFile,
-          isLogo: true,
-        );
-      }
+      if (logoFile != null || bannerFile != null) {
+        String activeCode = code ?? '';
+        if (activeCode.isEmpty) {
+          final org = await _repository.getOrganizationById(id);
+          if (org != null) {
+            activeCode = org.code;
+          }
+        }
 
-      if (bannerFile != null) {
-        finalBannerUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
-          code: code ?? '',
-          file: bannerFile,
-          isLogo: false,
-        );
+        if (logoFile != null) {
+          finalLogoUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
+            code: activeCode,
+            file: logoFile,
+            isLogo: true,
+          );
+        }
+
+        if (bannerFile != null) {
+          finalBannerUrl = await ref.read(storageServiceProvider).uploadOrganizationAsset(
+            code: activeCode,
+            file: bannerFile,
+            isLogo: false,
+          );
+        }
       }
 
       final Map<String, dynamic> updateData = {};
@@ -118,6 +129,10 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (requiresAdviserSignature != null) {
         updateData['requires_adviser_signature'] = requiresAdviserSignature;
+      }
+
+      if (requiresProgramHeadSignature != null) {
+        updateData['requires_program_head_signature'] = requiresProgramHeadSignature;
       }
 
       if (requiresFacultyDeanSignature != null) {
