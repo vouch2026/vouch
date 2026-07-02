@@ -22,7 +22,9 @@ class TasksPage extends ConsumerStatefulWidget {
 }
 
 class _TasksPageState extends ConsumerState<TasksPage> {
+  // ignore: unused_field
   bool _isOnline = true;
+  // ignore: unused_field
   bool _checkingConnectivity = false;
 
   @override
@@ -95,19 +97,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         onRefresh: _handleRefresh,
         child: tasksAsync.when(
           data: (tasks) {
-            final completedCount = tasks.where((t) => t.isCompleted).length;
-            final pendingCount = tasks.length - completedCount;
-
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Sync status header & quick actions
-                  _buildHeaderCard(tasks.length, completedCount, pendingCount),
-                  const SizedBox(height: AppSpacing.xl),
-
                   // Section Title
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -162,95 +157,6 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeaderCard(int total, int completed, int pending) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Connectivity Status Badge
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _isOnline ? AppColors.success : AppColors.warning,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    kIsWeb
-                        ? 'Cloud Syncing (Web)'
-                        : (_isOnline ? 'Online (Synced)' : 'Offline (Local Only)'),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: _isOnline ? AppColors.success : AppColors.warning,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              // Refresh Icon
-              IconButton(
-                onPressed: _handleRefresh,
-                icon: _checkingConnectivity
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                      )
-                    : const Icon(Icons.sync_rounded, color: AppColors.primary),
-                tooltip: 'Sync and Refresh',
-              ),
-            ],
-          ),
-          const Divider(height: AppSpacing.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem('Total', total.toString(), Icons.playlist_add_check_rounded),
-              _buildStatItem('Pending', pending.toString(), Icons.hourglass_empty_rounded, color: AppColors.warning),
-              _buildStatItem('Completed', completed.toString(), Icons.check_circle_outline_rounded, color: AppColors.success),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String count, IconData icon, {Color color = AppColors.primary}) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(count, style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark)),
-        Text(label, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-      ],
     );
   }
 
@@ -560,12 +466,16 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.task != null;
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 16 : 24)),
+      insetPadding: isMobile
+          ? const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0)
+          : const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
       child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        width: isMobile ? double.infinity : 500,
+        padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl),
         child: Form(
           key: _formKey,
           child: Column(
