@@ -333,8 +333,19 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             value: task.isCompleted,
             activeColor: AppColors.success,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-            onChanged: (_) {
-              ref.read(tasksProvider.notifier).toggleTaskCompletion(task);
+            onChanged: (_) async {
+              try {
+                await ref.read(tasksProvider.notifier).toggleTaskCompletion(task);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update task: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ),
@@ -468,9 +479,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
-              ref.read(tasksProvider.notifier).deleteTask(id);
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await ref.read(tasksProvider.notifier).deleteTask(id);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete task: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             child: const Text('Delete'),
           ),
@@ -493,9 +517,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
-              ref.read(tasksProvider.notifier).deleteAllCompletedTasks();
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await ref.read(tasksProvider.notifier).deleteAllCompletedTasks();
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete completed tasks: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             child: const Text('Delete All'),
           ),
