@@ -279,7 +279,7 @@ class ClearanceRepository {
     await _client.from('activity_card_clearance_signatures').update({
       'status': 'Signed',
       'signed_by_user_id': userId,
-      'signed_at': DateTime.now().toIso8601String(),
+      'signed_at': DateTime.now().toUtc().toIso8601String(),
       'remarks': remarks,
     }).eq('id', signatureId);
 
@@ -294,7 +294,7 @@ class ClearanceRepository {
     if (isFullySigned) {
       await _client.from('activity_card_clearance_requests').update({
         'status': 'Cleared',
-        'completed_at': DateTime.now().toIso8601String(),
+        'completed_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', requestId);
     }
   }
@@ -308,7 +308,7 @@ class ClearanceRepository {
     await _client.from('activity_card_clearance_signatures').update({
       'status': 'Rejected',
       'signed_by_user_id': userId,
-      'signed_at': DateTime.now().toIso8601String(),
+      'signed_at': DateTime.now().toUtc().toIso8601String(),
       'remarks': remarks,
     }).eq('id', signatureId);
 

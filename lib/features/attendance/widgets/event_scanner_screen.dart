@@ -202,7 +202,13 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         _showSuccess(newScan);
       }
     } catch (e) {
-      _showError('Error: $e');
+      String msg = e.toString();
+      if (msg.startsWith('Exception: ')) {
+        msg = msg.substring('Exception: '.length);
+      } else if (msg.startsWith('Exception')) {
+        msg = msg.replaceFirst('Exception', 'Error');
+      }
+      _showError(msg);
       _resumeScanning();
     }
   }

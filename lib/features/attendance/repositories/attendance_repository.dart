@@ -24,7 +24,7 @@ class AttendanceRepository {
     required String scannedByUserId,
     required bool isTimeIn,
   }) async {
-    final now = DateTime.now().toIso8601String();
+    final now = DateTime.now().toUtc().toIso8601String();
     
     // Validate if studentId is a UUID. If not, it's likely a School ID string.
     String actualStudentUuid = studentId;
@@ -49,6 +49,23 @@ class AttendanceRepository {
         .eq('event_id', eventId)
         .eq('student_id', actualStudentUuid)
         .maybeSingle();
+
+    if (existing != null) {
+      if (isTimeIn && existing['actual_time_in'] != null) {
+        final time = DateTime.parse(existing['actual_time_in'] as String).toLocal();
+        final period = time.hour >= 12 ? 'PM' : 'AM';
+        final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
+        final formattedTime = '$hour:${time.minute.toString().padLeft(2, '0')} $period';
+        throw Exception('Student has already timed in at $formattedTime.');
+      }
+      if (!isTimeIn && existing['actual_time_out'] != null) {
+        final time = DateTime.parse(existing['actual_time_out'] as String).toLocal();
+        final period = time.hour >= 12 ? 'PM' : 'AM';
+        final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
+        final formattedTime = '$hour:${time.minute.toString().padLeft(2, '0')} $period';
+        throw Exception('Student has already timed out at $formattedTime.');
+      }
+    }
 
     if (existing == null) {
       await _client.from('student_attendance').insert({

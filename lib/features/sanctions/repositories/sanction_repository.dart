@@ -361,7 +361,7 @@ class SanctionRepository {
     await _client.from('student_sanction_records').update({
       'status': 'Item Received',
       'received_by_user_id': officerId,
-      'received_at': DateTime.now().toIso8601String(),
+      'received_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', sanctionId);
   }
 
