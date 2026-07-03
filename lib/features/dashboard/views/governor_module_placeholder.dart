@@ -6,8 +6,13 @@ import '../../../core/theme/app_spacing.dart';
 
 class GovernorModulePlaceholder extends StatelessWidget {
   final String title;
+  final bool showBackButton;
   
-  const GovernorModulePlaceholder({super.key, required this.title});
+  const GovernorModulePlaceholder({
+    super.key,
+    required this.title,
+    this.showBackButton = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,12 +45,14 @@ class GovernorModulePlaceholder extends StatelessWidget {
               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Back to Dashboard'),
-            ),
+            if (showBackButton) ...[
+              const SizedBox(height: AppSpacing.xl),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Back to Dashboard'),
+              ),
+            ],
           ],
         ),
       ),
