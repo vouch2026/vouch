@@ -79,7 +79,7 @@ class StorageService {
     final extension = p.extension(file.name);
     final fileName = 'event_${eventName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'events/$fileName';
-    final bucket = dotenv.get('SUPABASE_EVENT_BUCKET', fallback: 'event-pictures');
+    final bucket = dotenv.get('SUPABASE_EVENT_BUCKET', fallback: dotenv.get('SUPABASE_EVENTS_BUCKET', fallback: 'event-pictures'));
 
     await _client.storage.from(bucket).uploadBinary(
           path,
