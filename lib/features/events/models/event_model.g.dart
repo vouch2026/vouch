@@ -29,6 +29,7 @@ _EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
       ? null
       : DateTime.parse(json['updated_at'] as String),
   createdByUserId: json['created_by_user_id'] as String?,
+  createdByOrganizationId: json['created_by_organization_id'] as String?,
 );
 
 Map<String, dynamic> _$EventModelToJson(_EventModel instance) =>
@@ -51,4 +52,5 @@ Map<String, dynamic> _$EventModelToJson(_EventModel instance) =>
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
       'created_by_user_id': instance.createdByUserId,
+      'created_by_organization_id': instance.createdByOrganizationId,
     };

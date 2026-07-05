@@ -18,6 +18,7 @@ import '../../excuse_requests/providers/excuse_provider.dart';
 import '../../excuse_requests/views/excuse_request_form_page.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/models/organization_membership_model.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
 
@@ -166,13 +167,22 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     
     final userOrgsAsync = ref.watch(userOrganizationsProvider);
     final userOrgs = userOrgsAsync.value ?? [];
-    final isMemberOfCreatorOrg = userOrgs.any((org) {
-      if (org.id == event.scopeId) return true;
-      if (event.scopeType == 'Institutional' && org.type == 'campus-based' && org.campusId == event.scopeId) return true;
-      if (event.scopeType == 'Faculty' && org.type == 'faculty-based' && org.facultyId == event.scopeId) return true;
-      if (event.scopeType == 'Program' && org.type == 'program-based' && org.programId == event.scopeId) return true;
-      return false;
-    });
+    
+    final creatorOrgId = event.createdByOrganizationId;
+    final creatorMembershipAsync = creatorOrgId != null
+        ? ref.watch(userMembershipInOrgProvider(creatorOrgId))
+        : const AsyncValue<OrganizationMembershipModel?>.data(null);
+    final creatorMembership = creatorMembershipAsync.value;
+
+    final isMemberOfCreatorOrg = creatorOrgId != null
+        ? userOrgs.any((org) => org.id == creatorOrgId)
+        : userOrgs.any((org) {
+            if (org.id == event.scopeId) return true;
+            if (event.scopeType == 'Institutional' && org.type == 'campus-based' && org.campusId == event.scopeId) return true;
+            if (event.scopeType == 'Faculty' && org.type == 'faculty-based' && org.facultyId == event.scopeId) return true;
+            if (event.scopeType == 'Program' && org.type == 'program-based' && org.programId == event.scopeId) return true;
+            return false;
+          });
 
     final selectedOrg = workspace.selectedOrganization;
     final isSelectedOrgCreator = selectedOrg != null && (
@@ -182,9 +192,17 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       (event.scopeType == 'Program' && selectedOrg.type == 'program-based' && selectedOrg.programId == event.scopeId)
     );
 
-    final isOfficer = activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator;
-    final canScan = (activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator;
-    final canEdit = (activeRole?.hasPermission(AppPermissions.editEvent) ?? false) && isSelectedOrgCreator;
+    final isOfficer = creatorOrgId != null
+        ? (creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member')
+        : (activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator);
+
+    final canScan = creatorOrgId != null
+        ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
+        : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
+
+    final canEdit = creatorOrgId != null
+        ? (creatorMembership?.permissions.contains(AppPermissions.editEvent) ?? false)
+        : ((activeRole?.hasPermission(AppPermissions.editEvent) ?? false) && isSelectedOrgCreator);
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

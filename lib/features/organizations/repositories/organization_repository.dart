@@ -370,6 +370,51 @@ class OrganizationRepository {
     return organizations;
   }
 
+  Future<OrganizationMembershipModel?> getUserMembershipInOrg(String userId, String orgId) async {
+    final response = await _client
+        .from('organization_members')
+        .select('''
+          *,
+          role:roles (
+            *,
+            role_permissions (
+              permissions (action)
+            )
+          )
+        ''')
+        .eq('user_id', userId)
+        .eq('organization_id', orgId)
+        .maybeSingle();
+        
+    if (response == null) return null;
+    
+    final roleData = response['role'];
+    final List<String> permissions = [];
+    if (roleData != null) {
+      final rolePerms = roleData['role_permissions'] as List?;
+      if (rolePerms != null) {
+        for (var rp in rolePerms) {
+          final perm = rp['permissions'];
+          if (perm is Map && perm.containsKey('action')) {
+            permissions.add(perm['action'] as String);
+          } else if (perm is List && perm.isNotEmpty) {
+            final action = perm.first['action'];
+            if (action != null) {
+              permissions.add(action as String);
+            }
+          }
+        }
+      }
+    }
+    
+    return OrganizationMembershipModel.fromJson({
+      ...response,
+      'role_name': roleData?['name'],
+      'hierarchy_level': roleData?['hierarchy_level'],
+      'permissions': permissions,
+    });
+  }
+
   Future<List<OrganizationSettingsHistoryModel>> getOrganizationSettingsHistory(String orgId) async {
     final response = await _client
         .from('organization_settings_history')

@@ -327,7 +327,8 @@ is_mandatory BOOLEAN DEFAULT true,
 academic_term_id UUID REFERENCES academic_terms(id) ON DELETE RESTRICT,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+created_by_organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

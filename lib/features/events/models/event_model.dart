@@ -27,6 +27,7 @@ abstract class EventModel with _$EventModel {
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
     @JsonKey(name: 'created_by_user_id') String? createdByUserId,
+    @JsonKey(name: 'created_by_organization_id') String? createdByOrganizationId,
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
