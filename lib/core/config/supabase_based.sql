@@ -15,9 +15,13 @@ BEGIN
     IF to_regclass('public.organizations') IS NOT NULL THEN
         DROP TRIGGER IF EXISTS on_organization_created ON public.organizations;
     END IF;
+    IF to_regclass('public.comselecs') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS on_comselec_created ON public.comselecs;
+    END IF;
 END $$;
 
 DROP FUNCTION IF EXISTS public.handle_new_organization() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_new_comselec() CASCADE;
 
 -- Drop legacy profiles table if it exists
 DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -37,12 +41,15 @@ DROP TABLE IF EXISTS student_attendance CASCADE;
 DROP TABLE IF EXISTS sanction_rules CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS fees CASCADE;
+DROP TABLE IF EXISTS comselec_members CASCADE;
 DROP TABLE IF EXISTS organization_members CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS permissions CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS public.comselec_settings CASCADE;
 DROP TABLE IF EXISTS public.organization_settings CASCADE;
+DROP TABLE IF EXISTS comselecs CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 DROP TABLE IF EXISTS programs CASCADE;
 DROP TABLE IF EXISTS faculties CASCADE;
@@ -58,6 +65,23 @@ BEGIN
     SELECT 'DROP FUNCTION ' || string_agg(oid::regprocedure::text, '; DROP FUNCTION ')
     FROM pg_proc 
     WHERE proname = 'create_organization_with_members' 
+      AND pronamespace = 'public'::regnamespace
+    INTO _sql;
+    IF _sql IS NOT NULL THEN
+        EXECUTE _sql;
+    END IF;
+EXCEPTION WHEN OTHERS THEN 
+    NULL;
+END $$;
+
+-- Robustly drop all versions of the comselec creation function
+DO $$ 
+DECLARE
+    _sql text;
+BEGIN
+    SELECT 'DROP FUNCTION ' || string_agg(oid::regprocedure::text, '; DROP FUNCTION ')
+    FROM pg_proc 
+    WHERE proname = 'create_comselec_with_members' 
       AND pronamespace = 'public'::regnamespace
     INTO _sql;
     IF _sql IS NOT NULL THEN
@@ -264,6 +288,52 @@ auto_sign_clearance BOOLEAN DEFAULT false,
 UNIQUE(organization_id, user_id, academic_term_id)
 );
 
+-- ==========================================
+-- 4b. COMSELEC ENTITIES
+-- ==========================================
+
+CREATE TABLE comselecs (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+name VARCHAR(255) NOT NULL,
+code VARCHAR(50) NOT NULL UNIQUE,
+description TEXT,
+logo_url VARCHAR(2048),
+banner_url VARCHAR(2048),
+campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+status VARCHAR(20) DEFAULT 'active',
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_comselecs_updated_at BEFORE UPDATE ON comselecs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS public.comselec_settings (
+comselec_id UUID PRIMARY KEY REFERENCES public.comselecs(id) ON DELETE CASCADE,
+requires_chairman_signature BOOLEAN NOT NULL DEFAULT FALSE,
+requires_commissioner_signature BOOLEAN NOT NULL DEFAULT FALSE,
+allow_member_to_print BOOLEAN NOT NULL DEFAULT FALSE,
+clearance_period_start TIMESTAMPTZ,
+clearance_period_end TIMESTAMPTZ,
+created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_comselec_settings_updated_at BEFORE UPDATE ON public.comselec_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE comselec_members (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+comselec_id UUID NOT NULL REFERENCES comselecs(id) ON DELETE CASCADE,
+user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+role_id UUID REFERENCES roles(id) ON DELETE SET NULL,
+academic_term_id UUID REFERENCES academic_terms(id) ON DELETE SET NULL,
+status VARCHAR(20) DEFAULT 'active', -- active, expired, pending, removed, archived
+assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+expired_at TIMESTAMP WITH TIME ZONE,
+joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+auto_sign_clearance BOOLEAN DEFAULT false,
+UNIQUE(comselec_id, user_id, academic_term_id)
+);
+
 CREATE TABLE user_roles (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -279,6 +349,7 @@ UNIQUE(user_id, role_id, scope_type, scope_id)
 CREATE TABLE governance_audit_logs (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+comselec_id UUID REFERENCES comselecs(id) ON DELETE CASCADE,
 action VARCHAR(100) NOT NULL,
 performed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
 target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -483,6 +554,9 @@ ALTER TABLE faculties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comselecs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comselec_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comselec_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE academic_terms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
@@ -619,6 +693,43 @@ USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
 CREATE POLICY "Organization members are viewable by everyone" ON organization_members FOR SELECT USING (true);
 CREATE POLICY "Super admins can manage organization memberships" ON organization_members FOR ALL TO authenticated USING (public.is_super_admin());
 
+-- Comselecs
+CREATE POLICY "Comselecs are viewable by everyone" ON comselecs FOR SELECT USING (true);
+CREATE POLICY "Super admins can manage comselecs" ON comselecs FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Officers can update their own comselec details" ON public.comselecs
+  FOR UPDATE TO authenticated
+  USING (
+    public.is_super_admin() OR
+    EXISTS (
+      SELECT 1 FROM public.comselec_members cm
+      WHERE cm.user_id = public.get_my_id()
+      AND cm.comselec_id = comselecs.id
+      AND cm.role_id IS NOT NULL
+      AND cm.status = 'active'
+    )
+  );
+
+-- Comselec Settings
+CREATE POLICY "Comselec settings are viewable by everyone" ON public.comselec_settings FOR SELECT USING (true);
+CREATE POLICY "Officers can manage comselec settings" ON public.comselec_settings
+  FOR ALL TO authenticated
+  USING (
+    public.is_super_admin() OR
+    EXISTS (
+      SELECT 1 FROM public.comselec_members cm
+      WHERE cm.user_id = public.get_my_id()
+      AND cm.comselec_id = comselec_settings.comselec_id
+      AND cm.role_id IS NOT NULL
+      AND cm.status = 'active'
+    )
+  );
+
+-- Comselec Members
+CREATE POLICY "Members can view their own comselec memberships" ON comselec_members FOR SELECT 
+USING (user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+CREATE POLICY "Comselec members are viewable by everyone" ON comselec_members FOR SELECT USING (true);
+CREATE POLICY "Super admins can manage comselec memberships" ON comselec_members FOR ALL TO authenticated USING (public.is_super_admin());
+
 -- Events
 CREATE POLICY "Events are viewable by everyone" ON events FOR SELECT USING (true);
 CREATE POLICY "Officers can create events" ON events FOR INSERT TO authenticated
@@ -704,7 +815,11 @@ USING (public.has_scope_permission('create_sanction_rules', scope_type, scope_id
 
 -- Audit Logs
 CREATE POLICY "Audit logs are viewable by officers" ON governance_audit_logs FOR SELECT TO authenticated
-USING (public.is_super_admin() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL));
+USING (
+    public.is_super_admin() OR 
+    EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL) OR
+    EXISTS (SELECT 1 FROM comselec_members cm WHERE cm.user_id = public.get_my_id() AND cm.comselec_id = governance_audit_logs.comselec_id AND cm.role_id IS NOT NULL)
+);
 
 -- ------------------------------------------------------------
 -- SYSTEM & EXTERNAL SERVICE GRANTS (e.g. Supabase Storage)
@@ -750,6 +865,14 @@ CREATE POLICY "Allow officers and super admins to upload org pictures" ON storag
           AND om.user_id = public.get_my_id()
           AND om.role_id IS NOT NULL
           AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.comselecs c
+        JOIN public.comselec_members cm ON cm.comselec_id = c.id
+        WHERE LOWER(c.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
+          AND cm.user_id = public.get_my_id()
+          AND cm.role_id IS NOT NULL
+          AND cm.status = 'active'
       )
     )
   );
@@ -769,6 +892,14 @@ CREATE POLICY "Allow officers and super admins to update org pictures" ON storag
           AND om.user_id = public.get_my_id()
           AND om.role_id IS NOT NULL
           AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.comselecs c
+        JOIN public.comselec_members cm ON cm.comselec_id = c.id
+        WHERE LOWER(c.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
+          AND cm.user_id = public.get_my_id()
+          AND cm.role_id IS NOT NULL
+          AND cm.status = 'active'
       )
     )
   );
@@ -788,6 +919,14 @@ CREATE POLICY "Allow officers and super admins to delete org pictures" ON storag
           AND om.user_id = public.get_my_id()
           AND om.role_id IS NOT NULL
           AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.comselecs c
+        JOIN public.comselec_members cm ON cm.comselec_id = c.id
+        WHERE LOWER(c.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
+          AND cm.user_id = public.get_my_id()
+          AND cm.role_id IS NOT NULL
+          AND cm.status = 'active'
       )
     )
   );
@@ -876,6 +1015,64 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION assign_comselec_officer(
+    p_comselec_id UUID,
+    p_user_id UUID,
+    p_role_id UUID,
+    p_term_id UUID,
+    p_assigned_by UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_actual_assigned_by_id UUID;
+    v_actual_user_id UUID;
+BEGIN
+    -- Standardize ID: The app might send Auth UID or internal User ID
+    SELECT id INTO v_actual_assigned_by_id 
+    FROM public.users 
+    WHERE id = p_assigned_by OR auth_id = p_assigned_by
+    LIMIT 1;
+    
+    SELECT id INTO v_actual_user_id 
+    FROM public.users 
+    WHERE id = p_user_id OR auth_id = p_user_id
+    LIMIT 1;
+
+    -- 1. Insert or Update membership (Comselec Context)
+    UPDATE comselec_members 
+    SET 
+        role_id = p_role_id,
+        academic_term_id = p_term_id,
+        status = 'active',
+        assigned_at = CURRENT_TIMESTAMP
+    WHERE comselec_id = p_comselec_id 
+      AND user_id = v_actual_user_id 
+      AND academic_term_id IS NULL;
+
+    IF NOT FOUND THEN
+        INSERT INTO comselec_members (comselec_id, user_id, role_id, academic_term_id, status)
+        VALUES (p_comselec_id, v_actual_user_id, p_role_id, p_term_id, 'active')
+        ON CONFLICT (comselec_id, user_id, academic_term_id) 
+        DO UPDATE SET 
+            role_id = EXCLUDED.role_id,
+            status = 'active',
+            assigned_at = CURRENT_TIMESTAMP;
+    END IF;
+
+    -- 2. Log the action
+    INSERT INTO governance_audit_logs (comselec_id, action, performed_by_user_id, target_user_id, details)
+    VALUES (
+        p_comselec_id, 
+        'assign_comselec_officer', 
+        v_actual_assigned_by_id, 
+        v_actual_user_id, 
+        jsonb_build_object(
+            'role_id', p_role_id,
+            'term_id', p_term_id
+        )
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Utility to sync existing officers to user_roles
 CREATE OR REPLACE FUNCTION sync_all_officers_to_user_roles()
 RETURNS VOID AS $$
@@ -955,6 +1152,49 @@ BEGIN
     END IF;
 
     RETURN v_org_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION create_comselec_with_members(
+    p_name TEXT,
+    p_code TEXT,
+    p_description TEXT,
+    p_campus_id UUID DEFAULT NULL,
+    p_logo_url TEXT DEFAULT NULL,
+    p_banner_url TEXT DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+    v_comselec_id UUID;
+BEGIN
+    INSERT INTO comselecs (name, code, description, campus_id, logo_url, banner_url)
+    VALUES (p_name, p_code, p_description, p_campus_id, p_logo_url, p_banner_url)
+    RETURNING id INTO v_comselec_id;
+
+    -- Automatically assign comselec chair and commissioners from user_roles
+    INSERT INTO comselec_members (comselec_id, user_id, role_id)
+    SELECT v_comselec_id, ur.user_id, ur.role_id
+    FROM public.user_roles ur
+    JOIN public.roles r ON ur.role_id = r.id
+    WHERE r.name IN ('Comselec Chair', 'COMSELEC Commissioner')
+      AND ur.scope_id = p_campus_id
+      AND ur.is_active = true
+    ON CONFLICT DO NOTHING;
+
+    -- Also automatically assign all students on this campus as Voters
+    INSERT INTO comselec_members (comselec_id, user_id, role_id)
+    SELECT v_comselec_id, u.id, (SELECT id FROM public.roles WHERE name = 'Voters')
+    FROM public.users u
+    WHERE u.campus_id = p_campus_id
+      AND EXISTS (
+          SELECT 1 FROM public.user_roles ur 
+          JOIN public.roles r ON ur.role_id = r.id 
+          WHERE ur.user_id = u.id 
+            AND r.name = 'Students' 
+            AND ur.is_active = true
+      )
+    ON CONFLICT DO NOTHING;
+
+    RETURN v_comselec_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -1110,6 +1350,26 @@ BEGIN
             WHERE type = 'program-based' AND program_id = v_program_id
             ON CONFLICT DO NOTHING;
         END IF;
+
+        -- Automatically assign student as Voter in COMSELEC
+        IF v_campus_id IS NOT NULL THEN
+            INSERT INTO public.comselec_members (comselec_id, user_id, role_id)
+            SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Voters')
+            FROM public.comselecs 
+            WHERE campus_id = v_campus_id
+            ON CONFLICT DO NOTHING;
+        END IF;
+    END IF;
+
+    -- Auto-assign Comselec officers to their respective Comselec
+    IF v_role IN ('comselec_chairman', 'comselec_chair', 'comselec_commissioner') THEN
+        IF v_campus_id IS NOT NULL THEN
+            INSERT INTO public.comselec_members (comselec_id, user_id, role_id)
+            SELECT id, new_user_id, target_role_id
+            FROM public.comselecs 
+            WHERE campus_id = v_campus_id
+            ON CONFLICT DO NOTHING;
+        END IF;
     END IF;
 
     RETURN new;
@@ -1136,12 +1396,28 @@ CREATE TRIGGER on_organization_created
 AFTER INSERT ON public.organizations
 FOR EACH ROW EXECUTE PROCEDURE public.handle_new_organization();
 
+CREATE OR REPLACE FUNCTION public.handle_new_comselec()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.comselec_settings (comselec_id)
+    VALUES (NEW.id)
+    ON CONFLICT (comselec_id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_comselec_created
+AFTER INSERT ON public.comselecs
+FOR EACH ROW EXECUTE PROCEDURE public.handle_new_comselec();
+
 -- ==============================================================================
 -- 11. DATA SEEDING
 -- ==============================================================================
 
 -- 1. INSERT CAMPUSES
 INSERT INTO campuses (name, location) VALUES ('DORSU Main Campus', 'Mati City, Davao Oriental');
+
+
 
 -- 2. INSERT FACULTIES
 INSERT INTO faculties (campus_id, name, code) VALUES

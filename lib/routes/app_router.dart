@@ -16,6 +16,7 @@ import '../features/activity_cards/views/activity_card_redirector.dart';
 import '../features/activity_cards/views/activity_card_details_page.dart';
 import '../features/organizations/views/organizations_page.dart';
 import '../features/organizations/views/organization_details_page.dart';
+import '../features/elections/views/comselecs_manager_page.dart';
 import '../features/campuses/views/campuses_page.dart';
 import '../features/campuses/views/campus_details_page.dart';
 import '../features/faculties/views/faculties_page.dart';
@@ -227,6 +228,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.organizations,
         name: RouteNames.organizations,
         builder: (context, state) => const OrganizationsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.comselecsManager,
+        name: RouteNames.comselecsManager,
+        builder: (context, state) => const ComselecsManagerPage(),
       ),
       GoRoute(
         path: RoutePaths.organizationDetails,

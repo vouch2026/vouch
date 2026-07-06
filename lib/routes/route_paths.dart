@@ -38,6 +38,7 @@ class RoutePaths {
   static const String officers = '/users/officers';
   static const String userDetails = '/users/:id';
   static const String comselecDashboard = '/comselec';
+  static const String comselecsManager = '/comselecs-manager';
   static const String comselecElections = '/comselec/elections';
   static const String comselecCandidates = '/comselec/candidates';
   static const String comselecVoters = '/comselec/voters';
