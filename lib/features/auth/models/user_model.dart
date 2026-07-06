@@ -17,8 +17,6 @@ abstract class UserModel with _$UserModel {
     @JsonKey(name: 'campus_id') String? campusId,
     @JsonKey(name: 'year') int? yearLevel,
     @JsonKey(name: 'profile_photo_url') String? avatarUrl,
-    @JsonKey(name: 'id_front_url') String? idFrontUrl,
-    @JsonKey(name: 'id_back_url') String? idBackUrl,
     @Default([]) @JsonKey(name: 'organization_ids') List<String> organizationIds,
     /// Derived or primary role
     @Default('student') String role,

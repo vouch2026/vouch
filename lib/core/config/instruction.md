@@ -45,8 +45,6 @@ BEGIN
         faculty_id, 
         program_id, 
         year,
-        id_front_url,
-        id_back_url,
         account_status
     )
     VALUES (
@@ -58,8 +56,6 @@ BEGIN
         v_faculty_id,
         v_program_id,
         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
-        new.raw_user_meta_data->>'id_front_url',
-        new.raw_user_meta_data->>'id_back_url',
         COALESCE(new.raw_user_meta_data->>'status', 'active')
     )
     ON CONFLICT (auth_id) DO UPDATE SET
@@ -184,23 +180,19 @@ FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
     42         faculty_id, 
     43         program_id, 
     44         year,
-    45         id_front_url,
-    46         id_back_url,
-    47         account_status
-    48     )
-    49     VALUES (
-    50         new.id, 
-    51         new.email, 
-    52         COALESCE(new.raw_user_meta_data->>'first_name', ''),
-    53         COALESCE(new.raw_user_meta_data->>'last_name', ''), 
-    54         COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
-    55         v_faculty_id,
-    56         v_program_id,
-    57         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
-    58         new.raw_user_meta_data->>'id_front_url',
-    59         new.raw_user_meta_data->>'id_back_url',
-    60         COALESCE(new.raw_user_meta_data->>'status', 'active')
-    61     )
+    45         account_status
+    46     )
+    47     VALUES (
+    48         new.id, 
+    49         new.email, 
+    50         COALESCE(new.raw_user_meta_data->>'first_name', ''),
+    51         COALESCE(new.raw_user_meta_data->>'last_name', ''), 
+    52         COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+    53         v_faculty_id,
+    54         v_program_id,
+    55         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
+    56         COALESCE(new.raw_user_meta_data->>'status', 'active')
+    57     )
     62     ON CONFLICT (auth_id) DO UPDATE SET
     63         email = EXCLUDED.email,
     64         first_name = EXCLUDED.first_name,

@@ -175,8 +175,6 @@ first_name VARCHAR(100) NOT NULL,
 last_name VARCHAR(100) NOT NULL,
 email VARCHAR(255) UNIQUE NOT NULL,
 profile_photo_url VARCHAR(2048),
-id_front_url VARCHAR(2048), -- From legacy profiles
-id_back_url VARCHAR(2048),  -- From legacy profiles
 year INT,
 account_status VARCHAR(20) DEFAULT 'active', -- Maps to 'status' in legacy profiles
 organization_ids TEXT[] DEFAULT '{}',        -- From legacy profiles
@@ -1020,8 +1018,7 @@ BEGIN
 
     INSERT INTO public.users (
         auth_id, email, first_name, last_name, student_id_number, 
-        campus_id, faculty_id, program_id, year,
-        id_front_url, id_back_url, account_status
+        campus_id, faculty_id, program_id, year, account_status
     )
     VALUES (
         new.id, new.email, 
@@ -1030,7 +1027,6 @@ BEGIN
         COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
         v_campus_id, v_faculty_id, v_program_id,
         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
-        new.raw_user_meta_data->>'id_front_url', new.raw_user_meta_data->>'id_back_url',
         COALESCE(new.raw_user_meta_data->>'status', 'active')
     )
     ON CONFLICT (auth_id) DO UPDATE SET
