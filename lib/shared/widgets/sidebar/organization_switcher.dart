@@ -245,7 +245,10 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
         padding: EdgeInsets.all(AppSpacing.md),
         child: Center(child: SizedBox(width: 20, height: 20, child: FlickrLoader())),
       ),
-      error: (err, _) => const SizedBox.shrink(),
+      error: (err, stack) {
+        debugPrint('Error in userOrganizationsProvider: $err\n$stack');
+        return const SizedBox.shrink();
+      },
     );
   }
 }

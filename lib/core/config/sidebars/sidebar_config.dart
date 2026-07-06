@@ -52,6 +52,10 @@ String getSidebarRoleKey(String roleName) {
       return 'staff';
     case 'adviser':
       return 'adviser';
+    case 'dean':
+      return 'dean';
+    case 'program_head':
+      return 'program_head';
     case 'member':
     case 'student':
     default:
@@ -519,6 +523,94 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       items: [
         SidebarItemConfig(label: 'Fees', icon: Icons.payments_outlined, path: RoutePaths.workspaceFees),
         SidebarItemConfig(label: 'Collections', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'INSIGHTS',
+      items: [
+        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
+      ],
+    ),
+  ],
+
+  'dean': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE: DETAILS',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'ACADEMIC STRUCTURE',
+      items: [
+        SidebarItemConfig(label: 'Organizations', icon: Icons.corporate_fare_rounded, path: RoutePaths.organizations),
+        SidebarItemConfig(label: 'Students', icon: Icons.people_outline_rounded, path: RoutePaths.users),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'STUDENT AFFAIRS',
+      items: [
+        SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'INSIGHTS',
+      items: [
+        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
+      ],
+    ),
+  ],
+
+  'program_head': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE: DETAILS',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'ACADEMIC STRUCTURE',
+      items: [
+        SidebarItemConfig(label: 'Students', icon: Icons.people_outline_rounded, path: RoutePaths.users),
+        SidebarItemConfig(label: 'Organizations', icon: Icons.corporate_fare_rounded, path: RoutePaths.organizations),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'STUDENT AFFAIRS',
+      items: [
+        SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
       ],
     ),
     const SidebarSectionConfig(

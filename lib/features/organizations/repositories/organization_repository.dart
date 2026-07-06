@@ -67,54 +67,62 @@ class OrganizationRepository {
   }
 
   Future<OrganizationModel?> getOrganizationById(String id) async {
-    final response = await _client
-        .from('organizations')
-        .select('''
-          *,
-          organization_settings (
+    final response = await _client.rpc('get_workspace_by_id', params: {'p_workspace_id': id});
+    if (response == null || (response as List).isEmpty) return null;
+    
+    final workspaceJson = response.first as Map<String, dynamic>;
+    final type = workspaceJson['type'] as String? ?? 'campus-based';
+    
+    if (type == 'campus-based' || type == 'faculty-based' || type == 'program-based') {
+      final settingsResponse = await _client
+          .from('organization_settings')
+          .select('''
             requires_adviser_signature,
             requires_dean_signature,
             requires_program_head_signature,
             allow_member_to_print,
             clearance_period_start,
             clearance_period_end
-          )
-        ''')
-        .eq('id', id)
-        .maybeSingle();
-    
-    if (response == null) return null;
+          ''')
+          .eq('organization_id', id)
+          .maybeSingle();
 
-    final settingsData = response['organization_settings'];
-    final settings = settingsData is List 
-        ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
-        : settingsData as Map<String, dynamic>?;
-    
-    final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
-    final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
-    final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
-    final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
-    final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
-    final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
-    
-    final now = DateTime.now();
-    bool isClearanceActive = false;
-    if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
-      final start = DateTime.parse(clearancePeriodStartStr);
-      final end = DateTime.parse(clearancePeriodEndStr);
-      isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      final settings = settingsResponse as Map<String, dynamic>?;
+      final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+      final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
+      final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
+      final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+      final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+      
+      final now = DateTime.now();
+      bool isClearanceActive = false;
+      if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+        final start = DateTime.parse(clearancePeriodStartStr);
+        final end = DateTime.parse(clearancePeriodEndStr);
+        isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      }
+
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        'requires_adviser_signature': requiresAdviser,
+        'requires_program_head_signature': requiresProgramHead,
+        'requires_faculty_dean_signature': requiresFacultyDean,
+        'allow_member_card_printing': allowMemberCardPrinting,
+        'clearance_period_start': clearancePeriodStartStr,
+        'clearance_period_end': clearancePeriodEndStr,
+        'is_clearance_active': isClearanceActive,
+      });
+    } else {
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        'requires_adviser_signature': false,
+        'requires_program_head_signature': false,
+        'requires_faculty_dean_signature': false,
+        'allow_member_card_printing': false,
+        'is_clearance_active': false,
+      });
     }
-
-    return OrganizationModel.fromJson({
-      ...response,
-      'requires_adviser_signature': requiresAdviser,
-      'requires_program_head_signature': requiresProgramHead,
-      'requires_faculty_dean_signature': requiresFacultyDean,
-      'allow_member_card_printing': allowMemberCardPrinting,
-      'clearance_period_start': clearancePeriodStartStr,
-      'clearance_period_end': clearancePeriodEndStr,
-      'is_clearance_active': isClearanceActive,
-    });
   }
 
   Future<String> createOrganization({
@@ -311,34 +319,28 @@ class OrganizationRepository {
   }
 
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
-    final response = await _client
-        .from('organization_members')
-        .select('''
-          *, 
-          organizations (
-            *,
-            organization_settings (
+    final response = await _client.rpc('get_my_workspaces');
+    final List<OrganizationModel> workspaces = [];
+
+    for (var json in (response as List)) {
+      final type = json['type'] as String? ?? 'campus-based';
+      final id = json['id'] as String;
+      
+      if (type == 'campus-based' || type == 'faculty-based' || type == 'program-based') {
+        final settingsResponse = await _client
+            .from('organization_settings')
+            .select('''
               requires_adviser_signature,
               requires_dean_signature,
               requires_program_head_signature,
               allow_member_to_print,
               clearance_period_start,
               clearance_period_end
-            )
-          )
-        ''')
-        .eq('user_id', userId);
-    
-    final List<OrganizationModel> organizations = [];
-    
-    for (var json in (response as List)) {
-      final orgJson = json['organizations'] as Map<String, dynamic>?;
-      if (orgJson != null) {
-        final settingsData = orgJson['organization_settings'];
-        final settings = settingsData is List 
-            ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
-            : settingsData as Map<String, dynamic>?;
-        
+            ''')
+            .eq('organization_id', id)
+            .maybeSingle();
+
+        final settings = settingsResponse as Map<String, dynamic>?;
         final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
         final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
         final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
@@ -354,8 +356,8 @@ class OrganizationRepository {
           isClearanceActive = now.isAfter(start) && now.isBefore(end);
         }
 
-        organizations.add(OrganizationModel.fromJson({
-          ...orgJson,
+        workspaces.add(OrganizationModel.fromJson({
+          ...json,
           'requires_adviser_signature': requiresAdviser,
           'requires_program_head_signature': requiresProgramHead,
           'requires_faculty_dean_signature': requiresFacultyDean,
@@ -364,10 +366,19 @@ class OrganizationRepository {
           'clearance_period_end': clearancePeriodEndStr,
           'is_clearance_active': isClearanceActive,
         }));
+      } else {
+        workspaces.add(OrganizationModel.fromJson({
+          ...json,
+          'requires_adviser_signature': false,
+          'requires_program_head_signature': false,
+          'requires_faculty_dean_signature': false,
+          'allow_member_card_printing': false,
+          'is_clearance_active': false,
+        }));
       }
     }
     
-    return organizations;
+    return workspaces;
   }
 
   Future<OrganizationMembershipModel?> getUserMembershipInOrg(String userId, String orgId) async {
@@ -423,6 +434,20 @@ class OrganizationRepository {
         .order('changed_at', ascending: false);
     
     return (response as List).map((json) => OrganizationSettingsHistoryModel.fromJson(json)).toList();
+  }
+
+  Future<Map<String, dynamic>?> getWorkspaceRoleAndPermissions(String workspaceId, String workspaceType) async {
+    final response = await _client.rpc(
+      'get_workspace_role_and_permissions',
+      params: {
+        'p_workspace_id': workspaceId,
+        'p_workspace_type': workspaceType,
+      },
+    );
+    if (response is List && response.isNotEmpty) {
+      return response.first as Map<String, dynamic>;
+    }
+    return null;
   }
 }
 

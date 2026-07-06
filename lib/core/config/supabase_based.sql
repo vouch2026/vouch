@@ -9,7 +9,7 @@
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
--- Wrap in DO block to avoid error if organizations table doesn't exist yet
+-- Wrap in DO block to avoid error if tables don't exist yet
 DO $$ 
 BEGIN
     IF to_regclass('public.organizations') IS NOT NULL THEN
@@ -18,10 +18,25 @@ BEGIN
     IF to_regclass('public.comselecs') IS NOT NULL THEN
         DROP TRIGGER IF EXISTS on_comselec_created ON public.comselecs;
     END IF;
+    IF to_regclass('public.faculties') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS on_faculty_dean_changed ON public.faculties;
+        DROP TRIGGER IF EXISTS on_faculty_deleted ON public.faculties;
+    END IF;
+    IF to_regclass('public.programs') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS on_program_head_changed ON public.programs;
+        DROP TRIGGER IF EXISTS on_program_deleted ON public.programs;
+    END IF;
 END $$;
 
 DROP FUNCTION IF EXISTS public.handle_new_organization() CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_comselec() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_faculty_dean_change() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_program_head_change() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_faculty_deletion() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_program_deletion() CASCADE;
+DROP FUNCTION IF EXISTS public.get_my_workspaces() CASCADE;
+DROP FUNCTION IF EXISTS public.get_workspace_role_and_permissions(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.get_workspace_by_id(UUID) CASCADE;
 
 -- Drop legacy profiles table if it exists
 DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -1704,4 +1719,330 @@ CREATE POLICY "Allow users to delete their own schedules"
 ON public.subject_schedules
 FOR DELETE 
 USING (auth.uid() = user_id);
+
+-- ==============================================================================
+-- WORKSPACE EXPANSION ADDITIONS (FACULTY & PROGRAM WORKSPACES)
+-- ==============================================================================
+
+-- 1. Seed permissions for Faculty Dean & Program Head
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM public.roles r, public.permissions p
+WHERE r.name = 'Faculty Dean' 
+AND p.action IN (
+    'sign_faculty_clearance', 'reject_clearance', 'view_clearance_dashboard',
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_program_analytics'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM public.roles r, public.permissions p
+WHERE r.name = 'Program Head' 
+AND p.action IN (
+    'sign_program_clearance', 'reject_clearance', 'view_clearance_dashboard',
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_program_analytics'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- 2. Automatic Role Synchronization Trigger Functions and Triggers
+CREATE OR REPLACE FUNCTION public.handle_faculty_dean_change()
+RETURNS TRIGGER AS $$
+DECLARE
+    role_id_var UUID;
+BEGIN
+    SELECT id INTO role_id_var FROM public.roles WHERE name = 'Faculty Dean';
+
+    -- Remove role from old dean
+    IF (TG_OP = 'UPDATE' AND OLD.dean_id IS DISTINCT FROM NEW.dean_id AND OLD.dean_id IS NOT NULL) THEN
+        DELETE FROM public.user_roles 
+        WHERE user_id = OLD.dean_id 
+          AND role_id = role_id_var 
+          AND scope_type = 'Faculty' 
+          AND scope_id = OLD.id;
+    END IF;
+
+    -- Add role to new dean
+    IF (NEW.dean_id IS NOT NULL AND (TG_OP = 'INSERT' OR OLD.dean_id IS DISTINCT FROM NEW.dean_id)) THEN
+        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id)
+        VALUES (NEW.dean_id, role_id_var, 'Faculty', NEW.id)
+        ON CONFLICT (user_id, role_id, scope_type, scope_id) DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_faculty_dean_changed
+AFTER INSERT OR UPDATE OF dean_id ON public.faculties
+FOR EACH ROW EXECUTE FUNCTION public.handle_faculty_dean_change();
+
+
+CREATE OR REPLACE FUNCTION public.handle_program_head_change()
+RETURNS TRIGGER AS $$
+DECLARE
+    role_id_var UUID;
+BEGIN
+    SELECT id INTO role_id_var FROM public.roles WHERE name = 'Program Head';
+
+    -- Remove role from old program head
+    IF (TG_OP = 'UPDATE' AND OLD.program_head_id IS DISTINCT FROM NEW.program_head_id AND OLD.program_head_id IS NOT NULL) THEN
+        DELETE FROM public.user_roles 
+        WHERE user_id = OLD.program_head_id 
+          AND role_id = role_id_var 
+          AND scope_type = 'Program' 
+          AND scope_id = OLD.id;
+    END IF;
+
+    -- Add role to new program head
+    IF (NEW.program_head_id IS NOT NULL AND (TG_OP = 'INSERT' OR OLD.program_head_id IS DISTINCT FROM NEW.program_head_id)) THEN
+        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id)
+        VALUES (NEW.program_head_id, role_id_var, 'Program', NEW.id)
+        ON CONFLICT (user_id, role_id, scope_type, scope_id) DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_program_head_changed
+AFTER INSERT OR UPDATE OF program_head_id ON public.programs
+FOR EACH ROW EXECUTE FUNCTION public.handle_program_head_change();
+
+
+CREATE OR REPLACE FUNCTION public.handle_faculty_deletion()
+RETURNS TRIGGER AS $$
+DECLARE
+    role_id_var UUID;
+BEGIN
+    SELECT id INTO role_id_var FROM public.roles WHERE name = 'Faculty Dean';
+    DELETE FROM public.user_roles 
+    WHERE role_id = role_id_var 
+      AND scope_type = 'Faculty' 
+      AND scope_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_faculty_deleted
+AFTER DELETE ON public.faculties
+FOR EACH ROW EXECUTE FUNCTION public.handle_faculty_deletion();
+
+
+CREATE OR REPLACE FUNCTION public.handle_program_deletion()
+RETURNS TRIGGER AS $$
+DECLARE
+    role_id_var UUID;
+BEGIN
+    SELECT id INTO role_id_var FROM public.roles WHERE name = 'Program Head';
+    DELETE FROM public.user_roles 
+    WHERE role_id = role_id_var 
+      AND scope_type = 'Program' 
+      AND scope_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_program_deleted
+AFTER DELETE ON public.programs
+FOR EACH ROW EXECUTE FUNCTION public.handle_program_deletion();
+
+
+-- 3. Workspace and Role Retrieval Functions
+CREATE OR REPLACE FUNCTION public.get_my_workspaces()
+RETURNS TABLE (
+    id UUID,
+    name VARCHAR,
+    code VARCHAR,
+    type VARCHAR,
+    logo_url VARCHAR,
+    banner_url VARCHAR,
+    status VARCHAR
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    SELECT public.get_my_id() INTO v_user_id;
+    IF v_user_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    -- 1. Student Organizations where the user is a member/officer
+    RETURN QUERY
+    SELECT 
+        o.id,
+        o.name,
+        o.code,
+        o.type::VARCHAR,
+        o.logo_url,
+        o.banner_url,
+        o.status
+    FROM public.organizations o
+    JOIN public.organization_members om ON o.id = om.organization_id
+    WHERE om.user_id = v_user_id AND om.status = 'active';
+
+    -- 2. Faculty workspaces where the user is Dean
+    RETURN QUERY
+    SELECT 
+        f.id,
+        f.name,
+        f.code,
+        'faculty'::VARCHAR AS type,
+        NULL::VARCHAR AS logo_url,
+        NULL::VARCHAR AS banner_url,
+        'active'::VARCHAR AS status
+    FROM public.faculties f
+    WHERE f.dean_id = v_user_id;
+
+    -- 3. Program workspaces where the user is Program Head
+    RETURN QUERY
+    SELECT 
+        p.id,
+        p.name,
+        p.code,
+        'program'::VARCHAR AS type,
+        NULL::VARCHAR AS logo_url,
+        NULL::VARCHAR AS banner_url,
+        'active'::VARCHAR AS status
+    FROM public.programs p
+    WHERE p.program_head_id = v_user_id;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.get_workspace_role_and_permissions(
+    p_workspace_id UUID,
+    p_workspace_type TEXT
+)
+RETURNS TABLE (
+    role_name VARCHAR,
+    hierarchy_level INT,
+    permissions JSONB
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    SELECT public.get_my_id() INTO v_user_id;
+    IF v_user_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    IF p_workspace_type = 'faculty' THEN
+        -- Check if they are dean
+        IF EXISTS (SELECT 1 FROM public.faculties WHERE id = p_workspace_id AND dean_id = v_user_id) THEN
+            RETURN QUERY
+            SELECT 
+                r.name,
+                r.hierarchy_level,
+                COALESCE(jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), '[]'::jsonb)
+            FROM public.roles r
+            LEFT JOIN public.role_permissions rp ON r.id = rp.role_id
+            LEFT JOIN public.permissions p ON rp.permission_id = p.id
+            WHERE r.name = 'Faculty Dean'
+            GROUP BY r.id, r.name, r.hierarchy_level;
+        END IF;
+
+    ELSIF p_workspace_type = 'program' THEN
+        -- Check if they are program head
+        IF EXISTS (SELECT 1 FROM public.programs WHERE id = p_workspace_id AND program_head_id = v_user_id) THEN
+            RETURN QUERY
+            SELECT 
+                r.name,
+                r.hierarchy_level,
+                COALESCE(jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), '[]'::jsonb)
+            FROM public.roles r
+            LEFT JOIN public.role_permissions rp ON r.id = rp.role_id
+            LEFT JOIN public.permissions p ON rp.permission_id = p.id
+            WHERE r.name = 'Program Head'
+            GROUP BY r.id, r.name, r.hierarchy_level;
+        END IF;
+
+    ELSE
+        -- Organization workspaces
+        RETURN QUERY
+        SELECT 
+            r.name,
+            r.hierarchy_level,
+            COALESCE(jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), '[]'::jsonb)
+        FROM public.organization_members om
+        JOIN public.roles r ON om.role_id = r.id
+        LEFT JOIN public.role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN public.permissions p ON rp.permission_id = p.id
+        WHERE om.user_id = v_user_id 
+          AND om.organization_id = p_workspace_id 
+          AND om.status = 'active'
+        GROUP BY r.id, r.name, r.hierarchy_level;
+    END IF;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.get_workspace_by_id(p_workspace_id UUID)
+RETURNS TABLE (
+    id UUID,
+    name VARCHAR,
+    code VARCHAR,
+    type VARCHAR,
+    logo_url VARCHAR,
+    banner_url VARCHAR,
+    status VARCHAR
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Check organizations
+    IF EXISTS (SELECT 1 FROM public.organizations WHERE id = p_workspace_id) THEN
+        RETURN QUERY
+        SELECT 
+            o.id,
+            o.name,
+            o.code,
+            o.type::VARCHAR,
+            o.logo_url,
+            o.banner_url,
+            o.status
+        FROM public.organizations o
+        WHERE o.id = p_workspace_id;
+        RETURN;
+    END IF;
+
+    -- Check faculties
+    IF EXISTS (SELECT 1 FROM public.faculties WHERE id = p_workspace_id) THEN
+        RETURN QUERY
+        SELECT 
+            f.id,
+            f.name,
+            f.code,
+            'faculty'::VARCHAR AS type,
+            NULL::VARCHAR AS logo_url,
+            NULL::VARCHAR AS banner_url,
+            'active'::VARCHAR AS status
+        FROM public.faculties f
+        WHERE f.id = p_workspace_id;
+        RETURN;
+    END IF;
+
+    -- Check programs
+    IF EXISTS (SELECT 1 FROM public.programs WHERE id = p_workspace_id) THEN
+        RETURN QUERY
+        SELECT 
+            p.id,
+            p.name,
+            p.code,
+            'program'::VARCHAR AS type,
+            NULL::VARCHAR AS logo_url,
+            NULL::VARCHAR AS banner_url,
+            'active'::VARCHAR AS status
+        FROM public.programs p
+        WHERE p.id = p_workspace_id;
+        RETURN;
+    END IF;
+END;
+$$;
+
 

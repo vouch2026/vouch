@@ -318,14 +318,15 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                 Center(
                                   child: userOrgsAsync.when(
                                     data: (orgs) {
-                                      if (orgs.isEmpty) {
+                                      final nonAdminOrgs = orgs.where((org) => org.type != 'faculty' && org.type != 'program').toList();
+                                      if (nonAdminOrgs.isEmpty) {
                                         return const SizedBox.shrink();
                                       }
                                       return Wrap(
                                         alignment: WrapAlignment.center,
                                         spacing: 12,
                                         runSpacing: 12,
-                                        children: orgs.map((org) {
+                                        children: nonAdminOrgs.map((org) {
                                           return Tooltip(
                                             message: org.name,
                                             child: _buildCircularLogo(
