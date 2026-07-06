@@ -6,6 +6,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../faculties/providers/faculty_provider.dart';
 import '../../../programs/models/program_model.dart';
 import '../../../programs/providers/program_provider.dart';
+import '../../../users/providers/users_provider.dart';
 
 class CreateProgramModal extends ConsumerStatefulWidget {
   const CreateProgramModal({super.key});
@@ -19,6 +20,7 @@ class _CreateProgramModalState extends ConsumerState<CreateProgramModal> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
   String? _selectedFaculty;
+  String? _selectedHead;
   bool _isLoading = false;
 
   @override
@@ -38,6 +40,7 @@ class _CreateProgramModalState extends ConsumerState<CreateProgramModal> {
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         facultyId: _selectedFaculty!,
+        programHeadId: _selectedHead,
       );
 
       await ref.read(programsProvider.notifier).addProgram(program);
@@ -62,6 +65,7 @@ class _CreateProgramModalState extends ConsumerState<CreateProgramModal> {
   @override
   Widget build(BuildContext context) {
     final facultiesAsync = ref.watch(facultiesProvider);
+    final usersAsync = ref.watch(allUsersProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -138,6 +142,35 @@ class _CreateProgramModalState extends ConsumerState<CreateProgramModal> {
                 ),
                 validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                 enabled: !_isLoading,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Program Head',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              usersAsync.when(
+                data: (users) => DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _selectedHead,
+                  decoration: const InputDecoration(hintText: 'Select Program Head (Optional)'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('No Program Head Assigned'),
+                    ),
+                    ...users.map((u) => DropdownMenuItem(
+                      value: u.id, 
+                      child: Text(
+                        '${u.fullName} (${u.email})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )).toList(),
+                  ],
+                  onChanged: _isLoading ? null : (val) => setState(() => _selectedHead = val),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (e, s) => Text('Error loading users: $e', style: const TextStyle(color: Colors.red)),
               ),
               const SizedBox(height: AppSpacing.xl),
               Row(

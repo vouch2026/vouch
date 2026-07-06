@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../campuses/providers/campus_provider.dart';
 import '../../../faculties/models/faculty_model.dart';
 import '../../../faculties/providers/faculty_provider.dart';
+import '../../../users/providers/users_provider.dart';
 
 class EditFacultyModal extends ConsumerStatefulWidget {
   final FacultyModel faculty;
@@ -21,6 +22,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
   late final TextEditingController _nameController;
   late final TextEditingController _codeController;
   String? _selectedCampus;
+  String? _selectedDean;
   bool _isLoading = false;
 
   @override
@@ -29,6 +31,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
     _nameController = TextEditingController(text: widget.faculty.name);
     _codeController = TextEditingController(text: widget.faculty.code);
     _selectedCampus = widget.faculty.campusId;
+    _selectedDean = widget.faculty.deanId;
   }
 
   @override
@@ -47,6 +50,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         campusId: _selectedCampus!,
+        deanId: _selectedDean,
       );
 
       await ref.read(facultiesProvider.notifier).updateFaculty(updatedFaculty);
@@ -71,6 +75,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
   @override
   Widget build(BuildContext context) {
     final campusesAsync = ref.watch(campusesProvider);
+    final usersAsync = ref.watch(allUsersProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -147,6 +152,35 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
                 ),
                 validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                 enabled: !_isLoading,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Faculty Dean',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              usersAsync.when(
+                data: (users) => DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _selectedDean,
+                  decoration: const InputDecoration(hintText: 'Select Faculty Dean (Optional)'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('No Dean Assigned'),
+                    ),
+                    ...users.map((u) => DropdownMenuItem(
+                      value: u.id, 
+                      child: Text(
+                        '${u.fullName} (${u.email})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )).toList(),
+                  ],
+                  onChanged: _isLoading ? null : (val) => setState(() => _selectedDean = val),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (e, s) => Text('Error loading users: $e', style: const TextStyle(color: Colors.red)),
               ),
               const SizedBox(height: AppSpacing.xl),
               Row(
