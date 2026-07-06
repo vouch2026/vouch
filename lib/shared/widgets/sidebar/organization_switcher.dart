@@ -177,6 +177,7 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                         _OrgAvatar(
                           logoUrl: selectedOrg?.logoUrl,
                           isGlobal: selectedOrg == null,
+                          type: selectedOrg?.type,
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
@@ -371,6 +372,7 @@ class _DropdownMenuState extends State<_DropdownMenu> with SingleTickerProviderS
                               name: org.name,
                               role: org.code,
                               logoUrl: org.logoUrl,
+                              type: org.type,
                               isSelected: isSelected,
                               onTap: () => widget.onSelected(org),
                             );
@@ -398,11 +400,16 @@ class _DropdownMenuState extends State<_DropdownMenu> with SingleTickerProviderS
 class _OrgAvatar extends StatelessWidget {
   final String? logoUrl;
   final bool isGlobal;
+  final String? type;
 
-  const _OrgAvatar({this.logoUrl, this.isGlobal = false});
+  const _OrgAvatar({this.logoUrl, this.isGlobal = false, this.type});
 
   @override
   Widget build(BuildContext context) {
+    final IconData fallbackIcon = isGlobal 
+        ? Icons.business_rounded 
+        : (type == 'comselec' ? Icons.how_to_vote_rounded : Icons.corporate_fare_rounded);
+
     return Container(
       width: 40,
       height: 40,
@@ -415,7 +422,7 @@ class _OrgAvatar extends StatelessWidget {
       ),
       child: logoUrl == null
           ? Icon(
-              isGlobal ? Icons.business_rounded : Icons.corporate_fare_rounded,
+              fallbackIcon,
               color: isGlobal ? AppColors.primary : Colors.grey.shade400,
               size: 20,
             )
@@ -428,6 +435,7 @@ class _OrgItem extends StatelessWidget {
   final String name;
   final String role;
   final String? logoUrl;
+  final String? type;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -435,6 +443,7 @@ class _OrgItem extends StatelessWidget {
     required this.name,
     required this.role,
     this.logoUrl,
+    this.type,
     this.isSelected = false,
     required this.onTap,
   });
@@ -461,7 +470,7 @@ class _OrgItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
               child: Row(
                 children: [
-                  _OrgAvatar(logoUrl: logoUrl),
+                  _OrgAvatar(logoUrl: logoUrl, type: type),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(

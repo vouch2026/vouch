@@ -1907,6 +1907,20 @@ BEGIN
         'active'::VARCHAR AS status
     FROM public.programs p
     WHERE p.program_head_id = v_user_id;
+
+    -- 4. COMSELEC workspaces where the user is an active member (chair, commissioner, or voter)
+    RETURN QUERY
+    SELECT 
+        c.id,
+        c.name,
+        c.code,
+        'comselec'::VARCHAR AS type,
+        c.logo_url,
+        c.banner_url,
+        c.status
+    FROM public.comselecs c
+    JOIN public.comselec_members cm ON c.id = cm.comselec_id
+    WHERE cm.user_id = v_user_id AND cm.status = 'active';
 END;
 $$;
 
@@ -1961,6 +1975,22 @@ BEGIN
             GROUP BY r.id, r.name, r.hierarchy_level;
         END IF;
 
+    ELSIF p_workspace_type = 'comselec' THEN
+        -- Comselec workspaces
+        RETURN QUERY
+        SELECT 
+            r.name,
+            r.hierarchy_level,
+            COALESCE(jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), '[]'::jsonb)
+        FROM public.comselec_members cm
+        JOIN public.roles r ON cm.role_id = r.id
+        LEFT JOIN public.role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN public.permissions p ON rp.permission_id = p.id
+        WHERE cm.user_id = v_user_id 
+          AND cm.comselec_id = p_workspace_id 
+          AND cm.status = 'active'
+        GROUP BY r.id, r.name, r.hierarchy_level;
+
     ELSE
         -- Organization workspaces
         RETURN QUERY
@@ -1996,7 +2026,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
     -- Check organizations
-    IF EXISTS (SELECT 1 FROM public.organizations WHERE id = p_workspace_id) THEN
+    IF EXISTS (SELECT 1 FROM public.organizations WHERE organizations.id = p_workspace_id) THEN
         RETURN QUERY
         SELECT 
             o.id,
@@ -2011,8 +2041,24 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Check comselecs
+    IF EXISTS (SELECT 1 FROM public.comselecs WHERE comselecs.id = p_workspace_id) THEN
+        RETURN QUERY
+        SELECT 
+            c.id,
+            c.name,
+            c.code,
+            'comselec'::VARCHAR AS type,
+            c.logo_url,
+            c.banner_url,
+            c.status
+        FROM public.comselecs c
+        WHERE c.id = p_workspace_id;
+        RETURN;
+    END IF;
+
     -- Check faculties
-    IF EXISTS (SELECT 1 FROM public.faculties WHERE id = p_workspace_id) THEN
+    IF EXISTS (SELECT 1 FROM public.faculties WHERE faculties.id = p_workspace_id) THEN
         RETURN QUERY
         SELECT 
             f.id,
@@ -2028,7 +2074,7 @@ BEGIN
     END IF;
 
     -- Check programs
-    IF EXISTS (SELECT 1 FROM public.programs WHERE id = p_workspace_id) THEN
+    IF EXISTS (SELECT 1 FROM public.programs WHERE programs.id = p_workspace_id) THEN
         RETURN QUERY
         SELECT 
             p.id,

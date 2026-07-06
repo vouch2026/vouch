@@ -113,6 +113,44 @@ class OrganizationRepository {
         'clearance_period_end': clearancePeriodEndStr,
         'is_clearance_active': isClearanceActive,
       });
+    } else if (type == 'comselec') {
+      final settingsResponse = await _client
+          .from('comselec_settings')
+          .select('''
+            requires_chairman_signature,
+            requires_commissioner_signature,
+            allow_member_to_print,
+            clearance_period_start,
+            clearance_period_end
+          ''')
+          .eq('comselec_id', id)
+          .maybeSingle();
+
+      final settings = settingsResponse as Map<String, dynamic>?;
+      final requiresChairman = settings?['requires_chairman_signature'] as bool? ?? false;
+      final requiresCommissioner = settings?['requires_commissioner_signature'] as bool? ?? false;
+      final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+      final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+      
+      final now = DateTime.now();
+      bool isClearanceActive = false;
+      if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+        final start = DateTime.parse(clearancePeriodStartStr);
+        final end = DateTime.parse(clearancePeriodEndStr);
+        isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      }
+
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        'requires_adviser_signature': requiresChairman,
+        'requires_program_head_signature': requiresCommissioner,
+        'requires_faculty_dean_signature': false,
+        'allow_member_card_printing': allowMemberCardPrinting,
+        'clearance_period_start': clearancePeriodStartStr,
+        'clearance_period_end': clearancePeriodEndStr,
+        'is_clearance_active': isClearanceActive,
+      });
     } else {
       return OrganizationModel.fromJson({
         ...workspaceJson,
@@ -361,6 +399,44 @@ class OrganizationRepository {
           'requires_adviser_signature': requiresAdviser,
           'requires_program_head_signature': requiresProgramHead,
           'requires_faculty_dean_signature': requiresFacultyDean,
+          'allow_member_card_printing': allowMemberCardPrinting,
+          'clearance_period_start': clearancePeriodStartStr,
+          'clearance_period_end': clearancePeriodEndStr,
+          'is_clearance_active': isClearanceActive,
+        }));
+      } else if (type == 'comselec') {
+        final settingsResponse = await _client
+            .from('comselec_settings')
+            .select('''
+              requires_chairman_signature,
+              requires_commissioner_signature,
+              allow_member_to_print,
+              clearance_period_start,
+              clearance_period_end
+            ''')
+            .eq('comselec_id', id)
+            .maybeSingle();
+
+        final settings = settingsResponse as Map<String, dynamic>?;
+        final requiresChairman = settings?['requires_chairman_signature'] as bool? ?? false;
+        final requiresCommissioner = settings?['requires_commissioner_signature'] as bool? ?? false;
+        final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+        final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+        final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+        
+        final now = DateTime.now();
+        bool isClearanceActive = false;
+        if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+          final start = DateTime.parse(clearancePeriodStartStr);
+          final end = DateTime.parse(clearancePeriodEndStr);
+          isClearanceActive = now.isAfter(start) && now.isBefore(end);
+        }
+
+        workspaces.add(OrganizationModel.fromJson({
+          ...json,
+          'requires_adviser_signature': requiresChairman,
+          'requires_program_head_signature': requiresCommissioner,
+          'requires_faculty_dean_signature': false,
           'allow_member_card_printing': allowMemberCardPrinting,
           'clearance_period_start': clearancePeriodStartStr,
           'clearance_period_end': clearancePeriodEndStr,
