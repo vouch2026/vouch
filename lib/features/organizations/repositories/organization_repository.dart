@@ -245,6 +245,52 @@ class OrganizationRepository {
   }
 
   Future<List<UserModel>> getOrganizationMembers(String orgId) async {
+    final isComselec = await _client
+        .from('comselecs')
+        .select('id')
+        .eq('id', orgId)
+        .maybeSingle() != null;
+
+    if (isComselec) {
+      final response = await _client
+          .from('comselec_members')
+          .select('''
+            *,
+            user:users (
+              *,
+              program:programs!users_program_id_fkey (name),
+              faculty:faculties!users_faculty_id_fkey (name)
+            ),
+            role:roles (name)
+          ''')
+          .eq('comselec_id', orgId);
+      
+      final Map<String, UserModel> uniqueUsers = {};
+      for (var json in (response as List)) {
+        final userData = json['user'];
+        if (userData == null) continue;
+        
+        final roleData = json['role'];
+        final roleName = roleData != null ? roleData['name'] : 'Voters';
+        
+        final programData = userData['program'];
+        final facultyData = userData['faculty'];
+        
+        final user = UserModel.fromJson({
+          ...userData,
+          'role': roleName,
+          'programName': programData?['name'],
+          'facultyName': facultyData?['name'],
+          'joined_at': json['joined_at'] ?? json['assigned_at'],
+        });
+        
+        if (user.id != null) {
+          uniqueUsers[user.id!] = user;
+        }
+      }
+      return uniqueUsers.values.toList();
+    }
+
     final response = await _client
         .from('organization_members')
         .select('''
@@ -286,6 +332,62 @@ class OrganizationRepository {
   }
 
   Future<List<OrganizationMembershipModel>> getOrganizationOfficers(String orgId) async {
+    final isComselec = await _client
+        .from('comselecs')
+        .select('id')
+        .eq('id', orgId)
+        .maybeSingle() != null;
+
+    if (isComselec) {
+      final response = await _client
+          .from('comselec_members')
+          .select('''
+            *,
+            user:users (*),
+            role:roles (
+              *,
+              role_permissions (
+                permissions (action)
+              )
+            ),
+            term:academic_terms (*)
+          ''')
+          .eq('comselec_id', orgId)
+          .not('role_id', 'is', null)
+          .order('assigned_at', ascending: false);
+      
+      return (response as List).map((json) {
+        final roleData = json['role'];
+        final List<String> permissions = [];
+        
+        if (roleData != null) {
+          final rolePerms = roleData['role_permissions'] as List?;
+          if (rolePerms != null) {
+            for (var rp in rolePerms) {
+              final perm = rp['permissions'];
+              if (perm is Map && perm.containsKey('action')) {
+                permissions.add(perm['action'] as String);
+              } else if (perm is List && perm.isNotEmpty) {
+                final action = perm.first['action'];
+                if (action != null) {
+                  permissions.add(action as String);
+                }
+              }
+            }
+          }
+        }
+
+        return OrganizationMembershipModel.fromJson({
+          ...json,
+          'user': json['user'],
+          'term': json['term'],
+          'role_name': roleData?['name'],
+          'hierarchy_level': roleData?['hierarchy_level'],
+          'permissions': permissions,
+        });
+      }).toList();
+    }
+
     final response = await _client
         .from('organization_members')
         .select('''
@@ -343,17 +445,31 @@ class OrganizationRepository {
     required String roleId,
     required String termId,
     required String assignedBy,
+    String? workspaceType,
   }) async {
-    await _client.rpc(
-      'assign_organization_officer',
-      params: {
-        'p_org_id': orgId,
-        'p_user_id': userId,
-        'p_role_id': roleId,
-        'p_term_id': termId,
-        'p_assigned_by': assignedBy,
-      },
-    );
+    if (workspaceType == 'comselec') {
+      await _client.rpc(
+        'assign_comselec_officer',
+        params: {
+          'p_comselec_id': orgId,
+          'p_user_id': userId,
+          'p_role_id': roleId,
+          'p_term_id': termId,
+          'p_assigned_by': assignedBy,
+        },
+      );
+    } else {
+      await _client.rpc(
+        'assign_organization_officer',
+        params: {
+          'p_org_id': orgId,
+          'p_user_id': userId,
+          'p_role_id': roleId,
+          'p_term_id': termId,
+          'p_assigned_by': assignedBy,
+        },
+      );
+    }
   }
 
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {

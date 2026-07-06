@@ -1855,7 +1855,10 @@ RETURNS TABLE (
     type VARCHAR,
     logo_url VARCHAR,
     banner_url VARCHAR,
-    status VARCHAR
+    status VARCHAR,
+    campus_id UUID,
+    faculty_id UUID,
+    program_id UUID
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -1877,7 +1880,10 @@ BEGIN
         o.type::VARCHAR,
         o.logo_url,
         o.banner_url,
-        o.status
+        o.status,
+        o.campus_id,
+        o.faculty_id,
+        o.program_id
     FROM public.organizations o
     JOIN public.organization_members om ON o.id = om.organization_id
     WHERE om.user_id = v_user_id AND om.status = 'active';
@@ -1891,7 +1897,10 @@ BEGIN
         'faculty'::VARCHAR AS type,
         NULL::VARCHAR AS logo_url,
         NULL::VARCHAR AS banner_url,
-        'active'::VARCHAR AS status
+        'active'::VARCHAR AS status,
+        f.campus_id,
+        f.id AS faculty_id,
+        NULL::UUID AS program_id
     FROM public.faculties f
     WHERE f.dean_id = v_user_id;
 
@@ -1904,8 +1913,12 @@ BEGIN
         'program'::VARCHAR AS type,
         NULL::VARCHAR AS logo_url,
         NULL::VARCHAR AS banner_url,
-        'active'::VARCHAR AS status
+        'active'::VARCHAR AS status,
+        f.campus_id,
+        p.faculty_id,
+        p.id AS program_id
     FROM public.programs p
+    JOIN public.faculties f ON p.faculty_id = f.id
     WHERE p.program_head_id = v_user_id;
 
     -- 4. COMSELEC workspaces where the user is an active member (chair, commissioner, or voter)
@@ -1917,7 +1930,10 @@ BEGIN
         'comselec'::VARCHAR AS type,
         c.logo_url,
         c.banner_url,
-        c.status
+        c.status,
+        c.campus_id,
+        NULL::UUID AS faculty_id,
+        NULL::UUID AS program_id
     FROM public.comselecs c
     JOIN public.comselec_members cm ON c.id = cm.comselec_id
     WHERE cm.user_id = v_user_id AND cm.status = 'active';
@@ -2019,7 +2035,10 @@ RETURNS TABLE (
     type VARCHAR,
     logo_url VARCHAR,
     banner_url VARCHAR,
-    status VARCHAR
+    status VARCHAR,
+    campus_id UUID,
+    faculty_id UUID,
+    program_id UUID
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -2035,7 +2054,10 @@ BEGIN
             o.type::VARCHAR,
             o.logo_url,
             o.banner_url,
-            o.status
+            o.status,
+            o.campus_id,
+            o.faculty_id,
+            o.program_id
         FROM public.organizations o
         WHERE o.id = p_workspace_id;
         RETURN;
@@ -2051,7 +2073,10 @@ BEGIN
             'comselec'::VARCHAR AS type,
             c.logo_url,
             c.banner_url,
-            c.status
+            c.status,
+            c.campus_id,
+            NULL::UUID AS faculty_id,
+            NULL::UUID AS program_id
         FROM public.comselecs c
         WHERE c.id = p_workspace_id;
         RETURN;
@@ -2067,7 +2092,10 @@ BEGIN
             'faculty'::VARCHAR AS type,
             NULL::VARCHAR AS logo_url,
             NULL::VARCHAR AS banner_url,
-            'active'::VARCHAR AS status
+            'active'::VARCHAR AS status,
+            f.campus_id,
+            f.id AS faculty_id,
+            NULL::UUID AS program_id
         FROM public.faculties f
         WHERE f.id = p_workspace_id;
         RETURN;
@@ -2083,8 +2111,12 @@ BEGIN
             'program'::VARCHAR AS type,
             NULL::VARCHAR AS logo_url,
             NULL::VARCHAR AS banner_url,
-            'active'::VARCHAR AS status
+            'active'::VARCHAR AS status,
+            f.campus_id,
+            p.faculty_id,
+            p.id AS program_id
         FROM public.programs p
+        JOIN public.faculties f ON p.faculty_id = f.id
         WHERE p.id = p_workspace_id;
         RETURN;
     END IF;
