@@ -1013,6 +1013,13 @@ BEGIN
             assigned_at = CURRENT_TIMESTAMP;
     END IF;
 
+    -- If the role is 'Adviser', update the adviser_name in organizations table
+    IF EXISTS (SELECT 1 FROM public.roles WHERE id = p_role_id AND name = 'Adviser') THEN
+        UPDATE public.organizations 
+        SET adviser_name = (SELECT first_name || ' ' || last_name FROM public.users WHERE id = v_actual_user_id)
+        WHERE id = p_org_id;
+    END IF;
+
     -- 2. Log the action
     INSERT INTO governance_audit_logs (organization_id, action, performed_by_user_id, target_user_id, details)
     VALUES (
@@ -1473,7 +1480,7 @@ INSERT INTO programs (faculty_id, name, code) VALUES
 
 -- 4. INSERT ROLES
 INSERT INTO roles (name, hierarchy_level) VALUES
-('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Comselec Chair', 60), 
+('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Adviser', 65), ('Comselec Chair', 60), 
 ('COMSELEC Commissioner', 58), ('Governor', 50), ('Vice Governor', 45), ('President', 50), ('Vice President', 45), 
 ('Secretary', 40), ('Assistant Secretary', 35), ('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), 
 ('PIO', 20), ('Business Manager', 20), ('Representative', 15), ('Personnel', 10), ('Staff', 10), ('Member', 5), 
@@ -1555,6 +1562,13 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Personnel' AND p.action IN ('view_events', 'view_announcements', 'view_documents')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Adviser' AND p.action IN (
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_activity_cards'
+)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 8. SUPER ADMIN SEED

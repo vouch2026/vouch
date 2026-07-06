@@ -13,6 +13,7 @@ import '../../../academic_structure/providers/term_provider.dart';
 import '../../../academic_structure/models/academic_term_model.dart';
 import '../../../../core/config/supabase_config.dart';
 import './assign_officer_dialog.dart';
+import './assign_adviser_dialog.dart';
 import '../../../sanctions/views/sanction_rules_page.dart';
 import './organization_settings_panel.dart';
 
@@ -404,17 +405,36 @@ class _OfficersTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              FilledButton.icon(
-                onPressed: () => showDialog(
-                  context: context,
-                  builder: (context) => AssignOfficerDialog(org: org),
-                ),
-                icon: const Icon(Icons.assignment_ind_rounded, size: 18),
-                label: const Text('Assign Officer'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF041E42), // Royal Blue
-                  foregroundColor: const Color(0xFFC5A059), // Gold
-                ),
+              Row(
+                children: [
+                  if (org.type != 'comselec') ...[
+                    OutlinedButton.icon(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (context) => AssignAdviserDialog(org: org),
+                      ),
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                      label: const Text('Assign Adviser'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF041E42),
+                        side: const BorderSide(color: Color(0xFF041E42)),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  FilledButton.icon(
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => AssignOfficerDialog(org: org),
+                    ),
+                    icon: const Icon(Icons.assignment_ind_rounded, size: 18),
+                    label: const Text('Assign Officer'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF041E42), // Royal Blue
+                      foregroundColor: const Color(0xFFC5A059), // Gold
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
