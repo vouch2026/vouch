@@ -1051,6 +1051,22 @@ BEGIN
         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
         v_scope_type := 'Program';
         v_scope_id := v_program_id;
+    ELSIF v_role = 'voter' OR v_role = 'voters' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Voters';
+        v_scope_type := 'Program';
+        v_scope_id := v_program_id;
+    ELSIF v_role = 'personnel' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Personnel';
+        v_scope_type := 'Faculty';
+        v_scope_id := v_faculty_id;
+    ELSIF v_role = 'comselec_chairman' OR v_role = 'comselec_chair' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Comselec Chair';
+        v_scope_type := 'Institutional';
+        v_scope_id := COALESCE(v_campus_id, '00000000-0000-0000-0000-000000000000'::uuid);
+    ELSIF v_role = 'comselec_commissioner' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'COMSELEC Commissioner';
+        v_scope_type := 'Institutional';
+        v_scope_id := COALESCE(v_campus_id, '00000000-0000-0000-0000-000000000000'::uuid);
     ELSIF v_role = 'faculty' THEN
         IF v_position = 'dean' THEN
             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
@@ -1168,9 +1184,10 @@ INSERT INTO programs (faculty_id, name, code) VALUES
 -- 4. INSERT ROLES
 INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Comselec Chair', 60), 
-('Governor', 50), ('Vice Governor', 45), ('President', 50), ('Vice President', 45), ('Secretary', 40), ('Assistant Secretary', 35),
-('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), ('PIO', 20),
-('Business Manager', 20), ('Representative', 15), ('Staff', 10), ('Member', 5), ('Students', 5)
+('COMSELEC Commissioner', 58), ('Governor', 50), ('Vice Governor', 45), ('President', 50), ('Vice President', 45), 
+('Secretary', 40), ('Assistant Secretary', 35), ('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), 
+('PIO', 20), ('Business Manager', 20), ('Representative', 15), ('Personnel', 10), ('Staff', 10), ('Member', 5), 
+('Students', 5), ('Voters', 5)
 ON CONFLICT (name) DO UPDATE SET hierarchy_level = EXCLUDED.hierarchy_level;
 
 -- 5. INSERT PERMISSIONS
@@ -1199,7 +1216,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name IN ('Students', 'Member') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions')
+WHERE r.name IN ('Students', 'Member', 'Voters') AND p.action IN ('request_clearance', 'view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 7. MAP PERMISSIONS FOR OFFICERS (Governor, Treasurer, etc.)
@@ -1233,6 +1250,21 @@ AND p.action IN (
     'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization',
     'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- 8. MAP PERMISSIONS FOR COMSELEC AND PERSONNEL
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name IN ('Comselec Chair', 'COMSELEC Commissioner') 
+AND p.action IN (
+    'manage_elections', 'view_election_analytics', 'sign_comselec_clearance',
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Personnel' AND p.action IN ('view_events', 'view_announcements', 'view_documents')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 8. SUPER ADMIN SEED

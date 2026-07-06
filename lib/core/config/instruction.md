@@ -80,6 +80,22 @@ BEGIN
         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
         v_scope_type := 'Program';
         v_scope_id := v_program_id;
+    ELSIF v_role = 'voter' OR v_role = 'voters' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Voters';
+        v_scope_type := 'Program';
+        v_scope_id := v_program_id;
+    ELSIF v_role = 'personnel' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Personnel';
+        v_scope_type := 'Faculty';
+        v_scope_id := v_faculty_id;
+    ELSIF v_role = 'comselec_chairman' OR v_role = 'comselec_chair' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Comselec Chair';
+        v_scope_type := 'Institutional';
+        v_scope_id := '00000000-0000-0000-0000-000000000000';
+    ELSIF v_role = 'comselec_commissioner' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'COMSELEC Commissioner';
+        v_scope_type := 'Institutional';
+        v_scope_id := '00000000-0000-0000-0000-000000000000';
     ELSIF v_role = 'faculty' THEN
         IF v_position = 'dean' THEN
             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
@@ -203,22 +219,38 @@ FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
     77         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
     78         v_scope_type := 'Program';
     79         v_scope_id := v_program_id;
-    80     ELSIF v_role = 'faculty' THEN
-    81         IF v_position = 'dean' THEN
-    82             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
-    83             v_scope_type := 'Faculty';
-    84             v_scope_id := v_faculty_id;
-    85         ELSIF v_position = 'program_head' THEN
-    86             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Program Head';
-    87             v_scope_type := 'Program';
-    88             v_scope_id := v_program_id;
-    89         ELSIF v_position = 'instructor' THEN
-    90             -- NEW logic to handle the generic instructor position
-    91             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Instructor';
-    92             v_scope_type := 'Faculty';
-    93             v_scope_id := v_faculty_id;
-    94         END IF;
-    95     END IF;
+    80     ELSIF v_role = 'voter' OR v_role = 'voters' THEN
+    81         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Voters';
+    82         v_scope_type := 'Program';
+    83         v_scope_id := v_program_id;
+    84     ELSIF v_role = 'personnel' THEN
+    85         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Personnel';
+    86         v_scope_type := 'Faculty';
+    87         v_scope_id := v_faculty_id;
+    88     ELSIF v_role = 'comselec_chairman' OR v_role = 'comselec_chair' THEN
+    89         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Comselec Chair';
+    90         v_scope_type := 'Institutional';
+    91         v_scope_id := '00000000-0000-0000-0000-000000000000';
+    92     ELSIF v_role = 'comselec_commissioner' THEN
+    93         SELECT id INTO target_role_id FROM public.roles WHERE name = 'COMSELEC Commissioner';
+    94         v_scope_type := 'Institutional';
+    95         v_scope_id := '00000000-0000-0000-0000-000000000000';
+    96     ELSIF v_role = 'faculty' THEN
+    97         IF v_position = 'dean' THEN
+    98             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Faculty Dean';
+    99             v_scope_type := 'Faculty';
+   100             v_scope_id := v_faculty_id;
+   101         ELSIF v_position = 'program_head' THEN
+   102             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Program Head';
+   103             v_scope_type := 'Program';
+   104             v_scope_id := v_program_id;
+   105         ELSIF v_position = 'instructor' THEN
+   106             -- NEW logic to handle the generic instructor position
+   107             SELECT id INTO target_role_id FROM public.roles WHERE name = 'Instructor';
+   108             v_scope_type := 'Faculty';
+   109             v_scope_id := v_faculty_id;
+   110         END IF;
+   111     END IF;
     96
     97     -- 5. Assign Role (Only if determined and scope is valid)
     98     IF target_role_id IS NOT NULL AND v_scope_id IS NOT NULL THEN

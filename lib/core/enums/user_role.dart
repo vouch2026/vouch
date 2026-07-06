@@ -11,7 +11,9 @@ enum UserRole {
   treasurer('treasurer'),
   pio('pio'),
   staff('staff'),
-  student('student');
+  student('student'),
+  voter('voter'),
+  personnel('personnel');
 
   final String value;
   const UserRole(this.value);

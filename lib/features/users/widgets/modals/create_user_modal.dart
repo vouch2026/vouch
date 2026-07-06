@@ -178,7 +178,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         SegmentedButton<String>(
           segments: const [
             ButtonSegment(value: 'student', label: Text('Student'), icon: Icon(Icons.person_outline)),
-            ButtonSegment(value: 'faculty', label: Text('Faculty/Staff'), icon: Icon(Icons.school_outlined)),
+            ButtonSegment(value: 'personnel', label: Text('Personnel'), icon: Icon(Icons.badge_outlined)),
             ButtonSegment(value: 'super_admin', label: Text('Admin'), icon: Icon(Icons.admin_panel_settings_outlined)),
           ],
           selected: {_selectedRole},
@@ -428,20 +428,27 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
             ],
           ],
         ),
-        if (_selectedRole == 'faculty' && _position != 'dean') ...[
+        if ((_selectedRole == 'faculty' && _position != 'dean') || _selectedRole == 'personnel') ...[
           const SizedBox(height: AppSpacing.md),
-          _buildLabel('Program Assignment'),
+          _buildLabel(_selectedRole == 'personnel' ? 'Program Assignment (Optional)' : 'Program Assignment'),
           programsAsync.when(
             data: (programs) => DropdownButtonFormField<String>(
               value: _selectedProgramId,
               isExpanded: true,
-              items: programs.map((p) => DropdownMenuItem(
-                value: p.id!, 
-                child: Text(p.name, overflow: TextOverflow.ellipsis),
-              )).toList(),
+              items: [
+                if (_selectedRole == 'personnel')
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('None (Optional)', style: TextStyle(color: AppColors.textGrey)),
+                  ),
+                ...programs.map((p) => DropdownMenuItem<String>(
+                  value: p.id!, 
+                  child: Text(p.name, overflow: TextOverflow.ellipsis),
+                )),
+              ],
               onChanged: (v) => setState(() => _selectedProgramId = v),
               decoration: const InputDecoration(hintText: 'Select Program'),
-              validator: (v) => v == null ? 'Required' : null,
+              validator: (v) => (_selectedRole != 'personnel' && v == null) ? 'Required' : null,
               disabledHint: const Text('Select a Faculty first'),
             ),
             loading: () => const LinearProgressIndicator(),
