@@ -1089,28 +1089,31 @@ BEGIN
         ON CONFLICT DO NOTHING;
     END IF;
 
-    IF v_campus_id IS NOT NULL THEN
-        INSERT INTO public.organization_members (organization_id, user_id, role_id)
-        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
-        FROM public.organizations 
-        WHERE type = 'campus-based' AND campus_id = v_campus_id
-        ON CONFLICT DO NOTHING;
-    END IF;
+    -- Only auto-assign students to their respective organizations as Members
+    IF v_role = 'student' THEN
+        IF v_campus_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
+            FROM public.organizations 
+            WHERE type = 'campus-based' AND campus_id = v_campus_id
+            ON CONFLICT DO NOTHING;
+        END IF;
 
-    IF v_faculty_id IS NOT NULL THEN
-        INSERT INTO public.organization_members (organization_id, user_id, role_id)
-        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
-        FROM public.organizations 
-        WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
-        ON CONFLICT DO NOTHING;
-    END IF;
+        IF v_faculty_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
+            FROM public.organizations 
+            WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
+            ON CONFLICT DO NOTHING;
+        END IF;
 
-    IF v_program_id IS NOT NULL THEN
-        INSERT INTO public.organization_members (organization_id, user_id, role_id)
-        SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
-        FROM public.organizations 
-        WHERE type = 'program-based' AND program_id = v_program_id
-        ON CONFLICT DO NOTHING;
+        IF v_program_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
+            FROM public.organizations 
+            WHERE type = 'program-based' AND program_id = v_program_id
+            ON CONFLICT DO NOTHING;
+        END IF;
     END IF;
 
     RETURN new;
