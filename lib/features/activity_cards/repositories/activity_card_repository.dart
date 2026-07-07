@@ -93,7 +93,8 @@ class ActivityCardRepository {
             *,
             activity_card_clearance_signatures (
               *,
-              roles (name)
+              roles (name),
+              signed_by_user:users!signed_by_user_id (first_name, last_name)
             )
           ''')
           .eq('student_id', studentId)
@@ -194,10 +195,21 @@ class ActivityCardRepository {
           final roleData = s['roles'];
           final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
           
+          final userData = s['signed_by_user'];
+          String? signedByName;
+          if (userData != null) {
+            final fName = userData['first_name'] as String?;
+            final lName = userData['last_name'] as String?;
+            if (fName != null || lName != null) {
+              signedByName = '${fName ?? ''} ${lName ?? ''}'.trim();
+            }
+          }
+
           signatures.add(ActivityCardSignature(
             id: s['id'],
             roleName: roleName,
             signedByUserId: s['signed_by_user_id'],
+            signedByUserName: signedByName,
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
             rejectionReason: s['remarks'],
@@ -461,7 +473,8 @@ class ActivityCardRepository {
             *,
             activity_card_clearance_signatures (
               *,
-              roles (name)
+              roles (name),
+              signed_by_user:users!signed_by_user_id (first_name, last_name)
             )
           ''')
           .filter('student_id', 'in', studentIds)
@@ -548,10 +561,21 @@ class ActivityCardRepository {
           final roleData = s['roles'];
           final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
 
+          final userData = s['signed_by_user'];
+          String? signedByName;
+          if (userData != null) {
+            final fName = userData['first_name'] as String?;
+            final lName = userData['last_name'] as String?;
+            if (fName != null || lName != null) {
+              signedByName = '${fName ?? ''} ${lName ?? ''}'.trim();
+            }
+          }
+
           signatures.add(ActivityCardSignature(
             id: s['id'],
             roleName: roleName,
             signedByUserId: s['signed_by_user_id'],
+            signedByUserName: signedByName,
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
             rejectionReason: s['remarks'],

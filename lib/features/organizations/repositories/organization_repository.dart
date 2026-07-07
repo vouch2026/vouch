@@ -105,14 +105,51 @@ class OrganizationRepository {
 
       final orgResponse = await _client
           .from('organizations')
-          .select('adviser_name')
+          .select('''
+            adviser_name,
+            programs (
+              program_head:users!program_head_id (first_name, last_name)
+            ),
+            faculties (
+              dean:users!dean_id (first_name, last_name)
+            )
+          ''')
           .eq('id', id)
           .maybeSingle();
+      
       final adviserName = orgResponse?['adviser_name'] as String?;
+      
+      String? programHeadName;
+      final programData = orgResponse?['programs'];
+      if (programData != null) {
+        final headData = programData['program_head'];
+        if (headData != null) {
+          final fName = headData['first_name'] as String?;
+          final lName = headData['last_name'] as String?;
+          if (fName != null || lName != null) {
+            programHeadName = '${fName ?? ''} ${lName ?? ''}'.trim();
+          }
+        }
+      }
+
+      String? deanName;
+      final facultyData = orgResponse?['faculties'];
+      if (facultyData != null) {
+        final deanData = facultyData['dean'];
+        if (deanData != null) {
+          final fName = deanData['first_name'] as String?;
+          final lName = deanData['last_name'] as String?;
+          if (fName != null || lName != null) {
+            deanName = '${fName ?? ''} ${lName ?? ''}'.trim();
+          }
+        }
+      }
 
       return OrganizationModel.fromJson({
         ...workspaceJson,
         if (adviserName != null) 'adviser_name': adviserName,
+        if (programHeadName != null) 'program_head_name': programHeadName,
+        if (deanName != null) 'dean_name': deanName,
         'requires_adviser_signature': requiresAdviser,
         'requires_program_head_signature': requiresProgramHead,
         'requires_faculty_dean_signature': requiresFacultyDean,

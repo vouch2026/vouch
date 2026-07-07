@@ -30,6 +30,9 @@ class SignatureWorkflowTimeline extends ConsumerWidget {
     final sortedSignatures = [...signatures]..sort((a, b) => a.order.compareTo(b.order));
 
     final activeTerm = ref.watch(activeTermProvider).valueOrNull;
+    final activeOrg = organizationId != null
+        ? ref.watch(organizationProvider(organizationId!)).valueOrNull
+        : null;
     final officers = organizationId != null 
         ? (ref.watch(organizationOfficersProvider(organizationId!)).valueOrNull ?? [])
         : const <OrganizationMembershipModel>[];
@@ -83,6 +86,12 @@ class SignatureWorkflowTimeline extends ConsumerWidget {
                           return false;
                         }).firstOrNull;
                         resolvedOfficerName = matchingOfficer?.user?.fullName;
+                      } else if (role == 'adviser' || role == 'instructor') {
+                        resolvedOfficerName = activeOrg?.adviserName;
+                      } else if (role == 'program head') {
+                        resolvedOfficerName = activeOrg?.programHeadName;
+                      } else if (role == 'faculty dean' || role == 'dean') {
+                        resolvedOfficerName = activeOrg?.deanName;
                       }
                     }
 
