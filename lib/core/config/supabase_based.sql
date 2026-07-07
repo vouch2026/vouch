@@ -1580,7 +1580,7 @@ WHERE r.name IN ('Secretary', 'Assistant Secretary')
 AND p.action IN (
     'create_event', 'edit_event', 'view_events', 'scan_event_attendance', 'create_announcement', 
     'edit_announcement', 'delete_announcement', 'view_announcements', 'view_members', 'manage_activity_cards', 'view_activity_cards', 'view_documents', 'view_analytics', 'manage_organization',
-    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions', 'view_fees'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

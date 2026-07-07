@@ -45,3 +45,12 @@ DROP POLICY IF EXISTS "Deans and Program Heads can sign slots" ON public.activit
 
 CREATE POLICY "Deans and Program Heads can sign slots" ON public.activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.role_id = required_role_id AND ur.scope_id = required_scope_id AND ur.is_active = true));
+
+-- 5. Grant view_fees permission to Secretary and Assistant Secretary
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id 
+FROM public.roles r
+CROSS JOIN public.permissions p
+WHERE r.name IN ('Secretary', 'Assistant Secretary') 
+AND p.action = 'view_fees'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
