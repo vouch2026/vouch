@@ -56,31 +56,10 @@ class AuthController extends AsyncNotifier<void> {
     required String facultyId,
     required String programId,
     required int yearLevel,
-    XFile? idFront,
-    XFile? idBack,
   }) async {
     state = const AsyncLoading();
     
     final result = await AsyncValue.guard(() async {
-      String? idFrontUrl;
-      String? idBackUrl;
-
-      if (idFront != null) {
-        idFrontUrl = await ref.read(storageServiceProvider).uploadIdImage(
-              identifier: email,
-              file: idFront,
-              isFront: true,
-            );
-      }
-
-      if (idBack != null) {
-        idBackUrl = await ref.read(storageServiceProvider).uploadIdImage(
-              identifier: email,
-              file: idBack,
-              isFront: false,
-            );
-      }
-
       return await _repository.signUpWithEmail(
         email: email,
         password: password,
@@ -92,8 +71,6 @@ class AuthController extends AsyncNotifier<void> {
           'faculty_id': facultyId,
           'program_id': programId,
           'year_level': yearLevel,
-          'id_front_url': idFrontUrl,
-          'id_back_url': idBackUrl,
           'role': 'student',
           'status': 'pending',
         },

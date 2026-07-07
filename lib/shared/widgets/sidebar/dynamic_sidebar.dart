@@ -94,6 +94,11 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
               path: RoutePaths.organizations,
             ),
             SidebarItemConfig(
+              label: 'My Comselec',
+              icon: Icons.gavel_rounded,
+              path: RoutePaths.comselecsManager,
+            ),
+            SidebarItemConfig(
               label: 'Academic Structure',
               icon: Icons.account_tree_outlined,
               path: RoutePaths.academicStructure,

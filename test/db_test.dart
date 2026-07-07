@@ -45,5 +45,25 @@ void main() {
     } catch (e) {
       print('ERROR querying organization_settings: $e');
     }
+
+    try {
+      final res = await client
+          .from('comselecs')
+          .select('*')
+          .limit(1);
+      print('SUCCESS! Comselecs table queried: $res');
+    } catch (e) {
+      print('ERROR querying comselecs: $e');
+    }
+
+    try {
+      final res = await client
+          .from('comselec_settings')
+          .select('*')
+          .limit(1);
+      print('SUCCESS! Comselec_settings table queried: $res');
+    } catch (e) {
+      print('ERROR querying comselec_settings: $e');
+    }
   });
 }

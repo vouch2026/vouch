@@ -27,7 +27,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -79,7 +79,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
                           _EventsTab(user: user),
                           _PaymentsTab(user: user),
                           _ActivityCardsTab(user: user),
-                          _IdTab(user: user),
                         ][_tabController.index],
                       ),
                     ],
@@ -416,7 +415,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
           Tab(text: 'Events'),
           Tab(text: 'Payments'),
           Tab(text: 'Activity Cards'),
-          Tab(text: 'ID'),
         ],
       ),
     );
@@ -999,74 +997,7 @@ class _ActivityCardsTab extends StatelessWidget {
   }
 }
 
-class _IdTab extends StatelessWidget {
-  final UserModel user;
-  const _IdTab({required this.user});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('ID Verification Images', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.lg),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final cardWidth = constraints.maxWidth > 800 ? (constraints.maxWidth - AppSpacing.lg) / 2 : constraints.maxWidth;
-              
-              return Wrap(
-                spacing: AppSpacing.lg,
-                runSpacing: AppSpacing.lg,
-                children: [
-                  _buildIdCard('Front ID', user.idFrontUrl, cardWidth),
-                  _buildIdCard('Back ID', user.idBackUrl, cardWidth),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIdCard(String label, String? url, double width) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        Container(
-          width: width,
-          height: 300, // Fixed height for consistency
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: url != null
-              ? Image.network(
-                  url,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image, size: 48, color: AppColors.textGrey),
-                        SizedBox(height: 8),
-                        Text('Failed to load image', style: TextStyle(color: AppColors.textGrey)),
-                      ],
-                    ),
-                  ),
-                )
-              : const Center(child: Text('No image uploaded')),
-        ),
-      ],
-    );
-  }
-}
 
 class _StatusBadge extends StatelessWidget {
   final String label;

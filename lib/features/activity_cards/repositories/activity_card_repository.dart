@@ -79,6 +79,7 @@ class ActivityCardRepository {
           ''')
           .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
+          .eq('is_mandatory', true)
           .eq('payments.student_id', studentId),
       _client
           .from('student_sanction_records')
@@ -266,11 +267,15 @@ class ActivityCardRepository {
     final hasTreasurer = signatures.any((s) => s.roleName == 'Treasurer');
     final hasGovernor = signatures.any((s) => s.roleName == 'Governor' || s.roleName == 'President');
     final hasAdviser = signatures.any((s) => s.roleName == 'Instructor' || s.roleName == 'Adviser');
+    final hasProgramHead = signatures.any((s) => s.roleName == 'Program Head');
+    final hasFacultyDean = signatures.any((s) => s.roleName == 'Faculty Dean');
 
     final isSecretarySigned = !hasSecretary || signatures.where((s) => s.roleName == 'Secretary').every((s) => s.status == SignatureStatus.signed);
     final isTreasurerSigned = !hasTreasurer || signatures.where((s) => s.roleName == 'Treasurer').every((s) => s.status == SignatureStatus.signed);
     final isGovernorSigned = !hasGovernor || signatures.where((s) => s.roleName == 'Governor' || s.roleName == 'President').every((s) => s.status == SignatureStatus.signed);
     final isAdviserSigned = !hasAdviser || signatures.where((s) => s.roleName == 'Instructor' || s.roleName == 'Adviser').every((s) => s.status == SignatureStatus.signed);
+    final isProgramHeadSigned = !hasProgramHead || signatures.where((s) => s.roleName == 'Program Head').every((s) => s.status == SignatureStatus.signed);
+    final isFacultyDeanSigned = !hasFacultyDean || signatures.where((s) => s.roleName == 'Faculty Dean').every((s) => s.status == SignatureStatus.signed);
 
     if (!isSecretarySigned) {
       return ActivityCardStatus.secretaryReview;
@@ -283,6 +288,12 @@ class ActivityCardRepository {
     }
     if (!isAdviserSigned) {
       return ActivityCardStatus.adviserReview;
+    }
+    if (!isProgramHeadSigned) {
+      return ActivityCardStatus.programHeadReview;
+    }
+    if (!isFacultyDeanSigned) {
+      return ActivityCardStatus.deanReview;
     }
 
     return ActivityCardStatus.cleared;
@@ -405,7 +416,8 @@ class ActivityCardRepository {
         .from('fees')
         .select('id, name, scope_type, amount')
         .eq('scope_id', scopeId)
-        .eq('academic_term_id', termId);
+        .eq('academic_term_id', termId)
+        .eq('is_mandatory', true);
 
     // 5. Get all attendance, payments, and clearance requests for these students in bulk
     final List<Future<dynamic>> futures = [

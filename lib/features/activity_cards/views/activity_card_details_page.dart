@@ -160,6 +160,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                                sig.roleName.toLowerCase() == 'president' || 
                                sig.roleName.toLowerCase() == 'adviser' || 
                                sig.roleName.toLowerCase() == 'instructor' ||
+                               sig.roleName.toLowerCase() == 'program head' ||
                                sig.roleName.toLowerCase() == 'faculty dean' ||
                                sig.roleName.toLowerCase() == 'dean')) {
                 return ActivityCardSignature(

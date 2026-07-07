@@ -17,6 +17,8 @@ import '../../attendance/providers/attendance_provider.dart';
 import '../../excuse_requests/providers/excuse_provider.dart';
 import '../../excuse_requests/views/excuse_request_form_page.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/models/organization_membership_model.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
 
@@ -162,9 +164,45 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole;
-    final canScan = activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false;
-    final canEdit = activeRole?.hasPermission(AppPermissions.editEvent) ?? false;
-    final isOfficer = activeRole != null && activeRole.roleName != 'Member';
+    
+    final userOrgsAsync = ref.watch(userOrganizationsProvider);
+    final userOrgs = userOrgsAsync.value ?? [];
+    
+    final creatorOrgId = event.createdByOrganizationId;
+    final creatorMembershipAsync = creatorOrgId != null
+        ? ref.watch(userMembershipInOrgProvider(creatorOrgId))
+        : const AsyncValue<OrganizationMembershipModel?>.data(null);
+    final creatorMembership = creatorMembershipAsync.value;
+
+    final isMemberOfCreatorOrg = creatorOrgId != null
+        ? userOrgs.any((org) => org.id == creatorOrgId)
+        : userOrgs.any((org) {
+            if (org.id == event.scopeId) return true;
+            if (event.scopeType == 'Institutional' && org.type == 'campus-based' && org.campusId == event.scopeId) return true;
+            if (event.scopeType == 'Faculty' && org.type == 'faculty-based' && org.facultyId == event.scopeId) return true;
+            if (event.scopeType == 'Program' && org.type == 'program-based' && org.programId == event.scopeId) return true;
+            return false;
+          });
+
+    final selectedOrg = workspace.selectedOrganization;
+    final isSelectedOrgCreator = selectedOrg != null && (
+      selectedOrg.id == event.scopeId ||
+      (event.scopeType == 'Institutional' && selectedOrg.type == 'campus-based' && selectedOrg.campusId == event.scopeId) ||
+      (event.scopeType == 'Faculty' && selectedOrg.type == 'faculty-based' && selectedOrg.facultyId == event.scopeId) ||
+      (event.scopeType == 'Program' && selectedOrg.type == 'program-based' && selectedOrg.programId == event.scopeId)
+    );
+
+    final isOfficer = creatorOrgId != null
+        ? (creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member')
+        : (activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator);
+
+    final canScan = creatorOrgId != null
+        ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
+        : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
+
+    final canEdit = creatorOrgId != null
+        ? (creatorMembership?.permissions.contains(AppPermissions.editEvent) ?? false)
+        : ((activeRole?.hasPermission(AppPermissions.editEvent) ?? false) && isSelectedOrgCreator);
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -271,16 +309,18 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         _buildDescriptionSection(event),
                         const SizedBox(height: AppSpacing.xxl),
                         if (!isOfficer && !isUpcoming) ...[
-                          highlightsAsync.when(
-                            data: (count) => _buildHighlightsSection(count),
-                            loading: () => const Center(child: FlickrLoader()),
-                            error: (_, __) => const SizedBox.shrink(),
-                          ),
-                          const SizedBox(height: AppSpacing.xxl),
-                          _buildStudentExcuseAction(context, event),
+                          if (isMemberOfCreatorOrg) ...[
+                            highlightsAsync.when(
+                              data: (count) => _buildHighlightsSection(count),
+                              loading: () => const Center(child: FlickrLoader()),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
+                            const SizedBox(height: AppSpacing.xxl),
+                          ],
+                          _buildStudentExcuseAction(context, event, isOfficer: isOfficer),
                         ],
                         if (isOfficer && event.isPastTimeout) ...[
-                          _buildOfficerPastEventActions(context, event),
+                          _buildOfficerPastEventActions(context, event, isMemberOfCreatorOrg: isMemberOfCreatorOrg),
                         ],
                       ],
                     ),
@@ -290,14 +330,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                   const SizedBox(width: AppSpacing.xxl),
                   Expanded(
                     flex: 1,
-                    child: _buildInfoSidebar(event),
+                    child: _buildInfoSidebar(event, isOfficer: isOfficer),
                   ),
                 ],
               ],
             ),
             if (isMobile) ...[
               const SizedBox(height: AppSpacing.xxl),
-              _buildInfoSidebar(event),
+              _buildInfoSidebar(event, isOfficer: isOfficer),
             ],
             const SizedBox(height: AppSpacing.xxl),
           ],
@@ -440,10 +480,9 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
   }
 
-  Widget _buildInfoSidebar(EventModel event) {
+  Widget _buildInfoSidebar(EventModel event, {required bool isOfficer}) {
     final userAsync = ref.watch(userProfileProvider);
     final attendanceAsync = ref.watch(userEventAttendanceProvider(event.id!));
-    final workspace = ref.watch(workspaceProvider);
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -451,8 +490,6 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
 
     return userAsync.when(
       data: (user) {
-        final activeRole = workspace.activeRole;
-        final isOfficer = activeRole != null && activeRole.roleName != 'Member';
 
         return Column(
           children: [
@@ -765,7 +802,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
   }
 
-  Widget _buildOfficerPastEventActions(BuildContext context, EventModel event) {
+  Widget _buildOfficerPastEventActions(BuildContext context, EventModel event, {required bool isMemberOfCreatorOrg}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -849,8 +886,10 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  highlightsButton,
-                  const SizedBox(height: AppSpacing.md),
+                  if (isMemberOfCreatorOrg) ...[
+                    highlightsButton,
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   attendanceButton,
                 ],
               );
@@ -858,8 +897,10 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
 
             return Row(
               children: [
-                Expanded(child: highlightsButton),
-                const SizedBox(width: AppSpacing.md),
+                if (isMemberOfCreatorOrg) ...[
+                  Expanded(child: highlightsButton),
+                  const SizedBox(width: AppSpacing.md),
+                ],
                 Expanded(child: attendanceButton),
               ],
             );
@@ -869,16 +910,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
   }
 
-  Widget _buildStudentExcuseAction(BuildContext context, EventModel event) {
+  Widget _buildStudentExcuseAction(BuildContext context, EventModel event, {required bool isOfficer}) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isPast = event.eventDate.isBefore(today);
     
     if (!isPast) return const SizedBox.shrink();
-
-    final workspace = ref.watch(workspaceProvider);
-    final activeRole = workspace.activeRole;
-    final isOfficer = activeRole != null && activeRole.roleName != 'Member';
     
     if (isOfficer) return const SizedBox.shrink();
 

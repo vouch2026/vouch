@@ -57,7 +57,7 @@ class ExcuseRepository {
           'rejection_reason': null,
           'reviewed_by_user_id': null,
           'reviewed_at': null,
-          'updated_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
         }).eq('id', existing['id']);
       }
     } else {
@@ -77,7 +77,7 @@ class ExcuseRepository {
         'scope_id': scopeId,
         'academic_term_id': termId,
         'submission_count': 1,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
     }
   }
@@ -168,7 +168,7 @@ class ExcuseRepository {
     required String scopeType,
     required String termId,
   }) async {
-    final now = DateTime.now().toIso8601String();
+    final now = DateTime.now().toUtc().toIso8601String();
 
     // 1. Update excuse request status
     final excuseData = await _client.from('excuse_requests').update({

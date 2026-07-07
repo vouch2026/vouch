@@ -7,7 +7,6 @@ import '../models/organization_membership_model.dart';
 import '../repositories/organization_repository.dart';
 import 'organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/models/user_model.dart';
 import '../../../core/models/app_role.dart';
 
 part 'workspace_provider.freezed.dart';
@@ -98,28 +97,17 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
         return;
       }
 
-      final memberships = await _repository.getOrganizationOfficers(org.id);
-      
-      // Filter all memberships for this user
-      final myMemberships = memberships.where((m) => m.userId == profile.id).toList();
-      
-      OrganizationMembershipModel? activeMembership;
-      if (myMemberships.isNotEmpty) {
-        // Sort by hierarchy level descending (highest role first)
-        myMemberships.sort((a, b) => (b.hierarchyLevel ?? 0).compareTo(a.hierarchyLevel ?? 0));
-        activeMembership = myMemberships.first;
-      }
+      final roleData = await _repository.getWorkspaceRoleAndPermissions(org.id, org.type);
 
       AppRole? role;
-      if (activeMembership != null && activeMembership.roleName != null) {
+      if (roleData != null) {
         role = AppRole(
-          roleName: activeMembership.roleName!,
-          hierarchyLevel: activeMembership.hierarchyLevel ?? 5,
+          roleName: roleData['role_name'] as String,
+          hierarchyLevel: roleData['hierarchy_level'] as int,
           scopeType: org.type,
-          permissions: activeMembership.permissions, 
+          permissions: List<String>.from(roleData['permissions'] as List),
         );
       } else {
-        // Fallback to basic membership if not found in officers list
         role = AppRole(
           roleName: 'Member',
           hierarchyLevel: 5,
@@ -129,12 +117,13 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       }
 
       state = state.copyWith(
-        activeMembership: activeMembership,
+        activeMembership: null,
         activeRole: role,
         isLoading: false,
         isInitialized: true,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Error in selectOrganization: $e\n$stack');
       state = state.copyWith(isLoading: false, isInitialized: true);
     }
   }

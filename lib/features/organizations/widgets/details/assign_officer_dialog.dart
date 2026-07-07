@@ -37,7 +37,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
   }
 
   String? _getEligibilityError(UserModel user) {
-    if (widget.org.type == 'campus-based') {
+    if (widget.org.type == 'campus-based' || widget.org.type == 'comselec') {
       if (user.campusId != widget.org.campusId) {
         return 'Student does not belong to this campus';
       }
@@ -222,6 +222,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
         roleId: _selectedRole!['id'],
         termId: _selectedTerm!.id,
         assignedBy: currentUser.id!,
+        workspaceType: widget.org.type,
       );
 
       if (mounted) {

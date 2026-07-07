@@ -199,6 +199,44 @@ class ClearanceRepository {
     
     final sigList = sigsResponse as List;
 
+    // Helper to check if a specific role is signed
+    bool isRoleSigned(String targetRole) {
+      final sig = sigList.firstWhere(
+        (s) {
+          if (s == null) return false;
+          final r = s['roles'];
+          final rName = r is List ? r.first['name'] as String : r['name'] as String;
+          if (targetRole == 'Adviser') {
+            return rName == 'Instructor' || rName == 'Adviser';
+          }
+          if (targetRole == 'Governor') {
+            return rName == 'Governor' || rName == 'President';
+          }
+          return rName == targetRole;
+        },
+        orElse: () => null,
+      );
+      return sig == null || sig['status'] == 'Signed';
+    }
+
+    // Helper to check if a specific role is present in this request
+    bool isRolePresent(String targetRole) {
+      return sigList.any(
+        (s) {
+          if (s == null) return false;
+          final r = s['roles'];
+          final rName = r is List ? r.first['name'] as String : r['name'] as String;
+          if (targetRole == 'Adviser') {
+            return rName == 'Instructor' || rName == 'Adviser';
+          }
+          if (targetRole == 'Governor') {
+            return rName == 'Governor' || rName == 'President';
+          }
+          return rName == targetRole;
+        },
+      );
+    }
+
     // 5. Enforce role-based clearance validations
     if (roleName == 'Secretary') {
       final allEventsComplied = card.events.every((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared);
@@ -212,30 +250,12 @@ class ClearanceRepository {
       }
     } else if (roleName == 'Governor' || roleName == 'President') {
       // Secretary must have signed
-      final secretarySig = sigList.cast<Map<String, dynamic>?>().firstWhere(
-        (s) {
-          if (s == null) return false;
-          final r = s['roles'];
-          final rName = r is List ? r.first['name'] : r['name'];
-          return rName == 'Secretary';
-        },
-        orElse: () => null,
-      );
-      if (secretarySig != null && secretarySig['status'] != 'Signed') {
+      if (!isRoleSigned('Secretary')) {
         throw Exception('Cannot sign. Secretary has not signed this clearance card yet.');
       }
 
       // Treasurer must have signed
-      final treasurerSig = sigList.cast<Map<String, dynamic>?>().firstWhere(
-        (s) {
-          if (s == null) return false;
-          final r = s['roles'];
-          final rName = r is List ? r.first['name'] : r['name'];
-          return rName == 'Treasurer';
-        },
-        orElse: () => null,
-      );
-      if (treasurerSig != null && treasurerSig['status'] != 'Signed') {
+      if (!isRoleSigned('Treasurer')) {
         throw Exception('Cannot sign. Treasurer has not signed this clearance card yet.');
       }
 
@@ -261,17 +281,34 @@ class ClearanceRepository {
       }
     } else if (roleName == 'Instructor' || roleName == 'Adviser') {
       // Governor/President must have signed before Adviser can sign
-      final govSig = sigList.cast<Map<String, dynamic>?>().firstWhere(
-        (s) {
-          if (s == null) return false;
-          final r = s['roles'];
-          final rName = r is List ? r.first['name'] : r['name'];
-          return rName == 'Governor' || rName == 'President';
-        },
-        orElse: () => null,
-      );
-      if (govSig != null && govSig['status'] != 'Signed') {
+      if (!isRoleSigned('Governor')) {
         throw Exception('Cannot sign. Governor/President signature is required first.');
+      }
+    } else if (roleName == 'Program Head') {
+      // Adviser/Instructor must have signed if present. Otherwise, Governor/President must have signed.
+      if (isRolePresent('Adviser')) {
+        if (!isRoleSigned('Adviser')) {
+          throw Exception('Cannot sign. Adviser/Instructor signature is required first.');
+        }
+      } else {
+        if (!isRoleSigned('Governor')) {
+          throw Exception('Cannot sign. Governor/President signature is required first.');
+        }
+      }
+    } else if (roleName == 'Faculty Dean' || roleName == 'Dean') {
+      // Program Head must have signed if present. Otherwise, Adviser/Instructor must have signed if present. Otherwise, Governor/President must have signed.
+      if (isRolePresent('Program Head')) {
+        if (!isRoleSigned('Program Head')) {
+          throw Exception('Cannot sign. Program Head signature is required first.');
+        }
+      } else if (isRolePresent('Adviser')) {
+        if (!isRoleSigned('Adviser')) {
+          throw Exception('Cannot sign. Adviser/Instructor signature is required first.');
+        }
+      } else {
+        if (!isRoleSigned('Governor')) {
+          throw Exception('Cannot sign. Governor/President signature is required first.');
+        }
       }
     }
 
@@ -279,7 +316,7 @@ class ClearanceRepository {
     await _client.from('activity_card_clearance_signatures').update({
       'status': 'Signed',
       'signed_by_user_id': userId,
-      'signed_at': DateTime.now().toIso8601String(),
+      'signed_at': DateTime.now().toUtc().toIso8601String(),
       'remarks': remarks,
     }).eq('id', signatureId);
 
@@ -294,7 +331,7 @@ class ClearanceRepository {
     if (isFullySigned) {
       await _client.from('activity_card_clearance_requests').update({
         'status': 'Cleared',
-        'completed_at': DateTime.now().toIso8601String(),
+        'completed_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', requestId);
     }
   }
@@ -308,7 +345,7 @@ class ClearanceRepository {
     await _client.from('activity_card_clearance_signatures').update({
       'status': 'Rejected',
       'signed_by_user_id': userId,
-      'signed_at': DateTime.now().toIso8601String(),
+      'signed_at': DateTime.now().toUtc().toIso8601String(),
       'remarks': remarks,
     }).eq('id', signatureId);
 

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$EventModel {
 
- String? get id; String get name;@JsonKey(name: 'event_date') DateTime get eventDate;@JsonKey(name: 'short_description') String? get shortDescription;@JsonKey(name: 'full_description') String? get fullDescription;@JsonKey(name: 'image_url') String? get imageUrl; String get location;@JsonKey(name: 'time_in_start') String get timeInStart;@JsonKey(name: 'time_in_end') String get timeInEnd;@JsonKey(name: 'time_out_start') String get timeOutStart;@JsonKey(name: 'time_out_end') String get timeOutEnd;@JsonKey(name: 'scope_type') String get scopeType;@JsonKey(name: 'scope_id') String get scopeId;@JsonKey(name: 'is_mandatory') bool get isMandatory;@JsonKey(name: 'academic_term_id') String? get academicTermId;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;@JsonKey(name: 'created_by_user_id') String? get createdByUserId;
+ String? get id; String get name;@JsonKey(name: 'event_date') DateTime get eventDate;@JsonKey(name: 'short_description') String? get shortDescription;@JsonKey(name: 'full_description') String? get fullDescription;@JsonKey(name: 'image_url') String? get imageUrl; String get location;@JsonKey(name: 'time_in_start') String get timeInStart;@JsonKey(name: 'time_in_end') String get timeInEnd;@JsonKey(name: 'time_out_start') String get timeOutStart;@JsonKey(name: 'time_out_end') String get timeOutEnd;@JsonKey(name: 'scope_type') String get scopeType;@JsonKey(name: 'scope_id') String get scopeId;@JsonKey(name: 'is_mandatory') bool get isMandatory;@JsonKey(name: 'academic_term_id') String? get academicTermId;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;@JsonKey(name: 'created_by_user_id') String? get createdByUserId;@JsonKey(name: 'created_by_organization_id') String? get createdByOrganizationId;
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $EventModelCopyWith<EventModel> get copyWith => _$EventModelCopyWithImpl<EventMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.eventDate, eventDate) || other.eventDate == eventDate)&&(identical(other.shortDescription, shortDescription) || other.shortDescription == shortDescription)&&(identical(other.fullDescription, fullDescription) || other.fullDescription == fullDescription)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.location, location) || other.location == location)&&(identical(other.timeInStart, timeInStart) || other.timeInStart == timeInStart)&&(identical(other.timeInEnd, timeInEnd) || other.timeInEnd == timeInEnd)&&(identical(other.timeOutStart, timeOutStart) || other.timeOutStart == timeOutStart)&&(identical(other.timeOutEnd, timeOutEnd) || other.timeOutEnd == timeOutEnd)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.isMandatory, isMandatory) || other.isMandatory == isMandatory)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.createdByUserId, createdByUserId) || other.createdByUserId == createdByUserId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.eventDate, eventDate) || other.eventDate == eventDate)&&(identical(other.shortDescription, shortDescription) || other.shortDescription == shortDescription)&&(identical(other.fullDescription, fullDescription) || other.fullDescription == fullDescription)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.location, location) || other.location == location)&&(identical(other.timeInStart, timeInStart) || other.timeInStart == timeInStart)&&(identical(other.timeInEnd, timeInEnd) || other.timeInEnd == timeInEnd)&&(identical(other.timeOutStart, timeOutStart) || other.timeOutStart == timeOutStart)&&(identical(other.timeOutEnd, timeOutEnd) || other.timeOutEnd == timeOutEnd)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.isMandatory, isMandatory) || other.isMandatory == isMandatory)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.createdByUserId, createdByUserId) || other.createdByUserId == createdByUserId)&&(identical(other.createdByOrganizationId, createdByOrganizationId) || other.createdByOrganizationId == createdByOrganizationId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,eventDate,shortDescription,fullDescription,imageUrl,location,timeInStart,timeInEnd,timeOutStart,timeOutEnd,scopeType,scopeId,isMandatory,academicTermId,createdAt,updatedAt,createdByUserId);
+int get hashCode => Object.hashAll([runtimeType,id,name,eventDate,shortDescription,fullDescription,imageUrl,location,timeInStart,timeInEnd,timeOutStart,timeOutEnd,scopeType,scopeId,isMandatory,academicTermId,createdAt,updatedAt,createdByUserId,createdByOrganizationId]);
 
 @override
 String toString() {
-  return 'EventModel(id: $id, name: $name, eventDate: $eventDate, shortDescription: $shortDescription, fullDescription: $fullDescription, imageUrl: $imageUrl, location: $location, timeInStart: $timeInStart, timeInEnd: $timeInEnd, timeOutStart: $timeOutStart, timeOutEnd: $timeOutEnd, scopeType: $scopeType, scopeId: $scopeId, isMandatory: $isMandatory, academicTermId: $academicTermId, createdAt: $createdAt, updatedAt: $updatedAt, createdByUserId: $createdByUserId)';
+  return 'EventModel(id: $id, name: $name, eventDate: $eventDate, shortDescription: $shortDescription, fullDescription: $fullDescription, imageUrl: $imageUrl, location: $location, timeInStart: $timeInStart, timeInEnd: $timeInEnd, timeOutStart: $timeOutStart, timeOutEnd: $timeOutEnd, scopeType: $scopeType, scopeId: $scopeId, isMandatory: $isMandatory, academicTermId: $academicTermId, createdAt: $createdAt, updatedAt: $updatedAt, createdByUserId: $createdByUserId, createdByOrganizationId: $createdByOrganizationId)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $EventModelCopyWith<$Res>  {
   factory $EventModelCopyWith(EventModel value, $Res Function(EventModel) _then) = _$EventModelCopyWithImpl;
 @useResult
 $Res call({
- String? id, String name,@JsonKey(name: 'event_date') DateTime eventDate,@JsonKey(name: 'short_description') String? shortDescription,@JsonKey(name: 'full_description') String? fullDescription,@JsonKey(name: 'image_url') String? imageUrl, String location,@JsonKey(name: 'time_in_start') String timeInStart,@JsonKey(name: 'time_in_end') String timeInEnd,@JsonKey(name: 'time_out_start') String timeOutStart,@JsonKey(name: 'time_out_end') String timeOutEnd,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'is_mandatory') bool isMandatory,@JsonKey(name: 'academic_term_id') String? academicTermId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'created_by_user_id') String? createdByUserId
+ String? id, String name,@JsonKey(name: 'event_date') DateTime eventDate,@JsonKey(name: 'short_description') String? shortDescription,@JsonKey(name: 'full_description') String? fullDescription,@JsonKey(name: 'image_url') String? imageUrl, String location,@JsonKey(name: 'time_in_start') String timeInStart,@JsonKey(name: 'time_in_end') String timeInEnd,@JsonKey(name: 'time_out_start') String timeOutStart,@JsonKey(name: 'time_out_end') String timeOutEnd,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'is_mandatory') bool isMandatory,@JsonKey(name: 'academic_term_id') String? academicTermId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'created_by_user_id') String? createdByUserId,@JsonKey(name: 'created_by_organization_id') String? createdByOrganizationId
 });
 
 
@@ -65,7 +65,7 @@ class _$EventModelCopyWithImpl<$Res>
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? name = null,Object? eventDate = null,Object? shortDescription = freezed,Object? fullDescription = freezed,Object? imageUrl = freezed,Object? location = null,Object? timeInStart = null,Object? timeInEnd = null,Object? timeOutStart = null,Object? timeOutEnd = null,Object? scopeType = null,Object? scopeId = null,Object? isMandatory = null,Object? academicTermId = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? createdByUserId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? name = null,Object? eventDate = null,Object? shortDescription = freezed,Object? fullDescription = freezed,Object? imageUrl = freezed,Object? location = null,Object? timeInStart = null,Object? timeInEnd = null,Object? timeOutStart = null,Object? timeOutEnd = null,Object? scopeType = null,Object? scopeId = null,Object? isMandatory = null,Object? academicTermId = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? createdByUserId = freezed,Object? createdByOrganizationId = freezed,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -85,6 +85,7 @@ as bool,academicTermId: freezed == academicTermId ? _self.academicTermId : acade
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdByUserId: freezed == createdByUserId ? _self.createdByUserId : createdByUserId // ignore: cast_nullable_to_non_nullable
+as String?,createdByOrganizationId: freezed == createdByOrganizationId ? _self.createdByOrganizationId : createdByOrganizationId // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -170,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String name, @JsonKey(name: 'event_date')  DateTime eventDate, @JsonKey(name: 'short_description')  String? shortDescription, @JsonKey(name: 'full_description')  String? fullDescription, @JsonKey(name: 'image_url')  String? imageUrl,  String location, @JsonKey(name: 'time_in_start')  String timeInStart, @JsonKey(name: 'time_in_end')  String timeInEnd, @JsonKey(name: 'time_out_start')  String timeOutStart, @JsonKey(name: 'time_out_end')  String timeOutEnd, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'is_mandatory')  bool isMandatory, @JsonKey(name: 'academic_term_id')  String? academicTermId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'created_by_user_id')  String? createdByUserId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String name, @JsonKey(name: 'event_date')  DateTime eventDate, @JsonKey(name: 'short_description')  String? shortDescription, @JsonKey(name: 'full_description')  String? fullDescription, @JsonKey(name: 'image_url')  String? imageUrl,  String location, @JsonKey(name: 'time_in_start')  String timeInStart, @JsonKey(name: 'time_in_end')  String timeInEnd, @JsonKey(name: 'time_out_start')  String timeOutStart, @JsonKey(name: 'time_out_end')  String timeOutEnd, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'is_mandatory')  bool isMandatory, @JsonKey(name: 'academic_term_id')  String? academicTermId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'created_by_user_id')  String? createdByUserId, @JsonKey(name: 'created_by_organization_id')  String? createdByOrganizationId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventModel() when $default != null:
-return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that.fullDescription,_that.imageUrl,_that.location,_that.timeInStart,_that.timeInEnd,_that.timeOutStart,_that.timeOutEnd,_that.scopeType,_that.scopeId,_that.isMandatory,_that.academicTermId,_that.createdAt,_that.updatedAt,_that.createdByUserId);case _:
+return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that.fullDescription,_that.imageUrl,_that.location,_that.timeInStart,_that.timeInEnd,_that.timeOutStart,_that.timeOutEnd,_that.scopeType,_that.scopeId,_that.isMandatory,_that.academicTermId,_that.createdAt,_that.updatedAt,_that.createdByUserId,_that.createdByOrganizationId);case _:
   return orElse();
 
 }
@@ -191,10 +192,10 @@ return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String name, @JsonKey(name: 'event_date')  DateTime eventDate, @JsonKey(name: 'short_description')  String? shortDescription, @JsonKey(name: 'full_description')  String? fullDescription, @JsonKey(name: 'image_url')  String? imageUrl,  String location, @JsonKey(name: 'time_in_start')  String timeInStart, @JsonKey(name: 'time_in_end')  String timeInEnd, @JsonKey(name: 'time_out_start')  String timeOutStart, @JsonKey(name: 'time_out_end')  String timeOutEnd, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'is_mandatory')  bool isMandatory, @JsonKey(name: 'academic_term_id')  String? academicTermId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'created_by_user_id')  String? createdByUserId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String name, @JsonKey(name: 'event_date')  DateTime eventDate, @JsonKey(name: 'short_description')  String? shortDescription, @JsonKey(name: 'full_description')  String? fullDescription, @JsonKey(name: 'image_url')  String? imageUrl,  String location, @JsonKey(name: 'time_in_start')  String timeInStart, @JsonKey(name: 'time_in_end')  String timeInEnd, @JsonKey(name: 'time_out_start')  String timeOutStart, @JsonKey(name: 'time_out_end')  String timeOutEnd, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'is_mandatory')  bool isMandatory, @JsonKey(name: 'academic_term_id')  String? academicTermId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'created_by_user_id')  String? createdByUserId, @JsonKey(name: 'created_by_organization_id')  String? createdByOrganizationId)  $default,) {final _that = this;
 switch (_that) {
 case _EventModel():
-return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that.fullDescription,_that.imageUrl,_that.location,_that.timeInStart,_that.timeInEnd,_that.timeOutStart,_that.timeOutEnd,_that.scopeType,_that.scopeId,_that.isMandatory,_that.academicTermId,_that.createdAt,_that.updatedAt,_that.createdByUserId);case _:
+return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that.fullDescription,_that.imageUrl,_that.location,_that.timeInStart,_that.timeInEnd,_that.timeOutStart,_that.timeOutEnd,_that.scopeType,_that.scopeId,_that.isMandatory,_that.academicTermId,_that.createdAt,_that.updatedAt,_that.createdByUserId,_that.createdByOrganizationId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +212,10 @@ return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String name, @JsonKey(name: 'event_date')  DateTime eventDate, @JsonKey(name: 'short_description')  String? shortDescription, @JsonKey(name: 'full_description')  String? fullDescription, @JsonKey(name: 'image_url')  String? imageUrl,  String location, @JsonKey(name: 'time_in_start')  String timeInStart, @JsonKey(name: 'time_in_end')  String timeInEnd, @JsonKey(name: 'time_out_start')  String timeOutStart, @JsonKey(name: 'time_out_end')  String timeOutEnd, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'is_mandatory')  bool isMandatory, @JsonKey(name: 'academic_term_id')  String? academicTermId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'created_by_user_id')  String? createdByUserId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String name, @JsonKey(name: 'event_date')  DateTime eventDate, @JsonKey(name: 'short_description')  String? shortDescription, @JsonKey(name: 'full_description')  String? fullDescription, @JsonKey(name: 'image_url')  String? imageUrl,  String location, @JsonKey(name: 'time_in_start')  String timeInStart, @JsonKey(name: 'time_in_end')  String timeInEnd, @JsonKey(name: 'time_out_start')  String timeOutStart, @JsonKey(name: 'time_out_end')  String timeOutEnd, @JsonKey(name: 'scope_type')  String scopeType, @JsonKey(name: 'scope_id')  String scopeId, @JsonKey(name: 'is_mandatory')  bool isMandatory, @JsonKey(name: 'academic_term_id')  String? academicTermId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'created_by_user_id')  String? createdByUserId, @JsonKey(name: 'created_by_organization_id')  String? createdByOrganizationId)?  $default,) {final _that = this;
 switch (_that) {
 case _EventModel() when $default != null:
-return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that.fullDescription,_that.imageUrl,_that.location,_that.timeInStart,_that.timeInEnd,_that.timeOutStart,_that.timeOutEnd,_that.scopeType,_that.scopeId,_that.isMandatory,_that.academicTermId,_that.createdAt,_that.updatedAt,_that.createdByUserId);case _:
+return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that.fullDescription,_that.imageUrl,_that.location,_that.timeInStart,_that.timeInEnd,_that.timeOutStart,_that.timeOutEnd,_that.scopeType,_that.scopeId,_that.isMandatory,_that.academicTermId,_that.createdAt,_that.updatedAt,_that.createdByUserId,_that.createdByOrganizationId);case _:
   return null;
 
 }
@@ -226,7 +227,7 @@ return $default(_that.id,_that.name,_that.eventDate,_that.shortDescription,_that
 @JsonSerializable()
 
 class _EventModel extends EventModel {
-  const _EventModel({this.id, required this.name, @JsonKey(name: 'event_date') required this.eventDate, @JsonKey(name: 'short_description') this.shortDescription, @JsonKey(name: 'full_description') this.fullDescription, @JsonKey(name: 'image_url') this.imageUrl, required this.location, @JsonKey(name: 'time_in_start') required this.timeInStart, @JsonKey(name: 'time_in_end') required this.timeInEnd, @JsonKey(name: 'time_out_start') required this.timeOutStart, @JsonKey(name: 'time_out_end') required this.timeOutEnd, @JsonKey(name: 'scope_type') required this.scopeType, @JsonKey(name: 'scope_id') required this.scopeId, @JsonKey(name: 'is_mandatory') this.isMandatory = true, @JsonKey(name: 'academic_term_id') this.academicTermId, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt, @JsonKey(name: 'created_by_user_id') this.createdByUserId}): super._();
+  const _EventModel({this.id, required this.name, @JsonKey(name: 'event_date') required this.eventDate, @JsonKey(name: 'short_description') this.shortDescription, @JsonKey(name: 'full_description') this.fullDescription, @JsonKey(name: 'image_url') this.imageUrl, required this.location, @JsonKey(name: 'time_in_start') required this.timeInStart, @JsonKey(name: 'time_in_end') required this.timeInEnd, @JsonKey(name: 'time_out_start') required this.timeOutStart, @JsonKey(name: 'time_out_end') required this.timeOutEnd, @JsonKey(name: 'scope_type') required this.scopeType, @JsonKey(name: 'scope_id') required this.scopeId, @JsonKey(name: 'is_mandatory') this.isMandatory = true, @JsonKey(name: 'academic_term_id') this.academicTermId, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt, @JsonKey(name: 'created_by_user_id') this.createdByUserId, @JsonKey(name: 'created_by_organization_id') this.createdByOrganizationId}): super._();
   factory _EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
 
 @override final  String? id;
@@ -247,6 +248,7 @@ class _EventModel extends EventModel {
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
 @override@JsonKey(name: 'created_by_user_id') final  String? createdByUserId;
+@override@JsonKey(name: 'created_by_organization_id') final  String? createdByOrganizationId;
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
@@ -261,16 +263,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.eventDate, eventDate) || other.eventDate == eventDate)&&(identical(other.shortDescription, shortDescription) || other.shortDescription == shortDescription)&&(identical(other.fullDescription, fullDescription) || other.fullDescription == fullDescription)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.location, location) || other.location == location)&&(identical(other.timeInStart, timeInStart) || other.timeInStart == timeInStart)&&(identical(other.timeInEnd, timeInEnd) || other.timeInEnd == timeInEnd)&&(identical(other.timeOutStart, timeOutStart) || other.timeOutStart == timeOutStart)&&(identical(other.timeOutEnd, timeOutEnd) || other.timeOutEnd == timeOutEnd)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.isMandatory, isMandatory) || other.isMandatory == isMandatory)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.createdByUserId, createdByUserId) || other.createdByUserId == createdByUserId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.eventDate, eventDate) || other.eventDate == eventDate)&&(identical(other.shortDescription, shortDescription) || other.shortDescription == shortDescription)&&(identical(other.fullDescription, fullDescription) || other.fullDescription == fullDescription)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.location, location) || other.location == location)&&(identical(other.timeInStart, timeInStart) || other.timeInStart == timeInStart)&&(identical(other.timeInEnd, timeInEnd) || other.timeInEnd == timeInEnd)&&(identical(other.timeOutStart, timeOutStart) || other.timeOutStart == timeOutStart)&&(identical(other.timeOutEnd, timeOutEnd) || other.timeOutEnd == timeOutEnd)&&(identical(other.scopeType, scopeType) || other.scopeType == scopeType)&&(identical(other.scopeId, scopeId) || other.scopeId == scopeId)&&(identical(other.isMandatory, isMandatory) || other.isMandatory == isMandatory)&&(identical(other.academicTermId, academicTermId) || other.academicTermId == academicTermId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.createdByUserId, createdByUserId) || other.createdByUserId == createdByUserId)&&(identical(other.createdByOrganizationId, createdByOrganizationId) || other.createdByOrganizationId == createdByOrganizationId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,eventDate,shortDescription,fullDescription,imageUrl,location,timeInStart,timeInEnd,timeOutStart,timeOutEnd,scopeType,scopeId,isMandatory,academicTermId,createdAt,updatedAt,createdByUserId);
+int get hashCode => Object.hashAll([runtimeType,id,name,eventDate,shortDescription,fullDescription,imageUrl,location,timeInStart,timeInEnd,timeOutStart,timeOutEnd,scopeType,scopeId,isMandatory,academicTermId,createdAt,updatedAt,createdByUserId,createdByOrganizationId]);
 
 @override
 String toString() {
-  return 'EventModel(id: $id, name: $name, eventDate: $eventDate, shortDescription: $shortDescription, fullDescription: $fullDescription, imageUrl: $imageUrl, location: $location, timeInStart: $timeInStart, timeInEnd: $timeInEnd, timeOutStart: $timeOutStart, timeOutEnd: $timeOutEnd, scopeType: $scopeType, scopeId: $scopeId, isMandatory: $isMandatory, academicTermId: $academicTermId, createdAt: $createdAt, updatedAt: $updatedAt, createdByUserId: $createdByUserId)';
+  return 'EventModel(id: $id, name: $name, eventDate: $eventDate, shortDescription: $shortDescription, fullDescription: $fullDescription, imageUrl: $imageUrl, location: $location, timeInStart: $timeInStart, timeInEnd: $timeInEnd, timeOutStart: $timeOutStart, timeOutEnd: $timeOutEnd, scopeType: $scopeType, scopeId: $scopeId, isMandatory: $isMandatory, academicTermId: $academicTermId, createdAt: $createdAt, updatedAt: $updatedAt, createdByUserId: $createdByUserId, createdByOrganizationId: $createdByOrganizationId)';
 }
 
 
@@ -281,7 +283,7 @@ abstract mixin class _$EventModelCopyWith<$Res> implements $EventModelCopyWith<$
   factory _$EventModelCopyWith(_EventModel value, $Res Function(_EventModel) _then) = __$EventModelCopyWithImpl;
 @override @useResult
 $Res call({
- String? id, String name,@JsonKey(name: 'event_date') DateTime eventDate,@JsonKey(name: 'short_description') String? shortDescription,@JsonKey(name: 'full_description') String? fullDescription,@JsonKey(name: 'image_url') String? imageUrl, String location,@JsonKey(name: 'time_in_start') String timeInStart,@JsonKey(name: 'time_in_end') String timeInEnd,@JsonKey(name: 'time_out_start') String timeOutStart,@JsonKey(name: 'time_out_end') String timeOutEnd,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'is_mandatory') bool isMandatory,@JsonKey(name: 'academic_term_id') String? academicTermId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'created_by_user_id') String? createdByUserId
+ String? id, String name,@JsonKey(name: 'event_date') DateTime eventDate,@JsonKey(name: 'short_description') String? shortDescription,@JsonKey(name: 'full_description') String? fullDescription,@JsonKey(name: 'image_url') String? imageUrl, String location,@JsonKey(name: 'time_in_start') String timeInStart,@JsonKey(name: 'time_in_end') String timeInEnd,@JsonKey(name: 'time_out_start') String timeOutStart,@JsonKey(name: 'time_out_end') String timeOutEnd,@JsonKey(name: 'scope_type') String scopeType,@JsonKey(name: 'scope_id') String scopeId,@JsonKey(name: 'is_mandatory') bool isMandatory,@JsonKey(name: 'academic_term_id') String? academicTermId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'created_by_user_id') String? createdByUserId,@JsonKey(name: 'created_by_organization_id') String? createdByOrganizationId
 });
 
 
@@ -298,7 +300,7 @@ class __$EventModelCopyWithImpl<$Res>
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? name = null,Object? eventDate = null,Object? shortDescription = freezed,Object? fullDescription = freezed,Object? imageUrl = freezed,Object? location = null,Object? timeInStart = null,Object? timeInEnd = null,Object? timeOutStart = null,Object? timeOutEnd = null,Object? scopeType = null,Object? scopeId = null,Object? isMandatory = null,Object? academicTermId = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? createdByUserId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? name = null,Object? eventDate = null,Object? shortDescription = freezed,Object? fullDescription = freezed,Object? imageUrl = freezed,Object? location = null,Object? timeInStart = null,Object? timeInEnd = null,Object? timeOutStart = null,Object? timeOutEnd = null,Object? scopeType = null,Object? scopeId = null,Object? isMandatory = null,Object? academicTermId = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? createdByUserId = freezed,Object? createdByOrganizationId = freezed,}) {
   return _then(_EventModel(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -318,6 +320,7 @@ as bool,academicTermId: freezed == academicTermId ? _self.academicTermId : acade
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdByUserId: freezed == createdByUserId ? _self.createdByUserId : createdByUserId // ignore: cast_nullable_to_non_nullable
+as String?,createdByOrganizationId: freezed == createdByOrganizationId ? _self.createdByOrganizationId : createdByOrganizationId // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

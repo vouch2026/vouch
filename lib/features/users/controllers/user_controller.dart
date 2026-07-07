@@ -21,32 +21,10 @@ class UserController extends AsyncNotifier<void> {
     required int yearLevel,
     required String role,
     String? position,
-    XFile? idFront,
-    XFile? idBack,
   }) async {
     state = const AsyncLoading();
     
     try {
-      String? idFrontUrl;
-      String? idBackUrl;
-
-      // Upload ID images if provided
-      if (idFront != null) {
-        idFrontUrl = await ref.read(storageServiceProvider).uploadIdImage(
-              identifier: email,
-              file: idFront,
-              isFront: true,
-            );
-      }
-
-      if (idBack != null) {
-        idBackUrl = await ref.read(storageServiceProvider).uploadIdImage(
-              identifier: email,
-              file: idBack,
-              isFront: false,
-            );
-      }
-
       // Create auth user with 'active' status metadata
       await SupabaseConfig.client.auth.signUp(
         email: email,
@@ -59,8 +37,6 @@ class UserController extends AsyncNotifier<void> {
           'faculty_id': facultyId?.isEmpty ?? true ? null : facultyId,
           'program_id': programId?.isEmpty ?? true ? null : programId,
           'year_level': yearLevel,
-          'id_front_url': idFrontUrl,
-          'id_back_url': idBackUrl,
           'role': role,
           'position': position,
           'status': 'active', // Automatically active as requested

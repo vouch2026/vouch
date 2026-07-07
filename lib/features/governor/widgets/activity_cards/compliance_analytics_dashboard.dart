@@ -179,7 +179,9 @@ class ComplianceAnalyticsDashboard extends StatelessWidget {
       c.status == ActivityCardStatus.secretaryReview ||
       c.status == ActivityCardStatus.treasurerReview ||
       c.status == ActivityCardStatus.governorReview ||
-      c.status == ActivityCardStatus.adviserReview
+      c.status == ActivityCardStatus.adviserReview ||
+      c.status == ActivityCardStatus.programHeadReview ||
+      c.status == ActivityCardStatus.deanReview
     ).length;
     final rejected = cards.where((c) => c.status == ActivityCardStatus.rejected).length;
     final total = cards.length;

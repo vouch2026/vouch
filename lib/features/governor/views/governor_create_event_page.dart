@@ -298,6 +298,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
             isMandatory: _isMandatory,
             academicTermId: activeTerm.id,
             createdByUserId: user.id,
+            createdByOrganizationId: org.id,
           ));
         }
         if (_afternoonEnabled) {
@@ -317,6 +318,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
             isMandatory: _isMandatory,
             academicTermId: activeTerm.id,
             createdByUserId: user.id,
+            createdByOrganizationId: org.id,
           ));
         }
         if (_eveningEnabled) {
@@ -336,6 +338,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
             isMandatory: _isMandatory,
             academicTermId: activeTerm.id,
             createdByUserId: user.id,
+            createdByOrganizationId: org.id,
           ));
         }
       } else {
@@ -355,6 +358,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
           isMandatory: _isMandatory,
           academicTermId: activeTerm.id,
           createdByUserId: user.id,
+          createdByOrganizationId: org.id,
         ));
       }
 

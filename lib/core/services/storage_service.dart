@@ -52,6 +52,30 @@ class StorageService {
     return _client.storage.from(bucket).getPublicUrl(path);
   }
 
+  Future<String> uploadAcademicAsset({
+    required String code,
+    required XFile file,
+    required String type,
+  }) async {
+    final bytes = await file.readAsBytes();
+    final extension = p.extension(file.name);
+    final fileName = '${type}_logo_${code.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'academic/$fileName';
+    final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
+
+    final contentType = extension.toLowerCase() == '.png'
+        ? 'image/png'
+        : (extension.toLowerCase() == '.gif' ? 'image/gif' : 'image/jpeg');
+
+    await _client.storage.from(bucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(upsert: true, contentType: contentType),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
+
   Future<String> uploadAnnouncementImage({
     required XFile file,
     required String title,

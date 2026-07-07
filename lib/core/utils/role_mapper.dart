@@ -39,6 +39,11 @@ class RoleMapper {
         return 'program_head';
       case 'adviser':
         return 'adviser';
+      case 'voters':
+      case 'voter':
+        return 'voter';
+      case 'personnel':
+        return 'personnel';
       default:
         return role.replaceAll(' ', '_');
     }

@@ -15,7 +15,7 @@ abstract class OrganizationModel with _$OrganizationModel {
     @Default('active') String status,
     @Default('campus-based') String type,
     String? facultyProgram,
-    String? adviserName,
+    @JsonKey(name: 'adviser_name') String? adviserName,
     @JsonKey(name: 'campus_id') String? campusId,
     @JsonKey(name: 'faculty_id') String? facultyId,
     @JsonKey(name: 'program_id') String? programId,

@@ -16,6 +16,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 
 class MyQrCodePage extends ConsumerStatefulWidget {
   const MyQrCodePage({super.key});
@@ -94,8 +95,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
   @override
   Widget build(BuildContext context) {
     final userProfileAsync = ref.watch(userProfileProvider);
-    final workspace = ref.watch(workspaceProvider);
-    final selectedOrg = workspace.selectedOrganization;
+    final userOrgsAsync = ref.watch(userOrganizationsProvider);
 
     return DashboardLayout(
       title: 'My QR Code',
@@ -285,6 +285,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                       version: QrVersions.auto,
                                       size: 200,
                                       gapless: true,
+                                      errorCorrectionLevel: QrErrorCorrectLevel.H,
                                       eyeStyle: const QrEyeStyle(
                                         eyeShape: QrEyeShape.square,
                                         color: AppColors.primary,
@@ -292,6 +293,10 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                       dataModuleStyle: const QrDataModuleStyle(
                                         dataModuleShape: QrDataModuleShape.square,
                                         color: AppColors.primary,
+                                      ),
+                                      embeddedImage: const AssetImage('assets/logos/vouch.png'),
+                                      embeddedImageStyle: const QrEmbeddedImageStyle(
+                                        size: Size(40, 40),
                                       ),
                                     ),
                                   ),
@@ -305,23 +310,66 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                 const SizedBox(height: AppSpacing.sm),
                                 _buildImprovedInfoItem(LucideIcons.layers, 'Year Level', '${profile.yearLevelDisplay} Year'),
                                 
-                                const SizedBox(height: AppSpacing.xl),
+                                const SizedBox(height: AppSpacing.lg),
+                                const Divider(height: 1),
+                                const SizedBox(height: AppSpacing.lg),
 
-                                // Footer Logos
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (selectedOrg != null) ...[
-                                      _buildCircularLogo(
-                                        logoUrl: selectedOrg.logoUrl,
-                                        fallbackIcon: LucideIcons.building,
-                                      ),
-                                      const SizedBox(width: 12),
-                                    ],
-                                    _buildCircularLogo(
-                                      assetPath: 'assets/logos/vouch.png',
+                                // Centered Organization Logos
+                                Center(
+                                  child: userOrgsAsync.when(
+                                    data: (orgs) {
+                                      final nonAdminOrgs = orgs.where((org) => org.type != 'faculty' && org.type != 'program').toList();
+                                      if (nonAdminOrgs.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Wrap(
+                                        alignment: WrapAlignment.center,
+                                        spacing: 12,
+                                        runSpacing: 12,
+                                        children: nonAdminOrgs.map((org) {
+                                          return Tooltip(
+                                            message: org.name,
+                                            child: _buildCircularLogo(
+                                              logoUrl: org.logoUrl,
+                                              size: 48,
+                                              fallbackIcon: LucideIcons.building,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      );
+                                    },
+                                    loading: () => const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
                                     ),
-                                  ],
+                                    error: (err, _) => const SizedBox.shrink(),
+                                  ),
+                                ),
+
+                                const SizedBox(height: AppSpacing.lg),
+
+                                // Footer Branded Verified Logo
+                                Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Image.asset(
+                                        'assets/logos/vouch.png',
+                                        height: 20,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'VERIFIED BY VOUCH',
+                                        style: AppTextStyles.labelSmall.copyWith(
+                                          color: AppColors.primary.withValues(alpha: 0.6),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -385,10 +433,15 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
     );
   }
 
-  Widget _buildCircularLogo({String? logoUrl, String? assetPath, IconData? fallbackIcon}) {
+  Widget _buildCircularLogo({
+    String? logoUrl,
+    String? assetPath,
+    IconData? fallbackIcon,
+    double size = 48.0,
+  }) {
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: AppColors.white,
         shape: BoxShape.circle,
@@ -402,11 +455,23 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
         ],
       ),
       child: ClipOval(
-        child: logoUrl != null
-            ? Image.network(logoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(fallbackIcon ?? LucideIcons.image, size: 24, color: AppColors.textGrey))
+        child: logoUrl != null && logoUrl.isNotEmpty
+            ? Image.network(
+                logoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                  fallbackIcon ?? LucideIcons.image,
+                  size: size * 0.5,
+                  color: AppColors.textGrey,
+                ),
+              )
             : assetPath != null
                 ? Image.asset(assetPath, fit: BoxFit.cover)
-                : Icon(fallbackIcon ?? LucideIcons.image, size: 24, color: AppColors.textGrey),
+                : Icon(
+                    fallbackIcon ?? LucideIcons.image,
+                    size: size * 0.5,
+                    color: AppColors.textGrey,
+                  ),
       ),
     );
   }

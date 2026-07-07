@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$UserModel {
 
  String? get id;// public.users.id
-@JsonKey(name: 'auth_id') String get authId; String get email;@JsonKey(name: 'first_name') String? get firstName;@JsonKey(name: 'last_name') String? get lastName;@JsonKey(name: 'student_id_number') String get schoolId;@JsonKey(name: 'faculty_id') String? get facultyId;@JsonKey(name: 'program_id') String? get programId;@JsonKey(name: 'campus_id') String? get campusId;@JsonKey(name: 'year') int? get yearLevel;@JsonKey(name: 'profile_photo_url') String? get avatarUrl;@JsonKey(name: 'id_front_url') String? get idFrontUrl;@JsonKey(name: 'id_back_url') String? get idBackUrl;@JsonKey(name: 'organization_ids') List<String> get organizationIds;/// Derived or primary role
+@JsonKey(name: 'auth_id') String get authId; String get email;@JsonKey(name: 'first_name') String? get firstName;@JsonKey(name: 'last_name') String? get lastName;@JsonKey(name: 'student_id_number') String get schoolId;@JsonKey(name: 'faculty_id') String? get facultyId;@JsonKey(name: 'program_id') String? get programId;@JsonKey(name: 'campus_id') String? get campusId;@JsonKey(name: 'year') int? get yearLevel;@JsonKey(name: 'profile_photo_url') String? get avatarUrl;@JsonKey(name: 'organization_ids') List<String> get organizationIds;/// Derived or primary role
  String get role;@JsonKey(name: 'account_status') String get status;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'joined_at') DateTime? get joinedAt;// Join fields (not in users table but useful for UI)
  String? get facultyName; String? get programName;
 /// Create a copy of UserModel
@@ -31,16 +31,16 @@ $UserModelCopyWith<UserModel> get copyWith => _$UserModelCopyWithImpl<UserModel>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.authId, authId) || other.authId == authId)&&(identical(other.email, email) || other.email == email)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.schoolId, schoolId) || other.schoolId == schoolId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.yearLevel, yearLevel) || other.yearLevel == yearLevel)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.idFrontUrl, idFrontUrl) || other.idFrontUrl == idFrontUrl)&&(identical(other.idBackUrl, idBackUrl) || other.idBackUrl == idBackUrl)&&const DeepCollectionEquality().equals(other.organizationIds, organizationIds)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt)&&(identical(other.facultyName, facultyName) || other.facultyName == facultyName)&&(identical(other.programName, programName) || other.programName == programName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.authId, authId) || other.authId == authId)&&(identical(other.email, email) || other.email == email)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.schoolId, schoolId) || other.schoolId == schoolId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.yearLevel, yearLevel) || other.yearLevel == yearLevel)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&const DeepCollectionEquality().equals(other.organizationIds, organizationIds)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt)&&(identical(other.facultyName, facultyName) || other.facultyName == facultyName)&&(identical(other.programName, programName) || other.programName == programName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,authId,email,firstName,lastName,schoolId,facultyId,programId,campusId,yearLevel,avatarUrl,idFrontUrl,idBackUrl,const DeepCollectionEquality().hash(organizationIds),role,status,createdAt,joinedAt,facultyName,programName]);
+int get hashCode => Object.hash(runtimeType,id,authId,email,firstName,lastName,schoolId,facultyId,programId,campusId,yearLevel,avatarUrl,const DeepCollectionEquality().hash(organizationIds),role,status,createdAt,joinedAt,facultyName,programName);
 
 @override
 String toString() {
-  return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, joinedAt: $joinedAt, facultyName: $facultyName, programName: $programName)';
+  return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, joinedAt: $joinedAt, facultyName: $facultyName, programName: $programName)';
 }
 
 
@@ -51,7 +51,7 @@ abstract mixin class $UserModelCopyWith<$Res>  {
   factory $UserModelCopyWith(UserModel value, $Res Function(UserModel) _then) = _$UserModelCopyWithImpl;
 @useResult
 $Res call({
- String? id,@JsonKey(name: 'auth_id') String authId, String email,@JsonKey(name: 'first_name') String? firstName,@JsonKey(name: 'last_name') String? lastName,@JsonKey(name: 'student_id_number') String schoolId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'year') int? yearLevel,@JsonKey(name: 'profile_photo_url') String? avatarUrl,@JsonKey(name: 'id_front_url') String? idFrontUrl,@JsonKey(name: 'id_back_url') String? idBackUrl,@JsonKey(name: 'organization_ids') List<String> organizationIds, String role,@JsonKey(name: 'account_status') String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'joined_at') DateTime? joinedAt, String? facultyName, String? programName
+ String? id,@JsonKey(name: 'auth_id') String authId, String email,@JsonKey(name: 'first_name') String? firstName,@JsonKey(name: 'last_name') String? lastName,@JsonKey(name: 'student_id_number') String schoolId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'year') int? yearLevel,@JsonKey(name: 'profile_photo_url') String? avatarUrl,@JsonKey(name: 'organization_ids') List<String> organizationIds, String role,@JsonKey(name: 'account_status') String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'joined_at') DateTime? joinedAt, String? facultyName, String? programName
 });
 
 
@@ -68,7 +68,7 @@ class _$UserModelCopyWithImpl<$Res>
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? authId = null,Object? email = null,Object? firstName = freezed,Object? lastName = freezed,Object? schoolId = null,Object? facultyId = freezed,Object? programId = freezed,Object? campusId = freezed,Object? yearLevel = freezed,Object? avatarUrl = freezed,Object? idFrontUrl = freezed,Object? idBackUrl = freezed,Object? organizationIds = null,Object? role = null,Object? status = null,Object? createdAt = freezed,Object? joinedAt = freezed,Object? facultyName = freezed,Object? programName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? authId = null,Object? email = null,Object? firstName = freezed,Object? lastName = freezed,Object? schoolId = null,Object? facultyId = freezed,Object? programId = freezed,Object? campusId = freezed,Object? yearLevel = freezed,Object? avatarUrl = freezed,Object? organizationIds = null,Object? role = null,Object? status = null,Object? createdAt = freezed,Object? joinedAt = freezed,Object? facultyName = freezed,Object? programName = freezed,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,authId: null == authId ? _self.authId : authId // ignore: cast_nullable_to_non_nullable
@@ -81,8 +81,6 @@ as String?,programId: freezed == programId ? _self.programId : programId // igno
 as String?,campusId: freezed == campusId ? _self.campusId : campusId // ignore: cast_nullable_to_non_nullable
 as String?,yearLevel: freezed == yearLevel ? _self.yearLevel : yearLevel // ignore: cast_nullable_to_non_nullable
 as int?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
-as String?,idFrontUrl: freezed == idFrontUrl ? _self.idFrontUrl : idFrontUrl // ignore: cast_nullable_to_non_nullable
-as String?,idBackUrl: freezed == idBackUrl ? _self.idBackUrl : idBackUrl // ignore: cast_nullable_to_non_nullable
 as String?,organizationIds: null == organizationIds ? _self.organizationIds : organizationIds // ignore: cast_nullable_to_non_nullable
 as List<String>,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
@@ -175,10 +173,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'auth_id')  String authId,  String email, @JsonKey(name: 'first_name')  String? firstName, @JsonKey(name: 'last_name')  String? lastName, @JsonKey(name: 'student_id_number')  String schoolId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'year')  int? yearLevel, @JsonKey(name: 'profile_photo_url')  String? avatarUrl, @JsonKey(name: 'id_front_url')  String? idFrontUrl, @JsonKey(name: 'id_back_url')  String? idBackUrl, @JsonKey(name: 'organization_ids')  List<String> organizationIds,  String role, @JsonKey(name: 'account_status')  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'joined_at')  DateTime? joinedAt,  String? facultyName,  String? programName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'auth_id')  String authId,  String email, @JsonKey(name: 'first_name')  String? firstName, @JsonKey(name: 'last_name')  String? lastName, @JsonKey(name: 'student_id_number')  String schoolId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'year')  int? yearLevel, @JsonKey(name: 'profile_photo_url')  String? avatarUrl, @JsonKey(name: 'organization_ids')  List<String> organizationIds,  String role, @JsonKey(name: 'account_status')  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'joined_at')  DateTime? joinedAt,  String? facultyName,  String? programName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserModel() when $default != null:
-return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName,_that.schoolId,_that.facultyId,_that.programId,_that.campusId,_that.yearLevel,_that.avatarUrl,_that.idFrontUrl,_that.idBackUrl,_that.organizationIds,_that.role,_that.status,_that.createdAt,_that.joinedAt,_that.facultyName,_that.programName);case _:
+return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName,_that.schoolId,_that.facultyId,_that.programId,_that.campusId,_that.yearLevel,_that.avatarUrl,_that.organizationIds,_that.role,_that.status,_that.createdAt,_that.joinedAt,_that.facultyName,_that.programName);case _:
   return orElse();
 
 }
@@ -196,10 +194,10 @@ return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'auth_id')  String authId,  String email, @JsonKey(name: 'first_name')  String? firstName, @JsonKey(name: 'last_name')  String? lastName, @JsonKey(name: 'student_id_number')  String schoolId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'year')  int? yearLevel, @JsonKey(name: 'profile_photo_url')  String? avatarUrl, @JsonKey(name: 'id_front_url')  String? idFrontUrl, @JsonKey(name: 'id_back_url')  String? idBackUrl, @JsonKey(name: 'organization_ids')  List<String> organizationIds,  String role, @JsonKey(name: 'account_status')  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'joined_at')  DateTime? joinedAt,  String? facultyName,  String? programName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'auth_id')  String authId,  String email, @JsonKey(name: 'first_name')  String? firstName, @JsonKey(name: 'last_name')  String? lastName, @JsonKey(name: 'student_id_number')  String schoolId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'year')  int? yearLevel, @JsonKey(name: 'profile_photo_url')  String? avatarUrl, @JsonKey(name: 'organization_ids')  List<String> organizationIds,  String role, @JsonKey(name: 'account_status')  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'joined_at')  DateTime? joinedAt,  String? facultyName,  String? programName)  $default,) {final _that = this;
 switch (_that) {
 case _UserModel():
-return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName,_that.schoolId,_that.facultyId,_that.programId,_that.campusId,_that.yearLevel,_that.avatarUrl,_that.idFrontUrl,_that.idBackUrl,_that.organizationIds,_that.role,_that.status,_that.createdAt,_that.joinedAt,_that.facultyName,_that.programName);case _:
+return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName,_that.schoolId,_that.facultyId,_that.programId,_that.campusId,_that.yearLevel,_that.avatarUrl,_that.organizationIds,_that.role,_that.status,_that.createdAt,_that.joinedAt,_that.facultyName,_that.programName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -216,10 +214,10 @@ return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'auth_id')  String authId,  String email, @JsonKey(name: 'first_name')  String? firstName, @JsonKey(name: 'last_name')  String? lastName, @JsonKey(name: 'student_id_number')  String schoolId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'year')  int? yearLevel, @JsonKey(name: 'profile_photo_url')  String? avatarUrl, @JsonKey(name: 'id_front_url')  String? idFrontUrl, @JsonKey(name: 'id_back_url')  String? idBackUrl, @JsonKey(name: 'organization_ids')  List<String> organizationIds,  String role, @JsonKey(name: 'account_status')  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'joined_at')  DateTime? joinedAt,  String? facultyName,  String? programName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'auth_id')  String authId,  String email, @JsonKey(name: 'first_name')  String? firstName, @JsonKey(name: 'last_name')  String? lastName, @JsonKey(name: 'student_id_number')  String schoolId, @JsonKey(name: 'faculty_id')  String? facultyId, @JsonKey(name: 'program_id')  String? programId, @JsonKey(name: 'campus_id')  String? campusId, @JsonKey(name: 'year')  int? yearLevel, @JsonKey(name: 'profile_photo_url')  String? avatarUrl, @JsonKey(name: 'organization_ids')  List<String> organizationIds,  String role, @JsonKey(name: 'account_status')  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'joined_at')  DateTime? joinedAt,  String? facultyName,  String? programName)?  $default,) {final _that = this;
 switch (_that) {
 case _UserModel() when $default != null:
-return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName,_that.schoolId,_that.facultyId,_that.programId,_that.campusId,_that.yearLevel,_that.avatarUrl,_that.idFrontUrl,_that.idBackUrl,_that.organizationIds,_that.role,_that.status,_that.createdAt,_that.joinedAt,_that.facultyName,_that.programName);case _:
+return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName,_that.schoolId,_that.facultyId,_that.programId,_that.campusId,_that.yearLevel,_that.avatarUrl,_that.organizationIds,_that.role,_that.status,_that.createdAt,_that.joinedAt,_that.facultyName,_that.programName);case _:
   return null;
 
 }
@@ -231,7 +229,7 @@ return $default(_that.id,_that.authId,_that.email,_that.firstName,_that.lastName
 @JsonSerializable()
 
 class _UserModel extends UserModel {
-  const _UserModel({this.id, @JsonKey(name: 'auth_id') required this.authId, required this.email, @JsonKey(name: 'first_name') this.firstName, @JsonKey(name: 'last_name') this.lastName, @JsonKey(name: 'student_id_number') required this.schoolId, @JsonKey(name: 'faculty_id') this.facultyId, @JsonKey(name: 'program_id') this.programId, @JsonKey(name: 'campus_id') this.campusId, @JsonKey(name: 'year') this.yearLevel, @JsonKey(name: 'profile_photo_url') this.avatarUrl, @JsonKey(name: 'id_front_url') this.idFrontUrl, @JsonKey(name: 'id_back_url') this.idBackUrl, @JsonKey(name: 'organization_ids') final  List<String> organizationIds = const [], this.role = 'student', @JsonKey(name: 'account_status') this.status = 'active', @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'joined_at') this.joinedAt, this.facultyName, this.programName}): _organizationIds = organizationIds,super._();
+  const _UserModel({this.id, @JsonKey(name: 'auth_id') required this.authId, required this.email, @JsonKey(name: 'first_name') this.firstName, @JsonKey(name: 'last_name') this.lastName, @JsonKey(name: 'student_id_number') required this.schoolId, @JsonKey(name: 'faculty_id') this.facultyId, @JsonKey(name: 'program_id') this.programId, @JsonKey(name: 'campus_id') this.campusId, @JsonKey(name: 'year') this.yearLevel, @JsonKey(name: 'profile_photo_url') this.avatarUrl, @JsonKey(name: 'organization_ids') final  List<String> organizationIds = const [], this.role = 'student', @JsonKey(name: 'account_status') this.status = 'active', @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'joined_at') this.joinedAt, this.facultyName, this.programName}): _organizationIds = organizationIds,super._();
   factory _UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
 
 @override final  String? id;
@@ -246,8 +244,6 @@ class _UserModel extends UserModel {
 @override@JsonKey(name: 'campus_id') final  String? campusId;
 @override@JsonKey(name: 'year') final  int? yearLevel;
 @override@JsonKey(name: 'profile_photo_url') final  String? avatarUrl;
-@override@JsonKey(name: 'id_front_url') final  String? idFrontUrl;
-@override@JsonKey(name: 'id_back_url') final  String? idBackUrl;
  final  List<String> _organizationIds;
 @override@JsonKey(name: 'organization_ids') List<String> get organizationIds {
   if (_organizationIds is EqualUnmodifiableListView) return _organizationIds;
@@ -277,16 +273,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.authId, authId) || other.authId == authId)&&(identical(other.email, email) || other.email == email)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.schoolId, schoolId) || other.schoolId == schoolId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.yearLevel, yearLevel) || other.yearLevel == yearLevel)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.idFrontUrl, idFrontUrl) || other.idFrontUrl == idFrontUrl)&&(identical(other.idBackUrl, idBackUrl) || other.idBackUrl == idBackUrl)&&const DeepCollectionEquality().equals(other._organizationIds, _organizationIds)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt)&&(identical(other.facultyName, facultyName) || other.facultyName == facultyName)&&(identical(other.programName, programName) || other.programName == programName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.authId, authId) || other.authId == authId)&&(identical(other.email, email) || other.email == email)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.schoolId, schoolId) || other.schoolId == schoolId)&&(identical(other.facultyId, facultyId) || other.facultyId == facultyId)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.campusId, campusId) || other.campusId == campusId)&&(identical(other.yearLevel, yearLevel) || other.yearLevel == yearLevel)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&const DeepCollectionEquality().equals(other._organizationIds, _organizationIds)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt)&&(identical(other.facultyName, facultyName) || other.facultyName == facultyName)&&(identical(other.programName, programName) || other.programName == programName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,authId,email,firstName,lastName,schoolId,facultyId,programId,campusId,yearLevel,avatarUrl,idFrontUrl,idBackUrl,const DeepCollectionEquality().hash(_organizationIds),role,status,createdAt,joinedAt,facultyName,programName]);
+int get hashCode => Object.hash(runtimeType,id,authId,email,firstName,lastName,schoolId,facultyId,programId,campusId,yearLevel,avatarUrl,const DeepCollectionEquality().hash(_organizationIds),role,status,createdAt,joinedAt,facultyName,programName);
 
 @override
 String toString() {
-  return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, idFrontUrl: $idFrontUrl, idBackUrl: $idBackUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, joinedAt: $joinedAt, facultyName: $facultyName, programName: $programName)';
+  return 'UserModel(id: $id, authId: $authId, email: $email, firstName: $firstName, lastName: $lastName, schoolId: $schoolId, facultyId: $facultyId, programId: $programId, campusId: $campusId, yearLevel: $yearLevel, avatarUrl: $avatarUrl, organizationIds: $organizationIds, role: $role, status: $status, createdAt: $createdAt, joinedAt: $joinedAt, facultyName: $facultyName, programName: $programName)';
 }
 
 
@@ -297,7 +293,7 @@ abstract mixin class _$UserModelCopyWith<$Res> implements $UserModelCopyWith<$Re
   factory _$UserModelCopyWith(_UserModel value, $Res Function(_UserModel) _then) = __$UserModelCopyWithImpl;
 @override @useResult
 $Res call({
- String? id,@JsonKey(name: 'auth_id') String authId, String email,@JsonKey(name: 'first_name') String? firstName,@JsonKey(name: 'last_name') String? lastName,@JsonKey(name: 'student_id_number') String schoolId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'year') int? yearLevel,@JsonKey(name: 'profile_photo_url') String? avatarUrl,@JsonKey(name: 'id_front_url') String? idFrontUrl,@JsonKey(name: 'id_back_url') String? idBackUrl,@JsonKey(name: 'organization_ids') List<String> organizationIds, String role,@JsonKey(name: 'account_status') String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'joined_at') DateTime? joinedAt, String? facultyName, String? programName
+ String? id,@JsonKey(name: 'auth_id') String authId, String email,@JsonKey(name: 'first_name') String? firstName,@JsonKey(name: 'last_name') String? lastName,@JsonKey(name: 'student_id_number') String schoolId,@JsonKey(name: 'faculty_id') String? facultyId,@JsonKey(name: 'program_id') String? programId,@JsonKey(name: 'campus_id') String? campusId,@JsonKey(name: 'year') int? yearLevel,@JsonKey(name: 'profile_photo_url') String? avatarUrl,@JsonKey(name: 'organization_ids') List<String> organizationIds, String role,@JsonKey(name: 'account_status') String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'joined_at') DateTime? joinedAt, String? facultyName, String? programName
 });
 
 
@@ -314,7 +310,7 @@ class __$UserModelCopyWithImpl<$Res>
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? authId = null,Object? email = null,Object? firstName = freezed,Object? lastName = freezed,Object? schoolId = null,Object? facultyId = freezed,Object? programId = freezed,Object? campusId = freezed,Object? yearLevel = freezed,Object? avatarUrl = freezed,Object? idFrontUrl = freezed,Object? idBackUrl = freezed,Object? organizationIds = null,Object? role = null,Object? status = null,Object? createdAt = freezed,Object? joinedAt = freezed,Object? facultyName = freezed,Object? programName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? authId = null,Object? email = null,Object? firstName = freezed,Object? lastName = freezed,Object? schoolId = null,Object? facultyId = freezed,Object? programId = freezed,Object? campusId = freezed,Object? yearLevel = freezed,Object? avatarUrl = freezed,Object? organizationIds = null,Object? role = null,Object? status = null,Object? createdAt = freezed,Object? joinedAt = freezed,Object? facultyName = freezed,Object? programName = freezed,}) {
   return _then(_UserModel(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,authId: null == authId ? _self.authId : authId // ignore: cast_nullable_to_non_nullable
@@ -327,8 +323,6 @@ as String?,programId: freezed == programId ? _self.programId : programId // igno
 as String?,campusId: freezed == campusId ? _self.campusId : campusId // ignore: cast_nullable_to_non_nullable
 as String?,yearLevel: freezed == yearLevel ? _self.yearLevel : yearLevel // ignore: cast_nullable_to_non_nullable
 as int?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
-as String?,idFrontUrl: freezed == idFrontUrl ? _self.idFrontUrl : idFrontUrl // ignore: cast_nullable_to_non_nullable
-as String?,idBackUrl: freezed == idBackUrl ? _self.idBackUrl : idBackUrl // ignore: cast_nullable_to_non_nullable
 as String?,organizationIds: null == organizationIds ? _self._organizationIds : organizationIds // ignore: cast_nullable_to_non_nullable
 as List<String>,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable

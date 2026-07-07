@@ -23,31 +23,46 @@ final scopeNamesProvider = FutureProvider<Map<String, String>>((ref) async {
   try {
     final orgs = await ref.read(organizationsProvider.future);
     for (final org in orgs) {
-      map[org.id] = org.name;
+      map[org.id] = org.code;
+      
+      // Map scope IDs to the organization's code that matches the scope
+      if (org.type == 'campus-based' && org.campusId != null) {
+        map[org.campusId!] = org.code;
+      } else if (org.type == 'faculty-based' && org.facultyId != null) {
+        map[org.facultyId!] = org.code;
+      } else if (org.type == 'program-based' && org.programId != null) {
+        map[org.programId!] = org.code;
+      }
     }
   } catch (_) {}
 
-  // Load campuses
+  // Load campuses as fallback
   try {
     final campuses = await ref.read(campusesProvider.future);
     for (final campus in campuses) {
-      map[campus.id] = campus.name;
+      if (!map.containsKey(campus.id)) {
+        map[campus.id] = campus.name;
+      }
     }
   } catch (_) {}
 
-  // Load faculties
+  // Load faculties as fallback
   try {
     final faculties = await ref.read(facultiesProvider.future);
     for (final faculty in faculties) {
-      map[faculty.id] = faculty.name;
+      if (!map.containsKey(faculty.id)) {
+        map[faculty.id] = faculty.name;
+      }
     }
   } catch (_) {}
 
-  // Load programs
+  // Load programs as fallback
   try {
     final programs = await ref.read(programsProvider.future);
     for (final program in programs) {
-      map[program.id] = program.name;
+      if (!map.containsKey(program.id)) {
+        map[program.id] = program.name;
+      }
     }
   } catch (_) {}
 
@@ -449,7 +464,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   }
 
   Widget _buildEventTile(EventModel event, Map<String, String> scopesMap) {
-    final scopeName = scopesMap[event.scopeId] ?? event.scopeType;
+    final organizationName = scopesMap[event.scopeId] ?? event.scopeType;
 
     return Container(
       decoration: BoxDecoration(
@@ -483,7 +498,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         const SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
-                            scopeName,
+                            organizationName,
                             style: AppTextStyles.labelSmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,

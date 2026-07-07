@@ -102,6 +102,7 @@ class DashboardLayout extends ConsumerWidget {
                           backgroundColor: Colors.transparent,
                           elevation: 0,
                           scrolledUnderElevation: 0,
+                          automaticallyImplyLeading: false,
                           toolbarHeight: containerHeight,
                           leadingWidth: onBack != null
                               ? (isMobile ? 52.0 : 60.0)

@@ -38,6 +38,7 @@ class RouteNames {
   static const String officers = 'officers';
   static const String userDetails = 'user-details';
   static const String comselecDashboard = 'comselec-dashboard';
+  static const String comselecsManager = 'comselecs-manager';
   static const String comselecElections = 'comselec-elections';
   static const String comselecCandidates = 'comselec-candidates';
   static const String comselecVoters = 'comselec-voters';

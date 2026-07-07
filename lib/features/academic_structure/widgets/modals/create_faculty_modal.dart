@@ -7,6 +7,10 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../campuses/providers/campus_provider.dart';
 import '../../../faculties/models/faculty_model.dart';
 import '../../../faculties/providers/faculty_provider.dart';
+import '../../../users/providers/users_provider.dart';
+
+import 'package:image_picker/image_picker.dart';
+import '../../../../core/providers/storage_provider.dart';
 
 class CreateFacultyModal extends ConsumerStatefulWidget {
   const CreateFacultyModal({super.key});
@@ -20,7 +24,10 @@ class _CreateFacultyModalState extends ConsumerState<CreateFacultyModal> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
   String? _selectedCampus;
+  String? _selectedDean;
   bool _isLoading = false;
+  XFile? _logoImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -29,16 +36,36 @@ class _CreateFacultyModalState extends ConsumerState<CreateFacultyModal> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _logoImage = image;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
+      String? logoUrl;
+      if (_logoImage != null) {
+        logoUrl = await ref.read(storageServiceProvider).uploadAcademicAsset(
+          code: _codeController.text.trim(),
+          file: _logoImage!,
+          type: 'faculty',
+        );
+      }
+
       final faculty = FacultyModel(
         id: '', 
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         campusId: _selectedCampus!,
+        deanId: _selectedDean,
+        logoUrl: logoUrl,
       );
 
       await ref.read(facultiesProvider.notifier).addFaculty(faculty);
@@ -63,6 +90,7 @@ class _CreateFacultyModalState extends ConsumerState<CreateFacultyModal> {
   @override
   Widget build(BuildContext context) {
     final campusesAsync = ref.watch(campusesProvider);
+    final usersAsync = ref.watch(allUsersProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -139,6 +167,55 @@ class _CreateFacultyModalState extends ConsumerState<CreateFacultyModal> {
                 ),
                 validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                 enabled: !_isLoading,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Faculty Dean',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+               usersAsync.when(
+                data: (users) => DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: _selectedDean,
+                  decoration: const InputDecoration(hintText: 'Select Faculty Dean (Optional)'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('No Dean Assigned'),
+                    ),
+                    ...users.map((u) => DropdownMenuItem(
+                      value: u.id, 
+                      child: Text(
+                        '${u.fullName} (${u.email})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )).toList(),
+                  ],
+                  onChanged: _isLoading ? null : (val) => setState(() => _selectedDean = val),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (e, s) => Text('Error loading users: $e', style: const TextStyle(color: Colors.red)),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Faculty Logo',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _pickImage,
+                  icon: Icon(_logoImage != null ? Icons.check_circle_rounded : Icons.image_outlined, 
+                    color: _logoImage != null ? Colors.green : null),
+                  label: Text(_logoImage != null ? 'Logo Selected' : 'Upload Logo',
+                    style: TextStyle(color: _logoImage != null ? Colors.green : null)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    side: BorderSide(color: _logoImage != null ? Colors.green : Theme.of(context).colorScheme.outlineVariant),
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
               Row(

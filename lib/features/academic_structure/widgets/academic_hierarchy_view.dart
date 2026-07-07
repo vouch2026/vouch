@@ -179,7 +179,17 @@ class _CampusNode extends ConsumerWidget {
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16), // More rounded
                 ),
-                child: const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                child: campus.logoUrl != null && campus.logoUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          campus.logoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                        ),
+                      )
+                    : const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
               ),
               title: Text(
                 campus.name,
@@ -328,12 +338,23 @@ class _FacultyNodeState extends ConsumerState<_FacultyNode> {
                 onTap: () => setState(() => _isExpanded = !_isExpanded),
                 contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
                 leading: Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.account_balance_rounded, color: AppColors.accent, size: 20),
+                  child: widget.faculty.logoUrl != null && widget.faculty.logoUrl!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Image.network(
+                            widget.faculty.logoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.account_balance_rounded, color: AppColors.accent, size: 20),
+                          ),
+                        )
+                      : const Icon(Icons.account_balance_rounded, color: AppColors.accent, size: 20),
                 ),
                 title: Text(
                   '${widget.faculty.name} (${widget.faculty.code})',
@@ -459,12 +480,23 @@ class _ProgramNode extends ConsumerWidget {
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
+            child: program.logoUrl != null && program.logoUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      program.logoUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.school_rounded, color: AppColors.primary, size: 14),
+                    ),
+                  )
+                : const Icon(Icons.school_rounded, color: AppColors.primary, size: 14),
           ),
           const SizedBox(width: 12),
           Expanded(

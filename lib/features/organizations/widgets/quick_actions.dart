@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_spacing.dart';
 import 'modals/organization_creation_modal.dart';
+import 'details/assign_adviser_dialog.dart';
 
 class QuickActions extends StatelessWidget {
   const QuickActions({super.key});
@@ -25,7 +26,12 @@ class QuickActions extends StatelessWidget {
         _ActionButton(
           icon: Icons.person_add_alt_1_rounded,
           label: 'Assign Adviser',
-          onPressed: () {},
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => const AssignAdviserDialog(),
+            );
+          },
         ),
         _ActionButton(
           icon: Icons.analytics_rounded,

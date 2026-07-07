@@ -67,54 +67,108 @@ class OrganizationRepository {
   }
 
   Future<OrganizationModel?> getOrganizationById(String id) async {
-    final response = await _client
-        .from('organizations')
-        .select('''
-          *,
-          organization_settings (
+    final response = await _client.rpc('get_workspace_by_id', params: {'p_workspace_id': id});
+    if (response == null || (response as List).isEmpty) return null;
+    
+    final workspaceJson = response.first as Map<String, dynamic>;
+    final type = workspaceJson['type'] as String? ?? 'campus-based';
+    
+    if (type == 'campus-based' || type == 'faculty-based' || type == 'program-based') {
+      final settingsResponse = await _client
+          .from('organization_settings')
+          .select('''
             requires_adviser_signature,
             requires_dean_signature,
             requires_program_head_signature,
             allow_member_to_print,
             clearance_period_start,
             clearance_period_end
-          )
-        ''')
-        .eq('id', id)
-        .maybeSingle();
-    
-    if (response == null) return null;
+          ''')
+          .eq('organization_id', id)
+          .maybeSingle();
 
-    final settingsData = response['organization_settings'];
-    final settings = settingsData is List 
-        ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
-        : settingsData as Map<String, dynamic>?;
-    
-    final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
-    final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
-    final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
-    final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
-    final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
-    final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
-    
-    final now = DateTime.now();
-    bool isClearanceActive = false;
-    if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
-      final start = DateTime.parse(clearancePeriodStartStr);
-      final end = DateTime.parse(clearancePeriodEndStr);
-      isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      final settings = settingsResponse as Map<String, dynamic>?;
+      final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
+      final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
+      final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
+      final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+      final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+      
+      final now = DateTime.now();
+      bool isClearanceActive = false;
+      if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+        final start = DateTime.parse(clearancePeriodStartStr);
+        final end = DateTime.parse(clearancePeriodEndStr);
+        isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      }
+
+      final orgResponse = await _client
+          .from('organizations')
+          .select('adviser_name')
+          .eq('id', id)
+          .maybeSingle();
+      final adviserName = orgResponse?['adviser_name'] as String?;
+
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        if (adviserName != null) 'adviser_name': adviserName,
+        'requires_adviser_signature': requiresAdviser,
+        'requires_program_head_signature': requiresProgramHead,
+        'requires_faculty_dean_signature': requiresFacultyDean,
+        'allow_member_card_printing': allowMemberCardPrinting,
+        'clearance_period_start': clearancePeriodStartStr,
+        'clearance_period_end': clearancePeriodEndStr,
+        'is_clearance_active': isClearanceActive,
+      });
+    } else if (type == 'comselec') {
+      final settingsResponse = await _client
+          .from('comselec_settings')
+          .select('''
+            requires_chairman_signature,
+            requires_commissioner_signature,
+            allow_member_to_print,
+            clearance_period_start,
+            clearance_period_end
+          ''')
+          .eq('comselec_id', id)
+          .maybeSingle();
+
+      final settings = settingsResponse as Map<String, dynamic>?;
+      final requiresChairman = settings?['requires_chairman_signature'] as bool? ?? false;
+      final requiresCommissioner = settings?['requires_commissioner_signature'] as bool? ?? false;
+      final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+      final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+      
+      final now = DateTime.now();
+      bool isClearanceActive = false;
+      if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+        final start = DateTime.parse(clearancePeriodStartStr);
+        final end = DateTime.parse(clearancePeriodEndStr);
+        isClearanceActive = now.isAfter(start) && now.isBefore(end);
+      }
+
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        'requires_adviser_signature': requiresChairman,
+        'requires_program_head_signature': requiresCommissioner,
+        'requires_faculty_dean_signature': false,
+        'allow_member_card_printing': allowMemberCardPrinting,
+        'clearance_period_start': clearancePeriodStartStr,
+        'clearance_period_end': clearancePeriodEndStr,
+        'is_clearance_active': isClearanceActive,
+      });
+    } else {
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        'requires_adviser_signature': false,
+        'requires_program_head_signature': false,
+        'requires_faculty_dean_signature': false,
+        'allow_member_card_printing': false,
+        'is_clearance_active': false,
+      });
     }
-
-    return OrganizationModel.fromJson({
-      ...response,
-      'requires_adviser_signature': requiresAdviser,
-      'requires_program_head_signature': requiresProgramHead,
-      'requires_faculty_dean_signature': requiresFacultyDean,
-      'allow_member_card_printing': allowMemberCardPrinting,
-      'clearance_period_start': clearancePeriodStartStr,
-      'clearance_period_end': clearancePeriodEndStr,
-      'is_clearance_active': isClearanceActive,
-    });
   }
 
   Future<String> createOrganization({
@@ -199,6 +253,52 @@ class OrganizationRepository {
   }
 
   Future<List<UserModel>> getOrganizationMembers(String orgId) async {
+    final isComselec = await _client
+        .from('comselecs')
+        .select('id')
+        .eq('id', orgId)
+        .maybeSingle() != null;
+
+    if (isComselec) {
+      final response = await _client
+          .from('comselec_members')
+          .select('''
+            *,
+            user:users (
+              *,
+              program:programs!users_program_id_fkey (name),
+              faculty:faculties!users_faculty_id_fkey (name)
+            ),
+            role:roles (name)
+          ''')
+          .eq('comselec_id', orgId);
+      
+      final Map<String, UserModel> uniqueUsers = {};
+      for (var json in (response as List)) {
+        final userData = json['user'];
+        if (userData == null) continue;
+        
+        final roleData = json['role'];
+        final roleName = roleData != null ? roleData['name'] : 'Voters';
+        
+        final programData = userData['program'];
+        final facultyData = userData['faculty'];
+        
+        final user = UserModel.fromJson({
+          ...userData,
+          'role': roleName,
+          'programName': programData?['name'],
+          'facultyName': facultyData?['name'],
+          'joined_at': json['joined_at'] ?? json['assigned_at'],
+        });
+        
+        if (user.id != null) {
+          uniqueUsers[user.id!] = user;
+        }
+      }
+      return uniqueUsers.values.toList();
+    }
+
     final response = await _client
         .from('organization_members')
         .select('''
@@ -240,6 +340,62 @@ class OrganizationRepository {
   }
 
   Future<List<OrganizationMembershipModel>> getOrganizationOfficers(String orgId) async {
+    final isComselec = await _client
+        .from('comselecs')
+        .select('id')
+        .eq('id', orgId)
+        .maybeSingle() != null;
+
+    if (isComselec) {
+      final response = await _client
+          .from('comselec_members')
+          .select('''
+            *,
+            user:users (*),
+            role:roles (
+              *,
+              role_permissions (
+                permissions (action)
+              )
+            ),
+            term:academic_terms (*)
+          ''')
+          .eq('comselec_id', orgId)
+          .not('role_id', 'is', null)
+          .order('assigned_at', ascending: false);
+      
+      return (response as List).map((json) {
+        final roleData = json['role'];
+        final List<String> permissions = [];
+        
+        if (roleData != null) {
+          final rolePerms = roleData['role_permissions'] as List?;
+          if (rolePerms != null) {
+            for (var rp in rolePerms) {
+              final perm = rp['permissions'];
+              if (perm is Map && perm.containsKey('action')) {
+                permissions.add(perm['action'] as String);
+              } else if (perm is List && perm.isNotEmpty) {
+                final action = perm.first['action'];
+                if (action != null) {
+                  permissions.add(action as String);
+                }
+              }
+            }
+          }
+        }
+
+        return OrganizationMembershipModel.fromJson({
+          ...json,
+          'user': json['user'],
+          'term': json['term'],
+          'role_name': roleData?['name'],
+          'hierarchy_level': roleData?['hierarchy_level'],
+          'permissions': permissions,
+        });
+      }).toList();
+    }
+
     final response = await _client
         .from('organization_members')
         .select('''
@@ -297,48 +453,56 @@ class OrganizationRepository {
     required String roleId,
     required String termId,
     required String assignedBy,
+    String? workspaceType,
   }) async {
-    await _client.rpc(
-      'assign_organization_officer',
-      params: {
-        'p_org_id': orgId,
-        'p_user_id': userId,
-        'p_role_id': roleId,
-        'p_term_id': termId,
-        'p_assigned_by': assignedBy,
-      },
-    );
+    if (workspaceType == 'comselec') {
+      await _client.rpc(
+        'assign_comselec_officer',
+        params: {
+          'p_comselec_id': orgId,
+          'p_user_id': userId,
+          'p_role_id': roleId,
+          'p_term_id': termId,
+          'p_assigned_by': assignedBy,
+        },
+      );
+    } else {
+      await _client.rpc(
+        'assign_organization_officer',
+        params: {
+          'p_org_id': orgId,
+          'p_user_id': userId,
+          'p_role_id': roleId,
+          'p_term_id': termId,
+          'p_assigned_by': assignedBy,
+        },
+      );
+    }
   }
 
   Future<List<OrganizationModel>> getUserOrganizations(String userId) async {
-    final response = await _client
-        .from('organization_members')
-        .select('''
-          *, 
-          organizations (
-            *,
-            organization_settings (
+    final response = await _client.rpc('get_my_workspaces');
+    final List<OrganizationModel> workspaces = [];
+
+    for (var json in (response as List)) {
+      final type = json['type'] as String? ?? 'campus-based';
+      final id = json['id'] as String;
+      
+      if (type == 'campus-based' || type == 'faculty-based' || type == 'program-based') {
+        final settingsResponse = await _client
+            .from('organization_settings')
+            .select('''
               requires_adviser_signature,
               requires_dean_signature,
               requires_program_head_signature,
               allow_member_to_print,
               clearance_period_start,
               clearance_period_end
-            )
-          )
-        ''')
-        .eq('user_id', userId);
-    
-    final List<OrganizationModel> organizations = [];
-    
-    for (var json in (response as List)) {
-      final orgJson = json['organizations'] as Map<String, dynamic>?;
-      if (orgJson != null) {
-        final settingsData = orgJson['organization_settings'];
-        final settings = settingsData is List 
-            ? (settingsData.isNotEmpty ? settingsData.first as Map<String, dynamic> : null)
-            : settingsData as Map<String, dynamic>?;
-        
+            ''')
+            .eq('organization_id', id)
+            .maybeSingle();
+
+        final settings = settingsResponse as Map<String, dynamic>?;
         final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
         final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
         final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
@@ -354,8 +518,16 @@ class OrganizationRepository {
           isClearanceActive = now.isAfter(start) && now.isBefore(end);
         }
 
-        organizations.add(OrganizationModel.fromJson({
-          ...orgJson,
+        final orgResponse = await _client
+            .from('organizations')
+            .select('adviser_name')
+            .eq('id', id)
+            .maybeSingle();
+        final adviserName = orgResponse?['adviser_name'] as String?;
+
+        workspaces.add(OrganizationModel.fromJson({
+          ...json,
+          if (adviserName != null) 'adviser_name': adviserName,
           'requires_adviser_signature': requiresAdviser,
           'requires_program_head_signature': requiresProgramHead,
           'requires_faculty_dean_signature': requiresFacultyDean,
@@ -364,10 +536,102 @@ class OrganizationRepository {
           'clearance_period_end': clearancePeriodEndStr,
           'is_clearance_active': isClearanceActive,
         }));
+      } else if (type == 'comselec') {
+        final settingsResponse = await _client
+            .from('comselec_settings')
+            .select('''
+              requires_chairman_signature,
+              requires_commissioner_signature,
+              allow_member_to_print,
+              clearance_period_start,
+              clearance_period_end
+            ''')
+            .eq('comselec_id', id)
+            .maybeSingle();
+
+        final settings = settingsResponse as Map<String, dynamic>?;
+        final requiresChairman = settings?['requires_chairman_signature'] as bool? ?? false;
+        final requiresCommissioner = settings?['requires_commissioner_signature'] as bool? ?? false;
+        final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+        final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
+        final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
+        
+        final now = DateTime.now();
+        bool isClearanceActive = false;
+        if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+          final start = DateTime.parse(clearancePeriodStartStr);
+          final end = DateTime.parse(clearancePeriodEndStr);
+          isClearanceActive = now.isAfter(start) && now.isBefore(end);
+        }
+
+        workspaces.add(OrganizationModel.fromJson({
+          ...json,
+          'requires_adviser_signature': requiresChairman,
+          'requires_program_head_signature': requiresCommissioner,
+          'requires_faculty_dean_signature': false,
+          'allow_member_card_printing': allowMemberCardPrinting,
+          'clearance_period_start': clearancePeriodStartStr,
+          'clearance_period_end': clearancePeriodEndStr,
+          'is_clearance_active': isClearanceActive,
+        }));
+      } else {
+        workspaces.add(OrganizationModel.fromJson({
+          ...json,
+          'requires_adviser_signature': false,
+          'requires_program_head_signature': false,
+          'requires_faculty_dean_signature': false,
+          'allow_member_card_printing': false,
+          'is_clearance_active': false,
+        }));
       }
     }
     
-    return organizations;
+    return workspaces;
+  }
+
+  Future<OrganizationMembershipModel?> getUserMembershipInOrg(String userId, String orgId) async {
+    final response = await _client
+        .from('organization_members')
+        .select('''
+          *,
+          role:roles (
+            *,
+            role_permissions (
+              permissions (action)
+            )
+          )
+        ''')
+        .eq('user_id', userId)
+        .eq('organization_id', orgId)
+        .maybeSingle();
+        
+    if (response == null) return null;
+    
+    final roleData = response['role'];
+    final List<String> permissions = [];
+    if (roleData != null) {
+      final rolePerms = roleData['role_permissions'] as List?;
+      if (rolePerms != null) {
+        for (var rp in rolePerms) {
+          final perm = rp['permissions'];
+          if (perm is Map && perm.containsKey('action')) {
+            permissions.add(perm['action'] as String);
+          } else if (perm is List && perm.isNotEmpty) {
+            final action = perm.first['action'];
+            if (action != null) {
+              permissions.add(action as String);
+            }
+          }
+        }
+      }
+    }
+    
+    return OrganizationMembershipModel.fromJson({
+      ...response,
+      'role_name': roleData?['name'],
+      'hierarchy_level': roleData?['hierarchy_level'],
+      'permissions': permissions,
+    });
   }
 
   Future<List<OrganizationSettingsHistoryModel>> getOrganizationSettingsHistory(String orgId) async {
@@ -378,6 +642,20 @@ class OrganizationRepository {
         .order('changed_at', ascending: false);
     
     return (response as List).map((json) => OrganizationSettingsHistoryModel.fromJson(json)).toList();
+  }
+
+  Future<Map<String, dynamic>?> getWorkspaceRoleAndPermissions(String workspaceId, String workspaceType) async {
+    final response = await _client.rpc(
+      'get_workspace_role_and_permissions',
+      params: {
+        'p_workspace_id': workspaceId,
+        'p_workspace_type': workspaceType,
+      },
+    );
+    if (response is List && response.isNotEmpty) {
+      return response.first as Map<String, dynamic>;
+    }
+    return null;
   }
 }
 

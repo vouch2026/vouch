@@ -38,12 +38,6 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
   String? _selectedProgramId;
   String? _selectedYearLevel;
   String _position = 'instructor';
-  
-  XFile? _idFrontImage;
-  XFile? _idBackImage;
-  Uint8List? _idFrontBytes;
-  Uint8List? _idBackBytes;
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -106,9 +100,6 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                       
                       if (_selectedRole == 'student') _buildStudentFields(facultiesAsync, programsAsync),
                       if (_selectedRole != 'student') _buildFacultyFields(facultiesAsync, programsAsync),
-                      
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildIdVerification(),
                     ],
                   ),
                 ),
@@ -178,7 +169,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         SegmentedButton<String>(
           segments: const [
             ButtonSegment(value: 'student', label: Text('Student'), icon: Icon(Icons.person_outline)),
-            ButtonSegment(value: 'faculty', label: Text('Faculty/Staff'), icon: Icon(Icons.school_outlined)),
+            ButtonSegment(value: 'personnel', label: Text('Personnel'), icon: Icon(Icons.badge_outlined)),
             ButtonSegment(value: 'super_admin', label: Text('Admin'), icon: Icon(Icons.admin_panel_settings_outlined)),
           ],
           selected: {_selectedRole},
@@ -428,20 +419,27 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
             ],
           ],
         ),
-        if (_selectedRole == 'faculty' && _position != 'dean') ...[
+        if ((_selectedRole == 'faculty' && _position != 'dean') || _selectedRole == 'personnel') ...[
           const SizedBox(height: AppSpacing.md),
-          _buildLabel('Program Assignment'),
+          _buildLabel(_selectedRole == 'personnel' ? 'Program Assignment (Optional)' : 'Program Assignment'),
           programsAsync.when(
             data: (programs) => DropdownButtonFormField<String>(
               value: _selectedProgramId,
               isExpanded: true,
-              items: programs.map((p) => DropdownMenuItem(
-                value: p.id!, 
-                child: Text(p.name, overflow: TextOverflow.ellipsis),
-              )).toList(),
+              items: [
+                if (_selectedRole == 'personnel')
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('None (Optional)', style: TextStyle(color: AppColors.textGrey)),
+                  ),
+                ...programs.map((p) => DropdownMenuItem<String>(
+                  value: p.id!, 
+                  child: Text(p.name, overflow: TextOverflow.ellipsis),
+                )),
+              ],
               onChanged: (v) => setState(() => _selectedProgramId = v),
               decoration: const InputDecoration(hintText: 'Select Program'),
-              validator: (v) => v == null ? 'Required' : null,
+              validator: (v) => (_selectedRole != 'personnel' && v == null) ? 'Required' : null,
               disabledHint: const Text('Select a Faculty first'),
             ),
             loading: () => const LinearProgressIndicator(),
@@ -452,89 +450,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
     );
   }
 
-  Widget _buildIdVerification() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('ID Verification (Optional for Admin-added)'),
-        Row(
-          children: [
-            Expanded(
-              child: _buildImagePicker(
-                label: 'ID Front',
-                image: _idFrontImage,
-                onTap: () => _pickImage(true),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: _buildImagePicker(
-                label: 'ID Back',
-                image: _idBackImage,
-                onTap: () => _pickImage(false),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
-  Widget _buildImagePicker({
-    required String label,
-    required XFile? image,
-    required VoidCallback onTap,
-  }) {
-    final bytes = label == 'ID Front' ? _idFrontBytes : _idBackBytes;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border, width: 1.5),
-          borderRadius: BorderRadius.circular(12),
-          color: AppColors.background,
-        ),
-        child: bytes != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: Image.memory(
-                  bytes,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_a_photo_outlined, color: AppColors.textGrey),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Future<void> _pickImage(bool isFront) async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        if (isFront) {
-          _idFrontImage = image;
-          _idFrontBytes = bytes;
-        } else {
-          _idBackImage = image;
-          _idBackBytes = bytes;
-        }
-      });
-    }
-  }
 
   Widget _buildActionButtons(bool isLoading) {
     return Row(
@@ -570,8 +486,6 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
         role: _selectedRole,
         position: _selectedRole == 'faculty' ? _position : null,
-        idFront: _idFrontImage,
-        idBack: _idBackImage,
       );
 
       if (success && mounted) {

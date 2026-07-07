@@ -5,6 +5,8 @@ enum ActivityCardStatus {
   treasurerReview,
   governorReview,
   adviserReview,
+  programHeadReview,
+  deanReview,
   cleared,
   rejected,
   // Retaining legacy values for compile compatibility

@@ -283,7 +283,7 @@ class DashboardPage extends ConsumerWidget {
             
             // Role Badge
             _buildBadge(
-              icon: Icons.shield_outlined,
+              icon: profile?.role == 'super_admin' ? Icons.shield_outlined : Icons.person_outline_rounded,
               label: profile?.role == 'super_admin' ? 'SYSTEM ADMIN' : (profile?.role?.toUpperCase() ?? 'STUDENT'),
               backgroundColor: AppColors.accent.withValues(alpha: 0.15),
               textColor: AppColors.primary,

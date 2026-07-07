@@ -18,8 +18,6 @@ _UserModel _$UserModelFromJson(Map<String, dynamic> json) => _UserModel(
   campusId: json['campus_id'] as String?,
   yearLevel: (json['year'] as num?)?.toInt(),
   avatarUrl: json['profile_photo_url'] as String?,
-  idFrontUrl: json['id_front_url'] as String?,
-  idBackUrl: json['id_back_url'] as String?,
   organizationIds:
       (json['organization_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -50,8 +48,6 @@ Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
       'campus_id': instance.campusId,
       'year': instance.yearLevel,
       'profile_photo_url': instance.avatarUrl,
-      'id_front_url': instance.idFrontUrl,
-      'id_back_url': instance.idBackUrl,
       'organization_ids': instance.organizationIds,
       'role': instance.role,
       'account_status': instance.status,

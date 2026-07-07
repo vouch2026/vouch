@@ -145,7 +145,7 @@ class FinanceRepository {
           'status': status,
           'rejection_note': rejectionNote,
           'received_by_user_id': officerId,
-          'updated_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', paymentId);
   }

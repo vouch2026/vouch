@@ -45,11 +45,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _showPassword = false;
   bool _showConfirmPassword = false;
   
-  XFile? _idFrontImage;
-  XFile? _idBackImage;
-  Uint8List? _idFrontBytes;
-  Uint8List? _idBackBytes;
-  final ImagePicker _picker = ImagePicker();
+
 
   @override
   void dispose() {
@@ -404,27 +400,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 _SchoolIdFormatter(),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            _buildLabel('ID Verification'),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildImagePicker(
-                    label: 'ID Front',
-                    image: _idFrontImage,
-                    onTap: () => _pickImage(true),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _buildImagePicker(
-                    label: 'ID Back',
-                    image: _idBackImage,
-                    onTap: () => _pickImage(false),
-                  ),
-                ),
-              ],
-            ),
+
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Email'),
             _buildTextField(
@@ -472,12 +448,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             );
                             return;
                           }
-                          if (_idFrontImage == null || _idBackImage == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please upload both ID front and back pictures')),
-                            );
-                            return;
-                          }
                           if (_selectedCampusId == null || _selectedFacultyId == null || _selectedProgramId == null || _selectedYearLevel == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Please select campus, faculty, program, and year level')),
@@ -495,8 +465,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 facultyId: _selectedFacultyId ?? '',
                                 programId: _selectedProgramId ?? '',
                                 yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
-                                idFront: _idFrontImage,
-                                idBack: _idBackImage,
                               ).then((success) {
                                 if (success && mounted) {
                                   context.goNamed(
@@ -653,61 +621,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
-  Future<void> _pickImage(bool isFront) async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        if (isFront) {
-          _idFrontImage = image;
-          _idFrontBytes = bytes;
-        } else {
-          _idBackImage = image;
-          _idBackBytes = bytes;
-        }
-      });
-    }
-  }
 
-  Widget _buildImagePicker({
-    required String label,
-    required XFile? image,
-    required VoidCallback onTap,
-  }) {
-    final bytes = label == 'ID Front' ? _idFrontBytes : _idBackBytes;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 100,
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.15), width: 1.5),
-          borderRadius: BorderRadius.circular(14),
-          color: AppColors.white,
-        ),
-        child: bytes != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.memory(
-                  bytes,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_a_photo_outlined, color: AppColors.primary),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
 }
 
 class _SchoolIdFormatter extends TextInputFormatter {

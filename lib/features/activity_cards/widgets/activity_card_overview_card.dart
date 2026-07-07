@@ -178,6 +178,14 @@ class _StatusBadge extends StatelessWidget {
         color = Colors.amber.shade700;
         label = 'ADVISER REVIEW';
         break;
+      case ActivityCardStatus.programHeadReview:
+        color = Colors.amber.shade700;
+        label = 'PROGRAM HEAD REVIEW';
+        break;
+      case ActivityCardStatus.deanReview:
+        color = Colors.amber.shade700;
+        label = 'DEAN REVIEW';
+        break;
       case ActivityCardStatus.partiallySigned:
         color = AppColors.primary;
         label = 'PARTIALLY SIGNED';

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/attendance_provider.dart';
 import '../models/qr_scan_ui_model.dart';
 import '../widgets/qr_recent_scan_card.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
 class AttendanceHistoryPage extends ConsumerStatefulWidget {
@@ -31,8 +32,8 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   String _selectedMode = 'All';
   String _selectedProgram = 'All';
 
-  static const Color primaryColor = Color(0xFF003DA5);
-  static const Color accentColor = Color(0xFFFFC107);
+  static const Color primaryColor = AppColors.primary;
+  static const Color accentColor = AppColors.accent;
 
   List<String> get _availablePrograms {
     final programs = _allScans
@@ -144,6 +145,125 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     });
   }
 
+  Widget _buildCustomAppBar() {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final isTablet = size.width >= 768 && size.width < 1024;
+
+    final double topMargin = isMobile ? 8.0 : (isTablet ? 12.0 : 16.0);
+    final double bottomMargin = isMobile ? 4.0 : (isTablet ? 6.0 : 8.0);
+    final double horizontalMargin = isMobile ? 8.0 : (isTablet ? 12.0 : 16.0);
+    final double borderRadius = isMobile ? 12.0 : 16.0;
+
+    return Container(
+      margin: EdgeInsets.only(
+        top: topMargin,
+        left: horizontalMargin,
+        right: horizontalMargin,
+        bottom: bottomMargin,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16.0,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: isMobile ? 52.0 : 60.0,
+        leading: Center(
+          child: Padding(
+            padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: Container(
+                width: isMobile ? 34 : 38,
+                height: isMobile ? 34 : 38,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.primary,
+                  size: isMobile ? 18 : 20,
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ),
+        titleSpacing: isMobile ? 4.0 : 8.0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Scan History',
+              style: GoogleFonts.poppins(
+                fontSize: isMobile ? 15 : (isTablet ? 16 : 18),
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              widget.eventName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: isMobile ? 11 : 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textGrey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: isMobile ? 12.0 : 16.0),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.12),
+                  ),
+                ),
+                child: Text(
+                  '${_filteredScans.length} Total',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
@@ -151,120 +271,15 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     return Theme(
       data: Theme.of(context).copyWith(textTheme: textTheme),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         body: SafeArea(
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Decorative Backgrounds
-              Positioned(
-                top: 100,
-                right: -50,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 260,
-                left: -30,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(75),
-                  ),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Custom AppBar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 16),
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 32,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: IconButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  icon: const Icon(
-                                    LucideIcons.arrowLeft,
-                                    color: primaryColor,
-                                    size: 21,
-                                  ),
-                                ),
-                              ),
-                              RichText(
-                                text: TextSpan(
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  children: const [
-                                    TextSpan(
-                                      text: 'Scan ',
-                                      style: TextStyle(color: primaryColor),
-                                    ),
-                                    TextSpan(
-                                      text: 'History',
-                                      style: TextStyle(color: accentColor),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: primaryColor.withOpacity(0.06),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: primaryColor.withOpacity(0.12),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    '${_filteredScans.length}',
-                                    style: const TextStyle(
-                                      color: primaryColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.eventName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(
-                            color: Colors.black.withOpacity(0.4),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 8),
+              // Custom AppBar (matches other screens)
+              _buildCustomAppBar(),
+              
+              const SizedBox(height: 8),
 
                   // Search Bar
                   Padding(
@@ -345,11 +360,9 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildFilterSection() {
