@@ -8,14 +8,14 @@ class ActivityCardRepository {
 
   Future<List<ActivityCard>> getStudentActivityCards(String studentId) async {
     // 1. Get active term
-    final termResponse = await _client
+    final termResponseList = await _client
         .from('academic_terms')
         .select()
         .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
     
-    if (termResponse == null) return [];
+    if (termResponseList.isEmpty) return [];
+    final termResponse = termResponseList.first;
     
     final termId = termResponse['id'];
     final academicYear = termResponse['academic_year'];
@@ -93,7 +93,8 @@ class ActivityCardRepository {
             *,
             activity_card_clearance_signatures (
               *,
-              roles (name)
+              roles (name),
+              signed_by_user:users!signed_by_user_id (first_name, last_name)
             )
           ''')
           .eq('student_id', studentId)
@@ -192,18 +193,32 @@ class ActivityCardRepository {
         for (var i = 0; i < sigList.length; i++) {
           final s = sigList[i];
           final roleData = s['roles'];
-          final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
+          final rawRoleName = roleData is List ? roleData.first['name'] as String : roleData['name'] as String;
+          final roleName = rawRoleName == 'Instructor' ? 'Adviser' : rawRoleName;
           
+          final userData = s['signed_by_user'];
+          String? signedByName;
+          if (userData != null) {
+            final fName = userData['first_name'] as String?;
+            final lName = userData['last_name'] as String?;
+            if (fName != null || lName != null) {
+              signedByName = '${fName ?? ''} ${lName ?? ''}'.trim();
+            }
+          }
+
           signatures.add(ActivityCardSignature(
             id: s['id'],
             roleName: roleName,
             signedByUserId: s['signed_by_user_id'],
+            signedByUserName: signedByName,
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
             rejectionReason: s['remarks'],
-            order: i,
+            order: _getRoleOrder(roleName),
           ));
         }
+        // Sort signatures by role order hierarchy
+        signatures.sort((a, b) => a.order.compareTo(b.order));
       }
 
       // 5. Calculate completion
@@ -348,61 +363,147 @@ class ActivityCardRepository {
     }
   }
 
+  int _getRoleOrder(String roleName) {
+    final name = roleName.toLowerCase().trim();
+    if (name == 'secretary') return 1;
+    if (name == 'treasurer') return 2;
+    if (name == 'governor' || name == 'president') return 3;
+    if (name == 'instructor' || name == 'adviser') return 4;
+    if (name == 'program head') return 5;
+    if (name == 'faculty dean' || name == 'dean') return 6;
+    return 7;
+  }
+
   Future<List<ActivityCard>> getOrganizationActivityCards(String organizationId) async {
     // 1. Get active term
-    final termResponse = await _client
+    final termResponseList = await _client
         .from('academic_terms')
         .select()
         .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
     
-    if (termResponse == null) return [];
+    if (termResponseList.isEmpty) return [];
+    final termResponse = termResponseList.first;
     final termId = termResponse['id'];
     final academicYear = termResponse['academic_year'];
     final semester = termResponse['semester'];
 
     // 2. Get organization info and its scope
-    final orgResponse = await _client
+    final orgResponseList = await _client
         .from('organizations')
         .select()
         .eq('id', organizationId)
-        .single();
+        .limit(1);
+    final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
     
-    final orgType = orgResponse['type'];
-    final orgName = orgResponse['name'];
-    final orgLogo = orgResponse['logo_url'];
-    String? scopeId = orgResponse['campus_id'];
-    if (orgType == 'faculty-based') {
-      scopeId = orgResponse['faculty_id'];
-    } else if (orgType == 'program-based') {
-      scopeId = orgResponse['program_id'];
+    String? orgType;
+    String? orgName;
+    String? orgLogo;
+    String? scopeId;
+
+    if (orgResponse != null) {
+      orgType = orgResponse['type'];
+      orgName = orgResponse['name'];
+      orgLogo = orgResponse['logo_url'];
+      scopeId = orgResponse['campus_id'];
+      if (orgType == 'faculty-based') {
+        scopeId = orgResponse['faculty_id'];
+      } else if (orgType == 'program-based') {
+        scopeId = orgResponse['program_id'];
+      }
+    } else {
+      // Check if it is a Program workspace
+      final programResponseList = await _client
+          .from('programs')
+          .select()
+          .eq('id', organizationId)
+          .limit(1);
+      final programResponse = programResponseList.isEmpty ? null : programResponseList.first;
+      
+      if (programResponse != null) {
+        orgType = 'program-based';
+        orgName = programResponse['name'];
+        orgLogo = programResponse['logo_url'];
+        scopeId = organizationId;
+      } else {
+        // Check if it is a Faculty workspace
+        final facultyResponseList = await _client
+            .from('faculties')
+            .select()
+            .eq('id', organizationId)
+            .limit(1);
+        final facultyResponse = facultyResponseList.isEmpty ? null : facultyResponseList.first;
+        
+        if (facultyResponse != null) {
+          orgType = 'faculty-based';
+          orgName = facultyResponse['name'];
+          orgLogo = facultyResponse['logo_url'];
+          scopeId = organizationId;
+        }
+      }
     }
 
     if (scopeId == null) return [];
 
-    // 3. Get all students (members) of this organization
-    // We join with users to get their names and program names
-    final membersResponse = await _client
-        .from('organization_members')
-        .select('''
-          user_id,
-          roles(hierarchy_level),
-          student:users (
+    // 3. Get all students (members)
+    final List<Map<String, dynamic>> normalizedMembers = [];
+    if (orgResponse != null) {
+      final membersResponse = await _client
+          .from('organization_members')
+          .select('''
+            user_id,
+            roles(hierarchy_level),
+            student:users (
+              id,
+              first_name,
+              last_name,
+              student_id_number,
+              program:programs!users_program_id_fkey (name)
+            )
+          ''')
+          .eq('organization_id', organizationId)
+          .eq('status', 'active');
+      
+      final members = membersResponse as List;
+      for (var m in members) {
+        final student = m['student'];
+        if (student != null) {
+          normalizedMembers.add({
+            'student_id': student['id'],
+            'student_name': '${student['first_name']} ${student['last_name']}',
+            'program_name': student['program']?['name'] ?? 'N/A',
+            'is_officer': ((m['roles']?['hierarchy_level'] ?? 5) as num) > 5,
+          });
+        }
+      }
+    } else {
+      // It's a Program or Faculty workspace, query students directly from users table
+      final isProgram = (orgType == 'program-based');
+      final usersResponse = await _client
+          .from('users')
+          .select('''
             id,
             first_name,
             last_name,
             student_id_number,
             program:programs!users_program_id_fkey (name)
-          )
-        ''')
-        .eq('organization_id', organizationId)
-        .eq('status', 'active');
-    
-    final List members = membersResponse as List;
-    if (members.isEmpty) return [];
+          ''')
+          .eq(isProgram ? 'program_id' : 'faculty_id', organizationId)
+          .eq('account_status', 'active');
 
-    final studentIds = members.map((m) => m['user_id'] as String).toList();
+      final usersList = usersResponse as List;
+      for (var u in usersList) {
+        normalizedMembers.add({
+          'student_id': u['id'],
+          'student_name': '${u['first_name']} ${u['last_name']}',
+          'program_name': u['program']?['name'] ?? 'N/A',
+          'is_officer': false,
+        });
+      }
+    }
+
+    if (normalizedMembers.isEmpty) return [];
+    final studentIds = normalizedMembers.map((m) => m['student_id'] as String).toList();
 
     // 4. Get events and fees for this scope
     final eventsResponse = await _client
@@ -418,6 +519,16 @@ class ActivityCardRepository {
         .eq('scope_id', scopeId)
         .eq('academic_term_id', termId)
         .eq('is_mandatory', true);
+
+    var sanctionsQuery = _client
+        .from('student_sanction_records')
+        .select()
+        .filter('student_id', 'in', studentIds)
+        .eq('academic_term_id', termId);
+
+    if (orgResponse != null) {
+      sanctionsQuery = sanctionsQuery.eq('scope_id', organizationId);
+    }
 
     // 5. Get all attendance, payments, and clearance requests for these students in bulk
     final List<Future<dynamic>> futures = [
@@ -436,23 +547,19 @@ class ActivityCardRepository {
               .filter('student_id', 'in', studentIds)
               .filter('fee_id', 'in', feesResponse.map((f) => f['id']).toList())
               .eq('status', 'Paid'),
-      _client
-          .from('student_sanction_records')
-          .select()
-          .filter('student_id', 'in', studentIds)
-          .eq('scope_id', organizationId)
-          .eq('academic_term_id', termId),
+      sanctionsQuery,
       _client
           .from('activity_card_clearance_requests')
           .select('''
             *,
             activity_card_clearance_signatures (
               *,
-              roles (name)
+              roles (name),
+              signed_by_user:users!signed_by_user_id (first_name, last_name)
             )
           ''')
           .filter('student_id', 'in', studentIds)
-          .eq('organization_id', organizationId)
+          .eq(orgResponse != null ? 'organization_id' : 'scope_id', organizationId)
           .eq('academic_term_id', termId)
     ];
 
@@ -465,15 +572,11 @@ class ActivityCardRepository {
     // 6. Assemble the ActivityCard objects for each student
     List<ActivityCard> cards = [];
 
-    for (var member in members) {
-      final student = member['student'];
-      final studentId = student['id'];
-      final studentName = '${student['first_name']} ${student['last_name']}';
-      final programName = student['program']?['name'] ?? 'N/A';
-
-      final roleData = member['roles'];
-      final hierarchyLevel = roleData?['hierarchy_level'] ?? 5;
-      final isOfficer = (hierarchyLevel as num) > 5;
+    for (var member in normalizedMembers) {
+      final studentId = member['student_id'] as String;
+      final studentName = member['student_name'] as String;
+      final programName = member['program_name'] as String;
+      final isOfficer = member['is_officer'] as bool;
 
       final studentAttendance = allAttendance.where((a) => a['student_id'] == studentId).toList();
       final studentPayments = allPayments.where((p) => p['student_id'] == studentId).toList();
@@ -533,18 +636,32 @@ class ActivityCardRepository {
         for (var i = 0; i < sigList.length; i++) {
           final s = sigList[i];
           final roleData = s['roles'];
-          final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
+          final rawRoleName = roleData is List ? roleData.first['name'] as String : roleData['name'] as String;
+          final roleName = rawRoleName == 'Instructor' ? 'Adviser' : rawRoleName;
+
+          final userData = s['signed_by_user'];
+          String? signedByName;
+          if (userData != null) {
+            final fName = userData['first_name'] as String?;
+            final lName = userData['last_name'] as String?;
+            if (fName != null || lName != null) {
+              signedByName = '${fName ?? ''} ${lName ?? ''}'.trim();
+            }
+          }
 
           signatures.add(ActivityCardSignature(
             id: s['id'],
             roleName: roleName,
             signedByUserId: s['signed_by_user_id'],
+            signedByUserName: signedByName,
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
             rejectionReason: s['remarks'],
-            order: i,
+            order: _getRoleOrder(roleName),
           ));
         }
+        // Sort signatures by role order hierarchy
+        signatures.sort((a, b) => a.order.compareTo(b.order));
       }
 
       // 5. Calculate completion
@@ -566,9 +683,9 @@ class ActivityCardRepository {
         studentName: studentName,
         studentProgram: programName,
         organizationId: organizationId,
-        organizationName: orgName,
+        organizationName: orgName ?? 'N/A',
         organizationLogo: orgLogo,
-        organizationType: orgType,
+        organizationType: orgType ?? 'campus-based',
         academicYear: academicYear,
         semester: semester,
         status: cardStatus,

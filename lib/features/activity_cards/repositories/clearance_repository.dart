@@ -11,64 +11,60 @@ class ClearanceRepository {
   /// Enforces the hierarchy: Program -> Faculty -> Campus.
   Future<bool> isEligibleForClearance(String studentId, String scopeId, String scopeType, String termId) async {
     if (scopeType == 'Program') {
-      return true; // Program is the base level
+      return true; // Program level clearance has no prerequisites
     }
 
     if (scopeType == 'Faculty') {
       // 1. Check if student has a Program clearance cleared for this term
-      final clearanceResponse = await _client
+      final clearanceResponseList = await _client
           .from('activity_card_clearance_requests')
           .select('status')
           .eq('student_id', studentId)
           .eq('scope_type', 'Program')
           .eq('academic_term_id', termId)
           .eq('status', 'Cleared')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
       
-      if (clearanceResponse != null) return true;
+      if (clearanceResponseList.isNotEmpty) return true;
 
       // 2. Check if student is an officer of any program-based organization for this term
       // Officers are exempt from needing a clearance card for their own level
-      final officerResponse = await _client
+      final officerResponseList = await _client
           .from('organization_members')
           .select('id, roles!inner(hierarchy_level), organizations!inner(type)')
           .eq('user_id', studentId)
           .eq('academic_term_id', termId)
           .eq('organizations.type', 'program-based')
           .gt('roles.hierarchy_level', 5)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
 
-      return officerResponse != null;
+      return officerResponseList.isNotEmpty;
     }
 
     if (scopeType == 'Institutional') {
       // 1. Check if student has a Faculty clearance cleared for this term
-      final clearanceResponse = await _client
+      final clearanceResponseList = await _client
           .from('activity_card_clearance_requests')
           .select('status')
           .eq('student_id', studentId)
           .eq('scope_type', 'Faculty')
           .eq('academic_term_id', termId)
           .eq('status', 'Cleared')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
       
-      if (clearanceResponse != null) return true;
+      if (clearanceResponseList.isNotEmpty) return true;
 
       // 2. Check if student is an officer of any faculty-based organization for this term
-      final officerResponse = await _client
+      final officerResponseList = await _client
           .from('organization_members')
           .select('id, roles!inner(hierarchy_level), organizations!inner(type)')
           .eq('user_id', studentId)
           .eq('academic_term_id', termId)
           .eq('organizations.type', 'faculty-based')
           .gt('roles.hierarchy_level', 5)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
 
-      return officerResponse != null;
+      return officerResponseList.isNotEmpty;
     }
 
     return false;
@@ -88,13 +84,15 @@ class ClearanceRepository {
     }
 
     // Check if a request already exists
-    final existingRequest = await _client
+    final existingRequestList = await _client
         .from('activity_card_clearance_requests')
         .select('id, status')
         .eq('student_id', studentId)
         .eq('organization_id', organizationId)
         .eq('academic_term_id', termId)
-        .maybeSingle();
+        .limit(1);
+
+    final existingRequest = existingRequestList.isEmpty ? null : existingRequestList.first;
 
     if (existingRequest != null) {
       if (existingRequest['status'] == 'Pending' || existingRequest['status'] == 'Cleared') {
@@ -117,11 +115,13 @@ class ClearanceRepository {
     final requestId = response['id'];
 
     // Identify required signatures based on roles and settings
-    final orgResponse = await _client
+    final orgResponseList = await _client
         .from('organization_settings')
         .select('requires_adviser_signature, requires_dean_signature, requires_program_head_signature')
         .eq('organization_id', organizationId)
-        .maybeSingle();
+        .limit(1);
+    
+    final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
     
     final bool requiresAdviser = orgResponse?['requires_adviser_signature'] ?? false;
     final bool requiresFacultyDean = orgResponse?['requires_dean_signature'] ?? false;
@@ -137,8 +137,12 @@ class ClearanceRepository {
       {'clearance_request_id': requestId, 'required_role_id': getRoleId('Treasurer'), 'required_scope_id': scopeId, 'status': 'Pending'},
     ];
 
+    // Governor/President is next in sequence
+    String governorRole = scopeType == 'Institutional' ? 'Governor' : 'President';
+    signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId(governorRole), 'required_scope_id': scopeId, 'status': 'Pending'});
+
     if (requiresAdviser) {
-      signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId('Instructor'), 'required_scope_id': scopeId, 'status': 'Pending'}); // Assuming Instructor role acts as Adviser
+      signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId('Adviser'), 'required_scope_id': scopeId, 'status': 'Pending'});
     }
 
     if (requiresProgramHead) {
@@ -148,10 +152,6 @@ class ClearanceRepository {
     if (requiresFacultyDean) {
       signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId('Faculty Dean'), 'required_scope_id': scopeId, 'status': 'Pending'});
     }
-
-    // Governor/President is always last
-    String governorRole = scopeType == 'Institutional' ? 'Governor' : 'President';
-    signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId(governorRole), 'required_scope_id': scopeId, 'status': 'Pending'});
 
     await _client.from('activity_card_clearance_signatures').insert(signatures);
   }
@@ -201,22 +201,23 @@ class ClearanceRepository {
 
     // Helper to check if a specific role is signed
     bool isRoleSigned(String targetRole) {
-      final sig = sigList.firstWhere(
-        (s) {
-          if (s == null) return false;
-          final r = s['roles'];
-          final rName = r is List ? r.first['name'] as String : r['name'] as String;
-          if (targetRole == 'Adviser') {
-            return rName == 'Instructor' || rName == 'Adviser';
-          }
-          if (targetRole == 'Governor') {
-            return rName == 'Governor' || rName == 'President';
-          }
-          return rName == targetRole;
-        },
-        orElse: () => null,
-      );
-      return sig == null || sig['status'] == 'Signed';
+      for (final s in sigList) {
+        if (s == null) continue;
+        final r = s['roles'];
+        final rName = r is List ? r.first['name'] as String : r['name'] as String;
+        bool isMatch = false;
+        if (targetRole == 'Adviser') {
+          isMatch = (rName == 'Instructor' || rName == 'Adviser');
+        } else if (targetRole == 'Governor') {
+          isMatch = (rName == 'Governor' || rName == 'President');
+        } else {
+          isMatch = (rName == targetRole);
+        }
+        if (isMatch) {
+          return s['status'] == 'Signed';
+        }
+      }
+      return true; // If the role is not present in the list, consider it signed/not required
     }
 
     // Helper to check if a specific role is present in this request
@@ -248,25 +249,24 @@ class ClearanceRepository {
       if (!allFeesPaid) {
         throw Exception('Cannot sign. Not all mandatory fees are paid.');
       }
-    } else if (roleName == 'Governor' || roleName == 'President') {
-      // Secretary must have signed
+      // Secretary must have signed before Treasurer can sign
       if (!isRoleSigned('Secretary')) {
         throw Exception('Cannot sign. Secretary has not signed this clearance card yet.');
       }
-
-      // Treasurer must have signed
+    } else if (roleName == 'Governor' || roleName == 'President') {
+      // Treasurer must have signed before Governor/President can sign
       if (!isRoleSigned('Treasurer')) {
         throw Exception('Cannot sign. Treasurer has not signed this clearance card yet.');
       }
 
       // Lower-level organization clearance check
-      final orgResponse = await _client
+      final orgResponseList = await _client
           .from('organizations')
           .select('type')
           .or('program_id.eq.$scopeId,faculty_id.eq.$scopeId,campus_id.eq.$scopeId')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
       
+      final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
       final String? orgType = orgResponse?['type'];
       bool isEligible = true;
 
