@@ -302,7 +302,7 @@ assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 auto_sign_clearance BOOLEAN DEFAULT false,
-UNIQUE(organization_id, user_id, academic_term_id)
+UNIQUE(organization_id, user_id)
 );
 
 -- ==========================================
@@ -348,7 +348,7 @@ assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 auto_sign_clearance BOOLEAN DEFAULT false,
-UNIQUE(comselec_id, user_id, academic_term_id)
+UNIQUE(comselec_id, user_id)
 );
 
 CREATE TABLE user_roles (
@@ -994,26 +994,14 @@ BEGIN
                     END;
 
     -- 1. Insert or Update membership (Organization Context)
-    -- If they have a base membership (NULL term), upgrade it
-    UPDATE organization_members 
-    SET 
-        role_id = p_role_id,
-        academic_term_id = p_term_id,
+    INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
+    VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
+    ON CONFLICT (organization_id, user_id) 
+    DO UPDATE SET 
+        role_id = EXCLUDED.role_id,
+        academic_term_id = EXCLUDED.academic_term_id,
         status = 'active',
-        assigned_at = CURRENT_TIMESTAMP
-    WHERE organization_id = p_org_id 
-      AND user_id = v_actual_user_id 
-      AND academic_term_id IS NULL;
-
-    IF NOT FOUND THEN
-        INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
-        VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
-        ON CONFLICT (organization_id, user_id, academic_term_id) 
-        DO UPDATE SET 
-            role_id = EXCLUDED.role_id,
-            status = 'active',
-            assigned_at = CURRENT_TIMESTAMP;
-    END IF;
+        assigned_at = CURRENT_TIMESTAMP;
 
     -- If the role is 'Adviser', update the adviser_name in organizations table
     IF EXISTS (SELECT 1 FROM public.roles WHERE id = p_role_id AND name = 'Adviser') THEN
@@ -1062,25 +1050,14 @@ BEGIN
     LIMIT 1;
 
     -- 1. Insert or Update membership (Comselec Context)
-    UPDATE comselec_members 
-    SET 
-        role_id = p_role_id,
-        academic_term_id = p_term_id,
+    INSERT INTO comselec_members (comselec_id, user_id, role_id, academic_term_id, status)
+    VALUES (p_comselec_id, v_actual_user_id, p_role_id, p_term_id, 'active')
+    ON CONFLICT (comselec_id, user_id) 
+    DO UPDATE SET 
+        role_id = EXCLUDED.role_id,
+        academic_term_id = EXCLUDED.academic_term_id,
         status = 'active',
-        assigned_at = CURRENT_TIMESTAMP
-    WHERE comselec_id = p_comselec_id 
-      AND user_id = v_actual_user_id 
-      AND academic_term_id IS NULL;
-
-    IF NOT FOUND THEN
-        INSERT INTO comselec_members (comselec_id, user_id, role_id, academic_term_id, status)
-        VALUES (p_comselec_id, v_actual_user_id, p_role_id, p_term_id, 'active')
-        ON CONFLICT (comselec_id, user_id, academic_term_id) 
-        DO UPDATE SET 
-            role_id = EXCLUDED.role_id,
-            status = 'active',
-            assigned_at = CURRENT_TIMESTAMP;
-    END IF;
+        assigned_at = CURRENT_TIMESTAMP;
 
     -- 2. Log the action
     INSERT INTO governance_audit_logs (comselec_id, action, performed_by_user_id, target_user_id, details)
@@ -1162,16 +1139,34 @@ BEGIN
     RETURNING id INTO v_org_id;
 
     IF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
-        INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM public.users WHERE campus_id = p_campus_id
+        INSERT INTO organization_members (organization_id, user_id, role_id)
+        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        FROM public.users u
+        JOIN public.user_roles ur ON u.id = ur.user_id
+        JOIN public.roles r ON ur.role_id = r.id
+        WHERE u.campus_id = p_campus_id
+          AND r.name = 'Students'
+          AND ur.is_active = true
         ON CONFLICT DO NOTHING;
     ELSIF p_type = 'faculty-based' AND p_faculty_id IS NOT NULL THEN
-        INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM public.users WHERE faculty_id = p_faculty_id
+        INSERT INTO organization_members (organization_id, user_id, role_id)
+        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        FROM public.users u
+        JOIN public.user_roles ur ON u.id = ur.user_id
+        JOIN public.roles r ON ur.role_id = r.id
+        WHERE u.faculty_id = p_faculty_id
+          AND r.name = 'Students'
+          AND ur.is_active = true
         ON CONFLICT DO NOTHING;
     ELSIF p_type = 'program-based' AND p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
-        INSERT INTO organization_members (organization_id, user_id)
-        SELECT v_org_id, id FROM public.users WHERE program_id = ANY(p_program_ids)
+        INSERT INTO organization_members (organization_id, user_id, role_id)
+        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        FROM public.users u
+        JOIN public.user_roles ur ON u.id = ur.user_id
+        JOIN public.roles r ON ur.role_id = r.id
+        WHERE u.program_id = ANY(p_program_ids)
+          AND r.name = 'Students'
+          AND ur.is_active = true
         ON CONFLICT DO NOTHING;
     END IF;
 

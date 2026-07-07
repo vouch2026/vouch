@@ -348,26 +348,14 @@ BEGIN
                     END;
 
     -- 1. Insert or Update membership (Organization Context)
-    -- If they have a base membership (NULL term), upgrade it
-    UPDATE organization_members 
-    SET 
-        role_id = p_role_id,
-        academic_term_id = p_term_id,
+    INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
+    VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
+    ON CONFLICT (organization_id, user_id) 
+    DO UPDATE SET 
+        role_id = EXCLUDED.role_id,
+        academic_term_id = EXCLUDED.academic_term_id,
         status = 'active',
-        assigned_at = CURRENT_TIMESTAMP
-    WHERE organization_id = p_org_id 
-      AND user_id = v_actual_user_id 
-      AND academic_term_id IS NULL;
-
-    IF NOT FOUND THEN
-        INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
-        VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
-        ON CONFLICT (organization_id, user_id, academic_term_id) 
-        DO UPDATE SET 
-            role_id = EXCLUDED.role_id,
-            status = 'active',
-            assigned_at = CURRENT_TIMESTAMP;
-    END IF;
+        assigned_at = CURRENT_TIMESTAMP;
 
     -- If the role is 'Adviser', update the adviser_name in organizations table
     IF EXISTS (SELECT 1 FROM public.roles WHERE id = p_role_id AND name = 'Adviser') THEN
