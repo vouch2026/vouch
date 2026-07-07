@@ -201,22 +201,23 @@ class ClearanceRepository {
 
     // Helper to check if a specific role is signed
     bool isRoleSigned(String targetRole) {
-      final sig = sigList.firstWhere(
-        (s) {
-          if (s == null) return false;
-          final r = s['roles'];
-          final rName = r is List ? r.first['name'] as String : r['name'] as String;
-          if (targetRole == 'Adviser') {
-            return rName == 'Instructor' || rName == 'Adviser';
-          }
-          if (targetRole == 'Governor') {
-            return rName == 'Governor' || rName == 'President';
-          }
-          return rName == targetRole;
-        },
-        orElse: () => null,
-      );
-      return sig == null || sig['status'] == 'Signed';
+      for (final s in sigList) {
+        if (s == null) continue;
+        final r = s['roles'];
+        final rName = r is List ? r.first['name'] as String : r['name'] as String;
+        bool isMatch = false;
+        if (targetRole == 'Adviser') {
+          isMatch = (rName == 'Instructor' || rName == 'Adviser');
+        } else if (targetRole == 'Governor') {
+          isMatch = (rName == 'Governor' || rName == 'President');
+        } else {
+          isMatch = (rName == targetRole);
+        }
+        if (isMatch) {
+          return s['status'] == 'Signed';
+        }
+      }
+      return true; // If the role is not present in the list, consider it signed/not required
     }
 
     // Helper to check if a specific role is present in this request
