@@ -169,6 +169,18 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                     (requiredRoleName == 'governor' || requiredRoleName == 'president')) {
                   return true;
                 }
+
+                // Adviser/Instructor overlap
+                if ((currentViewerRoleName == 'instructor' || currentViewerRoleName == 'adviser') && 
+                    (requiredRoleName == 'instructor' || requiredRoleName == 'adviser')) {
+                  return true;
+                }
+
+                // Dean/Faculty Dean overlap
+                if ((currentViewerRoleName == 'faculty dean' || currentViewerRoleName == 'dean') && 
+                    (requiredRoleName == 'faculty dean' || requiredRoleName == 'dean')) {
+                  return true;
+                }
   
                 // Super Admin can sign anything
                 if (currentViewerRoleName == 'super admin') return true;

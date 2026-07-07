@@ -1564,7 +1564,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Adviser' AND p.action IN (
-    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_activity_cards'
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_activity_cards', 'view_fees', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
