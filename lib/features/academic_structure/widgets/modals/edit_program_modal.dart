@@ -9,6 +9,9 @@ import '../../../programs/models/program_model.dart';
 import '../../../programs/providers/program_provider.dart';
 import '../../../users/providers/users_provider.dart';
 
+import 'package:image_picker/image_picker.dart';
+import '../../../../core/providers/storage_provider.dart';
+
 class EditProgramModal extends ConsumerStatefulWidget {
   final ProgramModel program;
   const EditProgramModal({super.key, required this.program});
@@ -24,6 +27,8 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
   String? _selectedFaculty;
   String? _selectedHead;
   bool _isLoading = false;
+  XFile? _logoImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -41,16 +46,35 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _logoImage = image;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
+      String? logoUrl = widget.program.logoUrl;
+      if (_logoImage != null) {
+        logoUrl = await ref.read(storageServiceProvider).uploadAcademicAsset(
+          code: _codeController.text.trim(),
+          file: _logoImage!,
+          type: 'program',
+        );
+      }
+
       final updatedProgram = widget.program.copyWith(
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         facultyId: _selectedFaculty!,
         programHeadId: _selectedHead,
+        logoUrl: logoUrl,
       );
 
       await ref.read(programsProvider.notifier).updateProgram(updatedProgram);
@@ -159,7 +183,7 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
                 style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.xs),
-              usersAsync.when(
+               usersAsync.when(
                 data: (users) => DropdownButtonFormField<String>(
                   isExpanded: true,
                   value: _selectedHead,
@@ -181,6 +205,42 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
                 ),
                 loading: () => const LinearProgressIndicator(),
                 error: (e, s) => Text('Error loading users: $e', style: const TextStyle(color: Colors.red)),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Program Logo',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  if (_logoImage == null && widget.program.logoUrl != null && widget.program.logoUrl!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        widget.program.logoUrl!,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_rounded, size: 48),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _pickImage,
+                      icon: Icon(_logoImage != null ? Icons.check_circle_rounded : Icons.image_outlined, 
+                        color: _logoImage != null ? Colors.green : null),
+                      label: Text(_logoImage != null ? 'Logo Selected' : 'Change Logo',
+                        style: TextStyle(color: _logoImage != null ? Colors.green : null)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                        side: BorderSide(color: _logoImage != null ? Colors.green : Theme.of(context).colorScheme.outlineVariant),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.xl),
               Row(

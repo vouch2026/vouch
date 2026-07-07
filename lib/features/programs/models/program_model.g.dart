@@ -14,6 +14,7 @@ _ProgramModel _$ProgramModelFromJson(Map<String, dynamic> json) =>
       facultyId: json['faculty_id'] as String,
       programHeadId: json['program_head_id'] as String?,
       programHeadName: json['programHeadName'] as String?,
+      logoUrl: json['logo_url'] as String?,
       status: json['status'] as String? ?? 'active',
       createdAt: json['created_at'] == null
           ? null
@@ -31,6 +32,7 @@ Map<String, dynamic> _$ProgramModelToJson(_ProgramModel instance) =>
       'faculty_id': instance.facultyId,
       'program_head_id': instance.programHeadId,
       'programHeadName': instance.programHeadName,
+      'logo_url': instance.logoUrl,
       'status': instance.status,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),

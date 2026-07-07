@@ -12,6 +12,7 @@ abstract class ProgramModel with _$ProgramModel {
     @JsonKey(name: 'faculty_id') required String facultyId,
     @JsonKey(name: 'program_head_id') String? programHeadId,
     String? programHeadName,
+    @JsonKey(name: 'logo_url') String? logoUrl,
     @Default('active') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,

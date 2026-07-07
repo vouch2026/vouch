@@ -9,6 +9,9 @@ import '../../../faculties/models/faculty_model.dart';
 import '../../../faculties/providers/faculty_provider.dart';
 import '../../../users/providers/users_provider.dart';
 
+import 'package:image_picker/image_picker.dart';
+import '../../../../core/providers/storage_provider.dart';
+
 class EditFacultyModal extends ConsumerStatefulWidget {
   final FacultyModel faculty;
   const EditFacultyModal({super.key, required this.faculty});
@@ -24,6 +27,8 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
   String? _selectedCampus;
   String? _selectedDean;
   bool _isLoading = false;
+  XFile? _logoImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -41,16 +46,35 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _logoImage = image;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
+      String? logoUrl = widget.faculty.logoUrl;
+      if (_logoImage != null) {
+        logoUrl = await ref.read(storageServiceProvider).uploadAcademicAsset(
+          code: _codeController.text.trim(),
+          file: _logoImage!,
+          type: 'faculty',
+        );
+      }
+
       final updatedFaculty = widget.faculty.copyWith(
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         campusId: _selectedCampus!,
         deanId: _selectedDean,
+        logoUrl: logoUrl,
       );
 
       await ref.read(facultiesProvider.notifier).updateFaculty(updatedFaculty);
@@ -159,7 +183,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
                 style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.xs),
-              usersAsync.when(
+               usersAsync.when(
                 data: (users) => DropdownButtonFormField<String>(
                   isExpanded: true,
                   value: _selectedDean,
@@ -181,6 +205,42 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
                 ),
                 loading: () => const LinearProgressIndicator(),
                 error: (e, s) => Text('Error loading users: $e', style: const TextStyle(color: Colors.red)),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Faculty Logo',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  if (_logoImage == null && widget.faculty.logoUrl != null && widget.faculty.logoUrl!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        widget.faculty.logoUrl!,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_rounded, size: 48),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _pickImage,
+                      icon: Icon(_logoImage != null ? Icons.check_circle_rounded : Icons.image_outlined, 
+                        color: _logoImage != null ? Colors.green : null),
+                      label: Text(_logoImage != null ? 'Logo Selected' : 'Change Logo',
+                        style: TextStyle(color: _logoImage != null ? Colors.green : null)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                        side: BorderSide(color: _logoImage != null ? Colors.green : Theme.of(context).colorScheme.outlineVariant),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.xl),
               Row(
