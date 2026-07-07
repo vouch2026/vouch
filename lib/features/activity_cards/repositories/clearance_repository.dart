@@ -11,64 +11,60 @@ class ClearanceRepository {
   /// Enforces the hierarchy: Program -> Faculty -> Campus.
   Future<bool> isEligibleForClearance(String studentId, String scopeId, String scopeType, String termId) async {
     if (scopeType == 'Program') {
-      return true; // Program is the base level
+      return true; // Program level clearance has no prerequisites
     }
 
     if (scopeType == 'Faculty') {
       // 1. Check if student has a Program clearance cleared for this term
-      final clearanceResponse = await _client
+      final clearanceResponseList = await _client
           .from('activity_card_clearance_requests')
           .select('status')
           .eq('student_id', studentId)
           .eq('scope_type', 'Program')
           .eq('academic_term_id', termId)
           .eq('status', 'Cleared')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
       
-      if (clearanceResponse != null) return true;
+      if (clearanceResponseList.isNotEmpty) return true;
 
       // 2. Check if student is an officer of any program-based organization for this term
       // Officers are exempt from needing a clearance card for their own level
-      final officerResponse = await _client
+      final officerResponseList = await _client
           .from('organization_members')
           .select('id, roles!inner(hierarchy_level), organizations!inner(type)')
           .eq('user_id', studentId)
           .eq('academic_term_id', termId)
           .eq('organizations.type', 'program-based')
           .gt('roles.hierarchy_level', 5)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
 
-      return officerResponse != null;
+      return officerResponseList.isNotEmpty;
     }
 
     if (scopeType == 'Institutional') {
       // 1. Check if student has a Faculty clearance cleared for this term
-      final clearanceResponse = await _client
+      final clearanceResponseList = await _client
           .from('activity_card_clearance_requests')
           .select('status')
           .eq('student_id', studentId)
           .eq('scope_type', 'Faculty')
           .eq('academic_term_id', termId)
           .eq('status', 'Cleared')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
       
-      if (clearanceResponse != null) return true;
+      if (clearanceResponseList.isNotEmpty) return true;
 
       // 2. Check if student is an officer of any faculty-based organization for this term
-      final officerResponse = await _client
+      final officerResponseList = await _client
           .from('organization_members')
           .select('id, roles!inner(hierarchy_level), organizations!inner(type)')
           .eq('user_id', studentId)
           .eq('academic_term_id', termId)
           .eq('organizations.type', 'faculty-based')
           .gt('roles.hierarchy_level', 5)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
 
-      return officerResponse != null;
+      return officerResponseList.isNotEmpty;
     }
 
     return false;
@@ -88,13 +84,15 @@ class ClearanceRepository {
     }
 
     // Check if a request already exists
-    final existingRequest = await _client
+    final existingRequestList = await _client
         .from('activity_card_clearance_requests')
         .select('id, status')
         .eq('student_id', studentId)
         .eq('organization_id', organizationId)
         .eq('academic_term_id', termId)
-        .maybeSingle();
+        .limit(1);
+
+    final existingRequest = existingRequestList.isEmpty ? null : existingRequestList.first;
 
     if (existingRequest != null) {
       if (existingRequest['status'] == 'Pending' || existingRequest['status'] == 'Cleared') {
@@ -117,11 +115,13 @@ class ClearanceRepository {
     final requestId = response['id'];
 
     // Identify required signatures based on roles and settings
-    final orgResponse = await _client
+    final orgResponseList = await _client
         .from('organization_settings')
         .select('requires_adviser_signature, requires_dean_signature, requires_program_head_signature')
         .eq('organization_id', organizationId)
-        .maybeSingle();
+        .limit(1);
+    
+    final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
     
     final bool requiresAdviser = orgResponse?['requires_adviser_signature'] ?? false;
     final bool requiresFacultyDean = orgResponse?['requires_dean_signature'] ?? false;
@@ -260,13 +260,13 @@ class ClearanceRepository {
       }
 
       // Lower-level organization clearance check
-      final orgResponse = await _client
+      final orgResponseList = await _client
           .from('organizations')
           .select('type')
           .or('program_id.eq.$scopeId,faculty_id.eq.$scopeId,campus_id.eq.$scopeId')
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
       
+      final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
       final String? orgType = orgResponse?['type'];
       bool isEligible = true;
 

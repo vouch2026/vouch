@@ -74,7 +74,7 @@ class OrganizationRepository {
     final type = workspaceJson['type'] as String? ?? 'campus-based';
     
     if (type == 'campus-based' || type == 'faculty-based' || type == 'program-based') {
-      final settingsResponse = await _client
+      final settingsResponseList = await _client
           .from('organization_settings')
           .select('''
             requires_adviser_signature,
@@ -85,9 +85,9 @@ class OrganizationRepository {
             clearance_period_end
           ''')
           .eq('organization_id', id)
-          .maybeSingle();
+          .limit(1);
 
-      final settings = settingsResponse as Map<String, dynamic>?;
+      final settings = settingsResponseList.isEmpty ? null : settingsResponseList.first as Map<String, dynamic>;
       final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
       final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
       final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
@@ -103,7 +103,7 @@ class OrganizationRepository {
         isClearanceActive = now.isAfter(start) && now.isBefore(end);
       }
 
-      final orgResponse = await _client
+      final orgResponseList = await _client
           .from('organizations')
           .select('''
             adviser_name,
@@ -115,8 +115,9 @@ class OrganizationRepository {
             )
           ''')
           .eq('id', id)
-          .maybeSingle();
+          .limit(1);
       
+      final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
       final adviserName = orgResponse?['adviser_name'] as String?;
       
       String? programHeadName;
@@ -159,7 +160,7 @@ class OrganizationRepository {
         'is_clearance_active': isClearanceActive,
       });
     } else if (type == 'comselec') {
-      final settingsResponse = await _client
+      final settingsResponseList = await _client
           .from('comselec_settings')
           .select('''
             requires_chairman_signature,
@@ -169,9 +170,9 @@ class OrganizationRepository {
             clearance_period_end
           ''')
           .eq('comselec_id', id)
-          .maybeSingle();
+          .limit(1);
 
-      final settings = settingsResponse as Map<String, dynamic>?;
+      final settings = settingsResponseList.isEmpty ? null : settingsResponseList.first as Map<String, dynamic>;
       final requiresChairman = settings?['requires_chairman_signature'] as bool? ?? false;
       final requiresCommissioner = settings?['requires_commissioner_signature'] as bool? ?? false;
       final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
@@ -290,11 +291,12 @@ class OrganizationRepository {
   }
 
   Future<List<UserModel>> getOrganizationMembers(String orgId) async {
-    final isComselec = await _client
+    final isComselecResponse = await _client
         .from('comselecs')
         .select('id')
         .eq('id', orgId)
-        .maybeSingle() != null;
+        .limit(1);
+    final isComselec = isComselecResponse.isNotEmpty;
 
     if (isComselec) {
       final response = await _client
@@ -377,11 +379,12 @@ class OrganizationRepository {
   }
 
   Future<List<OrganizationMembershipModel>> getOrganizationOfficers(String orgId) async {
-    final isComselec = await _client
+    final isComselecResponse = await _client
         .from('comselecs')
         .select('id')
         .eq('id', orgId)
-        .maybeSingle() != null;
+        .limit(1);
+    final isComselec = isComselecResponse.isNotEmpty;
 
     if (isComselec) {
       final response = await _client
@@ -526,7 +529,7 @@ class OrganizationRepository {
       final id = json['id'] as String;
       
       if (type == 'campus-based' || type == 'faculty-based' || type == 'program-based') {
-        final settingsResponse = await _client
+        final settingsResponseList = await _client
             .from('organization_settings')
             .select('''
               requires_adviser_signature,
@@ -537,9 +540,9 @@ class OrganizationRepository {
               clearance_period_end
             ''')
             .eq('organization_id', id)
-            .maybeSingle();
+            .limit(1);
 
-        final settings = settingsResponse as Map<String, dynamic>?;
+        final settings = settingsResponseList.isEmpty ? null : settingsResponseList.first as Map<String, dynamic>;
         final requiresAdviser = settings?['requires_adviser_signature'] as bool? ?? false;
         final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
         final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
@@ -555,11 +558,12 @@ class OrganizationRepository {
           isClearanceActive = now.isAfter(start) && now.isBefore(end);
         }
 
-        final orgResponse = await _client
+        final orgResponseList = await _client
             .from('organizations')
             .select('adviser_name')
             .eq('id', id)
-            .maybeSingle();
+            .limit(1);
+        final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
         final adviserName = orgResponse?['adviser_name'] as String?;
 
         workspaces.add(OrganizationModel.fromJson({
@@ -574,7 +578,7 @@ class OrganizationRepository {
           'is_clearance_active': isClearanceActive,
         }));
       } else if (type == 'comselec') {
-        final settingsResponse = await _client
+        final settingsResponseList = await _client
             .from('comselec_settings')
             .select('''
               requires_chairman_signature,
@@ -584,9 +588,9 @@ class OrganizationRepository {
               clearance_period_end
             ''')
             .eq('comselec_id', id)
-            .maybeSingle();
+            .limit(1);
 
-        final settings = settingsResponse as Map<String, dynamic>?;
+        final settings = settingsResponseList.isEmpty ? null : settingsResponseList.first as Map<String, dynamic>;
         final requiresChairman = settings?['requires_chairman_signature'] as bool? ?? false;
         final requiresCommissioner = settings?['requires_commissioner_signature'] as bool? ?? false;
         final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
@@ -627,7 +631,7 @@ class OrganizationRepository {
   }
 
   Future<OrganizationMembershipModel?> getUserMembershipInOrg(String userId, String orgId) async {
-    final response = await _client
+    final responseList = await _client
         .from('organization_members')
         .select('''
           *,
@@ -640,9 +644,10 @@ class OrganizationRepository {
         ''')
         .eq('user_id', userId)
         .eq('organization_id', orgId)
-        .maybeSingle();
+        .limit(1);
         
-    if (response == null) return null;
+    if (responseList.isEmpty) return null;
+    final response = responseList.first;
     
     final roleData = response['role'];
     final List<String> permissions = [];

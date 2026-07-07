@@ -8,14 +8,14 @@ class ActivityCardRepository {
 
   Future<List<ActivityCard>> getStudentActivityCards(String studentId) async {
     // 1. Get active term
-    final termResponse = await _client
+    final termResponseList = await _client
         .from('academic_terms')
         .select()
         .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
     
-    if (termResponse == null) return [];
+    if (termResponseList.isEmpty) return [];
+    final termResponse = termResponseList.first;
     
     final termId = termResponse['id'];
     final academicYear = termResponse['academic_year'];
@@ -376,24 +376,25 @@ class ActivityCardRepository {
 
   Future<List<ActivityCard>> getOrganizationActivityCards(String organizationId) async {
     // 1. Get active term
-    final termResponse = await _client
+    final termResponseList = await _client
         .from('academic_terms')
         .select()
         .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
     
-    if (termResponse == null) return [];
+    if (termResponseList.isEmpty) return [];
+    final termResponse = termResponseList.first;
     final termId = termResponse['id'];
     final academicYear = termResponse['academic_year'];
     final semester = termResponse['semester'];
 
     // 2. Get organization info and its scope
-    final orgResponse = await _client
+    final orgResponseList = await _client
         .from('organizations')
         .select()
         .eq('id', organizationId)
-        .maybeSingle();
+        .limit(1);
+    final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
     
     String? orgType;
     String? orgName;
@@ -412,11 +413,12 @@ class ActivityCardRepository {
       }
     } else {
       // Check if it is a Program workspace
-      final programResponse = await _client
+      final programResponseList = await _client
           .from('programs')
           .select()
           .eq('id', organizationId)
-          .maybeSingle();
+          .limit(1);
+      final programResponse = programResponseList.isEmpty ? null : programResponseList.first;
       
       if (programResponse != null) {
         orgType = 'program-based';
@@ -425,11 +427,12 @@ class ActivityCardRepository {
         scopeId = organizationId;
       } else {
         // Check if it is a Faculty workspace
-        final facultyResponse = await _client
+        final facultyResponseList = await _client
             .from('faculties')
             .select()
             .eq('id', organizationId)
-            .maybeSingle();
+            .limit(1);
+        final facultyResponse = facultyResponseList.isEmpty ? null : facultyResponseList.first;
         
         if (facultyResponse != null) {
           orgType = 'faculty-based';
