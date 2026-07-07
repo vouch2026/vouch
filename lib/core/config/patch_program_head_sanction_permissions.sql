@@ -54,3 +54,12 @@ CROSS JOIN public.permissions p
 WHERE r.name IN ('Secretary', 'Assistant Secretary') 
 AND p.action = 'view_fees'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- 6. Grant SELECT permission for Deans, Program Heads, and Officers to view all clearance requests and signatures (to resolve hierarchy/prerequisite checks during review)
+DROP POLICY IF EXISTS "Officers can view all clearance requests" ON public.activity_card_clearance_requests;
+CREATE POLICY "Officers can view all clearance requests" ON public.activity_card_clearance_requests FOR SELECT TO authenticated
+USING (EXISTS (SELECT 1 FROM public.organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL) OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.is_active = true));
+
+DROP POLICY IF EXISTS "Officers can view all clearance signatures" ON public.activity_card_clearance_signatures;
+CREATE POLICY "Officers can view all clearance signatures" ON public.activity_card_clearance_signatures FOR SELECT TO authenticated
+USING (EXISTS (SELECT 1 FROM public.organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL) OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.is_active = true));

@@ -848,6 +848,8 @@ CREATE POLICY "Students can view their own clearance requests" ON activity_card_
 USING (student_id = public.get_my_id());
 CREATE POLICY "Officers can view clearance requests for their organization" ON activity_card_clearance_requests FOR SELECT 
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = activity_card_clearance_requests.organization_id AND om.role_id IS NOT NULL));
+CREATE POLICY "Officers can view all clearance requests" ON activity_card_clearance_requests FOR SELECT TO authenticated
+USING (EXISTS (SELECT 1 FROM public.organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL) OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.is_active = true));
 CREATE POLICY "Students can request clearance" ON activity_card_clearance_requests FOR INSERT TO authenticated
 WITH CHECK (student_id = public.get_my_id());
 CREATE POLICY "Officers can update clearance status" ON activity_card_clearance_requests FOR UPDATE TO authenticated
@@ -856,6 +858,8 @@ USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.g
 -- Clearance Signatures
 CREATE POLICY "Users can view signatures for their own requests" ON activity_card_clearance_signatures FOR SELECT 
 USING (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND (r.student_id = public.get_my_id() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = r.organization_id AND om.role_id IS NOT NULL))));
+CREATE POLICY "Officers can view all clearance signatures" ON activity_card_clearance_signatures FOR SELECT TO authenticated
+USING (EXISTS (SELECT 1 FROM public.organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL) OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.is_active = true));
 CREATE POLICY "Students can insert signatures for their own requests" ON activity_card_clearance_signatures FOR INSERT TO authenticated
 WITH CHECK (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id()));
 CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
