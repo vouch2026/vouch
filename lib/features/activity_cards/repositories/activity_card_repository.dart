@@ -193,7 +193,8 @@ class ActivityCardRepository {
         for (var i = 0; i < sigList.length; i++) {
           final s = sigList[i];
           final roleData = s['roles'];
-          final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
+          final rawRoleName = roleData is List ? roleData.first['name'] as String : roleData['name'] as String;
+          final roleName = rawRoleName == 'Instructor' ? 'Adviser' : rawRoleName;
           
           final userData = s['signed_by_user'];
           String? signedByName;
@@ -559,7 +560,8 @@ class ActivityCardRepository {
         for (var i = 0; i < sigList.length; i++) {
           final s = sigList[i];
           final roleData = s['roles'];
-          final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
+          final rawRoleName = roleData is List ? roleData.first['name'] as String : roleData['name'] as String;
+          final roleName = rawRoleName == 'Instructor' ? 'Adviser' : rawRoleName;
 
           final userData = s['signed_by_user'];
           String? signedByName;
