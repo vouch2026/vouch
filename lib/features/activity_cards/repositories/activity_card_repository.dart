@@ -79,6 +79,7 @@ class ActivityCardRepository {
           ''')
           .filter('scope_id', 'in', scopeIds.toList())
           .eq('academic_term_id', termId)
+          .eq('is_mandatory', true)
           .eq('payments.student_id', studentId),
       _client
           .from('student_sanction_records')
@@ -405,7 +406,8 @@ class ActivityCardRepository {
         .from('fees')
         .select('id, name, scope_type, amount')
         .eq('scope_id', scopeId)
-        .eq('academic_term_id', termId);
+        .eq('academic_term_id', termId)
+        .eq('is_mandatory', true);
 
     // 5. Get all attendance, payments, and clearance requests for these students in bulk
     final List<Future<dynamic>> futures = [
