@@ -51,7 +51,7 @@ BEGIN
 
     -- 1. Student Organizations where the user is a member/officer
     RETURN QUERY
-    SELECT 
+    SELECT DISTINCT
         o.id,
         o.name,
         o.code,
@@ -101,7 +101,7 @@ BEGIN
 
     -- 4. COMSELEC workspaces where the user is an active member (chair, commissioner, or voter)
     RETURN QUERY
-    SELECT 
+    SELECT DISTINCT
         c.id,
         c.name,
         c.code,
@@ -280,7 +280,9 @@ BEGIN
         WHERE cm.user_id = v_user_id 
           AND cm.comselec_id = p_workspace_id 
           AND cm.status = 'active'
-        GROUP BY r.id, r.name, r.hierarchy_level;
+        GROUP BY r.id, r.name, r.hierarchy_level
+        ORDER BY r.hierarchy_level DESC
+        LIMIT 1;
 
     ELSE
         -- Organization workspaces
@@ -296,7 +298,9 @@ BEGIN
         WHERE om.user_id = v_user_id 
           AND om.organization_id = p_workspace_id 
           AND om.status = 'active'
-        GROUP BY r.id, r.name, r.hierarchy_level;
+        GROUP BY r.id, r.name, r.hierarchy_level
+        ORDER BY r.hierarchy_level DESC
+        LIMIT 1;
     END IF;
 END;
 $$;
