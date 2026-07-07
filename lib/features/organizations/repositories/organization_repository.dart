@@ -103,8 +103,16 @@ class OrganizationRepository {
         isClearanceActive = now.isAfter(start) && now.isBefore(end);
       }
 
+      final orgResponse = await _client
+          .from('organizations')
+          .select('adviser_name')
+          .eq('id', id)
+          .maybeSingle();
+      final adviserName = orgResponse?['adviser_name'] as String?;
+
       return OrganizationModel.fromJson({
         ...workspaceJson,
+        if (adviserName != null) 'adviser_name': adviserName,
         'requires_adviser_signature': requiresAdviser,
         'requires_program_head_signature': requiresProgramHead,
         'requires_faculty_dean_signature': requiresFacultyDean,
@@ -510,8 +518,16 @@ class OrganizationRepository {
           isClearanceActive = now.isAfter(start) && now.isBefore(end);
         }
 
+        final orgResponse = await _client
+            .from('organizations')
+            .select('adviser_name')
+            .eq('id', id)
+            .maybeSingle();
+        final adviserName = orgResponse?['adviser_name'] as String?;
+
         workspaces.add(OrganizationModel.fromJson({
           ...json,
+          if (adviserName != null) 'adviser_name': adviserName,
           'requires_adviser_signature': requiresAdviser,
           'requires_program_head_signature': requiresProgramHead,
           'requires_faculty_dean_signature': requiresFacultyDean,

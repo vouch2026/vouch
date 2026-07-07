@@ -404,7 +404,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workspace = ref.watch(workspaceProvider);
     final isCurrentWorkspace = workspace.selectedOrganization?.id == org.id;
-    final activeOrg = isCurrentWorkspace ? (workspace.selectedOrganization ?? org) : org;
+    final activeOrg = org;
     final activeRole = isCurrentWorkspace ? workspace.activeRole : null;
     final activeMembership = isCurrentWorkspace ? workspace.activeMembership : null;
 
@@ -450,8 +450,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                   label: 'Adviser Name',
                   value: activeOrg.adviserName ?? 'N/A',
                   icon: LucideIcons.userCheck,
-                  canEdit: canEdit,
-                  onEdit: () => _showEditAdviserDialog(context, ref, activeOrg),
+                  canEdit: false,
                 ),
                 _buildInfoTile(
                   label: 'Description',

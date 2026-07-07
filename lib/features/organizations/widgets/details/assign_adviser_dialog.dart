@@ -235,6 +235,7 @@ class _AssignAdviserDialogState extends ConsumerState<AssignAdviserDialog> {
         ref.invalidate(organizationMembersProvider(_selectedOrg!.id));
         ref.invalidate(organizationProvider(_selectedOrg!.id));
         ref.invalidate(organizationsProvider);
+        ref.invalidate(userOrganizationsProvider);
 
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
