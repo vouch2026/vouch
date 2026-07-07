@@ -137,8 +137,12 @@ class ClearanceRepository {
       {'clearance_request_id': requestId, 'required_role_id': getRoleId('Treasurer'), 'required_scope_id': scopeId, 'status': 'Pending'},
     ];
 
+    // Governor/President is next in sequence
+    String governorRole = scopeType == 'Institutional' ? 'Governor' : 'President';
+    signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId(governorRole), 'required_scope_id': scopeId, 'status': 'Pending'});
+
     if (requiresAdviser) {
-      signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId('Instructor'), 'required_scope_id': scopeId, 'status': 'Pending'}); // Assuming Instructor role acts as Adviser
+      signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId('Adviser'), 'required_scope_id': scopeId, 'status': 'Pending'});
     }
 
     if (requiresProgramHead) {
@@ -148,10 +152,6 @@ class ClearanceRepository {
     if (requiresFacultyDean) {
       signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId('Faculty Dean'), 'required_scope_id': scopeId, 'status': 'Pending'});
     }
-
-    // Governor/President is always last
-    String governorRole = scopeType == 'Institutional' ? 'Governor' : 'President';
-    signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId(governorRole), 'required_scope_id': scopeId, 'status': 'Pending'});
 
     await _client.from('activity_card_clearance_signatures').insert(signatures);
   }
@@ -248,13 +248,12 @@ class ClearanceRepository {
       if (!allFeesPaid) {
         throw Exception('Cannot sign. Not all mandatory fees are paid.');
       }
-    } else if (roleName == 'Governor' || roleName == 'President') {
-      // Secretary must have signed
+      // Secretary must have signed before Treasurer can sign
       if (!isRoleSigned('Secretary')) {
         throw Exception('Cannot sign. Secretary has not signed this clearance card yet.');
       }
-
-      // Treasurer must have signed
+    } else if (roleName == 'Governor' || roleName == 'President') {
+      // Treasurer must have signed before Governor/President can sign
       if (!isRoleSigned('Treasurer')) {
         throw Exception('Cannot sign. Treasurer has not signed this clearance card yet.');
       }

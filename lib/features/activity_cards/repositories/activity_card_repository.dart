@@ -201,9 +201,11 @@ class ActivityCardRepository {
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
             rejectionReason: s['remarks'],
-            order: i,
+            order: _getRoleOrder(roleName),
           ));
         }
+        // Sort signatures by role order hierarchy
+        signatures.sort((a, b) => a.order.compareTo(b.order));
       }
 
       // 5. Calculate completion
@@ -346,6 +348,17 @@ class ActivityCardRepository {
       case 'Pending': return ActivityCardStatus.pending;
       default: return ActivityCardStatus.pending;
     }
+  }
+
+  int _getRoleOrder(String roleName) {
+    final name = roleName.toLowerCase().trim();
+    if (name == 'secretary') return 1;
+    if (name == 'treasurer') return 2;
+    if (name == 'governor' || name == 'president') return 3;
+    if (name == 'instructor' || name == 'adviser') return 4;
+    if (name == 'program head') return 5;
+    if (name == 'faculty dean' || name == 'dean') return 6;
+    return 7;
   }
 
   Future<List<ActivityCard>> getOrganizationActivityCards(String organizationId) async {
@@ -542,9 +555,11 @@ class ActivityCardRepository {
             status: _mapSignatureStatus(s['status']),
             signedAt: s['signed_at'] != null ? DateTime.parse(s['signed_at']) : null,
             rejectionReason: s['remarks'],
-            order: i,
+            order: _getRoleOrder(roleName),
           ));
         }
+        // Sort signatures by role order hierarchy
+        signatures.sort((a, b) => a.order.compareTo(b.order));
       }
 
       // 5. Calculate completion

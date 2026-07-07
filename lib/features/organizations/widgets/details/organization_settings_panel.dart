@@ -864,21 +864,28 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 final List<Widget> steps = [
                   _buildWorkflowStep(
                     step: '1',
-                    title: 'Submission',
-                    subtitle: 'Student clearance request',
+                    title: 'Secretary sign',
+                    subtitle: 'Event compliance check',
                     color: AppColors.primary,
                     isCompleted: true,
                   ),
                   _buildWorkflowStep(
                     step: '2',
-                    title: 'Officer review',
-                    subtitle: 'Officers sign off',
+                    title: 'Treasurer sign',
+                    subtitle: 'Fee compliance check',
+                    color: AppColors.info,
+                    isCompleted: true,
+                  ),
+                  _buildWorkflowStep(
+                    step: '3',
+                    title: 'Governor sign',
+                    subtitle: 'Governor/President approval',
                     color: AppColors.info,
                     isCompleted: true,
                   ),
                 ];
 
-                int currentStep = 3;
+                int currentStep = 4;
 
                 // Adviser is applicable to all types
                 steps.add(_buildWorkflowStep(
