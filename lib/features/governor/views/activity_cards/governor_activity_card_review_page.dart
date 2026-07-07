@@ -136,7 +136,10 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                 if (isPrerequisiteLocked && (sig.roleName.toLowerCase() == 'governor' || 
                                              sig.roleName.toLowerCase() == 'president' || 
                                              sig.roleName.toLowerCase() == 'adviser' || 
-                                             sig.roleName.toLowerCase() == 'instructor')) {
+                                             sig.roleName.toLowerCase() == 'instructor' ||
+                                             sig.roleName.toLowerCase() == 'program head' ||
+                                             sig.roleName.toLowerCase() == 'faculty dean' ||
+                                             sig.roleName.toLowerCase() == 'dean')) {
                   return ActivityCardSignature(
                     id: sig.id,
                     roleName: sig.roleName,

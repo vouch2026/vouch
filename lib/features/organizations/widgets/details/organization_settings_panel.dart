@@ -417,6 +417,8 @@ class OrganizationSettingsPanel extends ConsumerWidget {
         activeRole?.roleName == 'Treasurer';
 
     final canEdit = isGovernor;
+    final now = DateTime.now();
+    final hasClearanceStarted = activeOrg.clearancePeriodStart != null && now.isAfter(activeOrg.clearancePeriodStart!);
     final orgState = ref.watch(organizationControllerProvider);
 
     return Stack(
@@ -474,10 +476,12 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 ),
                 _buildSwitchTile(
                   label: 'Require Adviser Signature',
-                  subtitle: 'Adviser final signature required on activity card',
+                  subtitle: hasClearanceStarted
+                      ? 'Adviser signature (Locked: clearance period has started)'
+                      : 'Adviser final signature required on activity card',
                   value: activeOrg.requiresAdviserSignature,
                   icon: LucideIcons.signature,
-                  onChanged: canEdit
+                  onChanged: (canEdit && !hasClearanceStarted)
                       ? (val) async {
                           final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                                 id: activeOrg.id,
@@ -495,10 +499,12 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 if (activeOrg.type == 'program-based')
                   _buildSwitchTile(
                     label: 'Require Program Head Signature',
-                    subtitle: 'Program Head final signature required on activity card',
+                    subtitle: hasClearanceStarted
+                        ? 'Program Head signature (Locked: clearance period has started)'
+                        : 'Program Head final signature required on activity card',
                     value: activeOrg.requiresProgramHeadSignature,
                     icon: LucideIcons.userCheck,
-                    onChanged: canEdit
+                    onChanged: (canEdit && !hasClearanceStarted)
                         ? (val) async {
                             final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                                   id: activeOrg.id,
@@ -516,10 +522,12 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 if (activeOrg.type == 'faculty-based')
                   _buildSwitchTile(
                     label: 'Require Faculty Dean Signature',
-                    subtitle: 'Dean final signature required on activity card',
+                    subtitle: hasClearanceStarted
+                        ? 'Faculty Dean signature (Locked: clearance period has started)'
+                        : 'Dean final signature required on activity card',
                     value: activeOrg.requiresFacultyDeanSignature,
                     icon: LucideIcons.graduationCap,
-                    onChanged: canEdit
+                    onChanged: (canEdit && !hasClearanceStarted)
                         ? (val) async {
                             final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                                   id: activeOrg.id,
