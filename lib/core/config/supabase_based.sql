@@ -784,6 +784,18 @@ CREATE POLICY "Students can view their own attendance" ON student_attendance FOR
 USING (student_id = public.get_my_id());
 CREATE POLICY "Officers can view attendance in their scope" ON student_attendance FOR SELECT 
 USING (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('view_events', e.scope_type, e.scope_id)));
+CREATE POLICY "Deans and Program Heads can view all attendance" ON student_attendance FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.programs pr
+    WHERE pr.program_head_id = public.get_my_id()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM public.faculties f
+    WHERE f.dean_id = public.get_my_id()
+  )
+);
 CREATE POLICY "Officers can scan attendance" ON student_attendance FOR INSERT TO authenticated
 WITH CHECK (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('scan_event_attendance', e.scope_type, e.scope_id)));
 CREATE POLICY "Officers can override attendance" ON student_attendance FOR UPDATE TO authenticated
@@ -794,6 +806,18 @@ CREATE POLICY "Students can view their own payments" ON student_payments FOR SEL
 USING (student_id = public.get_my_id());
 CREATE POLICY "Officers can view payments in their scope" ON student_payments FOR SELECT 
 USING (EXISTS (SELECT 1 FROM fees f WHERE f.id = fee_id AND public.has_scope_permission('view_fees', f.scope_type, f.scope_id)));
+CREATE POLICY "Deans and Program Heads can view all payments" ON student_payments FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.programs pr
+    WHERE pr.program_head_id = public.get_my_id()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM public.faculties f
+    WHERE f.dean_id = public.get_my_id()
+  )
+);
 CREATE POLICY "Students can submit payments" ON student_payments FOR INSERT TO authenticated
 WITH CHECK (student_id = public.get_my_id());
 CREATE POLICY "Officers can verify payments" ON student_payments FOR UPDATE TO authenticated
@@ -804,6 +828,18 @@ CREATE POLICY "Students can view their own sanctions" ON student_sanction_record
 USING (student_id = public.get_my_id());
 CREATE POLICY "Officers can view sanctions in their scope" ON student_sanction_records FOR SELECT 
 USING (public.has_scope_permission('view_activity_cards', scope_type, scope_id));
+CREATE POLICY "Deans and Program Heads can view all sanctions" ON student_sanction_records FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.programs pr
+    WHERE pr.program_head_id = public.get_my_id()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM public.faculties f
+    WHERE f.dean_id = public.get_my_id()
+  )
+);
 CREATE POLICY "Officers can manage sanctions" ON student_sanction_records FOR ALL TO authenticated
 USING (public.has_scope_permission('receive_sanction_items', scope_type, scope_id));
 
@@ -824,6 +860,8 @@ CREATE POLICY "Students can insert signatures for their own requests" ON activit
 WITH CHECK (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id()));
 CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id = required_role_id AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)));
+CREATE POLICY "Deans and Program Heads can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
+USING (EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.role_id = required_role_id AND ur.scope_id = required_scope_id AND ur.is_active = true));
 
 -- Sanction Rules
 CREATE POLICY "Sanction rules are viewable by everyone" ON sanction_rules FOR SELECT USING (true);
@@ -1741,7 +1779,8 @@ SELECT r.id, p.id FROM public.roles r, public.permissions p
 WHERE r.name = 'Faculty Dean' 
 AND p.action IN (
     'sign_faculty_clearance', 'reject_clearance', 'view_clearance_dashboard',
-    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_program_analytics'
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_program_analytics',
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
@@ -1750,7 +1789,8 @@ SELECT r.id, p.id FROM public.roles r, public.permissions p
 WHERE r.name = 'Program Head' 
 AND p.action IN (
     'sign_program_clearance', 'reject_clearance', 'view_clearance_dashboard',
-    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_program_analytics'
+    'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_program_analytics',
+    'create_sanction_rules', 'edit_sanction_rules', 'delete_sanction_rules', 'receive_sanction_items', 'view_sanctions'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

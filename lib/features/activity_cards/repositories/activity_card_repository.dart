@@ -393,42 +393,114 @@ class ActivityCardRepository {
         .from('organizations')
         .select()
         .eq('id', organizationId)
-        .single();
+        .maybeSingle();
     
-    final orgType = orgResponse['type'];
-    final orgName = orgResponse['name'];
-    final orgLogo = orgResponse['logo_url'];
-    String? scopeId = orgResponse['campus_id'];
-    if (orgType == 'faculty-based') {
-      scopeId = orgResponse['faculty_id'];
-    } else if (orgType == 'program-based') {
-      scopeId = orgResponse['program_id'];
+    String? orgType;
+    String? orgName;
+    String? orgLogo;
+    String? scopeId;
+
+    if (orgResponse != null) {
+      orgType = orgResponse['type'];
+      orgName = orgResponse['name'];
+      orgLogo = orgResponse['logo_url'];
+      scopeId = orgResponse['campus_id'];
+      if (orgType == 'faculty-based') {
+        scopeId = orgResponse['faculty_id'];
+      } else if (orgType == 'program-based') {
+        scopeId = orgResponse['program_id'];
+      }
+    } else {
+      // Check if it is a Program workspace
+      final programResponse = await _client
+          .from('programs')
+          .select()
+          .eq('id', organizationId)
+          .maybeSingle();
+      
+      if (programResponse != null) {
+        orgType = 'program-based';
+        orgName = programResponse['name'];
+        orgLogo = programResponse['logo_url'];
+        scopeId = organizationId;
+      } else {
+        // Check if it is a Faculty workspace
+        final facultyResponse = await _client
+            .from('faculties')
+            .select()
+            .eq('id', organizationId)
+            .maybeSingle();
+        
+        if (facultyResponse != null) {
+          orgType = 'faculty-based';
+          orgName = facultyResponse['name'];
+          orgLogo = facultyResponse['logo_url'];
+          scopeId = organizationId;
+        }
+      }
     }
 
     if (scopeId == null) return [];
 
-    // 3. Get all students (members) of this organization
-    // We join with users to get their names and program names
-    final membersResponse = await _client
-        .from('organization_members')
-        .select('''
-          user_id,
-          roles(hierarchy_level),
-          student:users (
+    // 3. Get all students (members)
+    final List<Map<String, dynamic>> normalizedMembers = [];
+    if (orgResponse != null) {
+      final membersResponse = await _client
+          .from('organization_members')
+          .select('''
+            user_id,
+            roles(hierarchy_level),
+            student:users (
+              id,
+              first_name,
+              last_name,
+              student_id_number,
+              program:programs!users_program_id_fkey (name)
+            )
+          ''')
+          .eq('organization_id', organizationId)
+          .eq('status', 'active');
+      
+      final members = membersResponse as List;
+      for (var m in members) {
+        final student = m['student'];
+        if (student != null) {
+          normalizedMembers.add({
+            'student_id': student['id'],
+            'student_name': '${student['first_name']} ${student['last_name']}',
+            'program_name': student['program']?['name'] ?? 'N/A',
+            'is_officer': ((m['roles']?['hierarchy_level'] ?? 5) as num) > 5,
+          });
+        }
+      }
+    } else {
+      // It's a Program or Faculty workspace, query students directly from users table
+      final isProgram = (orgType == 'program-based');
+      final usersResponse = await _client
+          .from('users')
+          .select('''
             id,
             first_name,
             last_name,
             student_id_number,
             program:programs!users_program_id_fkey (name)
-          )
-        ''')
-        .eq('organization_id', organizationId)
-        .eq('status', 'active');
-    
-    final List members = membersResponse as List;
-    if (members.isEmpty) return [];
+          ''')
+          .eq(isProgram ? 'program_id' : 'faculty_id', organizationId)
+          .eq('account_status', 'active');
 
-    final studentIds = members.map((m) => m['user_id'] as String).toList();
+      final usersList = usersResponse as List;
+      for (var u in usersList) {
+        normalizedMembers.add({
+          'student_id': u['id'],
+          'student_name': '${u['first_name']} ${u['last_name']}',
+          'program_name': u['program']?['name'] ?? 'N/A',
+          'is_officer': false,
+        });
+      }
+    }
+
+    if (normalizedMembers.isEmpty) return [];
+    final studentIds = normalizedMembers.map((m) => m['student_id'] as String).toList();
 
     // 4. Get events and fees for this scope
     final eventsResponse = await _client
@@ -444,6 +516,16 @@ class ActivityCardRepository {
         .eq('scope_id', scopeId)
         .eq('academic_term_id', termId)
         .eq('is_mandatory', true);
+
+    var sanctionsQuery = _client
+        .from('student_sanction_records')
+        .select()
+        .filter('student_id', 'in', studentIds)
+        .eq('academic_term_id', termId);
+
+    if (orgResponse != null) {
+      sanctionsQuery = sanctionsQuery.eq('scope_id', organizationId);
+    }
 
     // 5. Get all attendance, payments, and clearance requests for these students in bulk
     final List<Future<dynamic>> futures = [
@@ -462,12 +544,7 @@ class ActivityCardRepository {
               .filter('student_id', 'in', studentIds)
               .filter('fee_id', 'in', feesResponse.map((f) => f['id']).toList())
               .eq('status', 'Paid'),
-      _client
-          .from('student_sanction_records')
-          .select()
-          .filter('student_id', 'in', studentIds)
-          .eq('scope_id', organizationId)
-          .eq('academic_term_id', termId),
+      sanctionsQuery,
       _client
           .from('activity_card_clearance_requests')
           .select('''
@@ -479,7 +556,7 @@ class ActivityCardRepository {
             )
           ''')
           .filter('student_id', 'in', studentIds)
-          .eq('organization_id', organizationId)
+          .eq(orgResponse != null ? 'organization_id' : 'scope_id', organizationId)
           .eq('academic_term_id', termId)
     ];
 
@@ -492,15 +569,11 @@ class ActivityCardRepository {
     // 6. Assemble the ActivityCard objects for each student
     List<ActivityCard> cards = [];
 
-    for (var member in members) {
-      final student = member['student'];
-      final studentId = student['id'];
-      final studentName = '${student['first_name']} ${student['last_name']}';
-      final programName = student['program']?['name'] ?? 'N/A';
-
-      final roleData = member['roles'];
-      final hierarchyLevel = roleData?['hierarchy_level'] ?? 5;
-      final isOfficer = (hierarchyLevel as num) > 5;
+    for (var member in normalizedMembers) {
+      final studentId = member['student_id'] as String;
+      final studentName = member['student_name'] as String;
+      final programName = member['program_name'] as String;
+      final isOfficer = member['is_officer'] as bool;
 
       final studentAttendance = allAttendance.where((a) => a['student_id'] == studentId).toList();
       final studentPayments = allPayments.where((p) => p['student_id'] == studentId).toList();
@@ -607,9 +680,9 @@ class ActivityCardRepository {
         studentName: studentName,
         studentProgram: programName,
         organizationId: organizationId,
-        organizationName: orgName,
+        organizationName: orgName ?? 'N/A',
         organizationLogo: orgLogo,
-        organizationType: orgType,
+        organizationType: orgType ?? 'campus-based',
         academicYear: academicYear,
         semester: semester,
         status: cardStatus,
