@@ -138,7 +138,7 @@ class ClearanceRepository {
     ];
 
     // Governor/President is next in sequence
-    String governorRole = scopeType == 'Institutional' ? 'Governor' : 'President';
+    String governorRole = (scopeType == 'Faculty') ? 'Governor' : 'President';
     signatures.add({'clearance_request_id': requestId, 'required_role_id': getRoleId(governorRole), 'required_scope_id': scopeId, 'status': 'Pending'});
 
     if (requiresAdviser) {

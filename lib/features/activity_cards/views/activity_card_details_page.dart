@@ -156,19 +156,43 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
             final isRejected = activityCard.status == ActivityCardStatus.rejected;
   
             final adjustedSignatures = activityCard.signatures.map((sig) {
-              if (isLocked && (sig.roleName.toLowerCase() == 'governor' || 
-                               sig.roleName.toLowerCase() == 'president' || 
-                               sig.roleName.toLowerCase() == 'adviser' || 
-                               sig.roleName.toLowerCase() == 'instructor' ||
-                               sig.roleName.toLowerCase() == 'program head' ||
-                               sig.roleName.toLowerCase() == 'faculty dean' ||
-                               sig.roleName.toLowerCase() == 'dean')) {
+              String roleName = sig.roleName;
+              if (activityCard.organizationType == 'faculty-based') {
+                if (roleName.toLowerCase() == 'president') {
+                  roleName = 'Governor';
+                }
+              } else {
+                if (roleName.toLowerCase() == 'governor') {
+                  roleName = 'President';
+                }
+              }
+
+              if (isLocked && (roleName.toLowerCase() == 'governor' || 
+                               roleName.toLowerCase() == 'president' || 
+                               roleName.toLowerCase() == 'adviser' || 
+                               roleName.toLowerCase() == 'instructor' ||
+                               roleName.toLowerCase() == 'program head' ||
+                               roleName.toLowerCase() == 'faculty dean' ||
+                               roleName.toLowerCase() == 'dean')) {
                 return ActivityCardSignature(
                   id: sig.id,
-                  roleName: sig.roleName,
+                  roleName: roleName,
                   signedByUserId: sig.signedByUserId,
                   signedByUserName: sig.signedByUserName,
                   status: SignatureStatus.locked,
+                  signedAt: sig.signedAt,
+                  rejectionReason: sig.rejectionReason,
+                  order: sig.order,
+                );
+              }
+              
+              if (roleName != sig.roleName) {
+                return ActivityCardSignature(
+                  id: sig.id,
+                  roleName: roleName,
+                  signedByUserId: sig.signedByUserId,
+                  signedByUserName: sig.signedByUserName,
+                  status: sig.status,
                   signedAt: sig.signedAt,
                   rejectionReason: sig.rejectionReason,
                   order: sig.order,
@@ -214,7 +238,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                           if (isRejected) ...[
                             Builder(
                               builder: (context) {
-                                final rejectedSig = activityCard.signatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
+                                final rejectedSig = adjustedSignatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
                                 if (rejectedSig == null) return const SizedBox.shrink();
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
