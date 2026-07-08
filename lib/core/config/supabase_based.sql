@@ -2200,7 +2200,11 @@ BEGIN
     SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member';
     SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters';
 
-    -- 2. Reset student organization members to standard 'Member' role
+    -- 2. Delete adviser memberships (so they do not become standard student members)
+    DELETE FROM public.organization_members
+    WHERE role_id = (SELECT id FROM public.roles WHERE name = 'Adviser' LIMIT 1);
+
+    -- 3. Reset student organization members to standard 'Member' role
     UPDATE public.organization_members
     SET role_id = v_member_role_id
     WHERE role_id IS DISTINCT FROM v_member_role_id;
