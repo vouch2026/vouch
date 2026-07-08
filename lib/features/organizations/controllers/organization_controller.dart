@@ -83,6 +83,7 @@ class OrganizationController extends AsyncNotifier<void> {
     bool? requiresProgramHeadSignature,
     bool? requiresFacultyDeanSignature,
     bool? allowMemberCardPrinting,
+    bool? restrictClearanceRequest,
     bool? isClearanceActive,
     DateTime? clearancePeriodStart,
     DateTime? clearancePeriodEnd,
@@ -141,6 +142,10 @@ class OrganizationController extends AsyncNotifier<void> {
 
       if (allowMemberCardPrinting != null) {
         updateData['allow_member_card_printing'] = allowMemberCardPrinting;
+      }
+
+      if (restrictClearanceRequest != null) {
+        updateData['restrict_clearance_request'] = restrictClearanceRequest;
       }
 
       if (isClearanceActive != null) {

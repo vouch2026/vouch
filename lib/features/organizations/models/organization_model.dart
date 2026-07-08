@@ -26,6 +26,7 @@ abstract class OrganizationModel with _$OrganizationModel {
     @JsonKey(name: 'requires_program_head_signature') @Default(false) bool requiresProgramHeadSignature,
     @JsonKey(name: 'requires_faculty_dean_signature') @Default(false) bool requiresFacultyDeanSignature,
     @JsonKey(name: 'allow_member_card_printing') @Default(true) bool allowMemberCardPrinting,
+    @JsonKey(name: 'restrict_clearance_request') @Default(false) bool restrictClearanceRequest,
     @JsonKey(name: 'is_clearance_active') @Default(false) bool isClearanceActive,
     @JsonKey(name: 'clearance_period_start') DateTime? clearancePeriodStart,
     @JsonKey(name: 'clearance_period_end') DateTime? clearancePeriodEnd,

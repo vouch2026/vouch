@@ -20,7 +20,8 @@ class OrganizationRepository {
             requires_program_head_signature,
             allow_member_to_print,
             clearance_period_start,
-            clearance_period_end
+            clearance_period_end,
+            restrict_clearance_request
           ),
           member_count:organization_members(count)
         ''')
@@ -41,6 +42,7 @@ class OrganizationRepository {
       final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
       final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
       final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final restrictClearanceRequest = settings?['restrict_clearance_request'] as bool? ?? false;
       final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
       final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
       
@@ -59,6 +61,7 @@ class OrganizationRepository {
         'requires_program_head_signature': requiresProgramHead,
         'requires_faculty_dean_signature': requiresFacultyDean,
         'allow_member_card_printing': allowMemberCardPrinting,
+        'restrict_clearance_request': restrictClearanceRequest,
         'clearance_period_start': clearancePeriodStartStr,
         'clearance_period_end': clearancePeriodEndStr,
         'is_clearance_active': isClearanceActive,
@@ -82,7 +85,8 @@ class OrganizationRepository {
             requires_program_head_signature,
             allow_member_to_print,
             clearance_period_start,
-            clearance_period_end
+            clearance_period_end,
+            restrict_clearance_request
           ''')
           .eq('organization_id', id)
           .limit(1);
@@ -92,6 +96,7 @@ class OrganizationRepository {
       final requiresProgramHead = settings?['requires_program_head_signature'] as bool? ?? false;
       final requiresFacultyDean = settings?['requires_dean_signature'] as bool? ?? false;
       final allowMemberCardPrinting = settings?['allow_member_to_print'] as bool? ?? true;
+      final restrictClearanceRequest = settings?['restrict_clearance_request'] as bool? ?? false;
       final clearancePeriodStartStr = settings?['clearance_period_start'] as String?;
       final clearancePeriodEndStr = settings?['clearance_period_end'] as String?;
       
@@ -155,6 +160,7 @@ class OrganizationRepository {
         'requires_program_head_signature': requiresProgramHead,
         'requires_faculty_dean_signature': requiresFacultyDean,
         'allow_member_card_printing': allowMemberCardPrinting,
+        'restrict_clearance_request': restrictClearanceRequest,
         'clearance_period_start': clearancePeriodStartStr,
         'clearance_period_end': clearancePeriodEndStr,
         'is_clearance_active': isClearanceActive,
@@ -254,6 +260,8 @@ class OrganizationRepository {
         settingsData['requires_dean_signature'] = value;
       } else if (key == 'allow_member_card_printing') {
         settingsData['allow_member_to_print'] = value;
+      } else if (key == 'restrict_clearance_request') {
+        settingsData['restrict_clearance_request'] = value;
       } else if (key == 'clearance_period_start') {
         settingsData['clearance_period_start'] = value;
       } else if (key == 'clearance_period_end') {

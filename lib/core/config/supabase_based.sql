@@ -285,6 +285,7 @@ requires_adviser_signature BOOLEAN NOT NULL DEFAULT FALSE,
 requires_dean_signature BOOLEAN NOT NULL DEFAULT FALSE,
 requires_program_head_signature BOOLEAN NOT NULL DEFAULT FALSE,
 allow_member_to_print BOOLEAN NOT NULL DEFAULT FALSE,
+restrict_clearance_request BOOLEAN NOT NULL DEFAULT FALSE,
 clearance_period_start TIMESTAMPTZ,
 clearance_period_end TIMESTAMPTZ,
 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2229,7 +2230,8 @@ BEGIN
     -- 6. Reset clearance periods in organization & comselec settings
     UPDATE public.organization_settings
     SET clearance_period_start = NULL,
-        clearance_period_end = NULL
+        clearance_period_end = NULL,
+        restrict_clearance_request = FALSE
     WHERE organization_id IS NOT NULL;
 
     UPDATE public.comselec_settings

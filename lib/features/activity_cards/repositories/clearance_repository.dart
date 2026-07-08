@@ -83,6 +83,47 @@ class ClearanceRepository {
       throw Exception('You must clear the lower hierarchy organization first.');
     }
 
+    // Identify required signatures based on roles and settings
+    final orgResponseList = await _client
+        .from('organization_settings')
+        .select('requires_adviser_signature, requires_dean_signature, requires_program_head_signature, restrict_clearance_request')
+        .eq('organization_id', organizationId)
+        .limit(1);
+    
+    final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
+    
+    final bool requiresAdviser = orgResponse?['requires_adviser_signature'] ?? false;
+    final bool requiresFacultyDean = orgResponse?['requires_dean_signature'] ?? false;
+    final bool requiresProgramHead = orgResponse?['requires_program_head_signature'] ?? false;
+    final bool restrictClearanceRequest = orgResponse?['restrict_clearance_request'] ?? false;
+
+    if (restrictClearanceRequest) {
+      final cardRepo = ActivityCardRepository(_client);
+      final card = await cardRepo.getStudentActivityCardForOrganization(studentId, organizationId);
+      if (card == null) {
+        throw Exception('Student activity card not found.');
+      }
+      
+      final allEventsComplied = card.events.every((e) => 
+        e.attendanceStatus == AttendanceStatus.completed || 
+        e.attendanceStatus == AttendanceStatus.excused || 
+        e.attendanceStatus == AttendanceStatus.sanctionCleared
+      );
+      if (!allEventsComplied) {
+        throw Exception('You cannot request clearance. You have uncleared mandatory events.');
+      }
+
+      final allFeesPaid = card.fees.every((f) => f.isPaid);
+      if (!allFeesPaid) {
+        throw Exception('You cannot request clearance. You have outstanding mandatory fees.');
+      }
+
+      final allSanctionsFulfilled = card.sanctions.every((s) => s.isFulfilled);
+      if (!allSanctionsFulfilled) {
+        throw Exception('You cannot request clearance. You have active sanctions.');
+      }
+    }
+
     // Check if a request already exists
     final existingRequestList = await _client
         .from('activity_card_clearance_requests')
@@ -113,19 +154,6 @@ class ClearanceRepository {
     }).select().single();
 
     final requestId = response['id'];
-
-    // Identify required signatures based on roles and settings
-    final orgResponseList = await _client
-        .from('organization_settings')
-        .select('requires_adviser_signature, requires_dean_signature, requires_program_head_signature')
-        .eq('organization_id', organizationId)
-        .limit(1);
-    
-    final orgResponse = orgResponseList.isEmpty ? null : orgResponseList.first;
-    
-    final bool requiresAdviser = orgResponse?['requires_adviser_signature'] ?? false;
-    final bool requiresFacultyDean = orgResponse?['requires_dean_signature'] ?? false;
-    final bool requiresProgramHead = orgResponse?['requires_program_head_signature'] ?? false;
 
     final rolesResponse = await _client.from('roles').select('id, name');
     final roles = rolesResponse as List;

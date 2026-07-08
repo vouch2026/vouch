@@ -32,6 +32,8 @@ _OrganizationModel _$OrganizationModelFromJson(Map<String, dynamic> json) =>
           json['requires_faculty_dean_signature'] as bool? ?? false,
       allowMemberCardPrinting:
           json['allow_member_card_printing'] as bool? ?? true,
+      restrictClearanceRequest:
+          json['restrict_clearance_request'] as bool? ?? false,
       isClearanceActive: json['is_clearance_active'] as bool? ?? false,
       clearancePeriodStart: json['clearance_period_start'] == null
           ? null
@@ -67,6 +69,7 @@ Map<String, dynamic> _$OrganizationModelToJson(
   'requires_program_head_signature': instance.requiresProgramHeadSignature,
   'requires_faculty_dean_signature': instance.requiresFacultyDeanSignature,
   'allow_member_card_printing': instance.allowMemberCardPrinting,
+  'restrict_clearance_request': instance.restrictClearanceRequest,
   'is_clearance_active': instance.isClearanceActive,
   'clearance_period_start': instance.clearancePeriodStart?.toIso8601String(),
   'clearance_period_end': instance.clearancePeriodEnd?.toIso8601String(),
