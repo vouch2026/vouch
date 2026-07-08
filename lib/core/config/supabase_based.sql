@@ -2219,32 +2219,41 @@ BEGIN
 
     -- 5. Clear adviser assignments on organizations
     UPDATE public.organizations
-    SET adviser_name = NULL;
+    SET adviser_name = NULL
+    WHERE id IS NOT NULL;
 
     -- 6. Reset clearance periods in organization & comselec settings
     UPDATE public.organization_settings
     SET clearance_period_start = NULL,
-        clearance_period_end = NULL;
+        clearance_period_end = NULL
+    WHERE organization_id IS NOT NULL;
 
     UPDATE public.comselec_settings
     SET clearance_period_start = NULL,
-        clearance_period_end = NULL;
+        clearance_period_end = NULL
+    WHERE comselec_id IS NOT NULL;
 
     -- 7. Delete clearance requests and signatures (Cascade deletes signature records)
-    DELETE FROM public.activity_card_clearance_requests;
+    DELETE FROM public.activity_card_clearance_requests
+    WHERE id IS NOT NULL;
 
     -- 8. Delete events, attendance, excuses (Cascade deletes attendance/excuses)
-    DELETE FROM public.events;
+    DELETE FROM public.events
+    WHERE id IS NOT NULL;
 
     -- 9. Delete fees & payments (Cascade deletes payments)
-    DELETE FROM public.fees;
+    DELETE FROM public.fees
+    WHERE id IS NOT NULL;
 
     -- 10. Delete student sanctions and rules
-    DELETE FROM public.student_sanction_records;
-    DELETE FROM public.sanction_rules;
+    DELETE FROM public.student_sanction_records
+    WHERE id IS NOT NULL;
+    DELETE FROM public.sanction_rules
+    WHERE id IS NOT NULL;
 
     -- 11. Delete announcements
-    DELETE FROM public.announcements;
+    DELETE FROM public.announcements
+    WHERE id IS NOT NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -2268,6 +2277,26 @@ BEGIN
         -- Perform reset only if academic year changes
         IF v_old_academic_year IS NOT NULL AND v_old_academic_year <> NEW.academic_year THEN
             PERFORM public.reset_academic_year_data();
+        ELSIF v_old_academic_year IS NOT NULL AND v_old_academic_year = NEW.academic_year THEN
+            -- If academic year is the same (e.g. changing from 1st sem to 2nd sem),
+            -- carry over the academic_term_id of all active officers/advisers to the new active term.
+            UPDATE public.organization_members
+            SET academic_term_id = NEW.id
+            WHERE status = 'active'
+              AND role_id IS NOT NULL
+              AND academic_term_id IN (
+                  SELECT id FROM public.academic_terms 
+                  WHERE academic_year = NEW.academic_year AND id <> NEW.id
+              );
+
+            UPDATE public.comselec_members
+            SET academic_term_id = NEW.id
+            WHERE status = 'active'
+              AND role_id IS NOT NULL
+              AND academic_term_id IN (
+                  SELECT id FROM public.academic_terms 
+                  WHERE academic_year = NEW.academic_year AND id <> NEW.id
+              );
         END IF;
     END IF;
     RETURN NEW;
