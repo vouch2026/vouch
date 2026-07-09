@@ -38,7 +38,20 @@ class ClearanceRepository {
           .gt('roles.hierarchy_level', 5)
           .limit(1);
 
-      return officerResponseList.isNotEmpty;
+      if (officerResponseList.isNotEmpty) return true;
+
+      // 3. Check if student belongs to any active program-based organization for this term
+      // If they do not, they do not have a lower-based organization and can proceed.
+      final memberOfProgramOrg = await _client
+          .from('organization_members')
+          .select('id, organizations!inner(type)')
+          .eq('user_id', studentId)
+          .eq('academic_term_id', termId)
+          .eq('status', 'active')
+          .eq('organizations.type', 'program-based')
+          .limit(1);
+
+      return memberOfProgramOrg.isEmpty;
     }
 
     if (scopeType == 'Institutional') {
@@ -64,7 +77,20 @@ class ClearanceRepository {
           .gt('roles.hierarchy_level', 5)
           .limit(1);
 
-      return officerResponseList.isNotEmpty;
+      if (officerResponseList.isNotEmpty) return true;
+
+      // 3. Check if student belongs to any active faculty-based organization for this term
+      // If they do not, they do not have a lower-based organization and can proceed.
+      final memberOfFacultyOrg = await _client
+          .from('organization_members')
+          .select('id, organizations!inner(type)')
+          .eq('user_id', studentId)
+          .eq('academic_term_id', termId)
+          .eq('status', 'active')
+          .eq('organizations.type', 'faculty-based')
+          .limit(1);
+
+      return memberOfFacultyOrg.isEmpty;
     }
 
     return false;
