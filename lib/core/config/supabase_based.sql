@@ -37,6 +37,8 @@ DROP FUNCTION IF EXISTS public.handle_program_deletion() CASCADE;
 DROP FUNCTION IF EXISTS public.get_my_workspaces() CASCADE;
 DROP FUNCTION IF EXISTS public.get_workspace_role_and_permissions(UUID, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.get_workspace_by_id(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.reset_academic_year_data() CASCADE;
+
 
 -- Drop legacy profiles table if it exists
 DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -283,6 +285,7 @@ requires_adviser_signature BOOLEAN NOT NULL DEFAULT FALSE,
 requires_dean_signature BOOLEAN NOT NULL DEFAULT FALSE,
 requires_program_head_signature BOOLEAN NOT NULL DEFAULT FALSE,
 allow_member_to_print BOOLEAN NOT NULL DEFAULT FALSE,
+restrict_clearance_request BOOLEAN NOT NULL DEFAULT FALSE,
 clearance_period_start TIMESTAMPTZ,
 clearance_period_end TIMESTAMPTZ,
 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2181,5 +2184,130 @@ BEGIN
     END IF;
 END;
 $$;
+
+
+-- ==============================================================================
+-- 12. AUTOMATIC ACADEMIC YEAR RESET FUNCTIONALITY
+-- ==============================================================================
+
+-- Resets all roles, activity cards, events, and fees for a new academic year
+CREATE OR REPLACE FUNCTION public.reset_academic_year_data()
+RETURNS VOID AS $$
+DECLARE
+    v_member_role_id UUID;
+    v_voter_role_id UUID;
+BEGIN
+    -- 1. Retrieve IDs of default student roles
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member';
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters';
+
+    -- 2. Delete adviser memberships (so they do not become standard student members)
+    DELETE FROM public.organization_members
+    WHERE role_id = (SELECT id FROM public.roles WHERE name = 'Adviser' LIMIT 1);
+
+    -- 3. Reset student organization members to standard 'Member' role
+    UPDATE public.organization_members
+    SET role_id = v_member_role_id
+    WHERE role_id IS DISTINCT FROM v_member_role_id;
+
+    -- 3. Reset comselec members to standard 'Voters' role
+    UPDATE public.comselec_members
+    SET role_id = v_voter_role_id
+    WHERE role_id IS DISTINCT FROM v_voter_role_id;
+
+    -- 4. Delete transient officer roles from user_roles
+    DELETE FROM public.user_roles
+    WHERE role_id NOT IN (
+        SELECT id FROM public.roles 
+        WHERE name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Students', 'Voters')
+    );
+
+    -- 5. Clear adviser assignments on organizations
+    UPDATE public.organizations
+    SET adviser_name = NULL
+    WHERE id IS NOT NULL;
+
+    -- 6. Reset clearance periods in organization & comselec settings
+    UPDATE public.organization_settings
+    SET clearance_period_start = NULL,
+        clearance_period_end = NULL,
+        restrict_clearance_request = FALSE
+    WHERE organization_id IS NOT NULL;
+
+    UPDATE public.comselec_settings
+    SET clearance_period_start = NULL,
+        clearance_period_end = NULL
+    WHERE comselec_id IS NOT NULL;
+
+    -- 7. Delete clearance requests and signatures (Cascade deletes signature records)
+    DELETE FROM public.activity_card_clearance_requests
+    WHERE id IS NOT NULL;
+
+    -- 8. Delete events, attendance, excuses (Cascade deletes attendance/excuses)
+    DELETE FROM public.events
+    WHERE id IS NOT NULL;
+
+    -- 9. Delete fees & payments (Cascade deletes payments)
+    DELETE FROM public.fees
+    WHERE id IS NOT NULL;
+
+    -- 10. Delete student sanctions and rules
+    DELETE FROM public.student_sanction_records
+    WHERE id IS NOT NULL;
+    DELETE FROM public.sanction_rules
+    WHERE id IS NOT NULL;
+
+    -- 11. Delete announcements
+    DELETE FROM public.announcements
+    WHERE id IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- Redefine single_active_term to trigger the academic year reset
+CREATE OR REPLACE FUNCTION public.single_active_term()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_old_academic_year VARCHAR(20);
+BEGIN
+    IF NEW.is_active = TRUE THEN
+        -- Get the academic year of the currently active term (prior to its deactivation)
+        SELECT academic_year INTO v_old_academic_year
+        FROM public.academic_terms
+        WHERE is_active = TRUE AND id <> NEW.id
+        LIMIT 1;
+
+        -- Deactivate all other terms
+        UPDATE public.academic_terms SET is_active = FALSE WHERE id <> NEW.id;
+
+        -- Perform reset only if academic year changes
+        IF v_old_academic_year IS NOT NULL AND v_old_academic_year <> NEW.academic_year THEN
+            PERFORM public.reset_academic_year_data();
+        ELSIF v_old_academic_year IS NOT NULL AND v_old_academic_year = NEW.academic_year THEN
+            -- If academic year is the same (e.g. changing from 1st sem to 2nd sem),
+            -- carry over the academic_term_id of all active officers/advisers to the new active term.
+            UPDATE public.organization_members
+            SET academic_term_id = NEW.id
+            WHERE status = 'active'
+              AND role_id IS NOT NULL
+              AND academic_term_id IN (
+                  SELECT id FROM public.academic_terms 
+                  WHERE academic_year = NEW.academic_year AND id <> NEW.id
+              );
+
+            UPDATE public.comselec_members
+            SET academic_term_id = NEW.id
+            WHERE status = 'active'
+              AND role_id IS NOT NULL
+              AND academic_term_id IN (
+                  SELECT id FROM public.academic_terms 
+                  WHERE academic_year = NEW.academic_year AND id <> NEW.id
+              );
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 

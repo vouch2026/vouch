@@ -38,6 +38,33 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
     final currentUserProfile = ref.read(userProfileProvider).value;
     if (term == null || currentUserProfile == null) return;
 
+    final org = ref.read(organizationProvider(card.organizationId)).value;
+    if (org != null && org.restrictClearanceRequest) {
+      final allEventsComplied = card.events.every((e) => 
+        e.attendanceStatus == AttendanceStatus.completed || 
+        e.attendanceStatus == AttendanceStatus.excused || 
+        e.attendanceStatus == AttendanceStatus.sanctionCleared
+      );
+      final allFeesPaid = card.fees.every((f) => f.isPaid);
+      final allSanctionsFulfilled = card.sanctions.every((s) => s.isFulfilled);
+
+      if (!allEventsComplied || !allFeesPaid || !allSanctionsFulfilled) {
+        final List<String> reasons = [];
+        if (!allEventsComplied) reasons.add('events');
+        if (!allFeesPaid) reasons.add('fees');
+        if (!allSanctionsFulfilled) reasons.add('sanctions');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cannot request clearance. Please clear your outstanding ${reasons.join(', ')} first.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     setState(() => _isRequesting = true);
     try {
       final repo = ref.read(clearanceRepositoryProvider);
@@ -127,7 +154,26 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
             if (orgAsync.hasValue && org != null && !org.isClearanceActive) {
               isLocked = true;
               lockReason = 'Clearance requesting is currently closed/inactive for ${org.name}.';
-            } else if (allCardsAsync.hasValue) {
+            } else if (orgAsync.hasValue && org != null && org.restrictClearanceRequest) {
+              final allEventsComplied = activityCard.events.every((e) => 
+                e.attendanceStatus == AttendanceStatus.completed || 
+                e.attendanceStatus == AttendanceStatus.excused || 
+                e.attendanceStatus == AttendanceStatus.sanctionCleared
+              );
+              final allFeesPaid = activityCard.fees.every((f) => f.isPaid);
+              final allSanctionsFulfilled = activityCard.sanctions.every((s) => s.isFulfilled);
+
+              if (!allEventsComplied || !allFeesPaid || !allSanctionsFulfilled) {
+                isLocked = true;
+                final List<String> reasons = [];
+                if (!allEventsComplied) reasons.add('mandatory events');
+                if (!allFeesPaid) reasons.add('mandatory fees');
+                if (!allSanctionsFulfilled) reasons.add('sanctions');
+                lockReason = 'You must clear all ${reasons.join(', ')} before requesting clearance.';
+              }
+            }
+            
+            if (!isLocked && allCardsAsync.hasValue) {
               final allCards = allCardsAsync.value!;
               if (activityCard.organizationType == 'faculty-based') {
                 final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
@@ -156,19 +202,43 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
             final isRejected = activityCard.status == ActivityCardStatus.rejected;
   
             final adjustedSignatures = activityCard.signatures.map((sig) {
-              if (isLocked && (sig.roleName.toLowerCase() == 'governor' || 
-                               sig.roleName.toLowerCase() == 'president' || 
-                               sig.roleName.toLowerCase() == 'adviser' || 
-                               sig.roleName.toLowerCase() == 'instructor' ||
-                               sig.roleName.toLowerCase() == 'program head' ||
-                               sig.roleName.toLowerCase() == 'faculty dean' ||
-                               sig.roleName.toLowerCase() == 'dean')) {
+              String roleName = sig.roleName;
+              if (activityCard.organizationType == 'faculty-based') {
+                if (roleName.toLowerCase() == 'president') {
+                  roleName = 'Governor';
+                }
+              } else {
+                if (roleName.toLowerCase() == 'governor') {
+                  roleName = 'President';
+                }
+              }
+
+              if (isLocked && (roleName.toLowerCase() == 'governor' || 
+                               roleName.toLowerCase() == 'president' || 
+                               roleName.toLowerCase() == 'adviser' || 
+                               roleName.toLowerCase() == 'instructor' ||
+                               roleName.toLowerCase() == 'program head' ||
+                               roleName.toLowerCase() == 'faculty dean' ||
+                               roleName.toLowerCase() == 'dean')) {
                 return ActivityCardSignature(
                   id: sig.id,
-                  roleName: sig.roleName,
+                  roleName: roleName,
                   signedByUserId: sig.signedByUserId,
                   signedByUserName: sig.signedByUserName,
                   status: SignatureStatus.locked,
+                  signedAt: sig.signedAt,
+                  rejectionReason: sig.rejectionReason,
+                  order: sig.order,
+                );
+              }
+              
+              if (roleName != sig.roleName) {
+                return ActivityCardSignature(
+                  id: sig.id,
+                  roleName: roleName,
+                  signedByUserId: sig.signedByUserId,
+                  signedByUserName: sig.signedByUserName,
+                  status: sig.status,
                   signedAt: sig.signedAt,
                   rejectionReason: sig.rejectionReason,
                   order: sig.order,
@@ -214,7 +284,7 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                           if (isRejected) ...[
                             Builder(
                               builder: (context) {
-                                final rejectedSig = activityCard.signatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
+                                final rejectedSig = adjustedSignatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
                                 if (rejectedSig == null) return const SizedBox.shrink();
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: AppSpacing.md),

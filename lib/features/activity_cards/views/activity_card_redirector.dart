@@ -24,11 +24,11 @@ class ActivityCardRedirector extends ConsumerWidget {
           if (card != null) {
             Future.microtask(() {
               if (context.mounted) {
-                context.go('${RoutePaths.activityCards}/${card.id}');
+                context.go('${RoutePaths.activityCards}/${card.organizationId}');
               }
             });
             // Show the page directly while the redirect is happening
-            return ActivityCardDetailsPage(id: card.id);
+            return ActivityCardDetailsPage(id: card.organizationId);
           } else {
             return const DashboardLayout(
               title: 'Activity Card',

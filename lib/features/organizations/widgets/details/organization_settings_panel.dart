@@ -562,6 +562,26 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                         }
                       : null,
                 ),
+                _buildSwitchTile(
+                  label: 'Restrict Clearance Request',
+                  subtitle: 'Only allow students to request clearance if mandatory events, fees, and sanctions are cleared',
+                  value: activeOrg.restrictClearanceRequest,
+                  icon: LucideIcons.shieldAlert,
+                  onChanged: canEdit
+                      ? (val) async {
+                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                id: activeOrg.id,
+                                code: activeOrg.code,
+                                restrictClearanceRequest: val,
+                              );
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Clearance request restriction ${val ? 'enabled' : 'disabled'}')),
+                            );
+                          }
+                        }
+                      : null,
+                ),
                 if (activeMembership != null && (isGovernor || isSecretaryOrTreasurer))
                   _buildSwitchTile(
                     label: 'Auto-Sign Clearances (Coming Soon)',
