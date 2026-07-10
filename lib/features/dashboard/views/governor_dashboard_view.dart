@@ -238,7 +238,9 @@ class GovernorDashboardView extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth < 450 ? 1 : (constraints.maxWidth < 800 ? 2 : 3);
+        final isMobile = constraints.maxWidth < 600;
+        final crossAxisCount = isMobile ? 1 : (constraints.maxWidth < 800 ? 2 : 3);
+        final childAspectRatio = isMobile ? 3.5 : 1.5;
         
         return GridView.count(
           crossAxisCount: crossAxisCount,
@@ -246,19 +248,19 @@ class GovernorDashboardView extends ConsumerWidget {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: AppSpacing.md,
           mainAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1.5,
+          childAspectRatio: childAspectRatio,
           children: [
             if (isOfficer) ...[
-              _buildKpiCard('Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
-              _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
-              _buildKpiCard('Number of Officers', totalOfficers.toString(), Icons.badge_outlined, Colors.green),
-              _buildKpiCard('Mandatory Event', mandatoryEventsCount.toString(), Icons.event_available_outlined, Colors.teal),
-              _buildKpiCard('Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
-              _buildKpiCard('Mandatory Fees', mandatoryFeesCount.toString(), Icons.receipt_long_outlined, Colors.red),
+              _buildKpiCard(context, 'Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
+              _buildKpiCard(context, 'Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
+              _buildKpiCard(context, 'Number of Officers', totalOfficers.toString(), Icons.badge_outlined, Colors.green),
+              _buildKpiCard(context, 'Mandatory Event', mandatoryEventsCount.toString(), Icons.event_available_outlined, Colors.teal),
+              _buildKpiCard(context, 'Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
+              _buildKpiCard(context, 'Mandatory Fees', mandatoryFeesCount.toString(), Icons.receipt_long_outlined, Colors.red),
             ] else ...[
-              _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
-              _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
-              _buildKpiCard('Events Attended', '15', Icons.event_available_rounded, Colors.blue),
+              _buildKpiCard(context, 'My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
+              _buildKpiCard(context, 'Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
+              _buildKpiCard(context, 'Events Attended', '15', Icons.event_available_rounded, Colors.blue),
             ],
           ],
         );
@@ -267,7 +269,53 @@ class GovernorDashboardView extends ConsumerWidget {
   }
 
 
-  Widget _buildKpiCard(String label, String value, IconData icon, Color color) {
+  Widget _buildKpiCard(BuildContext context, String label, String value, IconData icon, Color color) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    
+    if (isMobile) {
+      final theme = Theme.of(context);
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.labelMedium.copyWith(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
