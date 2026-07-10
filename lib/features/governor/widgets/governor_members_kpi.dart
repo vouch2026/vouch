@@ -7,7 +7,12 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 
 class GovernorMembersKpi extends ConsumerWidget {
-  const GovernorMembersKpi({super.key});
+  final bool isOfficersScreen;
+
+  const GovernorMembersKpi({
+    super.key,
+    this.isOfficersScreen = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,14 +25,33 @@ class GovernorMembersKpi extends ConsumerWidget {
 
     return membersAsync.when(
       data: (members) {
-        final totalMembers = members.length;
-        final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
-        final totalOfficers = members.where((m) => m.role != 'Member').length;
-        
-        // Calculate new members this month
         final now = DateTime.now();
         final startOfMonth = DateTime(now.year, now.month, 1);
-        final newMembersThisMonth = members.where((m) {
+
+        // Filter lists
+        final regularMembers = members.where((m) {
+          final role = m.role.toLowerCase();
+          return role == 'member' || role == 'student';
+        }).toList();
+
+        final officers = members.where((m) {
+          final role = m.role.toLowerCase();
+          return role != 'member' && role != 'student';
+        }).toList();
+
+        // Calculate counts
+        final totalMembersCount = regularMembers.length;
+        final activeMembersCount = regularMembers.where((m) => m.status.toLowerCase() == 'active').length;
+        final pendingMembersCount = regularMembers.where((m) => m.status.toLowerCase() == 'pending').length;
+        final newMembersThisMonth = regularMembers.where((m) {
+          if (m.joinedAt == null) return false;
+          return m.joinedAt!.isAfter(startOfMonth);
+        }).length;
+
+        final totalOfficersCount = officers.length;
+        final activeOfficersCount = officers.where((m) => m.status.toLowerCase() == 'active').length;
+        final pendingOfficersCount = officers.where((m) => m.status.toLowerCase() == 'pending').length;
+        final newOfficersThisMonth = officers.where((m) {
           if (m.joinedAt == null) return false;
           return m.joinedAt!.isAfter(startOfMonth);
         }).length;
@@ -47,48 +71,86 @@ class GovernorMembersKpi extends ConsumerWidget {
               mainAxisSpacing: AppSpacing.lg,
               childAspectRatio: childAspectRatio,
               children: [
-                _buildKpiCard(
-                  context,
-                  title: 'Total Members',
-                  value: totalMembers.toString(),
-                  icon: Icons.people_alt_rounded,
-                  color: Colors.blue,
-                  trend: 'All registered students',
-                ),
-                _buildKpiCard(
-                  context,
-                  title: 'Active Members',
-                  value: activeMembers.toString(),
-                  icon: Icons.check_circle_rounded,
-                  color: Colors.green,
-                  trend: totalMembers > 0 
-                    ? '${((activeMembers / totalMembers) * 100).toInt()}% of total'
-                    : '0% of total',
-                ),
-                _buildKpiCard(
-                  context,
-                  title: 'Total Officers',
-                  value: totalOfficers.toString(),
-                  icon: Icons.badge_rounded,
-                  color: Colors.orange,
-                  trend: 'Organization leadership',
-                ),
-                _buildKpiCard(
-                  context,
-                  title: 'New This Month',
-                  value: newMembersThisMonth.toString(),
-                  icon: Icons.person_add_rounded,
-                  color: Colors.purple,
-                  trend: 'Joined since ${now.month}/${now.year}',
-                  isTrendPositive: newMembersThisMonth > 0,
-                ),
+                if (isOfficersScreen) ...[
+                  _buildKpiCard(
+                    context,
+                    title: 'Total Officers',
+                    value: totalOfficersCount.toString(),
+                    icon: Icons.badge_rounded,
+                    color: Colors.orange,
+                    trend: 'Organization leadership',
+                  ),
+                  _buildKpiCard(
+                    context,
+                    title: 'Active Officers',
+                    value: activeOfficersCount.toString(),
+                    icon: Icons.check_circle_rounded,
+                    color: Colors.green,
+                    trend: totalOfficersCount > 0
+                        ? '${((activeOfficersCount / totalOfficersCount) * 100).toInt()}% of total'
+                        : '0% of total',
+                  ),
+                  _buildKpiCard(
+                    context,
+                    title: 'Pending Officers',
+                    value: pendingOfficersCount.toString(),
+                    icon: Icons.pending_actions_rounded,
+                    color: Colors.red,
+                    trend: 'Awaiting confirmation',
+                  ),
+                  _buildKpiCard(
+                    context,
+                    title: 'New This Month',
+                    value: newOfficersThisMonth.toString(),
+                    icon: Icons.person_add_rounded,
+                    color: Colors.purple,
+                    trend: 'Joined since ${now.month}/${now.year}',
+                    isTrendPositive: newOfficersThisMonth > 0,
+                  ),
+                ] else ...[
+                  _buildKpiCard(
+                    context,
+                    title: 'Total Members',
+                    value: totalMembersCount.toString(),
+                    icon: Icons.people_alt_rounded,
+                    color: Colors.blue,
+                    trend: 'All registered students',
+                  ),
+                  _buildKpiCard(
+                    context,
+                    title: 'Active Members',
+                    value: activeMembersCount.toString(),
+                    icon: Icons.check_circle_rounded,
+                    color: Colors.green,
+                    trend: totalMembersCount > 0
+                        ? '${((activeMembersCount / totalMembersCount) * 100).toInt()}% of total'
+                        : '0% of total',
+                  ),
+                  _buildKpiCard(
+                    context,
+                    title: 'Pending Members',
+                    value: pendingMembersCount.toString(),
+                    icon: Icons.pending_actions_rounded,
+                    color: Colors.red,
+                    trend: 'Awaiting confirmation',
+                  ),
+                  _buildKpiCard(
+                    context,
+                    title: 'New This Month',
+                    value: newMembersThisMonth.toString(),
+                    icon: Icons.person_add_rounded,
+                    color: Colors.purple,
+                    trend: 'Joined since ${now.month}/${now.year}',
+                    isTrendPositive: newMembersThisMonth > 0,
+                  ),
+                ],
               ],
             );
           },
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (error, stackTrace) => const SizedBox.shrink(),
     );
   }
 
@@ -102,12 +164,12 @@ class GovernorMembersKpi extends ConsumerWidget {
     bool? isTrendPositive,
   }) {
     final theme = Theme.of(context);
-    
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -116,7 +178,7 @@ class GovernorMembersKpi extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
