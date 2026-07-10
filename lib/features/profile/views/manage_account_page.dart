@@ -202,7 +202,7 @@ class ManageAccountPage extends ConsumerWidget {
                         canEdit: false,
                       ),
                       _buildInfoTile(
-                        label: 'Student ID',
+                        label: 'ID Number',
                         value: profile.schoolId,
                         icon: LucideIcons.creditCard,
                         canEdit: false,
