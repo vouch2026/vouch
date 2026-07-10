@@ -50,7 +50,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
   Widget build(BuildContext context) {
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole;
-    final isStudentOrMember = activeRole?.roleName == 'Student' || activeRole?.roleName == 'Member';
+    final isStudentOrMember = activeRole?.roleName == 'Student' || activeRole?.roleName == 'Member' || activeRole?.roleName == 'Representative';
 
     if (isStudentOrMember) {
       return const _StudentFinanceView();
