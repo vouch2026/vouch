@@ -16,7 +16,6 @@ import '../widgets/governor_receiver_card.dart';
 import '../widgets/governor_submission_card.dart';
 import 'governor_add_receiver_page.dart';
 import 'governor_create_fee_page.dart';
-import 'governor_created_fees_page.dart';
 import '../../finance/views/student_proof_of_payment_page.dart';
 import '../../finance/models/payment_receiver_model.dart';
 
@@ -97,11 +96,6 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                         label: 'Create Fee',
                         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateFeePage())),
                         isPrimary: true,
-                      ),
-                      HeaderActionButton(
-                        icon: Icons.list_alt_rounded,
-                        label: 'Manage Fees',
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreatedFeesPage())),
                       ),
                     ],
                   ),
