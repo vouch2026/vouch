@@ -271,7 +271,7 @@ class _RoleBadge extends StatelessWidget {
       color = AppColors.primary;
     } else if (lowerRole.contains('treasurer')) {
       color = Colors.orange;
-    } else if (lowerRole.contains('officer') || lowerRole.contains('dean') || lowerRole.contains('head')) {
+    } else if (lowerRole.contains('officer') || lowerRole.contains('dean') || lowerRole.contains('head') || lowerRole.contains('representative')) {
       color = Colors.blue;
     } else if (lowerRole.contains('staff')) {
       color = Colors.purple;

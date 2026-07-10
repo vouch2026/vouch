@@ -50,6 +50,8 @@ String getSidebarRoleKey(String roleName) {
       return 'business_manager';
     case 'senator':
       return 'senator';
+    case 'representative':
+      return 'representative';
     case 'staff':
       return 'staff';
     case 'adviser':
@@ -443,6 +445,51 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       title: 'INSIGHTS',
       items: [
         SidebarItemConfig(label: 'Governance Reports', icon: Icons.poll_outlined, path: RoutePaths.workspaceGovernanceReports),
+      ],
+    ),
+  ],
+
+  'representative': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE: DETAILS',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'FINANCE',
+      items: [
+        SidebarItemConfig(label: 'Fees', icon: Icons.payments_outlined, path: RoutePaths.workspaceFees),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.workspaceAnnouncements),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'STUDENT AFFAIRS',
+      items: [
+        SidebarItemConfig(label: 'Sanctions', icon: Icons.gavel_rounded, path: RoutePaths.workspaceSanctions),
+        SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'RECORDS',
+      items: [
+        SidebarItemConfig(label: 'Documents', icon: Icons.folder_open_rounded, path: RoutePaths.workspaceDocuments),
       ],
     ),
   ],

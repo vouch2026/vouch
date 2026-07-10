@@ -8,6 +8,8 @@ class RoleMapper {
         return 'super_admin';
       case 'senator':
         return 'senator';
+      case 'representative':
+        return 'representative';
       case 'business manager':
         return 'business_manager';
       case 'students':
