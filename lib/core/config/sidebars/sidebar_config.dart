@@ -483,7 +483,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       title: 'STUDENT AFFAIRS',
       items: [
         SidebarItemConfig(label: 'Sanctions', icon: Icons.gavel_rounded, path: RoutePaths.workspaceSanctions),
-        SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
+        SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.activityCards),
       ],
     ),
     const SidebarSectionConfig(
