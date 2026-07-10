@@ -212,6 +212,8 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       normalizedRole == 'vice_president'
     );
 
+    final isFullOfficer = isOfficer && normalizedRole != 'representative';
+
     final canScan = creatorOrgId != null
         ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
         : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
@@ -324,7 +326,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         const SizedBox(height: AppSpacing.lg),
                         _buildDescriptionSection(event),
                         const SizedBox(height: AppSpacing.xxl),
-                        if (!isOfficer && !isUpcoming) ...[
+                        if (!isFullOfficer && !isUpcoming) ...[
                           if (isMemberOfCreatorOrg) ...[
                             highlightsAsync.when(
                               data: (count) => _buildHighlightsSection(count),
@@ -333,7 +335,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                             ),
                             const SizedBox(height: AppSpacing.xxl),
                           ],
-                          _buildStudentExcuseAction(context, event, isOfficer: isOfficer),
+                          _buildStudentExcuseAction(context, event, isOfficer: isFullOfficer),
                         ],
                         if (isAllowedOfficer && event.isPastTimeout) ...[
                           _buildOfficerPastEventActions(context, event, isMemberOfCreatorOrg: isMemberOfCreatorOrg),
@@ -346,14 +348,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                   const SizedBox(width: AppSpacing.xxl),
                   Expanded(
                     flex: 1,
-                    child: _buildInfoSidebar(event, isOfficer: isOfficer),
+                    child: _buildInfoSidebar(event, isOfficer: isFullOfficer),
                   ),
                 ],
               ],
             ),
             if (isMobile) ...[
               const SizedBox(height: AppSpacing.xxl),
-              _buildInfoSidebar(event, isOfficer: isOfficer),
+              _buildInfoSidebar(event, isOfficer: isFullOfficer),
             ],
             const SizedBox(height: AppSpacing.xxl),
           ],
