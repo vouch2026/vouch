@@ -345,7 +345,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              '© ${DateTime.now().year} Jeslito G. Geverola. All rights reserved.',
+              '© ${DateTime.now().year} Vouch SoftTech Services. All rights reserved.',
               style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
             ),
           ],

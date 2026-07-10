@@ -522,7 +522,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             const SizedBox(height: AppSpacing.lg),
             Center(
               child: Text(
-                '© ${DateTime.now().year} Jeslito G. Geverola. All rights reserved.',
+                '© ${DateTime.now().year} Vouch SoftTech Services. All rights reserved.',
                 style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
               ),
             ),
