@@ -15,7 +15,7 @@ class WorkspaceDashboardPage extends ConsumerWidget {
 
     return DashboardLayout(
       key: ValueKey(selectedOrg?.id ?? 'global-workspace'),
-      title: 'Workspace Command Center',
+      title: 'Dashboard',
       child: workspace.isLoading 
           ? const Center(child: FlickrLoader())
           : const GovernorDashboardView(),

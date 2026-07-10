@@ -7,13 +7,12 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../core/utils/time_formatter.dart';
 import '../../auth/models/user_model.dart';
 import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
 import '../../events/views/student_event_details_page.dart';
-import '../widgets/welcome_header.dart';
+import '../../finance/providers/finance_provider.dart';
+import '../../../core/utils/time_formatter.dart';
 
 class GovernorDashboardView extends ConsumerWidget {
   const GovernorDashboardView({super.key});
@@ -32,6 +31,8 @@ class GovernorDashboardView extends ConsumerWidget {
 
     final membersAsync = ref.watch(organizationMembersProvider(org.id));
     final eventsAsync = ref.watch(workspaceEventsProvider);
+    final officersAsync = ref.watch(organizationOfficersProvider(org.id));
+    final feesAsync = ref.watch(workspaceFeesProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -51,6 +52,9 @@ class GovernorDashboardView extends ConsumerWidget {
                     final upcomingEvents = events.where((e) => !e.isPastTimeout).toList();
                     upcomingEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
 
+                    final totalOfficers = officersAsync.valueOrNull?.length ?? 0;
+                    final mandatoryFeesCount = feesAsync.valueOrNull?.where((f) => f.isMandatory).length ?? 0;
+
                     return Column(
                       children: [
                         if (isDesktop) 
@@ -62,7 +66,7 @@ class GovernorDashboardView extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildKpiSection(context, org, activeRole?.roleName, members, events),
+                                    _buildKpiSection(context, org, activeRole?.roleName, members, events, totalOfficers, mandatoryFeesCount),
                                     const SizedBox(height: AppSpacing.lg),
                                     _buildUpcomingEvents(context, org, upcomingEvents),
                                   ],
@@ -74,8 +78,6 @@ class GovernorDashboardView extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildPendingApprovals(org, members),
-                                    const SizedBox(height: AppSpacing.lg),
                                     _buildRecentActivity(org, members),
                                   ],
                                 ),
@@ -85,9 +87,7 @@ class GovernorDashboardView extends ConsumerWidget {
                         else
                           Column(
                             children: [
-                              _buildKpiSection(context, org, activeRole?.roleName, members, events),
-                              const SizedBox(height: AppSpacing.lg),
-                              _buildPendingApprovals(org, members),
+                              _buildKpiSection(context, org, activeRole?.roleName, members, events, totalOfficers, mandatoryFeesCount),
                               const SizedBox(height: AppSpacing.lg),
                               _buildUpcomingEvents(context, org, upcomingEvents),
                               const SizedBox(height: AppSpacing.lg),
@@ -220,12 +220,20 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiSection(BuildContext context, dynamic org, String? roleName, List<UserModel> members, List<EventModel> events) {
+  Widget _buildKpiSection(
+    BuildContext context, 
+    dynamic org, 
+    String? roleName, 
+    List<UserModel> members, 
+    List<EventModel> events,
+    int totalOfficers,
+    int mandatoryFeesCount,
+  ) {
     final bool isOfficer = roleName != null && roleName != 'Student';
     final totalMembers = members.length;
     final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
-    final pendingRequests = members.where((m) => m.status.toLowerCase() == 'pending').length;
     final upcomingCount = events.where((e) => !e.isPastTimeout).length;
+    final mandatoryEventsCount = events.where((e) => e.isMandatory).length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -242,10 +250,10 @@ class GovernorDashboardView extends ConsumerWidget {
             if (isOfficer) ...[
               _buildKpiCard('Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
               _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
-              _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
-              _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
+              _buildKpiCard('Number of Officers', totalOfficers.toString(), Icons.badge_outlined, Colors.green),
+              _buildKpiCard('Mandatory Event', mandatoryEventsCount.toString(), Icons.event_available_outlined, Colors.teal),
               _buildKpiCard('Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
-              _buildKpiCard('Pending Requests', pendingRequests.toString(), Icons.pending_actions_rounded, Colors.red),
+              _buildKpiCard('Mandatory Fees', mandatoryFeesCount.toString(), Icons.receipt_long_outlined, Colors.red),
             ] else ...[
               _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
               _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
@@ -381,63 +389,6 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildPendingApprovals(dynamic org, List<UserModel> members) {
-    final pendingMembers = members.where((m) => m.status.toLowerCase() == 'pending').toList();
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Pending Approvals', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.md),
-          if (pendingMembers.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Center(child: Text('No pending membership requests.')),
-            )
-          else
-            ...pendingMembers.take(3).map((m) => _buildApprovalItem(m.fullName, 'Membership Request', 'Recent')),
-          
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {},
-              child: const Text('View All Requests'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApprovalItem(String name, String type, String time) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        children: [
-          CircleAvatar(radius: 18, child: Text(name[0].toUpperCase())),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(type, style: const TextStyle(color: AppColors.textGrey, fontSize: 12)),
-              ],
-            ),
-          ),
-          Text(time, style: const TextStyle(color: AppColors.textGrey, fontSize: 11)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildRecentActivity(dynamic org, List<UserModel> members) {
     final recentMembers = [...members];
