@@ -57,6 +57,7 @@ class RouteNames {
   static const String workspaceDocuments = 'workspace-documents';
   static const String workspaceFees = 'workspace-fees';
   static const String workspaceCollections = 'workspace-collections';
+  static const String workspaceCollectionsReport = 'workspace-collections-report';
   static const String workspaceFinanceReports = 'workspace-finance-reports';
   static const String workspaceElections = 'workspace-elections';
   static const String workspaceCompliance = 'workspace-compliance';

@@ -46,6 +46,8 @@ import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
 import '../features/governor/views/governor_officers_page.dart';
 import '../features/governor/views/governor_collections_page.dart';
+import '../features/governor/views/governor_fee_report_page.dart';
+import '../features/finance/models/fee_model.dart';
 import '../features/governor/views/governor_settings_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
@@ -393,6 +395,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.workspaceCollections,
         name: RouteNames.workspaceCollections,
         builder: (context, state) => const GovernorCollectionsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceCollectionsReport,
+        name: RouteNames.workspaceCollectionsReport,
+        builder: (context, state) {
+          final fee = state.extra as FeeModel;
+          return GovernorFeeReportPage(fee: fee);
+        },
       ),
       GoRoute(
         path: RoutePaths.workspaceFinanceReports,

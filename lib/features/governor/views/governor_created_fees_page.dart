@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
+import 'package:go_router/go_router.dart';
+import '../../../routes/route_names.dart';
 import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
 import 'governor_create_fee_page.dart';
@@ -544,11 +546,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => GovernorFeeReportPage(fee: fee),
-          ),
+        onTap: () => context.pushNamed(
+          RouteNames.workspaceCollectionsReport,
+          extra: fee,
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -681,11 +681,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => GovernorFeeReportPage(fee: fee),
-                          ),
+                        onPressed: () => context.pushNamed(
+                          RouteNames.workspaceCollectionsReport,
+                          extra: fee,
                         ),
                         child: const Text('View Payment Report'),
                       ),
@@ -725,11 +723,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                         ),
                         const Spacer(),
                         FilledButton.tonal(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => GovernorFeeReportPage(fee: fee),
-                            ),
+                          onPressed: () => context.pushNamed(
+                            RouteNames.workspaceCollectionsReport,
+                            extra: fee,
                           ),
                           child: const Text('View Payment Report'),
                         ),
