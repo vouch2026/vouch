@@ -50,9 +50,10 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   }
 
   Future<void> _showDeleteConfirmation(UserModel user) async {
+    final pageContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete User Entirely'),
         content: Text(
           'Are you sure you want to delete ${user.fullName} (${user.schoolId})? '
@@ -60,24 +61,32 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             onPressed: () async {
-              Navigator.pop(context);
-              final success = await ref.read(userControllerProvider.notifier).deleteUser(user.id!);
-              
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success ? 'User deleted successfully' : 'Failed to delete user'),
-                    backgroundColor: success ? AppColors.success : AppColors.error,
-                  ),
-                );
-                if (success) {
-                  context.pop();
+              Navigator.pop(dialogContext);
+              try {
+                await ref.read(userControllerProvider.notifier).deleteUser(user.id!);
+                if (pageContext.mounted) {
+                  ScaffoldMessenger.of(pageContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('User deleted successfully'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  pageContext.pop();
+                }
+              } catch (e) {
+                if (pageContext.mounted) {
+                  ScaffoldMessenger.of(pageContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete user: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
                 }
               }
             },

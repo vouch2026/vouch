@@ -74,7 +74,7 @@ class UserController extends AsyncNotifier<void> {
     }
   }
 
-  Future<bool> deleteUser(String userId) async {
+  Future<void> deleteUser(String userId) async {
     state = const AsyncLoading();
     
     try {
@@ -87,10 +87,9 @@ class UserController extends AsyncNotifier<void> {
       ref.invalidate(allUsersProvider);
       
       state = const AsyncData(null);
-      return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return false;
+      rethrow;
     }
   }
 }

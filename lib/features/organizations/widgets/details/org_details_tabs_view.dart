@@ -585,7 +585,7 @@ class _OfficersTab extends ConsumerWidget {
   void _showDemoteConfirmation(BuildContext context, WidgetRef ref, OrganizationMembershipModel officer) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(officer.roleName?.toLowerCase() == 'adviser' ? 'Remove Adviser' : 'Demote Officer'),
         content: Text(
           officer.roleName?.toLowerCase() == 'adviser'
@@ -594,13 +594,13 @@ class _OfficersTab extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               try {
                 await ref.read(organizationRepositoryProvider).demoteOfficer(
                   userId: officer.userId,
