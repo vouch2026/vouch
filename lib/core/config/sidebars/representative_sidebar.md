@@ -17,10 +17,8 @@ Finance
 Operations
    Events
    Announcements
+   Excuse Requests
 
 Student Affairs
    Sanctions
    Activity Clearances
-
-Records
-   Documents

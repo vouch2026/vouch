@@ -477,6 +477,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       items: [
         SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
         SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.workspaceAnnouncements),
+        SidebarItemConfig(label: 'Excuse Requests', icon: Icons.note_alt_outlined, path: RoutePaths.myExcuseRequests),
       ],
     ),
     const SidebarSectionConfig(
@@ -484,12 +485,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       items: [
         SidebarItemConfig(label: 'Sanctions', icon: Icons.gavel_rounded, path: RoutePaths.workspaceSanctions),
         SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.activityCards),
-      ],
-    ),
-    const SidebarSectionConfig(
-      title: 'RECORDS',
-      items: [
-        SidebarItemConfig(label: 'Documents', icon: Icons.folder_open_rounded, path: RoutePaths.workspaceDocuments),
       ],
     ),
   ],

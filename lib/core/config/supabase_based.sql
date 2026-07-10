@@ -1633,7 +1633,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Representative' AND p.action IN (
-    'view_events', 'scan_event_attendance', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions', 'view_documents', 'request_clearance'
+    'view_events', 'scan_event_attendance', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions', 'request_clearance'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
