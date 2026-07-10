@@ -435,6 +435,7 @@ class OrganizationRepository {
 
         return OrganizationMembershipModel.fromJson({
           ...json,
+          'organization_id': json['comselec_id'] ?? '',
           'user': json['user'],
           'term': json['term'],
           'role_name': roleData?['name'],
@@ -706,6 +707,49 @@ class OrganizationRepository {
       return response.first as Map<String, dynamic>;
     }
     return null;
+  }
+
+  Future<void> demoteOfficer({
+    required String userId,
+    required String orgId,
+    required String roleName,
+    String? workspaceType,
+  }) async {
+    final isCom = workspaceType == 'comselec';
+    if (roleName.toLowerCase() == 'adviser') {
+      if (isCom) {
+        await _client
+            .from('comselec_members')
+            .delete()
+            .eq('comselec_id', orgId)
+            .eq('user_id', userId);
+      } else {
+        await _client
+            .from('organization_members')
+            .delete()
+            .eq('organization_id', orgId)
+            .eq('user_id', userId);
+
+        await _client
+            .from('organizations')
+            .update({'adviser_name': null})
+            .eq('id', orgId);
+      }
+    } else {
+      if (isCom) {
+        await _client
+            .from('comselec_members')
+            .update({'role_id': null})
+            .eq('comselec_id', orgId)
+            .eq('user_id', userId);
+      } else {
+        await _client
+            .from('organization_members')
+            .update({'role_id': null})
+            .eq('organization_id', orgId)
+            .eq('user_id', userId);
+      }
+    }
   }
 }
 
