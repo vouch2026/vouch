@@ -37,26 +37,7 @@ class GovernorMembersPage extends ConsumerWidget {
                   subtitle: canManageMembers 
                       ? 'View and manage all members of your organization'
                       : 'View all members of your organization',
-                  actions: [
-                    if (canManageMembers) ...[
-                      HeaderActionButton(
-                        icon: Icons.person_add_rounded,
-                        label: 'Add Member',
-                        onPressed: () {},
-                        isPrimary: true,
-                      ),
-                      HeaderActionButton(
-                        icon: Icons.file_upload_outlined,
-                        label: 'Import',
-                        onPressed: () {},
-                      ),
-                      HeaderActionButton(
-                        icon: Icons.file_download_outlined,
-                        label: 'Export',
-                        onPressed: () {},
-                      ),
-                    ],
-                  ],
+                  actions: const [],
                 ),
                 SizedBox(height: verticalGap),
                 
