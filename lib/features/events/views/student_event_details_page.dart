@@ -21,6 +21,7 @@ import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/models/organization_membership_model.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
+import '../../../core/utils/role_mapper.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
 import '../../attendance/views/attendance_report_page.dart';
@@ -196,6 +197,21 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         ? (creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member')
         : (activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator);
 
+    final officerRoleName = creatorOrgId != null
+        ? creatorMembership?.roleName
+        : (isSelectedOrgCreator ? activeRole?.roleName : null);
+
+    final normalizedRole = officerRoleName != null
+        ? RoleMapper.mapDbRoleToAppFormat(officerRoleName)
+        : null;
+
+    final isAllowedOfficer = isOfficer && (
+      normalizedRole == 'governor' ||
+      normalizedRole == 'vice_governor' ||
+      normalizedRole == 'president' ||
+      normalizedRole == 'vice_president'
+    );
+
     final canScan = creatorOrgId != null
         ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
         : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
@@ -218,7 +234,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
           Navigator.pop(context);
         }
       },
-      floatingActionButton: (canScan && isToday) 
+      floatingActionButton: (canScan && isToday && !event.isPastTimeout) 
         ? FloatingActionButton.extended(
             onPressed: () => Navigator.push(
               context,
@@ -319,7 +335,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                           ],
                           _buildStudentExcuseAction(context, event, isOfficer: isOfficer),
                         ],
-                        if (isOfficer && event.isPastTimeout) ...[
+                        if (isAllowedOfficer && event.isPastTimeout) ...[
                           _buildOfficerPastEventActions(context, event, isMemberOfCreatorOrg: isMemberOfCreatorOrg),
                         ],
                       ],
