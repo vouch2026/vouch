@@ -73,6 +73,26 @@ class UserController extends AsyncNotifier<void> {
       return false;
     }
   }
+
+  Future<bool> deleteUser(String userId) async {
+    state = const AsyncLoading();
+    
+    try {
+      await SupabaseConfig.client.rpc(
+        'delete_user_entirely',
+        params: {'p_user_id': userId},
+      );
+      
+      // Invalidate provider to refresh list
+      ref.invalidate(allUsersProvider);
+      
+      state = const AsyncData(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
 }
 
 final userControllerProvider = AsyncNotifierProvider<UserController, void>(() {
