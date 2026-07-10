@@ -46,6 +46,8 @@ import '../features/governor/views/governor_finance_page.dart';
 import '../features/governor/views/governor_members_page.dart';
 import '../features/governor/views/governor_officers_page.dart';
 import '../features/governor/views/governor_collections_page.dart';
+import '../features/governor/views/governor_fee_report_page.dart';
+import '../features/finance/models/fee_model.dart';
 import '../features/governor/views/governor_settings_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
@@ -395,6 +397,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const GovernorCollectionsPage(),
       ),
       GoRoute(
+        path: RoutePaths.workspaceCollectionsReport,
+        name: RouteNames.workspaceCollectionsReport,
+        builder: (context, state) {
+          final fee = state.extra as FeeModel;
+          return GovernorFeeReportPage(fee: fee);
+        },
+      ),
+      GoRoute(
         path: RoutePaths.workspaceFinanceReports,
         name: RouteNames.workspaceFinanceReports,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Financial Reports'),
@@ -575,6 +585,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.workspaceReports,
         name: RouteNames.workspaceReports,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Reports'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceProjects,
+        name: RouteNames.workspaceProjects,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Projects'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceSales,
+        name: RouteNames.workspaceSales,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Sales'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceInventory,
+        name: RouteNames.workspaceInventory,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Inventory'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceSponsors,
+        name: RouteNames.workspaceSponsors,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Sponsors & Partners'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceFinancialRequests,
+        name: RouteNames.workspaceFinancialRequests,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Requests'),
       ),
     ],
   );

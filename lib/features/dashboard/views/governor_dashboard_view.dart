@@ -7,13 +7,12 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../core/utils/time_formatter.dart';
 import '../../auth/models/user_model.dart';
 import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
 import '../../events/views/student_event_details_page.dart';
-import '../widgets/welcome_header.dart';
+import '../../finance/providers/finance_provider.dart';
+import '../../../core/utils/time_formatter.dart';
 
 class GovernorDashboardView extends ConsumerWidget {
   const GovernorDashboardView({super.key});
@@ -32,6 +31,8 @@ class GovernorDashboardView extends ConsumerWidget {
 
     final membersAsync = ref.watch(organizationMembersProvider(org.id));
     final eventsAsync = ref.watch(workspaceEventsProvider);
+    final officersAsync = ref.watch(organizationOfficersProvider(org.id));
+    final feesAsync = ref.watch(workspaceFeesProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -51,6 +52,9 @@ class GovernorDashboardView extends ConsumerWidget {
                     final upcomingEvents = events.where((e) => !e.isPastTimeout).toList();
                     upcomingEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
 
+                    final totalOfficers = officersAsync.valueOrNull?.length ?? 0;
+                    final mandatoryFeesCount = feesAsync.valueOrNull?.where((f) => f.isMandatory).length ?? 0;
+
                     return Column(
                       children: [
                         if (isDesktop) 
@@ -62,7 +66,7 @@ class GovernorDashboardView extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildKpiSection(context, org, activeRole?.roleName, members, events),
+                                    _buildKpiSection(context, org, activeRole?.roleName, members, events, totalOfficers, mandatoryFeesCount),
                                     const SizedBox(height: AppSpacing.lg),
                                     _buildUpcomingEvents(context, org, upcomingEvents),
                                   ],
@@ -74,8 +78,6 @@ class GovernorDashboardView extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildPendingApprovals(org, members),
-                                    const SizedBox(height: AppSpacing.lg),
                                     _buildRecentActivity(org, members),
                                   ],
                                 ),
@@ -85,9 +87,7 @@ class GovernorDashboardView extends ConsumerWidget {
                         else
                           Column(
                             children: [
-                              _buildKpiSection(context, org, activeRole?.roleName, members, events),
-                              const SizedBox(height: AppSpacing.lg),
-                              _buildPendingApprovals(org, members),
+                              _buildKpiSection(context, org, activeRole?.roleName, members, events, totalOfficers, mandatoryFeesCount),
                               const SizedBox(height: AppSpacing.lg),
                               _buildUpcomingEvents(context, org, upcomingEvents),
                               const SizedBox(height: AppSpacing.lg),
@@ -152,64 +152,65 @@ class GovernorDashboardView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 80, AppSpacing.xl, AppSpacing.xl),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppColors.primary,
-                    backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-                    child: org.logoUrl == null ? const Icon(Icons.business, color: Colors.white, size: 40) : null,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        org.name,
-                        style: AppTextStyles.displaySmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              roleName.toUpperCase(),
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '• ${org.type.replaceAll('-', ' ').toUpperCase()}',
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
                           ),
                         ],
                       ),
-                    ],
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primary,
+                        backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
+                        child: org.logoUrl == null ? const Icon(Icons.business, color: Colors.white, size: 40) : null,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        roleName.toUpperCase(),
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Container(
+                    height: 140,
+                    padding: const EdgeInsets.only(top: 40),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      org.name,
+                      style: (MediaQuery.of(context).size.width >= 1024
+                              ? AppTextStyles.displaySmall
+                              : (MediaQuery.of(context).size.width >= 600
+                                  ? AppTextStyles.headlineLarge
+                                  : AppTextStyles.headlineSmall))
+                          .copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -220,16 +221,26 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiSection(BuildContext context, dynamic org, String? roleName, List<UserModel> members, List<EventModel> events) {
+  Widget _buildKpiSection(
+    BuildContext context, 
+    dynamic org, 
+    String? roleName, 
+    List<UserModel> members, 
+    List<EventModel> events,
+    int totalOfficers,
+    int mandatoryFeesCount,
+  ) {
     final bool isOfficer = roleName != null && roleName != 'Student';
     final totalMembers = members.length;
     final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
-    final pendingRequests = members.where((m) => m.status.toLowerCase() == 'pending').length;
     final upcomingCount = events.where((e) => !e.isPastTimeout).length;
+    final mandatoryEventsCount = events.where((e) => e.isMandatory).length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth < 450 ? 1 : (constraints.maxWidth < 800 ? 2 : 3);
+        final isMobile = constraints.maxWidth < 600;
+        final crossAxisCount = isMobile ? 1 : (constraints.maxWidth < 800 ? 2 : 3);
+        final childAspectRatio = isMobile ? 3.5 : 1.5;
         
         return GridView.count(
           crossAxisCount: crossAxisCount,
@@ -237,19 +248,19 @@ class GovernorDashboardView extends ConsumerWidget {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: AppSpacing.md,
           mainAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1.5,
+          childAspectRatio: childAspectRatio,
           children: [
             if (isOfficer) ...[
-              _buildKpiCard('Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
-              _buildKpiCard('Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
-              _buildKpiCard('Attendance Rate', '88%', Icons.how_to_reg_outlined, Colors.green),
-              _buildKpiCard('Collections', '₱12,500', Icons.payments_outlined, Colors.teal),
-              _buildKpiCard('Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
-              _buildKpiCard('Pending Requests', pendingRequests.toString(), Icons.pending_actions_rounded, Colors.red),
+              _buildKpiCard(context, 'Total Members', totalMembers.toString(), Icons.people_outline_rounded, Colors.blue),
+              _buildKpiCard(context, 'Active Members', activeMembers.toString(), Icons.check_circle_rounded, Colors.green),
+              _buildKpiCard(context, 'Number of Officers', totalOfficers.toString(), Icons.badge_outlined, Colors.green),
+              _buildKpiCard(context, 'Mandatory Event', mandatoryEventsCount.toString(), Icons.event_available_outlined, Colors.teal),
+              _buildKpiCard(context, 'Upcoming Events', upcomingCount.toString(), Icons.event_outlined, Colors.purple),
+              _buildKpiCard(context, 'Mandatory Fees', mandatoryFeesCount.toString(), Icons.receipt_long_outlined, Colors.red),
             ] else ...[
-              _buildKpiCard('My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
-              _buildKpiCard('Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
-              _buildKpiCard('Events Attended', '15', Icons.event_available_rounded, Colors.blue),
+              _buildKpiCard(context, 'My Attendance', '92%', Icons.how_to_reg_outlined, Colors.green),
+              _buildKpiCard(context, 'Pending Fees', '₱0', Icons.payments_outlined, Colors.teal),
+              _buildKpiCard(context, 'Events Attended', '15', Icons.event_available_rounded, Colors.blue),
             ],
           ],
         );
@@ -258,7 +269,53 @@ class GovernorDashboardView extends ConsumerWidget {
   }
 
 
-  Widget _buildKpiCard(String label, String value, IconData icon, Color color) {
+  Widget _buildKpiCard(BuildContext context, String label, String value, IconData icon, Color color) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    
+    if (isMobile) {
+      final theme = Theme.of(context);
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.labelMedium.copyWith(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -381,63 +438,6 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
-  Widget _buildPendingApprovals(dynamic org, List<UserModel> members) {
-    final pendingMembers = members.where((m) => m.status.toLowerCase() == 'pending').toList();
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Pending Approvals', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.md),
-          if (pendingMembers.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Center(child: Text('No pending membership requests.')),
-            )
-          else
-            ...pendingMembers.take(3).map((m) => _buildApprovalItem(m.fullName, 'Membership Request', 'Recent')),
-          
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {},
-              child: const Text('View All Requests'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApprovalItem(String name, String type, String time) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        children: [
-          CircleAvatar(radius: 18, child: Text(name[0].toUpperCase())),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(type, style: const TextStyle(color: AppColors.textGrey, fontSize: 12)),
-              ],
-            ),
-          ),
-          Text(time, style: const TextStyle(color: AppColors.textGrey, fontSize: 11)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildRecentActivity(dynamic org, List<UserModel> members) {
     final recentMembers = [...members];

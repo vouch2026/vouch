@@ -21,6 +21,7 @@ import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/models/organization_membership_model.dart';
 import '../../../core/permissions/app_permissions.dart';
 import '../../../core/utils/time_formatter.dart';
+import '../../../core/utils/role_mapper.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
 import '../../attendance/views/attendance_report_page.dart';
@@ -196,6 +197,23 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         ? (creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member')
         : (activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator);
 
+    final officerRoleName = creatorOrgId != null
+        ? creatorMembership?.roleName
+        : (isSelectedOrgCreator ? activeRole?.roleName : null);
+
+    final normalizedRole = officerRoleName != null
+        ? RoleMapper.mapDbRoleToAppFormat(officerRoleName)
+        : null;
+
+    final isAllowedOfficer = isOfficer && (
+      normalizedRole == 'governor' ||
+      normalizedRole == 'vice_governor' ||
+      normalizedRole == 'president' ||
+      normalizedRole == 'vice_president'
+    );
+
+    final isFullOfficer = isOfficer && normalizedRole != 'representative';
+
     final canScan = creatorOrgId != null
         ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
         : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
@@ -218,7 +236,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
           Navigator.pop(context);
         }
       },
-      floatingActionButton: (canScan && isToday) 
+      floatingActionButton: (canScan && isToday && !event.isPastTimeout) 
         ? FloatingActionButton.extended(
             onPressed: () => Navigator.push(
               context,
@@ -308,7 +326,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         const SizedBox(height: AppSpacing.lg),
                         _buildDescriptionSection(event),
                         const SizedBox(height: AppSpacing.xxl),
-                        if (!isOfficer && !isUpcoming) ...[
+                        if (!isFullOfficer && !isUpcoming) ...[
                           if (isMemberOfCreatorOrg) ...[
                             highlightsAsync.when(
                               data: (count) => _buildHighlightsSection(count),
@@ -317,9 +335,9 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                             ),
                             const SizedBox(height: AppSpacing.xxl),
                           ],
-                          _buildStudentExcuseAction(context, event, isOfficer: isOfficer),
+                          _buildStudentExcuseAction(context, event, isOfficer: isFullOfficer),
                         ],
-                        if (isOfficer && event.isPastTimeout) ...[
+                        if (isAllowedOfficer && event.isPastTimeout) ...[
                           _buildOfficerPastEventActions(context, event, isMemberOfCreatorOrg: isMemberOfCreatorOrg),
                         ],
                       ],
@@ -330,14 +348,14 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                   const SizedBox(width: AppSpacing.xxl),
                   Expanded(
                     flex: 1,
-                    child: _buildInfoSidebar(event, isOfficer: isOfficer),
+                    child: _buildInfoSidebar(event, isOfficer: isFullOfficer),
                   ),
                 ],
               ],
             ),
             if (isMobile) ...[
               const SizedBox(height: AppSpacing.xxl),
-              _buildInfoSidebar(event, isOfficer: isOfficer),
+              _buildInfoSidebar(event, isOfficer: isFullOfficer),
             ],
             const SizedBox(height: AppSpacing.xxl),
           ],

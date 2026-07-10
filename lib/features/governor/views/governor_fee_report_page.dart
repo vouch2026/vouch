@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:excel/excel.dart' as excel_lib;
@@ -341,27 +342,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Row(
                       children: [
-                        Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () {
-                            if (Navigator.canPop(context)) {
-                              Navigator.pop(context);
-                            }
-                            if (Navigator.canPop(context)) {
-                              Navigator.pop(context);
-                            }
-                          },
-                          child: Text(
-                            'Fees',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                        Icon(Icons.account_balance_wallet_outlined, size: 14, color: Colors.grey[500]),
                         const SizedBox(width: 8),
                         InkWell(
                           onTap: () {
@@ -370,7 +351,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                             }
                           },
                           child: Text(
-                            'Manage Fees',
+                            'Collections',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: Colors.grey[600],
                               fontWeight: FontWeight.w500,

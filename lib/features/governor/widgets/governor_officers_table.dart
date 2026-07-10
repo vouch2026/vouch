@@ -7,21 +7,15 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
-import '../../auth/models/user_model.dart';
 
-class GovernorMembersTable extends ConsumerWidget {
-  const GovernorMembersTable({super.key});
+class GovernorOfficersTable extends ConsumerWidget {
+  const GovernorOfficersTable({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final workspace = ref.watch(workspaceProvider);
     final selectedOrg = workspace.selectedOrganization;
-    final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
-    final canManageMembers = activeRoleName.contains('governor') || 
-                            activeRoleName.contains('president') ||
-                            activeRoleName.contains('vice governor') ||
-                            activeRoleName.contains('vice president');
 
     if (selectedOrg == null) {
       return const Center(child: Text('Please select an organization.'));
@@ -31,12 +25,12 @@ class GovernorMembersTable extends ConsumerWidget {
 
     return membersAsync.when(
       data: (members) {
-        final filteredMembers = members.where((m) {
+        final officers = members.where((m) {
           final role = m.role.toLowerCase();
-          return role == 'member' || role == 'student';
+          return role != 'member' && role != 'student';
         }).toList();
 
-        if (filteredMembers.isEmpty) {
+        if (officers.isEmpty) {
           return _buildEmptyState(theme);
         }
 
@@ -44,7 +38,7 @@ class GovernorMembersTable extends ConsumerWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -57,16 +51,15 @@ class GovernorMembersTable extends ConsumerWidget {
                       constraints: BoxConstraints(minWidth: constraints.maxWidth),
                       child: DataTable(
                         columnSpacing: AppSpacing.lg,
-                        headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
-                        columns: [
-                          const DataColumn(label: Text('Member')),
-                          const DataColumn(label: Text('Student ID')),
-                          const DataColumn(label: Text('Program & Year')),
-                          const DataColumn(label: Text('Joined Date')),
-                          const DataColumn(label: Text('Role')),
-                          if (canManageMembers) const DataColumn(label: Text('Actions')),
+                        headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
+                        columns: const [
+                          DataColumn(label: Text('Officer')),
+                          DataColumn(label: Text('Student ID')),
+                          DataColumn(label: Text('Program & Year')),
+                          DataColumn(label: Text('Joined Date')),
+                          DataColumn(label: Text('Role')),
                         ],
-                        rows: filteredMembers.map((member) {
+                        rows: officers.map((officer) {
                           return DataRow(
                             cells: [
                               DataCell(
@@ -75,10 +68,10 @@ class GovernorMembersTable extends ConsumerWidget {
                                     CircleAvatar(
                                       radius: 16,
                                       backgroundColor: theme.colorScheme.primaryContainer,
-                                      backgroundImage: member.avatarUrl != null ? NetworkImage(member.avatarUrl!) : null,
-                                      child: member.avatarUrl == null
+                                      backgroundImage: officer.avatarUrl != null ? NetworkImage(officer.avatarUrl!) : null,
+                                      child: officer.avatarUrl == null
                                           ? Text(
-                                              member.fullName[0].toUpperCase(),
+                                              officer.fullName[0].toUpperCase(),
                                               style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
                                             )
                                           : null,
@@ -88,27 +81,23 @@ class GovernorMembersTable extends ConsumerWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Text(member.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                                        Text(member.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
+                                        Text(officer.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                                        Text(officer.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
                                       ],
                                     ),
                                   ],
                                 ),
                               ),
-                              DataCell(Text(member.schoolId, style: AppTextStyles.bodySmall)),
+                              DataCell(Text(officer.schoolId, style: AppTextStyles.bodySmall)),
                               DataCell(Text(
-                                '${member.programName ?? 'N/A'} - ${member.yearLevel ?? ''}${member.yearLevel != null ? " Year" : ""}',
+                                '${officer.programName ?? 'N/A'} - ${officer.yearLevel ?? ''}${officer.yearLevel != null ? " Year" : ""}',
                                 style: AppTextStyles.bodySmall,
                               )),
                               DataCell(Text(
-                                member.joinedAt != null ? DateFormat.yMMMd().format(member.joinedAt!) : 'N/A',
+                                officer.joinedAt != null ? DateFormat.yMMMd().format(officer.joinedAt!) : 'N/A',
                                 style: AppTextStyles.bodySmall,
                               )),
-                              DataCell(_RoleBadge(role: member.role)),
-                              if (canManageMembers)
-                                DataCell(
-                                  _buildMemberActions(context, member),
-                                ),
+                              DataCell(_RoleBadge(role: officer.role)),
                             ],
                           );
                         }).toList(),
@@ -123,7 +112,7 @@ class GovernorMembersTable extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Showing ${filteredMembers.length} members',
+                      'Showing ${officers.length} officers',
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
                     ),
                     Row(
@@ -153,7 +142,7 @@ class GovernorMembersTable extends ConsumerWidget {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: AppSpacing.md),
-              Text('Error loading members: $error'),
+              Text('Error loading officers: $error'),
               TextButton(
                 onPressed: () => ref.refresh(organizationMembersProvider(selectedOrg.id)),
                 child: const Text('Retry'),
@@ -170,89 +159,25 @@ class GovernorMembersTable extends ConsumerWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           children: [
-            Icon(Icons.people_outline_rounded, size: 64, color: theme.colorScheme.primary.withOpacity(0.2)),
+            Icon(Icons.badge_outlined, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.2)),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'No members found',
+              'No officers found',
               style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'This organization doesn\'t have any members yet.',
+              'This organization doesn\'t have any officers assigned yet.',
               style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMemberActions(BuildContext context, UserModel member) {
-    final role = member.role.toLowerCase();
-    final isEligible = role == 'member' || role == 'student' || role == 'staff';
-
-    if (!isEligible) {
-      return const SizedBox.shrink();
-    }
-
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert_rounded, size: 20),
-      onSelected: (value) {
-        if (value == 'promote_representative') {
-          _showRepresentativeDialog(context, member);
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'promote_representative',
-          child: Row(
-            children: [
-              Icon(Icons.trending_up_rounded, size: 18, color: AppColors.primary),
-              SizedBox(width: 8),
-              Text('Promote to Representative'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showRepresentativeDialog(BuildContext context, UserModel member) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Promote to Representative'),
-        content: Text(
-          'Are you sure you want to promote ${member.fullName} to Organization Representative?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${member.fullName} successfully promoted as Representative.'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Confirm Promotion'),
-          ),
-        ],
       ),
     );
   }
@@ -282,15 +207,17 @@ class _RoleBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        role.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        role,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

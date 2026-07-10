@@ -49,7 +49,7 @@ final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
     userData['role'] = role;
     
     return UserModel.fromJson(userData);
-  }).toList();
+  }).where((user) => user.role != 'super_admin').toList();
   
   return users;
 });

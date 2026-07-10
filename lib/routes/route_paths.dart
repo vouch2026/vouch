@@ -58,6 +58,7 @@ class RoutePaths {
   static const String workspaceDocuments = '/workspace/documents';
   static const String workspaceFees = '/workspace/fees';
   static const String workspaceCollections = '/workspace/collections';
+  static const String workspaceCollectionsReport = '/workspace/collections/report';
   static const String workspaceFinanceReports = '/workspace/finance-reports';
   static const String workspaceElections = '/workspace/elections';
   static const String workspaceCompliance = '/workspace/compliance';
@@ -94,4 +95,9 @@ class RoutePaths {
   static const String workspaceGovernanceReports = '/workspace/governance-reports';
   static const String workspaceCollectionAnalytics = '/workspace/collection-analytics';
   static const String workspaceReports = '/workspace/reports';
+  static const String workspaceProjects = '/workspace/projects';
+  static const String workspaceSales = '/workspace/sales';
+  static const String workspaceInventory = '/workspace/inventory';
+  static const String workspaceSponsors = '/workspace/sponsors';
+  static const String workspaceFinancialRequests = '/workspace/financial-requests';
 }

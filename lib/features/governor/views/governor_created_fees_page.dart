@@ -7,13 +7,26 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
+import 'package:go_router/go_router.dart';
+import '../../../routes/route_names.dart';
 import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
 import 'governor_create_fee_page.dart';
 import 'governor_fee_report_page.dart';
 
 class GovernorCreatedFeesPage extends ConsumerStatefulWidget {
-  const GovernorCreatedFeesPage({super.key});
+  final String title;
+  final String subtitle;
+  final bool showBackButton;
+  final bool isTopLevel;
+
+  const GovernorCreatedFeesPage({
+    super.key,
+    this.title = 'Manage Fees',
+    this.subtitle = 'View and edit the payment requirements you have created.',
+    this.showBackButton = true,
+    this.isTopLevel = false,
+  });
 
   @override
   ConsumerState<GovernorCreatedFeesPage> createState() => _GovernorCreatedFeesPageState();
@@ -56,52 +69,69 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
         : (isTablet ? AppSpacing.lg : AppSpacing.xl);
 
     return DashboardLayout(
-      title: 'Manage Fees',
-      onBack: () {
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-      },
+      title: widget.title,
+      onBack: widget.showBackButton
+          ? () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            }
+          : null,
       child: SingleChildScrollView(
         padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Breadcrumbs Header
-            Row(
-              children: [
-                Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: Text(
-                    'Fees',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Manage Fees',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            if (widget.isTopLevel)
+              Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Collections',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Icon(Icons.payments_outlined, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: Text(
+                      'Fees',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Manage Fees',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: AppSpacing.md),
             UserManagementHeader(
-              title: 'Manage Fees',
-              subtitle: 'View and edit the payment requirements you have created.',
+              title: widget.title,
+              subtitle: widget.subtitle,
               actions: [
                 HeaderActionButton(
                   icon: Icons.add_rounded,
@@ -123,6 +153,7 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                 final totalFees = fees.length;
                 final mandatoryCount = fees.where((f) => f.isMandatory).length;
                 final activeCount = fees.where((f) => _isFeeActive(f.dueDate)).length;
+                final inactiveCount = fees.where((f) => !_isFeeActive(f.dueDate)).length;
 
                 // Apply filtering
                 final filteredFees = fees.where((fee) {
@@ -168,9 +199,15 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                     // Stats Cards Dashboard
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final isSmall = constraints.maxWidth < 600;
-                        final crossCount = isSmall ? 1 : 3;
-                        final ratio = isSmall ? 3.5 : 2.5;
+                        int crossCount = 1;
+                        double ratio = 3.5;
+                        if (constraints.maxWidth > 1100) {
+                          crossCount = 4;
+                          ratio = 2.5;
+                        } else if (constraints.maxWidth > 600) {
+                          crossCount = 2;
+                          ratio = 2.5;
+                        }
                         
                         return GridView(
                           shrinkWrap: true,
@@ -193,6 +230,12 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                               value: activeCount.toString(),
                               icon: Icons.pending_actions_rounded,
                               color: Colors.green,
+                            ),
+                            _buildStatCard(
+                              title: 'Inactive Fees',
+                              value: inactiveCount.toString(),
+                              icon: Icons.history_rounded,
+                              color: Colors.red,
                             ),
                             _buildStatCard(
                               title: 'Mandatory Fees',
@@ -503,11 +546,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => GovernorFeeReportPage(fee: fee),
-          ),
+        onTap: () => context.pushNamed(
+          RouteNames.workspaceCollectionsReport,
+          extra: fee,
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -640,11 +681,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => GovernorFeeReportPage(fee: fee),
-                          ),
+                        onPressed: () => context.pushNamed(
+                          RouteNames.workspaceCollectionsReport,
+                          extra: fee,
                         ),
                         child: const Text('View Payment Report'),
                       ),
@@ -684,11 +723,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                         ),
                         const Spacer(),
                         FilledButton.tonal(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => GovernorFeeReportPage(fee: fee),
-                            ),
+                          onPressed: () => context.pushNamed(
+                            RouteNames.workspaceCollectionsReport,
+                            extra: fee,
                           ),
                           child: const Text('View Payment Report'),
                         ),
