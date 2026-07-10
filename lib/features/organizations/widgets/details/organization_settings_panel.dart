@@ -665,7 +665,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 80, AppSpacing.xl, AppSpacing.xl),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Stack(
                   children: [
@@ -712,22 +712,22 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 ),
                 const SizedBox(width: AppSpacing.lg),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        org.name,
-                        style: AppTextStyles.headlineSmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
+                  child: Container(
+                    height: 108,
+                    padding: const EdgeInsets.only(top: 40),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      org.name,
+                      style: (MediaQuery.of(context).size.width >= 1024
+                              ? AppTextStyles.displaySmall
+                              : (MediaQuery.of(context).size.width >= 600
+                                  ? AppTextStyles.headlineLarge
+                                  : AppTextStyles.headlineSmall))
+                          .copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        org.type.replaceAll('-', ' ').toUpperCase(),
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],

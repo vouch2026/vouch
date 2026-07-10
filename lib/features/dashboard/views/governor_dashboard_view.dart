@@ -152,64 +152,65 @@ class GovernorDashboardView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 80, AppSpacing.xl, AppSpacing.xl),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppColors.primary,
-                    backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-                    child: org.logoUrl == null ? const Icon(Icons.business, color: Colors.white, size: 40) : null,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        MediaQuery.of(context).size.width < 600 ? org.code : org.name,
-                        style: AppTextStyles.displaySmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              roleName.toUpperCase(),
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '• ${org.type.replaceAll('-', ' ').toUpperCase()}',
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
                           ),
                         ],
                       ),
-                    ],
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primary,
+                        backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
+                        child: org.logoUrl == null ? const Icon(Icons.business, color: Colors.white, size: 40) : null,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        roleName.toUpperCase(),
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Container(
+                    height: 140,
+                    padding: const EdgeInsets.only(top: 40),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      org.name,
+                      style: (MediaQuery.of(context).size.width >= 1024
+                              ? AppTextStyles.displaySmall
+                              : (MediaQuery.of(context).size.width >= 600
+                                  ? AppTextStyles.headlineLarge
+                                  : AppTextStyles.headlineSmall))
+                          .copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                   ),
                 ),
               ],
