@@ -179,7 +179,7 @@ class GovernorDashboardView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        org.name,
+                        MediaQuery.of(context).size.width < 600 ? org.code : org.name,
                         style: AppTextStyles.displaySmall.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.textDark,
