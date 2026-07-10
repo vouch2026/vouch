@@ -262,7 +262,7 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '© ${DateTime.now().year} Jeslito G. Geverola. All rights reserved.',
+                      '© ${DateTime.now().year} Vouch SoftTech Services. All rights reserved.',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
                     ),

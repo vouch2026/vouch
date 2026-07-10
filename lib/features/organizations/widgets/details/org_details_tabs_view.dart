@@ -461,7 +461,7 @@ class _OfficersTab extends ConsumerWidget {
                   childAspectRatio: 2.5,
                 ),
                 itemCount: currentTermOfficers.length,
-                itemBuilder: (context, index) => _buildOfficerCard(currentTermOfficers[index]),
+                itemBuilder: (context, index) => _buildOfficerCard(context, ref, currentTermOfficers[index]),
               );
             },
             loading: () => const Center(child: FlickrLoader()),
@@ -491,7 +491,7 @@ class _OfficersTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildOfficerCard(OrganizationMembershipModel officer) {
+  Widget _buildOfficerCard(BuildContext context, WidgetRef ref, OrganizationMembershipModel officer) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -557,12 +557,90 @@ class _OfficersTab extends ConsumerWidget {
                 ],
               ),
             ),
-            IconButton(
-              onPressed: () {},
+            PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded, color: AppColors.textGrey),
+              offset: const Offset(0, 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              onSelected: (value) {
+                if (value == 'demote') {
+                  _showDemoteConfirmation(context, ref, officer);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'demote',
+                  child: Text(
+                    officer.roleName?.toLowerCase() == 'adviser' ? 'Remove Adviser' : 'Demote Officer',
+                    style: const TextStyle(color: AppColors.error),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDemoteConfirmation(BuildContext context, WidgetRef ref, OrganizationMembershipModel officer) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(officer.roleName?.toLowerCase() == 'adviser' ? 'Remove Adviser' : 'Demote Officer'),
+        content: Text(
+          officer.roleName?.toLowerCase() == 'adviser'
+              ? 'Are you sure you want to remove ${officer.user?.fullName ?? "this user"} as the adviser of ${org.name}?'
+              : 'Are you sure you want to demote ${officer.user?.fullName ?? "this user"} from their role as ${officer.roleName ?? "officer"}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref.read(organizationRepositoryProvider).demoteOfficer(
+                  userId: officer.userId,
+                  orgId: org.id,
+                  roleName: officer.roleName ?? '',
+                  workspaceType: org.type,
+                );
+                
+                // Invalidate/refresh providers to show updated list
+                ref.invalidate(organizationOfficersProvider(org.id));
+                ref.invalidate(organizationMembersProvider(org.id));
+                ref.invalidate(organizationProvider(org.id));
+                ref.invalidate(organizationsProvider);
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        officer.roleName?.toLowerCase() == 'adviser'
+                            ? 'Successfully removed adviser'
+                            : 'Successfully demoted officer',
+                      ),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
       ),
     );
   }

@@ -49,6 +49,45 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
     }
   }
 
+  Future<void> _showDeleteConfirmation(UserModel user) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete User Entirely'),
+        content: Text(
+          'Are you sure you want to delete ${user.fullName} (${user.schoolId})? '
+          'This action is permanent and will delete the user from both the database and authentication.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await ref.read(userControllerProvider.notifier).deleteUser(user.id!);
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? 'User deleted successfully' : 'Failed to delete user'),
+                    backgroundColor: success ? AppColors.success : AppColors.error,
+                  ),
+                );
+                if (success) {
+                  context.pop();
+                }
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider(widget.id));
@@ -333,19 +372,12 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
           onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'suspended'),
           color: AppColors.error,
         ),
-      if (user.status != 'archived')
-        _ActionBtn(
-          label: 'Archive User',
-          icon: Icons.archive_outlined,
-          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'archived'),
-        ),
-      if (user.status == 'archived')
-        _ActionBtn(
-          label: 'Restore User',
-          icon: Icons.unarchive_outlined,
-          onPressed: isLoading ? () {} : () => _updateUserStatus(user, 'active'),
-          color: AppColors.success,
-        ),
+      _ActionBtn(
+        label: 'Delete User',
+        icon: Icons.delete_forever_outlined,
+        onPressed: isLoading ? () {} : () => _showDeleteConfirmation(user),
+        color: AppColors.error,
+      ),
     ];
 
     if (isFullWidth) {

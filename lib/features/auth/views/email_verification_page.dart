@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,10 +21,41 @@ class EmailVerificationPage extends ConsumerStatefulWidget {
 
 class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   final _codeController = TextEditingController();
+  Timer? _timer;
+  int _secondsRemaining = 120; // 2 minutes cooldown
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    setState(() {
+      _secondsRemaining = 120;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  String get _timerText {
+    final minutes = _secondsRemaining ~/ 60;
+    final seconds = _secondsRemaining % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
 
   @override
   void dispose() {
     _codeController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -166,7 +198,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                     email: widget.email,
                     token: _codeController.text,
                   ).then((success) {
-                    if (success && mounted) {
+                    if (success && context.mounted) {
                       context.go(RoutePaths.dashboard);
                     }
                   });
@@ -199,16 +231,26 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
           ),
           const SizedBox(height: AppSpacing.md),
           TextButton(
-            onPressed: authState.isLoading ? null : () {
-              ref.read(authControllerProvider.notifier).resendOTP(widget.email).then((_) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Verification code resent')),
-                  );
-                }
-              });
-            },
-            child: Text('Resend code', style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary)),
+            onPressed: (authState.isLoading || _secondsRemaining > 0)
+                ? null
+                : () {
+                    ref.read(authControllerProvider.notifier).resendOTP(widget.email).then((_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Verification code resent')),
+                        );
+                        _startTimer();
+                      }
+                    });
+                  },
+            child: Text(
+              _secondsRemaining > 0 ? 'Resend code in $_timerText' : 'Resend code',
+              style: AppTextStyles.labelLarge.copyWith(
+                color: (authState.isLoading || _secondsRemaining > 0)
+                    ? Colors.grey.shade400
+                    : AppColors.primary,
+              ),
+            ),
           ),
         ],
       ),

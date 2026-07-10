@@ -2309,5 +2309,33 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ==============================================================================
+-- 13. DELETE USER ENTIRELY (DATABASE & AUTHENTICATION)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.delete_user_entirely(p_user_id UUID)
+RETURNS VOID AS $$
+DECLARE
+    v_auth_id UUID;
+BEGIN
+    -- Check if caller is super admin
+    IF NOT public.is_super_admin() THEN
+        RAISE EXCEPTION 'Access denied. Only Super Admins can delete users.';
+    END IF;
+
+    -- Get the auth_id of the target user
+    SELECT auth_id INTO v_auth_id FROM public.users WHERE id = p_user_id;
+
+    -- Delete target user's profile from public.users
+    -- This will cascade delete any references in tables with ON DELETE CASCADE
+    DELETE FROM public.users WHERE id = p_user_id;
+
+    -- Delete target user from auth.users (requires security definer context)
+    IF v_auth_id IS NOT NULL THEN
+        DELETE FROM auth.users WHERE id = v_auth_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
 
 
