@@ -95,4 +95,9 @@ class RoutePaths {
   static const String workspaceGovernanceReports = '/workspace/governance-reports';
   static const String workspaceCollectionAnalytics = '/workspace/collection-analytics';
   static const String workspaceReports = '/workspace/reports';
+  static const String workspaceProjects = '/workspace/projects';
+  static const String workspaceSales = '/workspace/sales';
+  static const String workspaceInventory = '/workspace/inventory';
+  static const String workspaceSponsors = '/workspace/sponsors';
+  static const String workspaceFinancialRequests = '/workspace/financial-requests';
 }

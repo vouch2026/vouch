@@ -6,6 +6,10 @@ class RoleMapper {
     switch (role) {
       case 'super admin':
         return 'super_admin';
+      case 'senator':
+        return 'senator';
+      case 'business manager':
+        return 'business_manager';
       case 'students':
       case 'student':
         return 'student';

@@ -586,6 +586,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.workspaceReports,
         builder: (context, state) => const GovernorModulePlaceholder(title: 'Reports'),
       ),
+      GoRoute(
+        path: RoutePaths.workspaceProjects,
+        name: RouteNames.workspaceProjects,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Projects'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceSales,
+        name: RouteNames.workspaceSales,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Sales'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceInventory,
+        name: RouteNames.workspaceInventory,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Inventory'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceSponsors,
+        name: RouteNames.workspaceSponsors,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Sponsors & Partners'),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceFinancialRequests,
+        name: RouteNames.workspaceFinancialRequests,
+        builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Requests'),
+      ),
     ],
   );
 });

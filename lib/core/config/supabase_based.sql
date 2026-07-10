@@ -1525,7 +1525,7 @@ INSERT INTO roles (name, hierarchy_level) VALUES
 ('Super Admin', 100), ('Faculty Dean', 80), ('Program Head', 70), ('Instructor', 65), ('Adviser', 65), ('Comselec Chair', 60), 
 ('COMSELEC Commissioner', 58), ('Governor', 50), ('Vice Governor', 45), ('President', 50), ('Vice President', 45), 
 ('Secretary', 40), ('Assistant Secretary', 35), ('Treasurer', 30), ('Assistant Treasurer', 25), ('Auditor', 20), 
-('PIO', 20), ('Business Manager', 20), ('Representative', 15), ('Personnel', 10), ('Staff', 10), ('Member', 5), 
+('PIO', 20), ('Business Manager', 20), ('Senator', 15), ('Representative', 15), ('Personnel', 10), ('Staff', 10), ('Member', 5), 
 ('Students', 5), ('Voters', 5)
 ON CONFLICT (name) DO UPDATE SET hierarchy_level = EXCLUDED.hierarchy_level;
 
@@ -1610,6 +1610,22 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Adviser' AND p.action IN (
     'view_events', 'view_announcements', 'view_members', 'view_officers', 'view_documents', 'view_activity_cards', 'view_fees', 'view_sanctions'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- MAP PERMISSIONS FOR SENATOR
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Senator' AND p.action IN (
+    'view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'view_sanctions', 'view_documents', 'view_analytics', 'request_clearance'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- MAP PERMISSIONS FOR BUSINESS MANAGER
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Business Manager' AND p.action IN (
+    'view_events', 'create_event', 'edit_event', 'view_announcements', 'create_announcement', 'edit_announcement', 'view_members', 'view_officers', 'view_fees', 'view_documents', 'view_analytics'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

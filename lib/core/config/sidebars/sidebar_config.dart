@@ -46,6 +46,8 @@ String getSidebarRoleKey(String roleName) {
       return 'auditor';
     case 'pio':
       return 'pio';
+    case 'business_manager':
+      return 'business_manager';
     case 'senator':
       return 'senator';
     case 'staff':
@@ -161,6 +163,55 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       title: 'INSIGHTS',
       items: [
         SidebarItemConfig(label: 'Audit Analytics', icon: Icons.query_stats_outlined, path: RoutePaths.workspaceAuditAnalytics),
+      ],
+    ),
+  ],
+
+  'business_manager': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE: DETAILS',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.workspaceDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.workspaceAnnouncements),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'BUSINESS',
+      items: [
+        SidebarItemConfig(label: 'Projects', icon: Icons.assignment_outlined, path: RoutePaths.workspaceProjects),
+        SidebarItemConfig(label: 'Sales', icon: Icons.point_of_sale_outlined, path: RoutePaths.workspaceSales),
+        SidebarItemConfig(label: 'Inventory', icon: Icons.inventory_2_outlined, path: RoutePaths.workspaceInventory),
+        SidebarItemConfig(label: 'Sponsors & Partners', icon: Icons.handshake_outlined, path: RoutePaths.workspaceSponsors),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'FINANCE',
+      items: [
+        SidebarItemConfig(label: 'Financial Requests', icon: Icons.receipt_long_outlined, path: RoutePaths.workspaceFinancialRequests),
+        SidebarItemConfig(label: 'Collections (View Only)', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'PEOPLE',
+      items: [
+        SidebarItemConfig(label: 'Members', icon: Icons.people_outline_rounded, path: RoutePaths.workspaceMembers),
+        SidebarItemConfig(label: 'Officers', icon: Icons.badge_outlined, path: RoutePaths.workspaceOfficers),
       ],
     ),
   ],
