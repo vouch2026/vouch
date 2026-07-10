@@ -31,7 +31,12 @@ class GovernorMembersTable extends ConsumerWidget {
 
     return membersAsync.when(
       data: (members) {
-        if (members.isEmpty) {
+        final filteredMembers = members.where((m) {
+          final role = m.role.toLowerCase();
+          return role == 'member' || role == 'student';
+        }).toList();
+
+        if (filteredMembers.isEmpty) {
           return _buildEmptyState(theme);
         }
 
@@ -61,7 +66,7 @@ class GovernorMembersTable extends ConsumerWidget {
                           const DataColumn(label: Text('Role')),
                           if (canManageMembers) const DataColumn(label: Text('Actions')),
                         ],
-                        rows: members.map((member) {
+                        rows: filteredMembers.map((member) {
                           return DataRow(
                             cells: [
                               DataCell(
@@ -118,7 +123,7 @@ class GovernorMembersTable extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Showing ${members.length} members',
+                      'Showing ${filteredMembers.length} members',
                       style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
                     ),
                     Row(
@@ -190,69 +195,27 @@ class GovernorMembersTable extends ConsumerWidget {
 
   Widget _buildMemberActions(BuildContext context, UserModel member) {
     final role = member.role.toLowerCase();
-    final isStaff = role == 'staff';
-    final isMember = role == 'member' || role == 'student';
+    final isEligible = role == 'member' || role == 'student' || role == 'staff';
+
+    if (!isEligible) {
+      return const SizedBox.shrink();
+    }
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert_rounded, size: 20),
       onSelected: (value) {
-        if (value == 'promote_staff') {
-          _showPromotionDialog(context, member, true);
-        } else if (value == 'demote_staff') {
-          _showPromotionDialog(context, member, false);
+        if (value == 'promote_representative') {
+          _showRepresentativeDialog(context, member);
         }
       },
       itemBuilder: (context) => [
         const PopupMenuItem(
-          value: 'view',
+          value: 'promote_representative',
           child: Row(
             children: [
-              Icon(Icons.visibility_outlined, size: 18),
+              Icon(Icons.trending_up_rounded, size: 18, color: AppColors.primary),
               SizedBox(width: 8),
-              Text('View Profile'),
-            ],
-          ),
-        ),
-        if (isMember)
-          const PopupMenuItem(
-            value: 'promote_staff',
-            child: Row(
-              children: [
-                Icon(Icons.admin_panel_settings_outlined, size: 18, color: AppColors.primary),
-                SizedBox(width: 8),
-                Text('Promote to Staff'),
-              ],
-            ),
-          ),
-        if (isStaff)
-          const PopupMenuItem(
-            value: 'demote_staff',
-            child: Row(
-              children: [
-                Icon(Icons.person_remove_outlined, size: 18, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Demote from Staff'),
-              ],
-            ),
-          ),
-        const PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 18),
-              SizedBox(width: 8),
-              Text('Edit Details'),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: 'remove',
-          child: Row(
-            children: [
-              Icon(Icons.person_off_outlined, size: 18, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Remove from Org', style: TextStyle(color: Colors.red)),
+              Text('Promote to Representative'),
             ],
           ),
         ),
@@ -260,15 +223,13 @@ class GovernorMembersTable extends ConsumerWidget {
     );
   }
 
-  void _showPromotionDialog(BuildContext context, UserModel member, bool isPromoting) {
+  void _showRepresentativeDialog(BuildContext context, UserModel member) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isPromoting ? 'Promote to Staff' : 'Demote from Staff'),
+        title: const Text('Promote to Representative'),
         content: Text(
-          isPromoting
-              ? 'Are you sure you want to promote ${member.fullName} to Event Staff? They will be able to scan QR codes during organization events.'
-              : 'Are you sure you want to demote ${member.fullName} from Event Staff? They will no longer have scanning privileges.',
+          'Are you sure you want to promote ${member.fullName} to Organization Representative?',
         ),
         actions: [
           TextButton(
@@ -277,20 +238,19 @@ class GovernorMembersTable extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // Implementation would update the state/provider
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('${member.fullName} successfully ${isPromoting ? 'promoted' : 'demoted'}.'),
-                  backgroundColor: isPromoting ? Colors.green : Colors.blue,
+                  content: Text('${member.fullName} successfully promoted as Representative.'),
+                  backgroundColor: Colors.green,
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: isPromoting ? AppColors.primary : Colors.red,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: Text(isPromoting ? 'Confirm Promotion' : 'Confirm Demotion'),
+            child: const Text('Confirm Promotion'),
           ),
         ],
       ),
