@@ -154,6 +154,11 @@ class ActivityCardRepository {
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = (e['attendance'] as List).firstOrNull;
         var status = _mapAttendanceStatus(attendance?['status']);
+        final hasTimeIn = attendance?['actual_time_in'] != null;
+        final hasTimeOut = attendance?['actual_time_out'] != null;
+        if (status == AttendanceStatus.completed && !(hasTimeIn && hasTimeOut)) {
+          status = AttendanceStatus.pending;
+        }
         final isPast = _isPastEvent(e);
         if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
           status = AttendanceStatus.sanctionCleared;
@@ -536,7 +541,7 @@ class ActivityCardRepository {
           ? Future.value(<dynamic>[])
           : _client
               .from('student_attendance')
-              .select('student_id, event_id, status, actual_time_out')
+              .select('student_id, event_id, status, actual_time_in, actual_time_out')
               .filter('student_id', 'in', studentIds)
               .filter('event_id', 'in', eventsResponse.map((e) => e['id']).toList()),
       feesResponse.isEmpty
@@ -599,6 +604,11 @@ class ActivityCardRepository {
       final List<ActivityCardEvent> events = eventsResponse.map((e) {
         final attendance = studentAttendance.where((a) => a['event_id'] == e['id']).firstOrNull;
         var status = _mapAttendanceStatus(attendance?['status']);
+        final hasTimeIn = attendance?['actual_time_in'] != null;
+        final hasTimeOut = attendance?['actual_time_out'] != null;
+        if (status == AttendanceStatus.completed && !(hasTimeIn && hasTimeOut)) {
+          status = AttendanceStatus.pending;
+        }
         final isPast = _isPastEvent(e);
         if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
           status = AttendanceStatus.sanctionCleared;
