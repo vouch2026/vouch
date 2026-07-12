@@ -14,6 +14,7 @@ class MySanctionsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sanctionsAsync = ref.watch(mySanctionsProvider);
+    final rulesAsync = ref.watch(sanctionRulesProvider);
 
     return DashboardLayout(
       title: 'My Sanctions',
@@ -22,6 +23,9 @@ class MySanctionsPage extends ConsumerWidget {
         child: sanctionsAsync.when(
           data: (sanctions) {
             if (sanctions.isEmpty) {
+              final rules = rulesAsync.value ?? [];
+              final isRulesNotSet = rulesAsync.hasValue && rules.isEmpty;
+
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
@@ -31,9 +35,18 @@ class MySanctionsPage extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.gavel_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.2)),
+                          Icon(
+                            isRulesNotSet ? Icons.rule_rounded : Icons.gavel_rounded,
+                            size: 64,
+                            color: AppColors.textGrey.withValues(alpha: 0.2),
+                          ),
                           const SizedBox(height: AppSpacing.md),
-                          const Text('Great job! You have no sanctions.', style: TextStyle(color: AppColors.textGrey)),
+                          Text(
+                            isRulesNotSet
+                                ? 'Sanction rules have not been configured by the officers yet.'
+                                : 'Great job! You have no sanctions.',
+                            style: const TextStyle(color: AppColors.textGrey),
+                          ),
                         ],
                       ),
                     ),
