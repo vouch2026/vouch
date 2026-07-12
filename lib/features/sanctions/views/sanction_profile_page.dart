@@ -131,6 +131,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     final profileAsync = ref.watch(userProfileByIdProvider(widget.studentId));
     final attendanceAsync = ref.watch(studentSanctionsAttendanceProvider(widget.studentId));
     final recordAsync = ref.watch(studentSanctionRecordProvider(widget.studentId));
+    final rulesAsync = ref.watch(sanctionRulesProvider);
     final currentUser = ref.watch(userProfileProvider).value;
 
     final activeRole = ref.watch(workspaceProvider).activeRole;
@@ -143,11 +144,22 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     );
 
     Widget? statusBadge;
-    if (recordAsync.hasValue) {
+    if (recordAsync.hasValue && rulesAsync.hasValue) {
       final sanction = recordAsync.value;
+      final rules = rulesAsync.value ?? [];
+      final isRulesNotSet = rules.isEmpty;
+
       final isComplied = sanction == null || sanction.status == 'Item Received' || totalSanctionScore == 0.0;
-      final statusLabel = isComplied ? 'CLEARED' : 'PENDING';
-      final badgeColor = isComplied ? AppColors.success : AppColors.warning;
+      final String statusLabel;
+      final Color badgeColor;
+
+      if (isRulesNotSet) {
+        statusLabel = 'RULES NOT SET';
+        badgeColor = AppColors.textGrey;
+      } else {
+        statusLabel = isComplied ? 'CLEARED' : 'PENDING';
+        badgeColor = isComplied ? AppColors.success : AppColors.warning;
+      }
 
       statusBadge = Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -435,189 +447,235 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                 const SizedBox(height: AppSpacing.md),
                 recordAsync.when(
                   data: (sanction) {
-                    if (sanction == null) {
-                      return Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: AppColors.border),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
+                    return rulesAsync.when(
+                      data: (rules) {
+                        final isRulesNotSet = rules.isEmpty;
+                        if (sanction == null) {
+                          if (isRulesNotSet) {
+                            return Card(
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: const BorderSide(color: AppColors.border),
                               ),
-                              const SizedBox(width: AppSpacing.lg),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Fully Compliant', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'This student has no outstanding sanctions in the current term.',
-                                      style: TextStyle(color: AppColors.textGrey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final isReceived = sanction.status == 'Item Received';
-
-                    return Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: isReceived ? AppColors.success.withValues(alpha: 0.2) : AppColors.border),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Requirement Details', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-                                    Text(
-                                      '${sanction.totalAbsences % 1 == 0 ? sanction.totalAbsences.toInt().toString() : sanction.totalAbsences.toStringAsFixed(1)} Sanction Score Triggered',
-                                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.2)),
-                                  ),
-                                  child: Text(
-                                    isReceived ? 'CLEARED' : 'PENDING',
-                                    style: TextStyle(
-                                      color: isReceived ? AppColors.success : AppColors.warning,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Divider(height: AppSpacing.xl),
-                            Row(
-                              children: [
-                                const Icon(Icons.inventory_2_outlined, size: 20, color: AppColors.textGrey),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Text(
-                                    'Item: ${sanction.requiredItem}',
-                                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (isReceived) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              Container(
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.1)),
-                                ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.xl),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 20),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Expanded(
-                                      child: Text(
-                                        'Marked as received by ${sanction.receivedByName} on ${DateFormat('MMM dd, yyyy').format(sanction.receivedAt!)}',
-                                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w500),
+                                    Container(
+                                      padding: const EdgeInsets.all(AppSpacing.md),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.textGrey.withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
                                       ),
+                                      child: const Icon(Icons.rule_rounded, color: AppColors.textGrey, size: 32),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ] else if (canManageSanctions) ...[
-                              const SizedBox(height: AppSpacing.xl),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton.icon(
-                                  onPressed: () {
-                                    if (currentUser == null) return;
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                        title: Text(
-                                          'Confirm Sanction Receipt',
-                                          style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
-                                        ),
-                                        content: Text(
-                                          'Are you sure you want to mark this sanction as received?\n\n'
-                                          'Required Item:\n"${sanction.requiredItem}"\n\n'
-                                          'This action will mark the student\'s sanction as settled.',
-                                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context),
-                                            child: Text('Cancel', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
-                                          ),
-                                          FilledButton(
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: AppColors.success,
-                                              foregroundColor: Colors.white,
-                                            ),
-                                            onPressed: () async {
-                                              Navigator.pop(context);
-                                              final messenger = ScaffoldMessenger.of(context);
-                                              try {
-                                                await ref.read(sanctionRepositoryProvider).receiveSanctionItem(sanction.id, currentUser.id!);
-                                                ref.invalidate(studentSanctionRecordProvider(widget.studentId));
-                                                ref.invalidate(workspaceSanctionsProvider);
-                                                ref.invalidate(workspaceComplianceProvider);
-                                                messenger.showSnackBar(const SnackBar(content: Text('Sanction marked as received.')));
-                                              } catch (e) {
-                                                messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
-                                              }
-                                            },
-                                            child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: AppSpacing.lg),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Rules Not Set', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Sanction rules have not been configured by the officers yet for this term.',
+                                            style: TextStyle(color: AppColors.textGrey),
                                           ),
                                         ],
                                       ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.how_to_reg_rounded),
-                                  label: const Text('Mark as Received'),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: AppColors.success,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
+                            );
+                          }
+
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: const BorderSide(color: AppColors.border),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.xl),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(AppSpacing.md),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success.withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
+                                  ),
+                                  const SizedBox(width: AppSpacing.lg),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Fully Compliant', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'This student has no outstanding sanctions in the current term.',
+                                          style: TextStyle(color: AppColors.textGrey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        final isReceived = sanction.status == 'Item Received';
+
+                        return Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: isReceived ? AppColors.success.withValues(alpha: 0.2) : AppColors.border),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Requirement Details', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+                                        Text(
+                                          '${sanction.totalAbsences % 1 == 0 ? sanction.totalAbsences.toInt().toString() : sanction.totalAbsences.toStringAsFixed(1)} Sanction Score Triggered',
+                                          style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey),
+                                        ),
+                                      ],
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: (isReceived ? AppColors.success : AppColors.warning).withValues(alpha: 0.2)),
+                                      ),
+                                      child: Text(
+                                        isReceived ? 'CLEARED' : 'PENDING',
+                                        style: TextStyle(
+                                          color: isReceived ? AppColors.success : AppColors.warning,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: AppSpacing.xl),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.inventory_2_outlined, size: 20, color: AppColors.textGrey),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: Text(
+                                        'Item: ${sanction.requiredItem}',
+                                        style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (isReceived) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  Container(
+                                    padding: const EdgeInsets.all(AppSpacing.md),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.success.withValues(alpha: 0.1)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 20),
+                                        const SizedBox(width: AppSpacing.md),
+                                        Expanded(
+                                          child: Text(
+                                            'Marked as received by ${sanction.receivedByName} on ${DateFormat('MMM dd, yyyy').format(sanction.receivedAt!)}',
+                                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w500),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ] else if (canManageSanctions) ...[
+                                  const SizedBox(height: AppSpacing.xl),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      onPressed: () {
+                                        if (currentUser == null) return;
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            title: Text(
+                                              'Confirm Sanction Receipt',
+                                              style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                            ),
+                                            content: Text(
+                                              'Are you sure you want to mark this sanction as received?\n\n'
+                                              'Required Item:\n"${sanction.requiredItem}"\n\n'
+                                              'This action will mark the student\'s sanction as settled.',
+                                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text('Cancel', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+                                              ),
+                                              FilledButton(
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: AppColors.success,
+                                                  foregroundColor: Colors.white,
+                                                ),
+                                                onPressed: () async {
+                                                  Navigator.pop(context);
+                                                  final messenger = ScaffoldMessenger.of(context);
+                                                  try {
+                                                    await ref.read(sanctionRepositoryProvider).receiveSanctionItem(sanction.id, currentUser.id!);
+                                                    ref.invalidate(studentSanctionRecordProvider(widget.studentId));
+                                                    ref.invalidate(workspaceSanctionsProvider);
+                                                    ref.invalidate(workspaceComplianceProvider);
+                                                    messenger.showSnackBar(const SnackBar(content: Text('Sanction marked as received.')));
+                                                  } catch (e) {
+                                                    messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+                                                  }
+                                                },
+                                                child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.how_to_reg_rounded),
+                                      label: const Text('Mark as Received'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: AppColors.success,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => const Center(child: FlickrLoader()),
+                      error: (err, _) => Center(child: Text('Error loading rules: $err')),
                     );
                   },
                   loading: () => const Center(child: FlickrLoader()),

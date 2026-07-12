@@ -189,7 +189,7 @@ class SanctionRepository {
       for (var row in memberRows) {
         final roleData = row['role'];
         final roleName = roleData != null ? roleData['name'] as String? ?? 'Member' : 'Member';
-        if (roleName == 'Member' || roleName == 'Students') {
+        if (roleName == 'Member' || roleName == 'Students' || roleName == 'Representative') {
           allStudentIds.add(row['user_id'] as String);
         }
       }
@@ -395,7 +395,7 @@ class SanctionRepository {
       
       final roleData = row['role'];
       final roleName = roleData != null ? roleData['name'] as String? ?? 'Member' : 'Member';
-      if (roleName != 'Member' && roleName != 'Students') {
+      if (roleName != 'Member' && roleName != 'Students' && roleName != 'Representative') {
         continue; // Skip officers
       }
       
