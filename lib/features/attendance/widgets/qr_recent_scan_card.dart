@@ -14,7 +14,9 @@ class QrRecentScanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = scan.isError
         ? const Color(0xFFC62828)
-        : const Color(0xFF2E7D32);
+        : scan.isPending
+            ? const Color(0xFFE65100)
+            : const Color(0xFF2E7D32);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

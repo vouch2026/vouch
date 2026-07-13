@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/enums/attendance_mode.dart';
@@ -62,7 +63,32 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   Future<void> _loadRecentScans() async {
     if (!mounted) return;
-    setState(() => _isLoadingScans = true);
+    
+    // 1. Load from Hive box first to show scanned results instantly
+    final box = Hive.box('attendance_scans');
+    final cachedData = box.get('scans_${widget.event.id}');
+    if (cachedData != null) {
+      try {
+        final cachedList = (cachedData as List).map((item) {
+          return QrScanUIModel.fromJson(Map<String, dynamic>.from(item as Map));
+        }).toList();
+        if (mounted) {
+          setState(() {
+            _recentScans = cachedList;
+            _isLoadingScans = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error decoding cached scans: $e');
+      }
+    } else {
+      setState(() => _isLoadingScans = true);
+    }
+
+    // Attempt to sync any pending scans before fetching new ones
+    await _syncPendingScans();
+
+    // 2. Fetch from Supabase
     try {
       final repository = ref.read(attendanceRepositoryProvider);
       final rawScans = await repository.getRecentScansForEvent(widget.event.id!);
@@ -101,7 +127,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       // Sort extractedScans by dateTime descending (newest first)
       extractedScans.sort((a, b) => (b['dateTime'] as DateTime).compareTo(a['dateTime'] as DateTime));
 
-      final scans = extractedScans.map((scanData) {
+      final remoteScans = extractedScans.map((scanData) {
         return QrScanUIModel(
           name: scanData['name'] as String,
           studentId: scanData['studentId'] as String,
@@ -112,16 +138,69 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         );
       }).toList();
 
+      // Merge remote scans with pending local scans
+      final pendingScans = _recentScans.where((s) => s.isPending).toList();
+      
+      final List<QrScanUIModel> merged = [...pendingScans];
+      for (final remote in remoteScans) {
+        final isDuplicated = merged.any((p) => p.studentId == remote.studentId && p.type == remote.type);
+        if (!isDuplicated) {
+          merged.add(remote);
+        }
+      }
+
       if (mounted) {
         setState(() {
-          _recentScans = scans;
+          _recentScans = merged;
           _isLoadingScans = false;
         });
+        
+        await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
       }
     } catch (e) {
+      debugPrint('Error loading recent scans from Supabase: $e');
       if (mounted) {
         setState(() => _isLoadingScans = false);
       }
+    }
+  }
+
+  Future<void> _syncPendingScans() async {
+    final pending = _recentScans.where((s) => s.isPending).toList();
+    if (pending.isEmpty) return;
+
+    final repository = ref.read(attendanceRepositoryProvider);
+    final box = Hive.box('attendance_scans');
+
+    List<QrScanUIModel> updatedScans = List.from(_recentScans);
+    bool anySynced = false;
+
+    for (final scan in pending) {
+      if (scan.scannedByUserId == null) continue;
+      try {
+        await repository.recordAttendance(
+          eventId: widget.event.id!,
+          studentId: scan.studentUuid ?? scan.studentId,
+          scannedByUserId: scan.scannedByUserId!,
+          isTimeIn: scan.type == 'Time In',
+        );
+
+        // Update status to success
+        final index = updatedScans.indexWhere((s) => s.studentId == scan.studentId && s.type == scan.type && s.isPending);
+        if (index != -1) {
+          updatedScans[index] = updatedScans[index].copyWith(status: 'success');
+          anySynced = true;
+        }
+      } catch (e) {
+        debugPrint('Failed to sync pending scan for ${scan.name}: $e');
+      }
+    }
+
+    if (anySynced && mounted) {
+      setState(() {
+        _recentScans = updatedScans;
+      });
+      await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
     }
   }
 
@@ -175,6 +254,25 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
        return;
     }
 
+    final newScan = QrScanUIModel(
+      name: payload.fullName,
+      studentId: payload.studentId,
+      program: payload.program,
+      time: DateFormat('h:mm a').format(DateTime.now()),
+      status: 'pending',
+      type: isTimeIn ? 'Time In' : 'Time Out',
+      studentUuid: payload.databaseId,
+      scannedByUserId: officer.id,
+    );
+
+    if (mounted) {
+      setState(() {
+        _recentScans = [newScan, ..._recentScans];
+      });
+      final box = Hive.box('attendance_scans');
+      await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
+    }
+
     try {
       final repository = ref.read(attendanceRepositoryProvider);
       
@@ -185,21 +283,18 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         isTimeIn: isTimeIn,
       );
 
-      // Add to local recent scans
-      final newScan = QrScanUIModel(
-        name: payload.fullName,
-        studentId: payload.studentId,
-        program: payload.program,
-        time: DateFormat('h:mm a').format(DateTime.now()),
-        status: 'success',
-        type: isTimeIn ? 'Time In' : 'Time Out',
-      );
-
       if (mounted) {
         setState(() {
-          _recentScans = [newScan, ..._recentScans];
+          final index = _recentScans.indexWhere((s) => s.studentId == newScan.studentId && s.type == newScan.type && s.isPending);
+          if (index != -1) {
+            _recentScans[index] = _recentScans[index].copyWith(status: 'success');
+          }
         });
-        _showSuccess(newScan);
+        
+        final box = Hive.box('attendance_scans');
+        await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
+        
+        _showSuccess(newScan.copyWith(status: 'success'));
       }
     } catch (e) {
       String msg = e.toString();
@@ -208,7 +303,22 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       } else if (msg.startsWith('Exception')) {
         msg = msg.replaceFirst('Exception', 'Error');
       }
-      _showError(msg);
+
+      final isNetworkError = msg.contains('SocketException') || msg.contains('Failed host lookup') || msg.contains('connection') || msg.contains('network');
+      
+      if (isNetworkError) {
+        _showWarning('Saved Offline: Scan recorded locally. Will sync when connection is restored.');
+      } else {
+        if (mounted) {
+          setState(() {
+            _recentScans.removeWhere((s) => s.studentId == newScan.studentId && s.type == newScan.type && s.isPending);
+          });
+          final box = Hive.box('attendance_scans');
+          await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
+        }
+        _showError(msg);
+      }
+      
       _resumeScanning();
     }
   }
@@ -233,6 +343,27 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       ),
     );
     _resumeScanning();
+  }
+
+  void _showWarning(String message) async {
+    await HapticFeedback.mediumImpact();
+    SystemSound.play(SystemSoundType.click);
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(LucideIcons.wifiOff, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: const Color(0xFFE65100),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _showError(String message) async {

@@ -14,6 +14,7 @@ void main() async {
   await Hive.openBox('settings');
   await Hive.openBox('tasks');
   await Hive.openBox('schedules');
+  await Hive.openBox('attendance_scans');
   
   runApp(
     const ProviderScope(
