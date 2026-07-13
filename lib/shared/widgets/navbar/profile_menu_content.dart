@@ -193,8 +193,11 @@ class ProfileMenuContent extends ConsumerWidget {
             ),            _buildMenuItem(
               context,
               icon: Icons.help_outline_rounded,
-              label: 'Support Center',
-              onTap: () {},
+              label: 'Help & Support',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.help);
+              },
             ),
 
             const SizedBox(height: AppSpacing.md),
