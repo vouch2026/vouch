@@ -241,16 +241,6 @@ class ManageAccountPage extends ConsumerWidget {
                         icon: LucideIcons.lock,
                         onTap: () => _showChangePasswordDialog(context, ref),
                       ),
-                      _buildActionTile(
-                        label: 'Two-Factor Authentication',
-                        icon: LucideIcons.shieldCheck,
-                        trailing: Switch(
-                          value: false,
-                          onChanged: (val) {},
-                          activeColor: AppColors.primary,
-                        ),
-                        onTap: () {},
-                      ),
                     ]),
                     const SizedBox(height: AppSpacing.xxl),
                     Center(

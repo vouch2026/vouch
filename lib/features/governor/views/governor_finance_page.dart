@@ -56,6 +56,9 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
       return const _StudentFinanceView();
     }
 
+    final allowedRoles = {'Treasurer', 'President', 'Vice President', 'Governor', 'Vice Governor'};
+    final canCreateFee = activeRole != null && allowedRoles.contains(activeRole.roleName);
+
     final theme = Theme.of(context);
     final receiversAsync = ref.watch(paymentReceiversProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
@@ -91,12 +94,13 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                     title: 'Finance & Collections',
                     subtitle: 'Manage fees, verify student payments, and track organization funds',
                     actions: [
-                      HeaderActionButton(
-                        icon: Icons.add_card_rounded,
-                        label: 'Create Fee',
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateFeePage())),
-                        isPrimary: true,
-                      ),
+                      if (canCreateFee)
+                        HeaderActionButton(
+                          icon: Icons.add_card_rounded,
+                          label: 'Create Fee',
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateFeePage())),
+                          isPrimary: true,
+                        ),
                     ],
                   ),
                 ),

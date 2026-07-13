@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../routes/route_names.dart';
 import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 import 'governor_create_fee_page.dart';
 import 'governor_fee_report_page.dart';
 
@@ -60,6 +61,11 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
 
   @override
   Widget build(BuildContext context) {
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole;
+    final allowedRoles = {'Treasurer', 'President', 'Vice President', 'Governor', 'Vice Governor'};
+    final canCreateFee = activeRole != null && allowedRoles.contains(activeRole.roleName);
+
     final feesAsync = ref.watch(workspaceFeesProvider);
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 768;
@@ -133,12 +139,13 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
               title: widget.title,
               subtitle: widget.subtitle,
               actions: [
-                HeaderActionButton(
-                  icon: Icons.add_rounded,
-                  label: 'Create Fee',
-                  onPressed: () => _navigateToCreate(context),
-                  isPrimary: true,
-                ),
+                if (canCreateFee)
+                  HeaderActionButton(
+                    icon: Icons.add_rounded,
+                    label: 'Create Fee',
+                    onPressed: () => _navigateToCreate(context),
+                    isPrimary: true,
+                  ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
