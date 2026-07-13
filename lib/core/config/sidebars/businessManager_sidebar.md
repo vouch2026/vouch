@@ -25,7 +25,7 @@ Business
 
 Finance
    Financial Requests
-   Collections (View Only)
+   Collections
 
 People
    Members

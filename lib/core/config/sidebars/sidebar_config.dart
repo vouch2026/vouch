@@ -206,7 +206,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       title: 'FINANCE',
       items: [
         SidebarItemConfig(label: 'Financial Requests', icon: Icons.receipt_long_outlined, path: RoutePaths.workspaceFinancialRequests),
-        SidebarItemConfig(label: 'Collections (View Only)', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
+        SidebarItemConfig(label: 'Collections', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
       ],
     ),
     const SidebarSectionConfig(
