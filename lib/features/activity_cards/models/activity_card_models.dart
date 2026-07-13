@@ -50,6 +50,7 @@ class ActivityCard {
   final List<ActivityCardFee> fees;
   final List<ActivityCardSanction> sanctions;
   final List<ActivityCardSignature> signatures;
+  final DateTime? clearedAt;
 
   const ActivityCard({
     required this.id,
@@ -69,6 +70,7 @@ class ActivityCard {
     required this.fees,
     required this.sanctions,
     required this.signatures,
+    this.clearedAt,
   });
 }
 

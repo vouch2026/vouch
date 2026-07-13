@@ -241,6 +241,9 @@ class ActivityCardRepository {
         completionPercentage,
       );
 
+      final clearedAtStr = clearanceResponse?['completed_at'] ?? clearanceResponse?['updated_at'] ?? clearanceResponse?['requested_at'];
+      final DateTime? clearedAt = clearedAtStr != null ? DateTime.parse(clearedAtStr) : null;
+
       cards.add(ActivityCard(
         id: clearanceResponse?['id'] ?? 'temp-$orgId',
         studentId: studentId,
@@ -257,6 +260,7 @@ class ActivityCardRepository {
         fees: fees,
         sanctions: sanctions,
         signatures: signatures,
+        clearedAt: clearedAt,
       ));
     }
 
@@ -687,6 +691,9 @@ class ActivityCardRepository {
         completionPercentage,
       );
 
+      final clearedAtStr = studentClearance?['completed_at'] ?? studentClearance?['updated_at'] ?? studentClearance?['requested_at'];
+      final DateTime? clearedAt = clearedAtStr != null ? DateTime.parse(clearedAtStr) : null;
+
       cards.add(ActivityCard(
         id: studentClearance?['id'] ?? 'temp-$studentId',
         studentId: studentId,
@@ -705,6 +712,7 @@ class ActivityCardRepository {
         fees: fees,
         sanctions: sanctions,
         signatures: signatures,
+        clearedAt: clearedAt,
       ));
     }
 
