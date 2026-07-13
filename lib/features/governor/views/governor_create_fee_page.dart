@@ -410,10 +410,11 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
         ),
         const SizedBox(height: AppSpacing.lg),
         Material(
-          type: MaterialType.transparency,
+          color: theme.colorScheme.primary.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
           child: Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
