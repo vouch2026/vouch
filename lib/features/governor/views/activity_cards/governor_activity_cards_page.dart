@@ -296,7 +296,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
   Widget _buildClearedFilters() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 800;
+        final width = constraints.maxWidth;
 
         final searchField = TextField(
           controller: _clearedSearchController,
@@ -304,6 +304,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             hintText: 'Search by student name or ID...',
             prefixIcon: const Icon(Icons.search_rounded),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
           ),
         );
 
@@ -315,19 +316,25 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(12),
+              color: Theme.of(context).colorScheme.surface,
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.date_range_rounded, size: 20, color: AppColors.primary),
                 const SizedBox(width: 8),
-                Text(
-                  _clearedDateRange == null
-                      ? 'Filter by Date'
-                      : '${DateFormat('MM/dd/yy').format(_clearedDateRange!.start)} - ${DateFormat('MM/dd/yy').format(_clearedDateRange!.end)}',
-                  style: TextStyle(
-                    color: _clearedDateRange == null ? Colors.grey[700] : AppColors.primary,
-                    fontWeight: _clearedDateRange == null ? FontWeight.normal : FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    _clearedDateRange == null
+                        ? 'Filter by Date'
+                        : '${DateFormat('MM/dd/yy').format(_clearedDateRange!.start)} - ${DateFormat('MM/dd/yy').format(_clearedDateRange!.end)}',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: _clearedDateRange == null ? Colors.grey[700] : AppColors.primary,
+                      fontWeight: _clearedDateRange == null ? FontWeight.normal : FontWeight.bold,
+                    ),
                   ),
                 ),
                 if (_clearedDateRange != null) ...[
@@ -355,19 +362,25 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(12),
+              color: Theme.of(context).colorScheme.surface,
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.access_time_rounded, size: 20, color: AppColors.primary),
                 const SizedBox(width: 8),
-                Text(
-                  (_clearedStartTime == null && _clearedEndTime == null)
-                      ? 'Filter by Time'
-                      : '${_clearedStartTime?.format(context) ?? "Any"} - ${_clearedEndTime?.format(context) ?? "Any"}',
-                  style: TextStyle(
-                    color: (_clearedStartTime == null && _clearedEndTime == null) ? Colors.grey[700] : AppColors.primary,
-                    fontWeight: (_clearedStartTime == null && _clearedEndTime == null) ? FontWeight.normal : FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    (_clearedStartTime == null && _clearedEndTime == null)
+                        ? 'Filter by Time'
+                        : '${_clearedStartTime?.format(context) ?? "Any"} - ${_clearedEndTime?.format(context) ?? "Any"}',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: (_clearedStartTime == null && _clearedEndTime == null) ? Colors.grey[700] : AppColors.primary,
+                      fontWeight: (_clearedStartTime == null && _clearedEndTime == null) ? FontWeight.normal : FontWeight.bold,
+                    ),
                   ),
                 ),
                 if (_clearedStartTime != null || _clearedEndTime != null) ...[
@@ -388,53 +401,83 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
           ),
         );
 
-        return isCompact
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+        // Mobile Layout (stacked vertically for best usability and touch targets)
+        if (width < 600) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              searchField,
+              const SizedBox(height: AppSpacing.md),
+              dateButton,
+              const SizedBox(height: AppSpacing.md),
+              timeButton,
+            ],
+          );
+        }
+
+        // Tablet Layout (Search spans full width, buttons placed side-by-side below)
+        if (width < 950) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              searchField,
+              const SizedBox(height: AppSpacing.md),
+              Row(
                 children: [
-                  searchField,
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(child: dateButton),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(child: timeButton),
-                    ],
-                  )
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: searchField,
-                  ),
+                  Expanded(child: dateButton),
                   const SizedBox(width: AppSpacing.md),
-                  dateButton,
-                  const SizedBox(width: AppSpacing.md),
-                  timeButton,
+                  Expanded(child: timeButton),
                 ],
-              );
+              ),
+            ],
+          );
+        }
+
+        // Desktop Layout (single row, search expanded, buttons have constrained min-widths)
+        return Row(
+          children: [
+            Expanded(
+              child: searchField,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 190),
+              child: dateButton,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 190),
+              child: timeButton,
+            ),
+          ],
+        );
       },
     );
   }
 
   Future<void> _selectClearedDateRange() async {
-    final initialRange = _clearedDateRange ?? DateTimeRange(
-      start: DateTime.now().subtract(const Duration(days: 7)),
-      end: DateTime.now(),
-    );
-    final picked = await showDateRangePicker(
+    final startDate = await showDatePicker(
       context: context,
+      initialDate: _clearedDateRange?.start ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: initialRange,
+      helpText: 'Select Start Date',
     );
-    if (picked != null) {
-      setState(() {
-        _clearedDateRange = picked;
-        _clearedCurrentPage = 1;
-      });
+    if (startDate != null) {
+      if (!mounted) return;
+      final endDate = await showDatePicker(
+        context: context,
+        initialDate: _clearedDateRange?.end ?? startDate,
+        firstDate: startDate,
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+        helpText: 'Select End Date',
+      );
+      if (endDate != null) {
+        setState(() {
+          _clearedDateRange = DateTimeRange(start: startDate, end: endDate);
+          _clearedCurrentPage = 1;
+        });
+      }
     }
   }
 
