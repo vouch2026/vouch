@@ -184,6 +184,15 @@ class ProfileMenuContent extends ConsumerWidget {
               ),
             _buildMenuItem(
               context,
+              icon: Icons.notifications_none_rounded,
+              label: 'Notifications',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.notifications);
+              },
+            ),
+            _buildMenuItem(
+              context,
               icon: Icons.info_outline_rounded,
               label: 'About Us',
               onTap: () {
