@@ -152,9 +152,20 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
               const SizedBox(height: 8),
               rolesAsync.when(
                 data: (roles) {
+                  final userProfile = ref.watch(userProfileProvider).value;
+                  final isSuperAdmin = userProfile?.role == 'super_admin';
+
                   final filteredRoles = roles.where((r) {
                     final name = r['name'].toString().toLowerCase();
-                    return !['super admin', 'students', 'member', 'instructor'].contains(name);
+                    final level = r['hierarchy_level'] as int? ?? 0;
+                    
+                    final isBaseRole = ['super admin', 'students', 'member', 'instructor'].contains(name);
+                    if (isBaseRole) return false;
+                    
+                    // Officers can only promote up to level 15
+                    if (!isSuperAdmin && level > 15) return false;
+                    
+                    return true;
                   }).toList();
 
                   return DropdownButtonFormField<Map<String, dynamic>>(

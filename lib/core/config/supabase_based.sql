@@ -1002,7 +1002,8 @@ CREATE OR REPLACE FUNCTION assign_organization_officer(
     p_user_id UUID,
     p_role_id UUID,
     p_term_id UUID,
-    p_assigned_by UUID
+    p_assigned_by UUID,
+    p_expired_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 ) RETURNS VOID AS $$
 DECLARE
     v_actual_assigned_by_id UUID;
@@ -1039,14 +1040,15 @@ BEGIN
                     END;
 
     -- 1. Insert or Update membership (Organization Context)
-    INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
-    VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
+    INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status, expired_at)
+    VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active', p_expired_at)
     ON CONFLICT (organization_id, user_id) 
     DO UPDATE SET 
         role_id = EXCLUDED.role_id,
         academic_term_id = EXCLUDED.academic_term_id,
         status = 'active',
-        assigned_at = CURRENT_TIMESTAMP;
+        assigned_at = CURRENT_TIMESTAMP,
+        expired_at = EXCLUDED.expired_at;
 
     -- If the role is 'Adviser', update the adviser_name in organizations table
     IF EXISTS (SELECT 1 FROM public.roles WHERE id = p_role_id AND name = 'Adviser') THEN
@@ -1066,7 +1068,8 @@ BEGIN
             'role_id', p_role_id,
             'term_id', p_term_id,
             'scope_type', v_scope_type,
-            'scope_id', v_scope_id
+            'scope_id', v_scope_id,
+            'expired_at', p_expired_at
         )
     );
 END;
@@ -1956,6 +1959,13 @@ AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
+    -- Lazy cleanup of expired roles
+    UPDATE public.organization_members
+    SET role_id = NULL,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
         RETURN;
@@ -2046,6 +2056,13 @@ AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
+    -- Lazy cleanup of expired roles
+    UPDATE public.organization_members
+    SET role_id = NULL,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
         RETURN;

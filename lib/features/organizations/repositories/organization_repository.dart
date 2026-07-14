@@ -503,6 +503,7 @@ class OrganizationRepository {
     required String termId,
     required String assignedBy,
     String? workspaceType,
+    DateTime? expiredAt,
   }) async {
     if (workspaceType == 'comselec') {
       await _client.rpc(
@@ -524,6 +525,7 @@ class OrganizationRepository {
           'p_role_id': roleId,
           'p_term_id': termId,
           'p_assigned_by': assignedBy,
+          if (expiredAt != null) 'p_expired_at': expiredAt.toUtc().toIso8601String(),
         },
       );
     }
@@ -739,13 +741,21 @@ class OrganizationRepository {
       if (isCom) {
         await _client
             .from('comselec_members')
-            .update({'role_id': null})
+            .update({
+              'role_id': null,
+              'expired_at': null,
+              'status': 'active',
+            })
             .eq('comselec_id', orgId)
             .eq('user_id', userId);
       } else {
         await _client
             .from('organization_members')
-            .update({'role_id': null})
+            .update({
+              'role_id': null,
+              'expired_at': null,
+              'status': 'active',
+            })
             .eq('organization_id', orgId)
             .eq('user_id', userId);
       }

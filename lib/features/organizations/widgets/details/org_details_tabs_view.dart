@@ -9,6 +9,7 @@ import '../../models/organization_membership_model.dart';
 import 'package:vouch_v2/features/organizations/providers/organization_provider.dart';
 import 'package:vouch_v2/features/organizations/providers/workspace_provider.dart';
 import '../../../auth/models/user_model.dart';
+import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
 import '../../../academic_structure/models/academic_term_model.dart';
 import '../../../../core/config/supabase_config.dart';
@@ -382,6 +383,15 @@ class _OfficersTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final officersAsync = ref.watch(organizationOfficersProvider(org.id));
     final activeTermAsync = ref.watch(activeTermProvider);
+    final workspace = ref.watch(workspaceProvider);
+    final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
+    final canManageMembers = isSuperAdmin || 
+                            activeRoleName.contains('governor') || 
+                            activeRoleName.contains('president') ||
+                            activeRoleName.contains('vice governor') ||
+                            activeRoleName.contains('vice president');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
@@ -407,7 +417,7 @@ class _OfficersTab extends ConsumerWidget {
               ),
               Row(
                 children: [
-                  if (org.type != 'comselec') ...[
+                  if (org.type != 'comselec' && isSuperAdmin) ...[
                     OutlinedButton.icon(
                       onPressed: () => showDialog(
                         context: context,
@@ -422,18 +432,19 @@ class _OfficersTab extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                   ],
-                  FilledButton.icon(
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (context) => AssignOfficerDialog(org: org),
+                  if (isSuperAdmin || canManageMembers)
+                    FilledButton.icon(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (context) => AssignOfficerDialog(org: org),
+                      ),
+                      icon: const Icon(Icons.assignment_ind_rounded, size: 18),
+                      label: const Text('Assign Officer'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF041E42), // Royal Blue
+                        foregroundColor: const Color(0xFFC5A059), // Gold
+                      ),
                     ),
-                    icon: const Icon(Icons.assignment_ind_rounded, size: 18),
-                    label: const Text('Assign Officer'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF041E42), // Royal Blue
-                      foregroundColor: const Color(0xFFC5A059), // Gold
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -492,6 +503,18 @@ class _OfficersTab extends ConsumerWidget {
   }
 
   Widget _buildOfficerCard(BuildContext context, WidgetRef ref, OrganizationMembershipModel officer) {
+    final workspace = ref.watch(workspaceProvider);
+    final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
+    final canManageMembers = isSuperAdmin || 
+                            activeRoleName.contains('governor') || 
+                            activeRoleName.contains('president') ||
+                            activeRoleName.contains('vice governor') ||
+                            activeRoleName.contains('vice president');
+                            
+    final showDemote = isSuperAdmin || (canManageMembers && (officer.hierarchyLevel ?? 0) <= 15);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -557,25 +580,28 @@ class _OfficersTab extends ConsumerWidget {
                 ],
               ),
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded, color: AppColors.textGrey),
-              offset: const Offset(0, 40),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              onSelected: (value) {
-                if (value == 'demote') {
-                  _showDemoteConfirmation(context, ref, officer);
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'demote',
-                  child: Text(
-                    officer.roleName?.toLowerCase() == 'adviser' ? 'Remove Adviser' : 'Demote Officer',
-                    style: const TextStyle(color: AppColors.error),
+            if (showDemote)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded, color: AppColors.textGrey),
+                offset: const Offset(0, 40),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                onSelected: (value) {
+                  if (value == 'demote') {
+                    _showDemoteConfirmation(context, ref, officer);
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'demote',
+                    child: Text(
+                      officer.roleName?.toLowerCase() == 'adviser' ? 'Remove Adviser' : 'Demote Officer',
+                      style: const TextStyle(color: AppColors.error),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              const SizedBox.shrink(),
           ],
         ),
       ),
