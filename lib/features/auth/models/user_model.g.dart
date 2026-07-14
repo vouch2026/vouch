@@ -33,6 +33,9 @@ _UserModel _$UserModelFromJson(Map<String, dynamic> json) => _UserModel(
       : DateTime.parse(json['joined_at'] as String),
   facultyName: json['facultyName'] as String?,
   programName: json['programName'] as String?,
+  expiredAt: json['expired_at'] == null
+      ? null
+      : DateTime.parse(json['expired_at'] as String),
 );
 
 Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
@@ -55,4 +58,5 @@ Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
       'joined_at': instance.joinedAt?.toIso8601String(),
       'facultyName': instance.facultyName,
       'programName': instance.programName,
+      'expired_at': instance.expiredAt?.toIso8601String(),
     };

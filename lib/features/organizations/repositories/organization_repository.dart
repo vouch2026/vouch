@@ -337,6 +337,7 @@ class OrganizationRepository {
           'programName': programData?['name'],
           'facultyName': facultyData?['name'],
           'joined_at': json['joined_at'] ?? json['assigned_at'],
+          'expired_at': json['expired_at'],
         });
         
         if (user.id != null) {
@@ -376,6 +377,7 @@ class OrganizationRepository {
         'programName': programData?['name'],
         'facultyName': facultyData?['name'],
         'joined_at': json['joined_at'],
+        'expired_at': json['expired_at'],
       });
       
       if (user.id != null) {

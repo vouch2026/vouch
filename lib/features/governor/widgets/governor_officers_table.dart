@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,6 +69,7 @@ class GovernorOfficersTable extends ConsumerWidget {
                           const DataColumn(label: Text('Program & Year')),
                           const DataColumn(label: Text('Joined Date')),
                           const DataColumn(label: Text('Role')),
+                          const DataColumn(label: Text('Duration')),
                           if (canManageMembers) const DataColumn(label: Text('Actions')),
                         ],
                         rows: officers.map((officer) {
@@ -109,6 +111,11 @@ class GovernorOfficersTable extends ConsumerWidget {
                                 style: AppTextStyles.bodySmall,
                               )),
                               DataCell(_RoleBadge(role: officer.role)),
+                              DataCell(
+                                officer.expiredAt != null
+                                    ? _CountdownTimerText(expiredAt: officer.expiredAt!)
+                                    : Text('Academic Year', style: AppTextStyles.bodySmall),
+                              ),
                               if (canManageMembers)
                                 DataCell(
                                   _buildOfficerActions(context, ref, officer, selectedOrg),
@@ -321,6 +328,74 @@ class _RoleBadge extends StatelessWidget {
           color: color,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+}
+
+class _CountdownTimerText extends StatefulWidget {
+  final DateTime expiredAt;
+  const _CountdownTimerText({required this.expiredAt});
+
+  @override
+  State<_CountdownTimerText> createState() => _CountdownTimerTextState();
+}
+
+class _CountdownTimerTextState extends State<_CountdownTimerText> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _calculateRemaining();
+        });
+      }
+    });
+  }
+
+  void _calculateRemaining() {
+    final now = DateTime.now();
+    _remaining = widget.expiredAt.difference(now);
+    if (_remaining.isNegative) {
+      _remaining = Duration.zero;
+      _timer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_remaining == Duration.zero) {
+      return Text(
+        'Expired',
+        style: TextStyle(
+          color: Colors.red[600],
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      );
+    }
+
+    final hours = _remaining.inHours.toString().padLeft(2, '0');
+    final minutes = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
+
+    return Text(
+      '$hours:$minutes:$seconds remaining',
+      style: TextStyle(
+        color: Colors.orange[800],
+        fontWeight: FontWeight.bold,
+        fontSize: 11,
       ),
     );
   }
