@@ -1621,6 +1621,14 @@ WHERE r.name = 'Senator' AND p.action IN (
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- MAP PERMISSIONS FOR AUDITOR
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Auditor' AND p.action IN (
+    'view_events', 'view_fees'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 -- MAP PERMISSIONS FOR BUSINESS MANAGER
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p

@@ -150,6 +150,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'FINANCE',
       items: [
+        SidebarItemConfig(label: 'Collections', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
         SidebarItemConfig(label: 'Financial Reports', icon: Icons.assessment_outlined, path: RoutePaths.workspaceFinanceReports),
         SidebarItemConfig(label: 'Collections Audit', icon: Icons.price_check_outlined, path: RoutePaths.workspaceCollectionsAudit),
       ],
@@ -159,6 +160,12 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       items: [
         SidebarItemConfig(label: 'Audit Logs', icon: Icons.receipt_long_outlined, path: RoutePaths.workspaceAuditLogs),
         SidebarItemConfig(label: 'Audit Reports', icon: Icons.find_in_page_outlined, path: RoutePaths.workspaceAuditReports),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
       ],
     ),
     const SidebarSectionConfig(
