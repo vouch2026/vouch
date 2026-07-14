@@ -218,9 +218,15 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
         : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
 
-    final canEdit = creatorOrgId != null
+    final canEdit = (creatorOrgId != null
         ? (creatorMembership?.permissions.contains(AppPermissions.editEvent) ?? false)
-        : ((activeRole?.hasPermission(AppPermissions.editEvent) ?? false) && isSelectedOrgCreator);
+        : ((activeRole?.hasPermission(AppPermissions.editEvent) ?? false) && isSelectedOrgCreator)) && (
+          normalizedRole == 'secretary' ||
+          normalizedRole == 'president' ||
+          normalizedRole == 'vice_president' ||
+          normalizedRole == 'governor' ||
+          normalizedRole == 'vice_governor'
+        );
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
