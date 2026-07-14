@@ -1,8 +1,12 @@
 -- Safe update script for Representative Promotion & Demotion features
 -- Run this in your Supabase SQL Editor to update the database functions.
 
--- 1. Drop existing assign_organization_officer function to avoid conflict with signature change
+-- 1. Drop existing functions first to prevent type/signature mismatch replacement conflicts
 DROP FUNCTION IF EXISTS public.assign_organization_officer(UUID, UUID, UUID, UUID, UUID);
+DROP FUNCTION IF EXISTS public.assign_organization_officer(UUID, UUID, UUID, UUID, UUID, TIMESTAMP WITH TIME ZONE);
+DROP FUNCTION IF EXISTS public.get_workspace_role_and_permissions(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.get_my_workspaces();
+DROP FUNCTION IF EXISTS public.demote_organization_officer(UUID, UUID, TEXT, TEXT);
 
 -- 2. Create updated assign_organization_officer with optional p_expired_at parameter
 CREATE OR REPLACE FUNCTION public.assign_organization_officer(
@@ -255,10 +259,74 @@ BEGIN
         p.logo_url,
         NULL::VARCHAR AS banner_url,
         'active'::VARCHAR AS status,
-        p.campus_id,
-        NULL::UUID AS faculty_id,
+        f.campus_id,
+        p.faculty_id,
         p.id AS program_id
     FROM public.programs p
+    JOIN public.faculties f ON p.faculty_id = f.id
     WHERE p.program_head_id = v_user_id;
+
+    -- 4. COMSELEC workspaces where the user is an active member (chair, commissioner, or voter)
+    RETURN QUERY
+    SELECT DISTINCT
+        c.id,
+        c.name,
+        c.code,
+        'comselec'::VARCHAR AS type,
+        c.logo_url,
+        c.banner_url,
+        c.status,
+        c.campus_id,
+        NULL::UUID AS faculty_id,
+        NULL::UUID AS program_id
+    FROM public.comselecs c
+    JOIN public.comselec_members cm ON c.id = cm.comselec_id
+    WHERE cm.user_id = v_user_id AND cm.status = 'active';
 END;
 $$;
+
+
+-- 5. Create demote_organization_officer function to handle demotions securely (SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION public.demote_organization_officer(
+    p_org_id UUID,
+    p_user_id UUID,
+    p_role_name TEXT,
+    p_workspace_type TEXT DEFAULT 'organization'
+) RETURNS VOID AS $$
+DECLARE
+    v_actual_user_id UUID;
+BEGIN
+    SELECT id INTO v_actual_user_id 
+    FROM public.users 
+    WHERE id = p_user_id OR auth_id = p_user_id
+    LIMIT 1;
+
+    IF p_workspace_type = 'comselec' THEN
+        IF LOWER(p_role_name) = 'adviser' THEN
+            DELETE FROM public.comselec_members
+            WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
+        ELSE
+            UPDATE public.comselec_members
+            SET role_id = NULL,
+                expired_at = NULL,
+                status = 'active'
+            WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
+        END IF;
+    ELSE
+        IF LOWER(p_role_name) = 'adviser' THEN
+            DELETE FROM public.organization_members
+            WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
+
+            UPDATE public.organizations
+            SET adviser_name = NULL
+            WHERE id = p_org_id;
+        ELSE
+            UPDATE public.organization_members
+            SET role_id = NULL,
+                expired_at = NULL,
+                status = 'active'
+            WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

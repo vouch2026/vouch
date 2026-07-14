@@ -717,49 +717,15 @@ class OrganizationRepository {
     required String roleName,
     String? workspaceType,
   }) async {
-    final isCom = workspaceType == 'comselec';
-    if (roleName.toLowerCase() == 'adviser') {
-      if (isCom) {
-        await _client
-            .from('comselec_members')
-            .delete()
-            .eq('comselec_id', orgId)
-            .eq('user_id', userId);
-      } else {
-        await _client
-            .from('organization_members')
-            .delete()
-            .eq('organization_id', orgId)
-            .eq('user_id', userId);
-
-        await _client
-            .from('organizations')
-            .update({'adviser_name': null})
-            .eq('id', orgId);
-      }
-    } else {
-      if (isCom) {
-        await _client
-            .from('comselec_members')
-            .update({
-              'role_id': null,
-              'expired_at': null,
-              'status': 'active',
-            })
-            .eq('comselec_id', orgId)
-            .eq('user_id', userId);
-      } else {
-        await _client
-            .from('organization_members')
-            .update({
-              'role_id': null,
-              'expired_at': null,
-              'status': 'active',
-            })
-            .eq('organization_id', orgId)
-            .eq('user_id', userId);
-      }
-    }
+    await _client.rpc(
+      'demote_organization_officer',
+      params: {
+        'p_org_id': orgId,
+        'p_user_id': userId,
+        'p_role_name': roleName,
+        'p_workspace_type': workspaceType ?? 'organization',
+      },
+    );
   }
 }
 

@@ -2386,5 +2386,53 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
+-- ==============================================================================
+-- 14. DEMOTE ORGANIZATION OFFICER (SECURITY DEFINER)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.demote_organization_officer(
+    p_org_id UUID,
+    p_user_id UUID,
+    p_role_name TEXT,
+    p_workspace_type TEXT DEFAULT 'organization'
+) RETURNS VOID AS $$
+DECLARE
+    v_actual_user_id UUID;
+BEGIN
+    SELECT id INTO v_actual_user_id 
+    FROM public.users 
+    WHERE id = p_user_id OR auth_id = p_user_id
+    LIMIT 1;
+
+    IF p_workspace_type = 'comselec' THEN
+        IF LOWER(p_role_name) = 'adviser' THEN
+            DELETE FROM public.comselec_members
+            WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
+        ELSE
+            UPDATE public.comselec_members
+            SET role_id = NULL,
+                expired_at = NULL,
+                status = 'active'
+            WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
+        END IF;
+    ELSE
+        IF LOWER(p_role_name) = 'adviser' THEN
+            DELETE FROM public.organization_members
+            WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
+
+            UPDATE public.organizations
+            SET adviser_name = NULL
+            WHERE id = p_org_id;
+        ELSE
+            UPDATE public.organization_members
+            SET role_id = NULL,
+                expired_at = NULL,
+                status = 'active'
+            WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
 
 
