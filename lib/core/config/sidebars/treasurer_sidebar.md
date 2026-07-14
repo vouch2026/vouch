@@ -16,6 +16,10 @@ Finance
    Collections
    Financial Reports
 
+Operations
+   Events
+   Announcements
+
 Student Affairs
    Activity Clearances
 
