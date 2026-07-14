@@ -438,6 +438,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'OPERATIONS',
       items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
         SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.workspaceAnnouncements),
       ],
     ),

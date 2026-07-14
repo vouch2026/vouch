@@ -17,6 +17,7 @@ Governance
    Resolutions
 
 Operations
+   Events
    Announcements
 
 Insights
