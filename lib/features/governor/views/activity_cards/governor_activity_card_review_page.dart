@@ -72,8 +72,12 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(isReject ? 'Card rejected successfully' : 'Signature applied successfully')),
         );
+        setState(() {
+          _showRejectionForm = false;
+        });
         ref.invalidate(reviewActivityCardProvider(widget.id));
-        context.pop();
+        ref.invalidate(studentActivityCardsByIdProvider(widget.id));
+        ref.invalidate(organizationActivityCardsProvider);
       }
     } catch (e) {
       if (mounted) {
