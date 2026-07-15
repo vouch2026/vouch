@@ -196,9 +196,10 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     // Date range filter
                     if (_clearedDateRange != null) {
                       if (card.clearedAt == null) return false;
+                      final clearedAtLocal = card.clearedAt!.toLocal();
                       final startOfDay = DateTime(_clearedDateRange!.start.year, _clearedDateRange!.start.month, _clearedDateRange!.start.day, 0, 0, 0);
                       final endOfDay = DateTime(_clearedDateRange!.end.year, _clearedDateRange!.end.month, _clearedDateRange!.end.day, 23, 59, 59);
-                      if (card.clearedAt!.isBefore(startOfDay) || card.clearedAt!.isAfter(endOfDay)) {
+                      if (clearedAtLocal.isBefore(startOfDay) || clearedAtLocal.isAfter(endOfDay)) {
                         return false;
                       }
                     }
@@ -206,7 +207,8 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     // Time range filter
                     if (_clearedStartTime != null || _clearedEndTime != null) {
                       if (card.clearedAt == null) return false;
-                      final clearedTime = TimeOfDay.fromDateTime(card.clearedAt!);
+                      final clearedAtLocal = card.clearedAt!.toLocal();
+                      final clearedTime = TimeOfDay.fromDateTime(clearedAtLocal);
                       
                       if (_clearedStartTime != null) {
                         if (clearedTime.hour < _clearedStartTime!.hour || 
@@ -607,7 +609,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     final feesDisplay = '$paidFees/$totalFees';
 
     final clearedAtText = card.clearedAt != null
-        ? DateFormat('MMM dd, yyyy hh:mm a').format(card.clearedAt!)
+        ? DateFormat('MMM dd, yyyy hh:mm a').format(card.clearedAt!.toLocal())
         : 'N/A';
 
     return DataRow(
