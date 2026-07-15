@@ -34,6 +34,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   final TextEditingController _notesController = TextEditingController();
   bool _isActionLoading = false;
   bool _showRejectionForm = false;
+  bool _hasActioned = false;
 
   @override
   void dispose() {
@@ -74,10 +75,10 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
         );
         setState(() {
           _showRejectionForm = false;
+          _hasActioned = true;
         });
-        ref.invalidate(reviewActivityCardProvider(widget.id));
+        ref.refresh(reviewActivityCardProvider(widget.id));
         ref.invalidate(studentActivityCardsByIdProvider(widget.id));
-        ref.invalidate(organizationActivityCardsProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -102,15 +103,28 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
       vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
     );
 
-    return LoadingOverlay(
-      isLoading: _isActionLoading,
-      child: DashboardLayout(
-        title: 'Review Activity Card',
-        onBack: () => context.pop(),
-        child: Padding(
-          padding: padding,
-          child: activityCardAsync.when(
-            data: (activityCard) {
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop && _hasActioned) {
+          ref.invalidate(organizationActivityCardsProvider);
+        }
+      },
+      child: LoadingOverlay(
+        isLoading: _isActionLoading,
+        child: DashboardLayout(
+          title: 'Review Activity Card',
+          onBack: () {
+            if (_hasActioned) {
+              ref.invalidate(organizationActivityCardsProvider);
+            }
+            context.pop();
+          },
+          child: Padding(
+            padding: padding,
+            child: activityCardAsync.when(
+              skipLoadingOnRefresh: true,
+              skipLoadingOnReload: true,
+              data: (activityCard) {
               if (activityCard == null) {
                 return const Center(child: Text('Activity Card not found for this student in your organization.'));
               }
@@ -390,6 +404,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
             error: (err, _) => Center(child: Text('Error: $err')),
           ),
         ),
+      ),
       ),
     );
   }

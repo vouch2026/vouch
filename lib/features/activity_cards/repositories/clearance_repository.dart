@@ -239,10 +239,14 @@ class ClearanceRepository {
     required String termId,
     String? remarks,
   }) async {
-    // 1. Get signature details to check the role and scope
+    // 1. Get signature details to check the role and scope, including request organization_id
     final sigResponse = await _client
         .from('activity_card_clearance_signatures')
-        .select('*, roles(name)')
+        .select('''
+          *,
+          roles(name),
+          clearance_request:activity_card_clearance_requests(organization_id)
+        ''')
         .eq('id', signatureId)
         .single();
     
@@ -250,29 +254,23 @@ class ClearanceRepository {
     final roleName = roleData is List ? roleData.first['name'] : roleData['name'];
     final scopeId = sigResponse['required_scope_id'];
     final requestId = sigResponse['clearance_request_id'];
+    final organizationId = sigResponse['clearance_request']['organization_id'];
 
-    // 2. Retrieve organization_id from the clearance request
-    final reqResponse = await _client
-        .from('activity_card_clearance_requests')
-        .select('organization_id')
-        .eq('id', requestId)
-        .single();
-    final organizationId = reqResponse['organization_id'];
-
-    // 3. Get the student's activity card using ActivityCardRepository
+    // 2. Get student's activity card and all signatures in parallel using Future.wait
     final cardRepo = ActivityCardRepository(_client);
-    final card = await cardRepo.getStudentActivityCardForOrganization(studentId, organizationId);
-    if (card == null) {
-      throw Exception('Student activity card not found.');
-    }
-
-    // 4. Get all signatures for this clearance request to verify sequence compliance
-    final sigsResponse = await _client
+    final cardFuture = cardRepo.getStudentActivityCardForOrganization(studentId, organizationId);
+    final sigsFuture = _client
         .from('activity_card_clearance_signatures')
         .select('*, roles(name)')
         .eq('clearance_request_id', requestId);
-    
-    final sigList = sigsResponse as List;
+
+    final results = await Future.wait<dynamic>([cardFuture, sigsFuture]);
+    final card = results[0] as ActivityCard?;
+    final sigList = results[1] as List;
+
+    if (card == null) {
+      throw Exception('Student activity card not found.');
+    }
 
     // Helper to check if a specific role is signed
     bool isRoleSigned(String targetRole) {
@@ -417,19 +415,12 @@ class ClearanceRepository {
     required String userId,
     required String remarks,
   }) async {
-    await _client.from('activity_card_clearance_signatures').update({
+    final signatureResponse = await _client.from('activity_card_clearance_signatures').update({
       'status': 'Rejected',
       'signed_by_user_id': userId,
       'signed_at': DateTime.now().toUtc().toIso8601String(),
       'remarks': remarks,
-    }).eq('id', signatureId);
-
-    // Get the request ID
-    final signatureResponse = await _client
-        .from('activity_card_clearance_signatures')
-        .select('clearance_request_id')
-        .eq('id', signatureId)
-        .single();
+    }).eq('id', signatureId).select('clearance_request_id').single();
     
     final requestId = signatureResponse['clearance_request_id'];
 
