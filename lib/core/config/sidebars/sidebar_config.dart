@@ -76,7 +76,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -138,7 +137,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -150,6 +148,7 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
     const SidebarSectionConfig(
       title: 'FINANCE',
       items: [
+        SidebarItemConfig(label: 'Collections', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
         SidebarItemConfig(label: 'Financial Reports', icon: Icons.assessment_outlined, path: RoutePaths.workspaceFinanceReports),
         SidebarItemConfig(label: 'Collections Audit', icon: Icons.price_check_outlined, path: RoutePaths.workspaceCollectionsAudit),
       ],
@@ -162,9 +161,15 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       ],
     ),
     const SidebarSectionConfig(
-      title: 'INSIGHTS',
+      title: 'OPERATIONS',
       items: [
-        SidebarItemConfig(label: 'Audit Analytics', icon: Icons.query_stats_outlined, path: RoutePaths.workspaceAuditAnalytics),
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'GOVERNANCE',
+      items: [
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
   ],
@@ -177,7 +182,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -216,6 +220,12 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Officers', icon: Icons.badge_outlined, path: RoutePaths.workspaceOfficers),
       ],
     ),
+    const SidebarSectionConfig(
+      title: 'GOVERNANCE',
+      items: [
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
+      ],
+    ),
   ],
 
   'governor_president': [
@@ -226,7 +236,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -265,12 +274,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       ],
     ),
     const SidebarSectionConfig(
-      title: 'INSIGHTS',
-      items: [
-        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
-      ],
-    ),
-    const SidebarSectionConfig(
       title: 'GOVERNANCE',
       items: [
         SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
@@ -286,7 +289,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -316,6 +318,12 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Fees', icon: Icons.payments_outlined, path: RoutePaths.workspaceFees),
       ],
     ),
+    const SidebarSectionConfig(
+      title: 'GOVERNANCE',
+      items: [
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
+      ],
+    ),
   ],
 
   'pio': [
@@ -326,7 +334,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -350,9 +357,9 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       ],
     ),
     const SidebarSectionConfig(
-      title: 'INSIGHTS',
+      title: 'GOVERNANCE',
       items: [
-        SidebarItemConfig(label: 'Engagement Reports', icon: Icons.auto_graph_outlined, path: RoutePaths.workspaceEngagementReports),
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
   ],
@@ -365,7 +372,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -403,9 +409,9 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       ],
     ),
     const SidebarSectionConfig(
-      title: 'INSIGHTS',
+      title: 'GOVERNANCE',
       items: [
-        SidebarItemConfig(label: 'Attendance Reports', icon: Icons.how_to_reg_rounded, path: RoutePaths.workspaceAttendanceReports),
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
   ],
@@ -418,7 +424,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -433,18 +438,14 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Proposals', icon: Icons.lightbulb_outline, path: RoutePaths.workspaceProposals),
         SidebarItemConfig(label: 'Voting', icon: Icons.how_to_vote_rounded, path: RoutePaths.workspaceVoting),
         SidebarItemConfig(label: 'Resolutions', icon: Icons.verified_outlined, path: RoutePaths.workspaceResolutions),
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
     const SidebarSectionConfig(
       title: 'OPERATIONS',
       items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
         SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.workspaceAnnouncements),
-      ],
-    ),
-    const SidebarSectionConfig(
-      title: 'INSIGHTS',
-      items: [
-        SidebarItemConfig(label: 'Governance Reports', icon: Icons.poll_outlined, path: RoutePaths.workspaceGovernanceReports),
       ],
     ),
   ],
@@ -457,7 +458,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -487,6 +487,12 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.activityCards),
       ],
     ),
+    const SidebarSectionConfig(
+      title: 'GOVERNANCE',
+      items: [
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
+      ],
+    ),
   ],
 
   'staff': [
@@ -497,7 +503,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -541,7 +546,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -555,7 +559,13 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       items: [
         SidebarItemConfig(label: 'Fees', icon: Icons.payments_outlined, path: RoutePaths.workspaceFees),
         SidebarItemConfig(label: 'Collections', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
-        SidebarItemConfig(label: 'Financial Reports', icon: Icons.assessment_outlined, path: RoutePaths.workspaceFinanceReports),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Events', icon: Icons.calendar_month_outlined, path: RoutePaths.workspaceEvents),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.workspaceAnnouncements),
       ],
     ),
     const SidebarSectionConfig(
@@ -565,9 +575,9 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       ],
     ),
     const SidebarSectionConfig(
-      title: 'INSIGHTS',
+      title: 'GOVERNANCE',
       items: [
-        SidebarItemConfig(label: 'Collection Analytics', icon: Icons.insert_chart_outlined, path: RoutePaths.workspaceCollectionAnalytics),
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
   ],
@@ -580,7 +590,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -619,9 +628,9 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       ],
     ),
     const SidebarSectionConfig(
-      title: 'INSIGHTS',
+      title: 'GOVERNANCE',
       items: [
-        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
+        SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
   ],
@@ -634,7 +643,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(
@@ -678,7 +686,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
         SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
         SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-        SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
       ],
     ),
     const SidebarSectionConfig(

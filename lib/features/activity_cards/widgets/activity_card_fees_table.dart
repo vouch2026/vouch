@@ -99,7 +99,7 @@ class ActivityCardFeesTable extends StatelessWidget {
                           ),
                           DataColumn(
                             label: Text(
-                              'PAID DATE / REF', 
+                              'VERIFIED BY', 
                               style: AppTextStyles.labelSmall.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,
@@ -123,20 +123,7 @@ class ActivityCardFeesTable extends StatelessWidget {
                               ),
                               DataCell(Text('₱${fee.amount.toStringAsFixed(2)}', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark))),
                               DataCell(_PaymentStatusBadge(isPaid: fee.isPaid)),
-                              DataCell(
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      fee.paidAt != null ? DateFormat('MMM d, yyyy').format(fee.paidAt!) : '—',
-                                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDark),
-                                    ),
-                                    if (fee.referenceNumber != null)
-                                      Text(fee.referenceNumber!, style: AppTextStyles.labelSmall.copyWith(fontSize: 9, color: AppColors.textGrey)),
-                                  ],
-                                ),
-                              ),
+                              DataCell(Text(fee.verifiedBy ?? '—', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDark))),
                             ],
                           );
                         }).toList(),

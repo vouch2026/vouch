@@ -857,6 +857,9 @@ CREATE POLICY "Students can request clearance" ON activity_card_clearance_reques
 WITH CHECK (student_id = public.get_my_id());
 CREATE POLICY "Officers can update clearance status" ON activity_card_clearance_requests FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = activity_card_clearance_requests.organization_id AND om.role_id IS NOT NULL));
+CREATE POLICY "Students can update their own rejected clearance requests" ON activity_card_clearance_requests FOR UPDATE TO authenticated
+USING (student_id = public.get_my_id() AND status = 'Rejected')
+WITH CHECK (student_id = public.get_my_id() AND status = 'Pending');
 
 -- Clearance Signatures
 CREATE POLICY "Users can view signatures for their own requests" ON activity_card_clearance_signatures FOR SELECT 
@@ -869,6 +872,9 @@ CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FO
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id = required_role_id AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)));
 CREATE POLICY "Deans and Program Heads can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.role_id = required_role_id AND ur.scope_id = required_scope_id AND ur.is_active = true));
+CREATE POLICY "Students can update their own rejected signatures" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
+USING (EXISTS (SELECT 1 FROM public.activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id() AND (r.status = 'Rejected' OR r.status = 'Pending')))
+WITH CHECK (status = 'Pending' AND signed_by_user_id IS NULL AND signed_at IS NULL AND remarks IS NULL);
 
 -- Sanction Rules
 CREATE POLICY "Sanction rules are viewable by everyone" ON sanction_rules FOR SELECT USING (true);
@@ -1002,7 +1008,8 @@ CREATE OR REPLACE FUNCTION assign_organization_officer(
     p_user_id UUID,
     p_role_id UUID,
     p_term_id UUID,
-    p_assigned_by UUID
+    p_assigned_by UUID,
+    p_expired_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 ) RETURNS VOID AS $$
 DECLARE
     v_actual_assigned_by_id UUID;
@@ -1039,14 +1046,15 @@ BEGIN
                     END;
 
     -- 1. Insert or Update membership (Organization Context)
-    INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status)
-    VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active')
+    INSERT INTO organization_members (organization_id, user_id, role_id, academic_term_id, status, expired_at)
+    VALUES (p_org_id, v_actual_user_id, p_role_id, p_term_id, 'active', p_expired_at)
     ON CONFLICT (organization_id, user_id) 
     DO UPDATE SET 
         role_id = EXCLUDED.role_id,
         academic_term_id = EXCLUDED.academic_term_id,
         status = 'active',
-        assigned_at = CURRENT_TIMESTAMP;
+        assigned_at = CURRENT_TIMESTAMP,
+        expired_at = EXCLUDED.expired_at;
 
     -- If the role is 'Adviser', update the adviser_name in organizations table
     IF EXISTS (SELECT 1 FROM public.roles WHERE id = p_role_id AND name = 'Adviser') THEN
@@ -1066,7 +1074,8 @@ BEGIN
             'role_id', p_role_id,
             'term_id', p_term_id,
             'scope_type', v_scope_type,
-            'scope_id', v_scope_id
+            'scope_id', v_scope_id,
+            'expired_at', p_expired_at
         )
     );
 END;
@@ -1621,6 +1630,14 @@ WHERE r.name = 'Senator' AND p.action IN (
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- MAP PERMISSIONS FOR AUDITOR
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'Auditor' AND p.action IN (
+    'view_events', 'view_fees'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 -- MAP PERMISSIONS FOR BUSINESS MANAGER
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -1948,6 +1965,13 @@ AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
+    -- Lazy cleanup of expired roles
+    UPDATE public.organization_members
+    SET role_id = NULL,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
         RETURN;
@@ -2038,6 +2062,13 @@ AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
+    -- Lazy cleanup of expired roles
+    UPDATE public.organization_members
+    SET role_id = NULL,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
         RETURN;
@@ -2356,6 +2387,54 @@ BEGIN
     -- Delete target user from auth.users (requires security definer context)
     IF v_auth_id IS NOT NULL THEN
         DELETE FROM auth.users WHERE id = v_auth_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- ==============================================================================
+-- 14. DEMOTE ORGANIZATION OFFICER (SECURITY DEFINER)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.demote_organization_officer(
+    p_org_id UUID,
+    p_user_id UUID,
+    p_role_name TEXT,
+    p_workspace_type TEXT DEFAULT 'organization'
+) RETURNS VOID AS $$
+DECLARE
+    v_actual_user_id UUID;
+BEGIN
+    SELECT id INTO v_actual_user_id 
+    FROM public.users 
+    WHERE id = p_user_id OR auth_id = p_user_id
+    LIMIT 1;
+
+    IF p_workspace_type = 'comselec' THEN
+        IF LOWER(p_role_name) = 'adviser' THEN
+            DELETE FROM public.comselec_members
+            WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
+        ELSE
+            UPDATE public.comselec_members
+            SET role_id = NULL,
+                expired_at = NULL,
+                status = 'active'
+            WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
+        END IF;
+    ELSE
+        IF LOWER(p_role_name) = 'adviser' THEN
+            DELETE FROM public.organization_members
+            WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
+
+            UPDATE public.organizations
+            SET adviser_name = NULL
+            WHERE id = p_org_id;
+        ELSE
+            UPDATE public.organization_members
+            SET role_id = NULL,
+                expired_at = NULL,
+                status = 'active'
+            WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
+        END IF;
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

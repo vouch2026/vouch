@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/models/user_model.dart';
 
 class GovernorOfficersTable extends ConsumerWidget {
   const GovernorOfficersTable({super.key});
@@ -16,6 +19,14 @@ class GovernorOfficersTable extends ConsumerWidget {
     final theme = Theme.of(context);
     final workspace = ref.watch(workspaceProvider);
     final selectedOrg = workspace.selectedOrganization;
+    final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
+    final canManageMembers = isSuperAdmin || 
+                            activeRoleName.contains('governor') || 
+                            activeRoleName.contains('president') ||
+                            activeRoleName.contains('vice governor') ||
+                            activeRoleName.contains('vice president');
 
     if (selectedOrg == null) {
       return const Center(child: Text('Please select an organization.'));
@@ -52,12 +63,14 @@ class GovernorOfficersTable extends ConsumerWidget {
                       child: DataTable(
                         columnSpacing: AppSpacing.lg,
                         headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
-                        columns: const [
-                          DataColumn(label: Text('Officer')),
-                          DataColumn(label: Text('Student ID')),
-                          DataColumn(label: Text('Program & Year')),
-                          DataColumn(label: Text('Joined Date')),
-                          DataColumn(label: Text('Role')),
+                        columns: [
+                          const DataColumn(label: Text('Officer')),
+                          const DataColumn(label: Text('Student ID')),
+                          const DataColumn(label: Text('Program & Year')),
+                          const DataColumn(label: Text('Joined Date')),
+                          const DataColumn(label: Text('Role')),
+                          const DataColumn(label: Text('Duration')),
+                          if (canManageMembers) const DataColumn(label: Text('Actions')),
                         ],
                         rows: officers.map((officer) {
                           return DataRow(
@@ -98,6 +111,15 @@ class GovernorOfficersTable extends ConsumerWidget {
                                 style: AppTextStyles.bodySmall,
                               )),
                               DataCell(_RoleBadge(role: officer.role)),
+                              DataCell(
+                                officer.expiredAt != null
+                                    ? _CountdownTimerText(expiredAt: officer.expiredAt!)
+                                    : Text('Academic Year', style: AppTextStyles.bodySmall),
+                              ),
+                              if (canManageMembers)
+                                DataCell(
+                                  _buildOfficerActions(context, ref, officer, selectedOrg),
+                                ),
                             ],
                           );
                         }).toList(),
@@ -181,6 +203,94 @@ class GovernorOfficersTable extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildOfficerActions(BuildContext context, WidgetRef ref, UserModel officer, dynamic selectedOrg) {
+    final role = officer.role.toLowerCase();
+    
+    // Only representatives can be actioned (demoted)
+    if (role != 'representative') {
+      return const SizedBox.shrink();
+    }
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, size: 20),
+      offset: const Offset(0, 30),
+      onSelected: (value) {
+        if (value == 'demote_representative') {
+          _showDemoteDialog(context, ref, officer, selectedOrg);
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'demote_representative',
+          child: Row(
+            children: [
+              Icon(Icons.trending_down_rounded, size: 18, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Demote to Member', style: TextStyle(color: AppColors.error)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showDemoteDialog(BuildContext context, WidgetRef ref, UserModel officer, dynamic selectedOrg) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Demote Representative'),
+        content: Text(
+          'Are you sure you want to demote ${officer.fullName} back to a standard Member? This action takes effect immediately.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await ref.read(organizationRepositoryProvider).demoteOfficer(
+                  userId: officer.id!,
+                  orgId: selectedOrg.id,
+                  roleName: 'Representative',
+                  workspaceType: selectedOrg.type,
+                );
+                
+                ref.invalidate(organizationMembersProvider(selectedOrg.id));
+                ref.invalidate(organizationOfficersProvider(selectedOrg.id));
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Successfully demoted ${officer.fullName} to Member.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error demoting user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm Demotion'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RoleBadge extends StatelessWidget {
@@ -218,6 +328,74 @@ class _RoleBadge extends StatelessWidget {
           color: color,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+}
+
+class _CountdownTimerText extends StatefulWidget {
+  final DateTime expiredAt;
+  const _CountdownTimerText({required this.expiredAt});
+
+  @override
+  State<_CountdownTimerText> createState() => _CountdownTimerTextState();
+}
+
+class _CountdownTimerTextState extends State<_CountdownTimerText> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _calculateRemaining();
+        });
+      }
+    });
+  }
+
+  void _calculateRemaining() {
+    final now = DateTime.now();
+    _remaining = widget.expiredAt.difference(now);
+    if (_remaining.isNegative) {
+      _remaining = Duration.zero;
+      _timer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_remaining == Duration.zero) {
+      return Text(
+        'Expired',
+        style: TextStyle(
+          color: Colors.red[600],
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      );
+    }
+
+    final hours = _remaining.inHours.toString().padLeft(2, '0');
+    final minutes = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
+
+    return Text(
+      '$hours:$minutes:$seconds remaining',
+      style: TextStyle(
+        color: Colors.orange[800],
+        fontWeight: FontWeight.bold,
+        fontSize: 11,
       ),
     );
   }

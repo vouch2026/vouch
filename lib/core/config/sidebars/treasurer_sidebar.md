@@ -4,7 +4,6 @@ Home
 Tasks
 Calendar
 Schedule
-Notifications
 
 WORKSPACE: ACES
 Role: Treasurer
@@ -15,6 +14,10 @@ Finance
    Fees
    Collections
    Financial Reports
+
+Operations
+   Events
+   Announcements
 
 Student Affairs
    Activity Clearances

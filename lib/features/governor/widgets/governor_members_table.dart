@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
 
 class GovernorMembersTable extends ConsumerWidget {
   const GovernorMembersTable({super.key});
@@ -18,7 +21,10 @@ class GovernorMembersTable extends ConsumerWidget {
     final workspace = ref.watch(workspaceProvider);
     final selectedOrg = workspace.selectedOrganization;
     final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
-    final canManageMembers = activeRoleName.contains('governor') || 
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
+    final canManageMembers = isSuperAdmin ||
+                            activeRoleName.contains('governor') || 
                             activeRoleName.contains('president') ||
                             activeRoleName.contains('vice governor') ||
                             activeRoleName.contains('vice president');
@@ -226,33 +232,197 @@ class GovernorMembersTable extends ConsumerWidget {
   void _showRepresentativeDialog(BuildContext context, UserModel member) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Promote to Representative'),
-        content: Text(
-          'Are you sure you want to promote ${member.fullName} to Organization Representative?',
+      barrierDismissible: false,
+      builder: (context) => _PromoteRepresentativeDialog(member: member),
+    );
+  }
+}
+
+class _PromoteRepresentativeDialog extends ConsumerStatefulWidget {
+  final UserModel member;
+  const _PromoteRepresentativeDialog({required this.member});
+
+  @override
+  ConsumerState<_PromoteRepresentativeDialog> createState() => _PromoteRepresentativeDialogState();
+}
+
+class _PromoteRepresentativeDialogState extends ConsumerState<_PromoteRepresentativeDialog> {
+  String _durationOption = '24h'; // '24h' or 'permanent'
+  bool _isSubmitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final workspace = ref.watch(workspaceProvider);
+    final selectedOrg = workspace.selectedOrganization;
+
+    return AlertDialog(
+      title: Container(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${member.fullName} successfully promoted as Representative.'),
-                  backgroundColor: Colors.green,
+        child: Row(
+          children: [
+            const Icon(Icons.trending_up_rounded, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.md),
+            const Text('Promote to Representative'),
+          ],
+        ),
+      ),
+      content: SizedBox(
+        width: 450,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to promote ${widget.member.fullName} to Representative?',
+                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'This will assign them the Representative role, allowing them to view events, scan attendance, and request clearance.',
+                style: TextStyle(color: AppColors.textGrey, fontSize: 13),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Role Duration',
+                style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: AppColors.border.withOpacity(0.5)),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Confirm Promotion'),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: const Text('Temporary (24 Hours)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Automatically demotes back to Member after 24 hours', style: TextStyle(fontSize: 12)),
+                      value: '24h',
+                      groupValue: _durationOption,
+                      activeColor: AppColors.primary,
+                      onChanged: _isSubmitting ? null : (val) => setState(() => _durationOption = val!),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<String>(
+                      title: const Text('Permanent Duration', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Active for the duration of the Academic Term', style: TextStyle(fontSize: 12)),
+                      value: 'permanent',
+                      groupValue: _durationOption,
+                      activeColor: AppColors.primary,
+                      onChanged: _isSubmitting ? null : (val) => setState(() => _durationOption = val!),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting 
+              ? null 
+              : () => _handlePromotion(selectedOrg),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text('Confirm Promotion'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handlePromotion(dynamic selectedOrg) async {
+    if (selectedOrg == null) {
+      _showError('No organization selected.');
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSubmitting = true);
+
+    try {
+      final activeTerm = await ref.read(activeTermProvider.future);
+      if (activeTerm == null) {
+        _showError('No active academic term found. Please contact the administrator.');
+        return;
+      }
+
+      final roles = await ref.read(availableRolesProvider.future);
+      final repRole = roles.firstWhere(
+        (r) => r['name'].toString().toLowerCase() == 'representative',
+        orElse: () => {},
+      );
+      if (repRole.isEmpty) {
+        _showError('Representative role not found in database.');
+        return;
+      }
+
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser == null) {
+        _showError('Authentication error. Please log in again.');
+        return;
+      }
+
+      final expiredAt = _durationOption == '24h'
+          ? DateTime.now().add(const Duration(hours: 24))
+          : null;
+
+      await ref.read(organizationRepositoryProvider).assignOfficer(
+        userId: widget.member.id!,
+        orgId: selectedOrg.id,
+        roleId: repRole['id'],
+        termId: activeTerm.id,
+        assignedBy: currentUser.id,
+        workspaceType: selectedOrg.type,
+        expiredAt: expiredAt,
+      );
+
+      ref.invalidate(organizationMembersProvider(selectedOrg.id));
+      ref.invalidate(organizationOfficersProvider(selectedOrg.id));
+
+      if (mounted) {
+        Navigator.pop(context);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('${widget.member.fullName} successfully promoted to Representative.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, stack) {
+      debugPrint('Promotion error: $e\n$stack');
+      if (mounted) {
+        _showError('Error promoting user: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
       ),
     );
   }
@@ -291,6 +461,74 @@ class _RoleBadge extends StatelessWidget {
       child: Text(
         role.toUpperCase(),
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _CountdownTimerText extends StatefulWidget {
+  final DateTime expiredAt;
+  const _CountdownTimerText({required this.expiredAt});
+
+  @override
+  State<_CountdownTimerText> createState() => _CountdownTimerTextState();
+}
+
+class _CountdownTimerTextState extends State<_CountdownTimerText> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _calculateRemaining();
+        });
+      }
+    });
+  }
+
+  void _calculateRemaining() {
+    final now = DateTime.now();
+    _remaining = widget.expiredAt.difference(now);
+    if (_remaining.isNegative) {
+      _remaining = Duration.zero;
+      _timer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_remaining == Duration.zero) {
+      return Text(
+        'Expired',
+        style: TextStyle(
+          color: Colors.red[600],
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      );
+    }
+
+    final hours = _remaining.inHours.toString().padLeft(2, '0');
+    final minutes = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
+
+    return Text(
+      '$hours:$minutes:$seconds remaining',
+      style: TextStyle(
+        color: Colors.orange[800],
+        fontWeight: FontWeight.bold,
+        fontSize: 11,
       ),
     );
   }

@@ -117,6 +117,7 @@ class ActivityCardRepository {
       final orgName = org['name'];
       final orgLogo = org['logo_url'];
       final orgType = org['type'];
+      final orgCode = org['code'] ?? 'N/A';
 
       final roleData = member['roles'];
       final hierarchyLevel = roleData?['hierarchy_level'] ?? 5;
@@ -138,60 +139,7 @@ class ActivityCardRepository {
       final sanctionsResponse = allSanctions.where((s) => s['scope_id'] == orgId).toList();
       final clearanceResponse = allClearanceRequests.where((c) => c['organization_id'] == orgId).firstOrNull;
 
-      // 1. Map sanctions first
-      final List<ActivityCardSanction> sanctions = sanctionsResponse.map((s) {
-        return ActivityCardSanction(
-          id: s['id'],
-          description: s['required_item'],
-          isFulfilled: s['status'] == 'Item Received',
-          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
-        );
-      }).toList();
-
-      final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
-
-      // 2. Map events (applying sanctionCleared if all sanctions are completed)
-      final List<ActivityCardEvent> events = eventsResponse.map((e) {
-        final attendance = (e['attendance'] as List).firstOrNull;
-        var status = _mapAttendanceStatus(attendance?['status']);
-        final hasTimeIn = attendance?['actual_time_in'] != null;
-        final hasTimeOut = attendance?['actual_time_out'] != null;
-        if (status == AttendanceStatus.completed && !(hasTimeIn && hasTimeOut)) {
-          status = AttendanceStatus.pending;
-        }
-        final isPast = _isPastEvent(e);
-        if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
-          status = AttendanceStatus.sanctionCleared;
-        }
-        return ActivityCardEvent(
-          id: e['id'],
-          eventId: e['id'],
-          title: e['name'],
-          category: e['scope_type'],
-          date: DateTime.parse(e['event_date']),
-          attendanceStatus: status,
-          completedAt: attendance?['actual_time_out'] != null 
-            ? DateTime.parse(attendance!['actual_time_out']) 
-            : null,
-        );
-      }).toList();
-
-      // 3. Map fees
-      final List<ActivityCardFee> fees = feesResponse.map((f) {
-        final payment = (f['payments'] as List).where((p) => p['status'] == 'Paid').firstOrNull;
-        return ActivityCardFee(
-          id: f['id'],
-          feeId: f['id'],
-          title: f['name'],
-          category: f['scope_type'],
-          amount: (f['amount'] as num).toDouble(),
-          isPaid: payment != null,
-          paidAt: payment?['paid_at'] != null ? DateTime.parse(payment!['paid_at']) : null,
-          referenceNumber: payment?['reference_number'],
-        );
-      }).toList();
-
-      // 4. Map signatures
+      // 1. Map signatures first to determine if Secretary/Treasurer have signed
       final List<ActivityCardSignature> signatures = [];
       if (clearanceResponse != null && clearanceResponse['activity_card_clearance_signatures'] != null) {
         final sigList = clearanceResponse['activity_card_clearance_signatures'] as List;
@@ -226,6 +174,64 @@ class ActivityCardRepository {
         signatures.sort((a, b) => a.order.compareTo(b.order));
       }
 
+      final bool isSecretarySigned = signatures.any((s) => s.roleName == 'Secretary' && s.status == SignatureStatus.signed);
+      final bool isTreasurerSigned = signatures.any((s) => s.roleName == 'Treasurer' && s.status == SignatureStatus.signed);
+
+      // 2. Map sanctions first
+      final List<ActivityCardSanction> sanctions = sanctionsResponse.map((s) {
+        return ActivityCardSanction(
+          id: s['id'],
+          description: s['required_item'],
+          isFulfilled: s['status'] == 'Item Received',
+          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
+        );
+      }).toList();
+
+      final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
+
+      // 3. Map events (applying sanctionCleared if all sanctions are completed)
+      final List<ActivityCardEvent> events = eventsResponse.map((e) {
+        final attendance = (e['attendance'] as List).firstOrNull;
+        var status = _mapAttendanceStatus(attendance?['status']);
+        final hasTimeIn = attendance?['actual_time_in'] != null;
+        final hasTimeOut = attendance?['actual_time_out'] != null;
+        if (status == AttendanceStatus.completed && !(hasTimeIn && hasTimeOut)) {
+          status = AttendanceStatus.pending;
+        }
+        final isPast = _isPastEvent(e);
+        if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
+          status = AttendanceStatus.sanctionCleared;
+        }
+        return ActivityCardEvent(
+          id: e['id'],
+          eventId: e['id'],
+          title: e['name'],
+          category: e['scope_type'],
+          date: DateTime.parse(e['event_date']),
+          attendanceStatus: status,
+          verifiedBy: isSecretarySigned ? '$orgCode SECRETARY' : null,
+          completedAt: attendance?['actual_time_out'] != null 
+            ? DateTime.parse(attendance!['actual_time_out']) 
+            : null,
+        );
+      }).toList();
+
+      // 4. Map fees
+      final List<ActivityCardFee> fees = feesResponse.map((f) {
+        final payment = (f['payments'] as List).where((p) => p['status'] == 'Paid').firstOrNull;
+        return ActivityCardFee(
+          id: f['id'],
+          feeId: f['id'],
+          title: f['name'],
+          category: f['scope_type'],
+          amount: (f['amount'] as num).toDouble(),
+          isPaid: payment != null,
+          paidAt: payment?['paid_at'] != null ? DateTime.parse(payment!['paid_at']) : null,
+          referenceNumber: payment?['reference_number'],
+          verifiedBy: isTreasurerSigned ? '$orgCode TREASURER' : null,
+        );
+      }).toList();
+
       // 5. Calculate completion
       final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
       final paidFees = fees.where((f) => f.isPaid).length;
@@ -240,6 +246,9 @@ class ActivityCardRepository {
         signatures,
         completionPercentage,
       );
+
+      final clearedAtStr = clearanceResponse?['completed_at'] ?? clearanceResponse?['updated_at'] ?? clearanceResponse?['requested_at'];
+      final DateTime? clearedAt = clearedAtStr != null ? DateTime.parse(clearedAtStr) : null;
 
       cards.add(ActivityCard(
         id: clearanceResponse?['id'] ?? 'temp-$orgId',
@@ -257,6 +266,8 @@ class ActivityCardRepository {
         fees: fees,
         sanctions: sanctions,
         signatures: signatures,
+        clearedAt: clearedAt,
+        organizationCode: orgCode,
       ));
     }
 
@@ -405,11 +416,13 @@ class ActivityCardRepository {
     String? orgName;
     String? orgLogo;
     String? scopeId;
+    String? orgCode;
 
     if (orgResponse != null) {
       orgType = orgResponse['type'];
       orgName = orgResponse['name'];
       orgLogo = orgResponse['logo_url'];
+      orgCode = orgResponse['code'];
       scopeId = orgResponse['campus_id'];
       if (orgType == 'faculty-based') {
         scopeId = orgResponse['faculty_id'];
@@ -429,6 +442,7 @@ class ActivityCardRepository {
         orgType = 'program-based';
         orgName = programResponse['name'];
         orgLogo = programResponse['logo_url'];
+        orgCode = programResponse['code'];
         scopeId = organizationId;
       } else {
         // Check if it is a Faculty workspace
@@ -443,6 +457,7 @@ class ActivityCardRepository {
           orgType = 'faculty-based';
           orgName = facultyResponse['name'];
           orgLogo = facultyResponse['logo_url'];
+          orgCode = facultyResponse['code'];
           scopeId = organizationId;
         }
       }
@@ -463,7 +478,8 @@ class ActivityCardRepository {
               first_name,
               last_name,
               student_id_number,
-              program:programs!users_program_id_fkey (name)
+              program:programs!users_program_id_fkey (code),
+              faculty:faculties!users_faculty_id_fkey (code)
             )
           ''')
           .eq('organization_id', organizationId)
@@ -475,8 +491,10 @@ class ActivityCardRepository {
         if (student != null) {
           normalizedMembers.add({
             'student_id': student['id'],
+            'student_id_number': student['student_id_number'],
             'student_name': '${student['first_name']} ${student['last_name']}',
-            'program_name': student['program']?['name'] ?? 'N/A',
+            'program_name': student['program']?['code'] ?? 'N/A',
+            'faculty_name': student['faculty']?['code'] ?? 'N/A',
             'is_officer': ((m['roles']?['hierarchy_level'] ?? 5) as num) > 5,
           });
         }
@@ -491,19 +509,29 @@ class ActivityCardRepository {
             first_name,
             last_name,
             student_id_number,
-            program:programs!users_program_id_fkey (name)
+            faculty_id,
+            program_id,
+            program:programs!users_program_id_fkey (code, faculty_id),
+            faculty:faculties!users_faculty_id_fkey (code)
           ''')
-          .eq(isProgram ? 'program_id' : 'faculty_id', organizationId)
           .eq('account_status', 'active');
 
       final usersList = usersResponse as List;
       for (var u in usersList) {
-        normalizedMembers.add({
-          'student_id': u['id'],
-          'student_name': '${u['first_name']} ${u['last_name']}',
-          'program_name': u['program']?['name'] ?? 'N/A',
-          'is_officer': false,
-        });
+        final matches = isProgram
+            ? (u['program_id'] == organizationId)
+            : (u['faculty_id'] == organizationId || u['program']?['faculty_id'] == organizationId);
+            
+        if (matches) {
+          normalizedMembers.add({
+            'student_id': u['id'],
+            'student_id_number': u['student_id_number'],
+            'student_name': '${u['first_name']} ${u['last_name']}',
+            'program_name': u['program']?['code'] ?? 'N/A',
+            'faculty_name': u['faculty']?['code'] ?? 'N/A',
+            'is_officer': false,
+          });
+        }
       }
     }
 
@@ -588,58 +616,7 @@ class ActivityCardRepository {
       final studentSanctions = allSanctions.where((s) => s['student_id'] == studentId).toList();
       final studentClearance = allClearances.where((c) => c['student_id'] == studentId).firstOrNull;
 
-      // 1. Map sanctions first
-      final List<ActivityCardSanction> sanctions = studentSanctions.map((s) {
-        return ActivityCardSanction(
-          id: s['id'],
-          description: s['required_item'],
-          isFulfilled: s['status'] == 'Item Received',
-          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
-        );
-      }).toList();
-
-      final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
-
-      // 2. Map events (applying sanctionCleared if all sanctions are completed)
-      final List<ActivityCardEvent> events = eventsResponse.map((e) {
-        final attendance = studentAttendance.where((a) => a['event_id'] == e['id']).firstOrNull;
-        var status = _mapAttendanceStatus(attendance?['status']);
-        final hasTimeIn = attendance?['actual_time_in'] != null;
-        final hasTimeOut = attendance?['actual_time_out'] != null;
-        if (status == AttendanceStatus.completed && !(hasTimeIn && hasTimeOut)) {
-          status = AttendanceStatus.pending;
-        }
-        final isPast = _isPastEvent(e);
-        if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
-          status = AttendanceStatus.sanctionCleared;
-        }
-        return ActivityCardEvent(
-          id: e['id'],
-          eventId: e['id'],
-          title: e['name'],
-          category: e['scope_type'],
-          date: DateTime.parse(e['event_date']),
-          attendanceStatus: status,
-          completedAt: attendance?['actual_time_out'] != null ? DateTime.parse(attendance!['actual_time_out']) : null,
-        );
-      }).toList();
-
-      // 3. Map fees
-      final List<ActivityCardFee> fees = feesResponse.map((f) {
-        final payment = studentPayments.where((p) => p['fee_id'] == f['id']).firstOrNull;
-        return ActivityCardFee(
-          id: f['id'],
-          feeId: f['id'],
-          title: f['name'],
-          category: f['scope_type'],
-          amount: (f['amount'] as num).toDouble(),
-          isPaid: payment != null,
-          paidAt: payment?['paid_at'] != null ? DateTime.parse(payment!['paid_at']) : null,
-          referenceNumber: payment?['reference_number'],
-        );
-      }).toList();
-
-      // 4. Map signatures
+      // 1. Map signatures first to check Secretary/Treasurer status
       final List<ActivityCardSignature> signatures = [];
       if (studentClearance != null && studentClearance['activity_card_clearance_signatures'] != null) {
         final sigList = studentClearance['activity_card_clearance_signatures'] as List;
@@ -674,6 +651,62 @@ class ActivityCardRepository {
         signatures.sort((a, b) => a.order.compareTo(b.order));
       }
 
+      final bool isSecretarySigned = signatures.any((s) => s.roleName == 'Secretary' && s.status == SignatureStatus.signed);
+      final bool isTreasurerSigned = signatures.any((s) => s.roleName == 'Treasurer' && s.status == SignatureStatus.signed);
+
+      // 2. Map sanctions first
+      final List<ActivityCardSanction> sanctions = studentSanctions.map((s) {
+        return ActivityCardSanction(
+          id: s['id'],
+          description: s['required_item'],
+          isFulfilled: s['status'] == 'Item Received',
+          fulfilledAt: s['received_at'] != null ? DateTime.parse(s['received_at']) : null,
+        );
+      }).toList();
+
+      final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
+
+      // 3. Map events (applying sanctionCleared if all sanctions are completed)
+      final List<ActivityCardEvent> events = eventsResponse.map((e) {
+        final attendance = studentAttendance.where((a) => a['event_id'] == e['id']).firstOrNull;
+        var status = _mapAttendanceStatus(attendance?['status']);
+        final hasTimeIn = attendance?['actual_time_in'] != null;
+        final hasTimeOut = attendance?['actual_time_out'] != null;
+        if (status == AttendanceStatus.completed && !(hasTimeIn && hasTimeOut)) {
+          status = AttendanceStatus.pending;
+        }
+        final isPast = _isPastEvent(e);
+        if ((status == AttendanceStatus.absent || (status == AttendanceStatus.pending && isPast)) && sanctionsCleared) {
+          status = AttendanceStatus.sanctionCleared;
+        }
+        return ActivityCardEvent(
+          id: e['id'],
+          eventId: e['id'],
+          title: e['name'],
+          category: e['scope_type'],
+          date: DateTime.parse(e['event_date']),
+          attendanceStatus: status,
+          verifiedBy: isSecretarySigned ? '${orgCode ?? 'N/A'} SECRETARY' : null,
+          completedAt: attendance?['actual_time_out'] != null ? DateTime.parse(attendance!['actual_time_out']) : null,
+        );
+      }).toList();
+
+      // 4. Map fees
+      final List<ActivityCardFee> fees = feesResponse.map((f) {
+        final payment = studentPayments.where((p) => p['fee_id'] == f['id']).firstOrNull;
+        return ActivityCardFee(
+          id: f['id'],
+          feeId: f['id'],
+          title: f['name'],
+          category: f['scope_type'],
+          amount: (f['amount'] as num).toDouble(),
+          isPaid: payment != null,
+          paidAt: payment?['paid_at'] != null ? DateTime.parse(payment!['paid_at']) : null,
+          referenceNumber: payment?['reference_number'],
+          verifiedBy: isTreasurerSigned ? '${orgCode ?? 'N/A'} TREASURER' : null,
+        );
+      }).toList();
+
       // 5. Calculate completion
       final completedEvents = events.where((e) => e.attendanceStatus == AttendanceStatus.completed || e.attendanceStatus == AttendanceStatus.excused || e.attendanceStatus == AttendanceStatus.sanctionCleared).length;
       final paidFees = fees.where((f) => f.isPaid).length;
@@ -687,10 +720,15 @@ class ActivityCardRepository {
         completionPercentage,
       );
 
+      final clearedAtStr = studentClearance?['completed_at'] ?? studentClearance?['updated_at'] ?? studentClearance?['requested_at'];
+      final DateTime? clearedAt = clearedAtStr != null ? DateTime.parse(clearedAtStr) : null;
+
       cards.add(ActivityCard(
         id: studentClearance?['id'] ?? 'temp-$studentId',
         studentId: studentId,
+        studentIdNumber: member['student_id_number'] as String?,
         studentName: studentName,
+        studentFaculty: member['faculty_name'] as String?,
         studentProgram: programName,
         organizationId: organizationId,
         organizationName: orgName ?? 'N/A',
@@ -705,6 +743,8 @@ class ActivityCardRepository {
         fees: fees,
         sanctions: sanctions,
         signatures: signatures,
+        clearedAt: clearedAt,
+        organizationCode: orgCode ?? 'N/A',
       ));
     }
 

@@ -35,7 +35,9 @@ enum SignatureStatus {
 class ActivityCard {
   final String id;
   final String studentId;
+  final String? studentIdNumber;
   final String? studentName;
+  final String? studentFaculty;
   final String? studentProgram;
   final String organizationId;
   final String organizationName;
@@ -50,11 +52,15 @@ class ActivityCard {
   final List<ActivityCardFee> fees;
   final List<ActivityCardSanction> sanctions;
   final List<ActivityCardSignature> signatures;
+  final DateTime? clearedAt;
+  final String organizationCode;
 
   const ActivityCard({
     required this.id,
     required this.studentId,
+    this.studentIdNumber,
     this.studentName,
+    this.studentFaculty,
     this.studentProgram,
     required this.organizationId,
     required this.organizationName,
@@ -69,6 +75,8 @@ class ActivityCard {
     required this.fees,
     required this.sanctions,
     required this.signatures,
+    this.clearedAt,
+    required this.organizationCode,
   });
 }
 
@@ -117,6 +125,7 @@ class ActivityCardFee {
   final bool isPaid;
   final DateTime? paidAt;
   final String? referenceNumber;
+  final String? verifiedBy;
 
   const ActivityCardFee({
     required this.id,
@@ -127,6 +136,7 @@ class ActivityCardFee {
     required this.isPaid,
     this.paidAt,
     this.referenceNumber,
+    this.verifiedBy,
   });
 }
 

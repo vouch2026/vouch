@@ -4,7 +4,6 @@ Home
 Tasks
 Calendar
 Schedule
-Notifications
 
 WORKSPACE: BSIT Program
 Role: Program Head

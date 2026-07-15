@@ -337,6 +337,7 @@ class OrganizationRepository {
           'programName': programData?['name'],
           'facultyName': facultyData?['name'],
           'joined_at': json['joined_at'] ?? json['assigned_at'],
+          'expired_at': json['expired_at'],
         });
         
         if (user.id != null) {
@@ -376,6 +377,7 @@ class OrganizationRepository {
         'programName': programData?['name'],
         'facultyName': facultyData?['name'],
         'joined_at': json['joined_at'],
+        'expired_at': json['expired_at'],
       });
       
       if (user.id != null) {
@@ -503,6 +505,7 @@ class OrganizationRepository {
     required String termId,
     required String assignedBy,
     String? workspaceType,
+    DateTime? expiredAt,
   }) async {
     if (workspaceType == 'comselec') {
       await _client.rpc(
@@ -524,6 +527,7 @@ class OrganizationRepository {
           'p_role_id': roleId,
           'p_term_id': termId,
           'p_assigned_by': assignedBy,
+          if (expiredAt != null) 'p_expired_at': expiredAt.toUtc().toIso8601String(),
         },
       );
     }
@@ -715,41 +719,15 @@ class OrganizationRepository {
     required String roleName,
     String? workspaceType,
   }) async {
-    final isCom = workspaceType == 'comselec';
-    if (roleName.toLowerCase() == 'adviser') {
-      if (isCom) {
-        await _client
-            .from('comselec_members')
-            .delete()
-            .eq('comselec_id', orgId)
-            .eq('user_id', userId);
-      } else {
-        await _client
-            .from('organization_members')
-            .delete()
-            .eq('organization_id', orgId)
-            .eq('user_id', userId);
-
-        await _client
-            .from('organizations')
-            .update({'adviser_name': null})
-            .eq('id', orgId);
-      }
-    } else {
-      if (isCom) {
-        await _client
-            .from('comselec_members')
-            .update({'role_id': null})
-            .eq('comselec_id', orgId)
-            .eq('user_id', userId);
-      } else {
-        await _client
-            .from('organization_members')
-            .update({'role_id': null})
-            .eq('organization_id', orgId)
-            .eq('user_id', userId);
-      }
-    }
+    await _client.rpc(
+      'demote_organization_officer',
+      params: {
+        'p_org_id': orgId,
+        'p_user_id': userId,
+        'p_role_name': roleName,
+        'p_workspace_type': workspaceType ?? 'organization',
+      },
+    );
   }
 }
 

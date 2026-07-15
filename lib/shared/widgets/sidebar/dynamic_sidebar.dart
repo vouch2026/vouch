@@ -82,7 +82,6 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
             SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
             SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
             SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-            SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
           ],
         ),
         const SidebarSectionConfig(
@@ -128,7 +127,6 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
             SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
             SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
             SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
-            SidebarItemConfig(label: 'Notifications', icon: Icons.notifications_none_rounded, path: RoutePaths.notifications),
           ],
         ),
       ];
@@ -232,18 +230,6 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                         }),
                       ],
                     ],
-                    const _SectionDivider(),
-                    const _SidebarHeader(label: 'VOUCH'),
-                    const _SidebarItem(
-                      icon: Icons.help_outline_rounded,
-                      label: 'Help & Support',
-                      path: RoutePaths.help,
-                    ),
-                    const _SidebarItem(
-                      icon: Icons.info_outline_rounded,
-                      label: 'About Us',
-                      path: RoutePaths.aboutUs,
-                    ),
                     const SizedBox(height: AppSpacing.md),
                   ],
                 ),

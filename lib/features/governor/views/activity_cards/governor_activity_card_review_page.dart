@@ -1,5 +1,6 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -17,6 +18,7 @@ import '../../../organizations/providers/workspace_provider.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
+import '../../../organizations/providers/organization_provider.dart';
 
 class GovernorActivityCardReviewPage extends ConsumerStatefulWidget {
   final String id; // This is the studentId passed from the list
@@ -34,6 +36,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   final TextEditingController _notesController = TextEditingController();
   bool _isActionLoading = false;
   bool _showRejectionForm = false;
+  bool _hasActioned = false;
 
   @override
   void dispose() {
@@ -72,8 +75,12 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(isReject ? 'Card rejected successfully' : 'Signature applied successfully')),
         );
-        ref.invalidate(reviewActivityCardProvider(widget.id));
-        context.pop();
+        setState(() {
+          _showRejectionForm = false;
+          _hasActioned = true;
+        });
+        ref.refresh(reviewActivityCardProvider(widget.id));
+        ref.invalidate(studentActivityCardsByIdProvider(widget.id));
       }
     } catch (e) {
       if (mounted) {
@@ -90,6 +97,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
     final studentProfileAsync = ref.watch(userProfileByIdProvider(widget.id));
     final allStudentCardsAsync = ref.watch(studentActivityCardsByIdProvider(widget.id));
     final activeRole = ref.watch(workspaceProvider).activeRole;
+    final currentUserProfile = ref.watch(userProfileProvider).value;
 
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 768;
@@ -98,15 +106,28 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
       vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
     );
 
-    return LoadingOverlay(
-      isLoading: _isActionLoading,
-      child: DashboardLayout(
-        title: 'Review Activity Card',
-        onBack: () => context.pop(),
-        child: Padding(
-          padding: padding,
-          child: activityCardAsync.when(
-            data: (activityCard) {
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop && _hasActioned) {
+          ref.invalidate(organizationActivityCardsProvider);
+        }
+      },
+      child: LoadingOverlay(
+        isLoading: _isActionLoading,
+        child: DashboardLayout(
+          title: 'Review Activity Card',
+          onBack: () {
+            if (_hasActioned) {
+              ref.invalidate(organizationActivityCardsProvider);
+            }
+            context.pop();
+          },
+          child: Padding(
+            padding: padding,
+            child: activityCardAsync.when(
+              skipLoadingOnRefresh: true,
+              skipLoadingOnReload: true,
+              data: (activityCard) {
               if (activityCard == null) {
                 return const Center(child: Text('Activity Card not found for this student in your organization.'));
               }
@@ -214,6 +235,25 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   
               return studentProfileAsync.when(
                 data: (studentProfile) {
+                  final roleName = activeRole?.roleName.toLowerCase().trim();
+                  if (currentUserProfile != null && studentProfile != null) {
+                    if (roleName == 'program head') {
+                      if (currentUserProfile.programId != studentProfile.programId) {
+                        return _buildAccessDeniedWidget(
+                          context,
+                          'Access Denied: This student is not enrolled in your program (${currentUserProfile.programName ?? 'your program'}).',
+                        );
+                      }
+                    } else if (roleName == 'faculty dean' || roleName == 'dean') {
+                      if (currentUserProfile.facultyId != studentProfile.facultyId) {
+                        return _buildAccessDeniedWidget(
+                          context,
+                          'Access Denied: This student is not under your faculty (${currentUserProfile.facultyName ?? 'your faculty'}).',
+                        );
+                      }
+                    }
+                  }
+
                   return SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,6 +414,8 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                             ),
                           ),
                         const SizedBox(height: AppSpacing.xxl),
+                        _buildOrganizationInfo(ref, activityCard),
+                        const SizedBox(height: AppSpacing.xxl),
                       ],
                     ),
                   );
@@ -386,6 +428,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
             error: (err, _) => Center(child: Text('Error: $err')),
           ),
         ),
+      ),
       ),
     );
   }
@@ -572,9 +615,37 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                       spacing: AppSpacing.md,
                       runSpacing: AppSpacing.xs,
                       children: [
-                        Text(
-                          'Student ID: ${studentProfile?.schoolId ?? 'N/A'}',
-                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                        InkWell(
+                          onTap: studentProfile?.schoolId != null
+                              ? () async {
+                                  await Clipboard.setData(ClipboardData(text: studentProfile!.schoolId!));
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Student ID copied to clipboard'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              : null,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Student ID: ${studentProfile?.schoolId ?? 'N/A'}',
+                                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                                ),
+                                if (studentProfile?.schoolId != null) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.copy_rounded, size: 12, color: AppColors.textGrey),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                         Text(
                           'User ID (Sanctions Basis): ${studentProfile?.id ?? widget.id}',
@@ -589,6 +660,76 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
               _buildQuickCompliance(card),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccessDeniedWidget(BuildContext context, String message) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: AppColors.error,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'Restricted Access',
+              style: AppTextStyles.headlineMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textGrey,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => context.pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Go Back'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -769,6 +910,111 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOrganizationInfo(WidgetRef ref, ActivityCard card) {
+    final clearanceOrgIdAsync = ref.watch(clearanceOrgProvider(card.id));
+    return clearanceOrgIdAsync.when(
+      data: (orgId) {
+        final targetOrgId = orgId ?? card.organizationId;
+        final orgAsync = ref.watch(organizationProvider(targetOrgId));
+        return orgAsync.when(
+          data: (org) {
+            if (org == null) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 6.0),
+                  child: Text(
+                    'ORGANIZATION DETAILS',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textGrey,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                    boxShadow: [
+                       BoxShadow(
+                         color: Colors.black.withValues(alpha: 0.08),
+                         blurRadius: 16,
+                         offset: const Offset(0, 6),
+                       ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            width: 1,
+                          ),
+                        ),
+                        child: org.logoUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  org.logoUrl!, 
+                                  width: 44, 
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                                ),
+                              )
+                            : const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              org.name, 
+                              style: AppTextStyles.headlineSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textGrey),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${card.academicYear} • ${card.semester}', 
+                                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.textGrey),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: FlickrLoader()),
+          error: (err, _) => Center(child: Text('Error loading organization details: $err')),
+        );
+      },
+      loading: () => const Center(child: FlickrLoader()),
+      error: (err, _) => Center(child: Text('Error loading clearance details: $err')),
     );
   }
 }

@@ -4,7 +4,6 @@ Home
 Tasks
 Calendar
 Schedule
-Notifications
 
 WORKSPACE: ACES
 Role: Senator
@@ -17,6 +16,7 @@ Governance
    Resolutions
 
 Operations
+   Events
    Announcements
 
 Insights

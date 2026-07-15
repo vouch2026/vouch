@@ -7,6 +7,8 @@ class ActivityCardMockData {
     ActivityCard(
       id: 'ac-1',
       studentId: 'student-123',
+      studentIdNumber: '2025-0001',
+      studentFaculty: 'FaCET',
       organizationId: 'aces-001',
       organizationName: 'ACES',
       organizationType: 'Faculty-Based Organization',
@@ -14,6 +16,7 @@ class ActivityCardMockData {
       semester: '1st Semester',
       status: ActivityCardStatus.partiallySigned,
       completionPercentage: 0.75,
+      organizationCode: 'ACES',
       events: [
         ActivityCardEvent(
           id: 'ace-1',
@@ -22,7 +25,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 9, 15),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary Maria',
+          verifiedBy: 'ACES SECRETARY',
           completedAt: DateTime(2025, 9, 15, 14, 30),
         ),
         ActivityCardEvent(
@@ -32,7 +35,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 10, 5),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary Maria',
+          verifiedBy: 'ACES SECRETARY',
           completedAt: DateTime(2025, 10, 5, 16, 00),
         ),
         ActivityCardEvent(
@@ -54,6 +57,7 @@ class ActivityCardMockData {
           isPaid: true,
           paidAt: DateTime(2025, 8, 15),
           referenceNumber: 'REF-12345',
+          verifiedBy: 'ACES TREASURER',
         ),
         ActivityCardFee(
           id: 'acf-2',
@@ -64,6 +68,7 @@ class ActivityCardMockData {
           isPaid: true,
           paidAt: DateTime(2025, 9, 10),
           referenceNumber: 'REF-67890',
+          verifiedBy: 'ACES TREASURER',
         ),
       ],
       sanctions: [],
@@ -103,6 +108,8 @@ class ActivityCardMockData {
     ActivityCard(
       id: 'ac-2',
       studentId: 'student-123',
+      studentIdNumber: '2025-0001',
+      studentFaculty: 'FaCET',
       organizationId: 'usc-001',
       organizationName: 'USC',
       organizationType: 'University-Wide Organization',
@@ -110,6 +117,7 @@ class ActivityCardMockData {
       semester: '1st Semester',
       status: ActivityCardStatus.pending,
       completionPercentage: 0.40,
+      organizationCode: 'USC',
       events: [
         ActivityCardEvent(
           id: 'ace-usc-1',
@@ -118,7 +126,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 8, 20),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary USC',
+          verifiedBy: null,
           completedAt: DateTime(2025, 8, 20, 20, 00),
         ),
         ActivityCardEvent(
@@ -165,6 +173,59 @@ class ActivityCardMockData {
           roleName: 'Adviser',
           status: SignatureStatus.locked,
           order: 4,
+        ),
+      ],
+    ),
+    ActivityCard(
+      id: 'ac-3',
+      studentId: 'student-456',
+      studentIdNumber: '2025-0002',
+      studentName: 'Jane Smith',
+      studentFaculty: 'FaCET',
+      studentProgram: 'BSCS',
+      organizationId: 'aces-001',
+      organizationName: 'ACES',
+      organizationType: 'Faculty-Based Organization',
+      academicYear: 'AY 2025–2026',
+      semester: '1st Semester',
+      status: ActivityCardStatus.cleared,
+      completionPercentage: 1.0,
+      clearedAt: DateTime(2026, 7, 10, 14, 30),
+      organizationCode: 'ACES',
+      events: [
+        ActivityCardEvent(
+          id: 'ace-3-1',
+          eventId: 'e-1',
+          title: 'ACES General Assembly',
+          category: 'Mandatory',
+          date: DateTime(2025, 9, 15),
+          attendanceStatus: AttendanceStatus.completed,
+          verifiedBy: 'ACES SECRETARY',
+          completedAt: DateTime(2025, 9, 15, 14, 30),
+        ),
+      ],
+      fees: [
+        ActivityCardFee(
+          id: 'acf-3-1',
+          feeId: 'f-1',
+          title: 'Membership Fee',
+          category: 'Mandatory',
+          amount: 150.0,
+          isPaid: true,
+          paidAt: DateTime(2025, 8, 15),
+          referenceNumber: 'REF-12345',
+        ),
+      ],
+      sanctions: [],
+      signatures: [
+        ActivityCardSignature(
+          id: 'acs-3-1',
+          roleName: 'Secretary',
+          signedByUserId: 'sec-001',
+          signedByUserName: 'Maria Santos',
+          status: SignatureStatus.signed,
+          signedAt: DateTime(2025, 11, 25),
+          order: 1,
         ),
       ],
     ),
