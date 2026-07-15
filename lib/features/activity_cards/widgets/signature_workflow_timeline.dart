@@ -28,6 +28,7 @@ class SignatureWorkflowTimeline extends ConsumerWidget {
     }
     // Sort signatures by order
     final sortedSignatures = [...signatures]..sort((a, b) => a.order.compareTo(b.order));
+    final rejectedSignature = sortedSignatures.where((s) => s.status == SignatureStatus.rejected).firstOrNull;
 
     final activeTerm = ref.watch(activeTermProvider).valueOrNull;
     final activeOrg = organizationId != null
@@ -112,6 +113,69 @@ class SignatureWorkflowTimeline extends ConsumerWidget {
             ),
           ),
         ),
+        if (rejectedSignature != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: useHorizontalPadding ? AppSpacing.lg : 0),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'Rejection Card',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  RichText(
+                    text: TextSpan(
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDark),
+                      children: [
+                        const TextSpan(
+                          text: 'Rejected by: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: rejectedSignature.roleName,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  RichText(
+                    text: TextSpan(
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDark),
+                      children: [
+                        const TextSpan(
+                          text: 'Reason: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: rejectedSignature.rejectionReason ?? '—',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

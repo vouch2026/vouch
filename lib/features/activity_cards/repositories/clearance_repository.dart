@@ -162,11 +162,32 @@ class ClearanceRepository {
     final existingRequest = existingRequestList.isEmpty ? null : existingRequestList.first;
 
     if (existingRequest != null) {
-      if (existingRequest['status'] == 'Pending' || existingRequest['status'] == 'Cleared') {
+      final String currentStatus = existingRequest['status'];
+      if (currentStatus == 'Pending' || currentStatus == 'Cleared') {
         throw Exception('A clearance request already exists for this organization.');
       }
-      // If Rejected, we delete the old one to reset the signature workflow
-      await _client.from('activity_card_clearance_requests').delete().eq('id', existingRequest['id']);
+      
+      if (currentStatus == 'Rejected') {
+        // 1. Reset the rejected signature slot(s) back to Pending
+        await _client
+            .from('activity_card_clearance_signatures')
+            .update({
+              'status': 'Pending',
+              'signed_by_user_id': null,
+              'signed_at': null,
+              'remarks': null,
+            })
+            .eq('clearance_request_id', existingRequest['id'])
+            .eq('status', 'Rejected');
+            
+        // 2. Update request status back to Pending
+        await _client
+            .from('activity_card_clearance_requests')
+            .update({'status': 'Pending'})
+            .eq('id', existingRequest['id']);
+            
+        return; // Return early, do not insert a duplicate request
+      }
     }
 
     // Create the request
