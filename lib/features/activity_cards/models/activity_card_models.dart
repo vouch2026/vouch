@@ -51,6 +51,7 @@ class ActivityCard {
   final List<ActivityCardSanction> sanctions;
   final List<ActivityCardSignature> signatures;
   final DateTime? clearedAt;
+  final String organizationCode;
 
   const ActivityCard({
     required this.id,
@@ -71,6 +72,7 @@ class ActivityCard {
     required this.sanctions,
     required this.signatures,
     this.clearedAt,
+    required this.organizationCode,
   });
 }
 
@@ -119,6 +121,7 @@ class ActivityCardFee {
   final bool isPaid;
   final DateTime? paidAt;
   final String? referenceNumber;
+  final String? verifiedBy;
 
   const ActivityCardFee({
     required this.id,
@@ -129,6 +132,7 @@ class ActivityCardFee {
     required this.isPaid,
     this.paidAt,
     this.referenceNumber,
+    this.verifiedBy,
   });
 }
 

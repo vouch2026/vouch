@@ -14,6 +14,7 @@ class ActivityCardMockData {
       semester: '1st Semester',
       status: ActivityCardStatus.partiallySigned,
       completionPercentage: 0.75,
+      organizationCode: 'ACES',
       events: [
         ActivityCardEvent(
           id: 'ace-1',
@@ -22,7 +23,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 9, 15),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary Maria',
+          verifiedBy: 'ACES SECRETARY',
           completedAt: DateTime(2025, 9, 15, 14, 30),
         ),
         ActivityCardEvent(
@@ -32,7 +33,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 10, 5),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary Maria',
+          verifiedBy: 'ACES SECRETARY',
           completedAt: DateTime(2025, 10, 5, 16, 00),
         ),
         ActivityCardEvent(
@@ -54,6 +55,7 @@ class ActivityCardMockData {
           isPaid: true,
           paidAt: DateTime(2025, 8, 15),
           referenceNumber: 'REF-12345',
+          verifiedBy: 'ACES TREASURER',
         ),
         ActivityCardFee(
           id: 'acf-2',
@@ -64,6 +66,7 @@ class ActivityCardMockData {
           isPaid: true,
           paidAt: DateTime(2025, 9, 10),
           referenceNumber: 'REF-67890',
+          verifiedBy: 'ACES TREASURER',
         ),
       ],
       sanctions: [],
@@ -110,6 +113,7 @@ class ActivityCardMockData {
       semester: '1st Semester',
       status: ActivityCardStatus.pending,
       completionPercentage: 0.40,
+      organizationCode: 'USC',
       events: [
         ActivityCardEvent(
           id: 'ace-usc-1',
@@ -118,7 +122,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 8, 20),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary USC',
+          verifiedBy: null,
           completedAt: DateTime(2025, 8, 20, 20, 00),
         ),
         ActivityCardEvent(
@@ -181,6 +185,7 @@ class ActivityCardMockData {
       status: ActivityCardStatus.cleared,
       completionPercentage: 1.0,
       clearedAt: DateTime(2026, 7, 10, 14, 30),
+      organizationCode: 'ACES',
       events: [
         ActivityCardEvent(
           id: 'ace-3-1',
@@ -189,7 +194,7 @@ class ActivityCardMockData {
           category: 'Mandatory',
           date: DateTime(2025, 9, 15),
           attendanceStatus: AttendanceStatus.completed,
-          verifiedBy: 'Secretary Maria',
+          verifiedBy: 'ACES SECRETARY',
           completedAt: DateTime(2025, 9, 15, 14, 30),
         ),
       ],
