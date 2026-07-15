@@ -230,18 +230,6 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                         }),
                       ],
                     ],
-                    const _SectionDivider(),
-                    const _SidebarHeader(label: 'VOUCH'),
-                    const _SidebarItem(
-                      icon: Icons.help_outline_rounded,
-                      label: 'Help & Support',
-                      path: RoutePaths.help,
-                    ),
-                    const _SidebarItem(
-                      icon: Icons.info_outline_rounded,
-                      label: 'About Us',
-                      path: RoutePaths.aboutUs,
-                    ),
                     const SizedBox(height: AppSpacing.md),
                   ],
                 ),
