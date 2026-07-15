@@ -146,7 +146,8 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     // Exclude cleared students from Pending tab
                     if (card.status == ActivityCardStatus.cleared) return false;
   
-                    final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
+                    final matchesSearch = (card.studentName?.toLowerCase().contains(query) ?? false) ||
+                        (card.studentIdNumber?.toLowerCase().contains(query) ?? false);
                     if (!matchesSearch) return false;
 
                     // Status Filter Logic
@@ -190,7 +191,8 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     // Only show cleared students in Cleared tab
                     if (card.status != ActivityCardStatus.cleared) return false;
 
-                    final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
+                    final matchesSearch = (card.studentName?.toLowerCase().contains(query) ?? false) ||
+                        (card.studentIdNumber?.toLowerCase().contains(query) ?? false);
                     if (!matchesSearch) return false;
 
                     // Date range filter
@@ -575,6 +577,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                       columnSpacing: AppSpacing.lg,
                       headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                       columns: const [
+                        DataColumn(label: Text('ID NO.', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -612,8 +615,11 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
         ? DateFormat('MMM dd, yyyy hh:mm a').format(card.clearedAt!.toLocal())
         : 'N/A';
 
+    final studentIdNo = card.studentIdNumber ?? 'N/A';
+
     return DataRow(
       cells: [
+        DataCell(Text(studentIdNo, style: const TextStyle(fontWeight: FontWeight.w500))),
         DataCell(
           Row(
             children: [
@@ -762,6 +768,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                   columnSpacing: AppSpacing.lg,
                   headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                   columns: const [
+                    DataColumn(label: Text('ID NO.', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -792,8 +799,11 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     final paidFees = card.fees.where((f) => f.isPaid).length;
     final feesDisplay = '$paidFees/$totalFees';
 
+    final studentIdNo = card.studentIdNumber ?? 'N/A';
+
     return DataRow(
       cells: [
+        DataCell(Text(studentIdNo, style: const TextStyle(fontWeight: FontWeight.w500))),
         DataCell(
           Row(
             children: [

@@ -490,6 +490,7 @@ class ActivityCardRepository {
         if (student != null) {
           normalizedMembers.add({
             'student_id': student['id'],
+            'student_id_number': student['student_id_number'],
             'student_name': '${student['first_name']} ${student['last_name']}',
             'program_name': student['program']?['name'] ?? 'N/A',
             'is_officer': ((m['roles']?['hierarchy_level'] ?? 5) as num) > 5,
@@ -515,6 +516,7 @@ class ActivityCardRepository {
       for (var u in usersList) {
         normalizedMembers.add({
           'student_id': u['id'],
+          'student_id_number': u['student_id_number'],
           'student_name': '${u['first_name']} ${u['last_name']}',
           'program_name': u['program']?['name'] ?? 'N/A',
           'is_officer': false,
@@ -713,6 +715,7 @@ class ActivityCardRepository {
       cards.add(ActivityCard(
         id: studentClearance?['id'] ?? 'temp-$studentId',
         studentId: studentId,
+        studentIdNumber: member['student_id_number'] as String?,
         studentName: studentName,
         studentProgram: programName,
         organizationId: organizationId,

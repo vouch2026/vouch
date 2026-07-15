@@ -7,6 +7,7 @@ class ActivityCardMockData {
     ActivityCard(
       id: 'ac-1',
       studentId: 'student-123',
+      studentIdNumber: '2025-0001',
       organizationId: 'aces-001',
       organizationName: 'ACES',
       organizationType: 'Faculty-Based Organization',
@@ -106,6 +107,7 @@ class ActivityCardMockData {
     ActivityCard(
       id: 'ac-2',
       studentId: 'student-123',
+      studentIdNumber: '2025-0001',
       organizationId: 'usc-001',
       organizationName: 'USC',
       organizationType: 'University-Wide Organization',
@@ -175,6 +177,7 @@ class ActivityCardMockData {
     ActivityCard(
       id: 'ac-3',
       studentId: 'student-456',
+      studentIdNumber: '2025-0002',
       studentName: 'Jane Smith',
       studentProgram: 'BS Computer Science',
       organizationId: 'aces-001',
