@@ -8,6 +8,7 @@ import '../../../../shared/layouts/dashboard_layout.dart';
 import '../../../users/widgets/user_management_header.dart';
 import '../../../activity_cards/models/activity_card_models.dart';
 import '../../../activity_cards/providers/activity_card_provider.dart';
+import '../../../organizations/providers/workspace_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../routes/route_paths.dart';
 import 'package:intl/intl.dart';
@@ -21,7 +22,7 @@ class GovernorActivityCardsPage extends ConsumerStatefulWidget {
 
 class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCardsPage> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedStatus = 'All';
+  String _selectedStatus = 'Needs Action';
   late TabController _tabController;
 
   // Cleared clearances filters and pagination state
@@ -63,6 +64,10 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
       horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
       vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
     );
+
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole;
+    final orgType = workspace.selectedOrganization?.type;
 
     final cardsAsync = ref.watch(organizationActivityCardsProvider);
 
@@ -142,12 +147,38 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     if (card.status == ActivityCardStatus.cleared) return false;
   
                     final matchesSearch = card.studentName?.toLowerCase().contains(query) ?? false;
-                    final matchesStatus = _selectedStatus == 'All' || 
-                        card.status.name.toLowerCase() == _selectedStatus.toLowerCase().replaceAll(' ', '');
-                    return matchesSearch && matchesStatus;
+                    if (!matchesSearch) return false;
+
+                    // Status Filter Logic
+                    if (_selectedStatus == 'Needs Action') {
+                      final roleName = activeRole?.roleName.toLowerCase().trim();
+                      if (roleName == 'secretary') {
+                        return card.status == ActivityCardStatus.secretaryReview;
+                      } else if (roleName == 'treasurer') {
+                        return card.status == ActivityCardStatus.treasurerReview;
+                      } else if (roleName == 'governor' || roleName == 'president') {
+                        return card.status == ActivityCardStatus.governorReview;
+                      } else if (roleName == 'adviser' || roleName == 'instructor') {
+                        return card.status == ActivityCardStatus.adviserReview;
+                      } else if (roleName == 'program head') {
+                        return card.status == ActivityCardStatus.programHeadReview;
+                      } else if (roleName == 'faculty dean' || roleName == 'dean') {
+                        return card.status == ActivityCardStatus.deanReview;
+                      }
+                      return true; // Fallback
+                    } else if (_selectedStatus == 'All') {
+                      return true;
+                    } else {
+                      // Map selected label to enum key (e.g. Governor Review or President Review -> governorReview)
+                      String normalizedSelected = _selectedStatus;
+                      if (_selectedStatus == 'Governor Review' || _selectedStatus == 'President Review') {
+                        normalizedSelected = 'Governor Review';
+                      }
+                      return card.status.name.toLowerCase() == normalizedSelected.toLowerCase().replaceAll(' ', '');
+                    }
                   }).toList();
                   
-                  return _buildClearanceList(context, filteredCards);
+                  return _buildClearanceList(context, filteredCards, orgType);
                 },
                 loading: () => const Center(child: FlickrLoader()),
                 error: (err, stack) => Center(child: Text('Error: $err')),
@@ -224,17 +255,17 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     );
   }
 
-  Widget _buildClearanceList(BuildContext context, List<ActivityCard> cards) {
+  Widget _buildClearanceList(BuildContext context, List<ActivityCard> cards, String? orgType) {
     return Column(
       children: [
-        _buildFilters(),
+        _buildFilters(orgType),
         const SizedBox(height: AppSpacing.lg),
-        Expanded(child: _buildStudentsTable(cards)),
+        Expanded(child: _buildStudentsTable(cards, orgType)),
       ],
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(String? orgType) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 600;
@@ -256,7 +287,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             SizedBox(width: isCompact ? 0 : AppSpacing.md, height: isCompact ? AppSpacing.md : 0),
             SizedBox(
               width: isCompact ? double.infinity : null,
-              child: _buildStatusDropdown(),
+              child: _buildStatusDropdown(orgType),
             ),
           ],
         );
@@ -264,7 +295,20 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     );
   }
 
-  Widget _buildStatusDropdown() {
+  Widget _buildStatusDropdown(String? orgType) {
+    final govPresLabel = orgType == 'faculty-based' ? 'Governor Review' : 'President Review';
+    final dropdownItems = [
+      'Needs Action',
+      'All',
+      'Secretary Review',
+      'Treasurer Review',
+      govPresLabel,
+      'Adviser Review',
+      'Program Head Review',
+      'Dean Review',
+      'Rejected'
+    ];
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
@@ -274,7 +318,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedStatus == 'Cleared' ? 'All' : _selectedStatus,
-          items: ['All', 'Partially Signed', 'Pending', 'Rejected']
+          items: dropdownItems
               .map((s) => DropdownMenuItem(value: s, child: Text(s)))
               .toList(),
           onChanged: (val) => setState(() => _selectedStatus = val!),
@@ -694,7 +738,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     );
   }
 
-  Widget _buildStudentsTable(List<ActivityCard> cards) {
+  Widget _buildStudentsTable(List<ActivityCard> cards, String? orgType) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.lg),
       elevation: 0,
@@ -724,7 +768,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
-                  rows: cards.map((card) => _buildDataRow(card)).toList(),
+                  rows: cards.map((card) => _buildDataRow(card, orgType)).toList(),
                 ),
               ),
             ),
@@ -734,7 +778,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     );
   }
 
-  DataRow _buildDataRow(ActivityCard card) {
+  DataRow _buildDataRow(ActivityCard card, String? orgType) {
     final name = card.studentName ?? 'Unknown Student';
     final program = card.studentProgram ?? 'N/A';
     
@@ -797,7 +841,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             ],
           ),
         ),
-        DataCell(_buildStatusBadge(card.status)),
+        DataCell(_buildStatusBadge(card.status, orgType)),
         DataCell(
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
@@ -815,7 +859,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     return Colors.red;
   }
 
-  Widget _buildStatusBadge(ActivityCardStatus status) {
+  Widget _buildStatusBadge(ActivityCardStatus status, String? orgType) {
     Color color;
     String label;
 
@@ -842,7 +886,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
         break;
       case ActivityCardStatus.governorReview:
         color = Colors.amber.shade700;
-        label = 'GOVERNOR REVIEW';
+        label = orgType == 'faculty-based' ? 'GOVERNOR REVIEW' : 'PRESIDENT REVIEW';
         break;
       case ActivityCardStatus.adviserReview:
         color = Colors.amber.shade700;
