@@ -579,6 +579,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                       columns: const [
                         DataColumn(label: Text('ID NO.', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('FACULTY', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('FEES', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -633,6 +634,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             ],
           ),
         ),
+        DataCell(Text(card.studentFaculty ?? 'N/A')),
         DataCell(Text(program)),
         DataCell(
           Row(
@@ -770,6 +772,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                   columns: const [
                     DataColumn(label: Text('ID NO.', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('STUDENT', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('FACULTY', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('PROGRAM', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('EVENTS', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('FEES', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -817,6 +820,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
             ],
           ),
         ),
+        DataCell(Text(card.studentFaculty ?? 'N/A')),
         DataCell(Text(program)),
         DataCell(
           Row(

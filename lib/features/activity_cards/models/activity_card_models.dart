@@ -37,6 +37,7 @@ class ActivityCard {
   final String studentId;
   final String? studentIdNumber;
   final String? studentName;
+  final String? studentFaculty;
   final String? studentProgram;
   final String organizationId;
   final String organizationName;
@@ -59,6 +60,7 @@ class ActivityCard {
     required this.studentId,
     this.studentIdNumber,
     this.studentName,
+    this.studentFaculty,
     this.studentProgram,
     required this.organizationId,
     required this.organizationName,

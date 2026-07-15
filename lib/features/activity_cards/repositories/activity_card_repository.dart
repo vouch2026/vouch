@@ -478,7 +478,8 @@ class ActivityCardRepository {
               first_name,
               last_name,
               student_id_number,
-              program:programs!users_program_id_fkey (name)
+              program:programs!users_program_id_fkey (code),
+              faculty:faculties!users_faculty_id_fkey (code)
             )
           ''')
           .eq('organization_id', organizationId)
@@ -492,7 +493,8 @@ class ActivityCardRepository {
             'student_id': student['id'],
             'student_id_number': student['student_id_number'],
             'student_name': '${student['first_name']} ${student['last_name']}',
-            'program_name': student['program']?['name'] ?? 'N/A',
+            'program_name': student['program']?['code'] ?? 'N/A',
+            'faculty_name': student['faculty']?['code'] ?? 'N/A',
             'is_officer': ((m['roles']?['hierarchy_level'] ?? 5) as num) > 5,
           });
         }
@@ -507,20 +509,29 @@ class ActivityCardRepository {
             first_name,
             last_name,
             student_id_number,
-            program:programs!users_program_id_fkey (name)
+            faculty_id,
+            program_id,
+            program:programs!users_program_id_fkey (code, faculty_id),
+            faculty:faculties!users_faculty_id_fkey (code)
           ''')
-          .eq(isProgram ? 'program_id' : 'faculty_id', organizationId)
           .eq('account_status', 'active');
 
       final usersList = usersResponse as List;
       for (var u in usersList) {
-        normalizedMembers.add({
-          'student_id': u['id'],
-          'student_id_number': u['student_id_number'],
-          'student_name': '${u['first_name']} ${u['last_name']}',
-          'program_name': u['program']?['name'] ?? 'N/A',
-          'is_officer': false,
-        });
+        final matches = isProgram
+            ? (u['program_id'] == organizationId)
+            : (u['faculty_id'] == organizationId || u['program']?['faculty_id'] == organizationId);
+            
+        if (matches) {
+          normalizedMembers.add({
+            'student_id': u['id'],
+            'student_id_number': u['student_id_number'],
+            'student_name': '${u['first_name']} ${u['last_name']}',
+            'program_name': u['program']?['code'] ?? 'N/A',
+            'faculty_name': u['faculty']?['code'] ?? 'N/A',
+            'is_officer': false,
+          });
+        }
       }
     }
 
@@ -717,6 +728,7 @@ class ActivityCardRepository {
         studentId: studentId,
         studentIdNumber: member['student_id_number'] as String?,
         studentName: studentName,
+        studentFaculty: member['faculty_name'] as String?,
         studentProgram: programName,
         organizationId: organizationId,
         organizationName: orgName ?? 'N/A',

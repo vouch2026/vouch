@@ -96,6 +96,7 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
     final studentProfileAsync = ref.watch(userProfileByIdProvider(widget.id));
     final allStudentCardsAsync = ref.watch(studentActivityCardsByIdProvider(widget.id));
     final activeRole = ref.watch(workspaceProvider).activeRole;
+    final currentUserProfile = ref.watch(userProfileProvider).value;
 
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 768;
@@ -233,6 +234,25 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   
               return studentProfileAsync.when(
                 data: (studentProfile) {
+                  final roleName = activeRole?.roleName.toLowerCase().trim();
+                  if (currentUserProfile != null && studentProfile != null) {
+                    if (roleName == 'program head') {
+                      if (currentUserProfile.programId != studentProfile.programId) {
+                        return _buildAccessDeniedWidget(
+                          context,
+                          'Access Denied: This student is not enrolled in your program (${currentUserProfile.programName ?? 'your program'}).',
+                        );
+                      }
+                    } else if (roleName == 'faculty dean' || roleName == 'dean') {
+                      if (currentUserProfile.facultyId != studentProfile.facultyId) {
+                        return _buildAccessDeniedWidget(
+                          context,
+                          'Access Denied: This student is not under your faculty (${currentUserProfile.facultyName ?? 'your faculty'}).',
+                        );
+                      }
+                    }
+                  }
+
                   return SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -637,6 +657,76 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
               _buildQuickCompliance(card),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccessDeniedWidget(BuildContext context, String message) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: AppColors.error,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'Restricted Access',
+              style: AppTextStyles.headlineMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textGrey,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => context.pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Go Back'),
+              ),
+            ),
+          ],
         ),
       ),
     );
