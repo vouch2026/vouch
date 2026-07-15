@@ -18,6 +18,7 @@ import '../../../organizations/providers/workspace_provider.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
+import '../../../organizations/providers/organization_provider.dart';
 
 class GovernorActivityCardReviewPage extends ConsumerStatefulWidget {
   final String id; // This is the studentId passed from the list
@@ -412,6 +413,8 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, fontStyle: FontStyle.italic),
                             ),
                           ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        _buildOrganizationInfo(ref, activityCard),
                         const SizedBox(height: AppSpacing.xxl),
                       ],
                     ),
@@ -907,6 +910,111 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOrganizationInfo(WidgetRef ref, ActivityCard card) {
+    final clearanceOrgIdAsync = ref.watch(clearanceOrgProvider(card.id));
+    return clearanceOrgIdAsync.when(
+      data: (orgId) {
+        final targetOrgId = orgId ?? card.organizationId;
+        final orgAsync = ref.watch(organizationProvider(targetOrgId));
+        return orgAsync.when(
+          data: (org) {
+            if (org == null) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 6.0),
+                  child: Text(
+                    'ORGANIZATION DETAILS',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textGrey,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                    boxShadow: [
+                       BoxShadow(
+                         color: Colors.black.withValues(alpha: 0.08),
+                         blurRadius: 16,
+                         offset: const Offset(0, 6),
+                       ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            width: 1,
+                          ),
+                        ),
+                        child: org.logoUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  org.logoUrl!, 
+                                  width: 44, 
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                                ),
+                              )
+                            : const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              org.name, 
+                              style: AppTextStyles.headlineSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textGrey),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${card.academicYear} • ${card.semester}', 
+                                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.textGrey),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: FlickrLoader()),
+          error: (err, _) => Center(child: Text('Error loading organization details: $err')),
+        );
+      },
+      loading: () => const Center(child: FlickrLoader()),
+      error: (err, _) => Center(child: Text('Error loading clearance details: $err')),
     );
   }
 }
