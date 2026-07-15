@@ -1,5 +1,6 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -591,9 +592,37 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
                       spacing: AppSpacing.md,
                       runSpacing: AppSpacing.xs,
                       children: [
-                        Text(
-                          'Student ID: ${studentProfile?.schoolId ?? 'N/A'}',
-                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                        InkWell(
+                          onTap: studentProfile?.schoolId != null
+                              ? () async {
+                                  await Clipboard.setData(ClipboardData(text: studentProfile!.schoolId!));
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Student ID copied to clipboard'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              : null,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Student ID: ${studentProfile?.schoolId ?? 'N/A'}',
+                                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                                ),
+                                if (studentProfile?.schoolId != null) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.copy_rounded, size: 12, color: AppColors.textGrey),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                         Text(
                           'User ID (Sanctions Basis): ${studentProfile?.id ?? widget.id}',
