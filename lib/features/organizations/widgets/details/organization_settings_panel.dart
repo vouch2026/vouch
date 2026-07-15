@@ -463,134 +463,136 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                 ),
               ]),
 
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle('Clearance Settings'),
-              const SizedBox(height: AppSpacing.md),
-              _buildInfoCard([
-                _buildInfoTile(
-                  label: 'Clearance Period',
-                  value: _getClearancePeriodDisplay(activeOrg),
-                  icon: LucideIcons.calendar,
-                  canEdit: canEdit,
-                  onEdit: () => _showClearancePeriodDialog(context, ref, activeOrg),
-                ),
-                _buildSwitchTile(
-                  label: 'Require Adviser Signature',
-                  subtitle: hasClearanceStarted
-                      ? 'Adviser signature (Locked: clearance period has started)'
-                      : 'Adviser final signature required on activity card',
-                  value: activeOrg.requiresAdviserSignature,
-                  icon: LucideIcons.signature,
-                  onChanged: (canEdit && !hasClearanceStarted)
-                      ? (val) async {
-                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: activeOrg.id,
-                                code: activeOrg.code,
-                                requiresAdviserSignature: val,
-                              );
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Adviser signature requirement ${val ? 'enabled' : 'disabled'}')),
-                            );
-                          }
-                        }
-                      : null,
-                ),
-                if (activeOrg.type == 'program-based')
+              if (isGovernor) ...[
+                const SizedBox(height: AppSpacing.xl),
+                _buildSectionTitle('Clearance Settings'),
+                const SizedBox(height: AppSpacing.md),
+                _buildInfoCard([
+                  _buildInfoTile(
+                    label: 'Clearance Period',
+                    value: _getClearancePeriodDisplay(activeOrg),
+                    icon: LucideIcons.calendar,
+                    canEdit: canEdit,
+                    onEdit: () => _showClearancePeriodDialog(context, ref, activeOrg),
+                  ),
                   _buildSwitchTile(
-                    label: 'Require Program Head Signature',
+                    label: 'Require Adviser Signature',
                     subtitle: hasClearanceStarted
-                        ? 'Program Head signature (Locked: clearance period has started)'
-                        : 'Program Head final signature required on activity card',
-                    value: activeOrg.requiresProgramHeadSignature,
-                    icon: LucideIcons.userCheck,
+                        ? 'Adviser signature (Locked: clearance period has started)'
+                        : 'Adviser final signature required on activity card',
+                    value: activeOrg.requiresAdviserSignature,
+                    icon: LucideIcons.signature,
                     onChanged: (canEdit && !hasClearanceStarted)
                         ? (val) async {
                             final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                                   id: activeOrg.id,
                                   code: activeOrg.code,
-                                  requiresProgramHeadSignature: val,
+                                  requiresAdviserSignature: val,
                                 );
                             if (success && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Program Head signature requirement ${val ? 'enabled' : 'disabled'}')),
+                                SnackBar(content: Text('Adviser signature requirement ${val ? 'enabled' : 'disabled'}')),
                               );
                             }
                           }
                         : null,
                   ),
-                if (activeOrg.type == 'faculty-based')
+                  if (activeOrg.type == 'program-based')
+                    _buildSwitchTile(
+                      label: 'Require Program Head Signature',
+                      subtitle: hasClearanceStarted
+                          ? 'Program Head signature (Locked: clearance period has started)'
+                          : 'Program Head final signature required on activity card',
+                      value: activeOrg.requiresProgramHeadSignature,
+                      icon: LucideIcons.userCheck,
+                      onChanged: (canEdit && !hasClearanceStarted)
+                          ? (val) async {
+                              final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                    id: activeOrg.id,
+                                    code: activeOrg.code,
+                                    requiresProgramHeadSignature: val,
+                                  );
+                              if (success && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Program Head signature requirement ${val ? 'enabled' : 'disabled'}')),
+                                );
+                              }
+                            }
+                          : null,
+                    ),
+                  if (activeOrg.type == 'faculty-based')
+                    _buildSwitchTile(
+                      label: 'Require Faculty Dean Signature',
+                      subtitle: hasClearanceStarted
+                          ? 'Faculty Dean signature (Locked: clearance period has started)'
+                          : 'Dean final signature required on activity card',
+                      value: activeOrg.requiresFacultyDeanSignature,
+                      icon: LucideIcons.graduationCap,
+                      onChanged: (canEdit && !hasClearanceStarted)
+                          ? (val) async {
+                              final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                    id: activeOrg.id,
+                                    code: activeOrg.code,
+                                    requiresFacultyDeanSignature: val,
+                                  );
+                              if (success && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Faculty Dean signature requirement ${val ? 'enabled' : 'disabled'}')),
+                                );
+                              }
+                            }
+                          : null,
+                    ),
                   _buildSwitchTile(
-                    label: 'Require Faculty Dean Signature',
-                    subtitle: hasClearanceStarted
-                        ? 'Faculty Dean signature (Locked: clearance period has started)'
-                        : 'Dean final signature required on activity card',
-                    value: activeOrg.requiresFacultyDeanSignature,
-                    icon: LucideIcons.graduationCap,
-                    onChanged: (canEdit && !hasClearanceStarted)
+                    label: 'Allow Member Card Printing',
+                    subtitle: 'Allow student members to print cleared cards',
+                    value: activeOrg.allowMemberCardPrinting,
+                    icon: LucideIcons.printer,
+                    onChanged: canEdit
                         ? (val) async {
                             final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
                                   id: activeOrg.id,
                                   code: activeOrg.code,
-                                  requiresFacultyDeanSignature: val,
+                                  allowMemberCardPrinting: val,
                                 );
                             if (success && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Faculty Dean signature requirement ${val ? 'enabled' : 'disabled'}')),
+                                SnackBar(content: Text('Member card printing ${val ? 'enabled' : 'disabled'}')),
                               );
                             }
                           }
                         : null,
                   ),
-                _buildSwitchTile(
-                  label: 'Allow Member Card Printing',
-                  subtitle: 'Allow student members to print cleared cards',
-                  value: activeOrg.allowMemberCardPrinting,
-                  icon: LucideIcons.printer,
-                  onChanged: canEdit
-                      ? (val) async {
-                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: activeOrg.id,
-                                code: activeOrg.code,
-                                allowMemberCardPrinting: val,
-                              );
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Member card printing ${val ? 'enabled' : 'disabled'}')),
-                            );
-                          }
-                        }
-                      : null,
-                ),
-                _buildSwitchTile(
-                  label: 'Restrict Clearance Request',
-                  subtitle: 'Only allow students to request clearance if mandatory events, fees, and sanctions are cleared',
-                  value: activeOrg.restrictClearanceRequest,
-                  icon: LucideIcons.shieldAlert,
-                  onChanged: canEdit
-                      ? (val) async {
-                          final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
-                                id: activeOrg.id,
-                                code: activeOrg.code,
-                                restrictClearanceRequest: val,
-                              );
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Clearance request restriction ${val ? 'enabled' : 'disabled'}')),
-                            );
-                          }
-                        }
-                      : null,
-                ),
-                if (activeMembership != null && (isGovernor || isSecretaryOrTreasurer))
                   _buildSwitchTile(
-                    label: 'Auto-Sign Clearances (Coming Soon)',
-                    subtitle: 'Auto-sign when student has zero balances/absences',
-                    value: activeMembership.autoSignClearance,
-                    icon: LucideIcons.zap,
-                    onChanged: null,
+                    label: 'Restrict Clearance Request',
+                    subtitle: 'Only allow students to request clearance if mandatory events, fees, and sanctions are cleared',
+                    value: activeOrg.restrictClearanceRequest,
+                    icon: LucideIcons.shieldAlert,
+                    onChanged: canEdit
+                        ? (val) async {
+                            final success = await ref.read(organizationControllerProvider.notifier).updateOrganization(
+                                  id: activeOrg.id,
+                                  code: activeOrg.code,
+                                  restrictClearanceRequest: val,
+                                );
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Clearance request restriction ${val ? 'enabled' : 'disabled'}')),
+                              );
+                            }
+                          }
+                        : null,
                   ),
-              ]),
+                  if (activeMembership != null && (isGovernor || isSecretaryOrTreasurer))
+                    _buildSwitchTile(
+                      label: 'Auto-Sign Clearances (Coming Soon)',
+                      subtitle: 'Auto-sign when student has zero balances/absences',
+                      value: activeMembership.autoSignClearance,
+                      icon: LucideIcons.zap,
+                      onChanged: null,
+                    ),
+                ]),
+              ],
 
               const SizedBox(height: AppSpacing.xl),
               _buildWorkflowDiagramCard(activeOrg),
@@ -875,6 +877,31 @@ class OrganizationSettingsPanel extends ConsumerWidget {
             Text(
               'Visual flowchart representing clearance processing based on current configs.',
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.calendar, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Clearance Period: ${_getClearancePeriodDisplay(activeOrg)}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.xl),
             LayoutBuilder(
