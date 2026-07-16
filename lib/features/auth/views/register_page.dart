@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/widgets/dialogs/document_viewer_dialog.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -42,13 +44,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String? _selectedFacultyId;
   String? _selectedProgramId;
   String? _selectedYearLevel;
+  bool _agreeToTerms = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
-  
 
+  @override
+  void initState() {
+    super.initState();
+    _firstNameController.addListener(_onFieldChanged);
+    _lastNameController.addListener(_onFieldChanged);
+    _schoolIdController.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _passwordController.addListener(_onFieldChanged);
+    _confirmPasswordController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
+    _firstNameController.removeListener(_onFieldChanged);
+    _lastNameController.removeListener(_onFieldChanged);
+    _schoolIdController.removeListener(_onFieldChanged);
+    _emailController.removeListener(_onFieldChanged);
+    _passwordController.removeListener(_onFieldChanged);
+    _confirmPasswordController.removeListener(_onFieldChanged);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _schoolIdController.dispose();
@@ -56,6 +78,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  bool get _isFormValid {
+    return _selectedCampusId != null &&
+        _selectedFacultyId != null &&
+        _selectedProgramId != null &&
+        _selectedYearLevel != null &&
+        _firstNameController.text.trim().isNotEmpty &&
+        _lastNameController.text.trim().isNotEmpty &&
+        _schoolIdController.text.trim().isNotEmpty &&
+        _emailController.text.trim().isNotEmpty &&
+        _passwordController.text.trim().isNotEmpty &&
+        _confirmPasswordController.text.trim().isNotEmpty &&
+        _agreeToTerms;
   }
 
   @override
@@ -288,12 +324,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               data: (campuses) => _buildDropdown<String>(
                 hint: 'Select Campus',
                 value: _selectedCampusId,
-                items: campuses.map((c) => DropdownMenuItem(
+                items: campuses.map((c) => DropdownItem(
                   value: c.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(c.name),
-                  ),
+                  label: c.name,
                 )).toList(),
                 onChanged: (val) => setState(() {
                   _selectedCampusId = val;
@@ -308,14 +341,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _buildLabel('Faculty'),
             facultiesAsync.when(
               data: (faculties) => _buildDropdown<String>(
+                key: ValueKey('faculty_$_selectedCampusId'),
                 hint: _selectedCampusId == null ? 'Select Campus first' : 'Select Faculty',
                 value: _selectedFacultyId,
-                items: faculties.map((f) => DropdownMenuItem(
+                items: faculties.map((f) => DropdownItem(
                   value: f.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(f.name),
-                  ),
+                  label: f.name,
                 )).toList(),
                 onChanged: _selectedCampusId == null ? null : (val) => setState(() {
                   _selectedFacultyId = val;
@@ -329,14 +360,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _buildLabel('Program'),
             programsAsync.when(
               data: (programs) => _buildDropdown<String>(
+                key: ValueKey('program_$_selectedFacultyId'),
                 hint: _selectedFacultyId == null ? 'Select Faculty first' : 'Select Program',
                 value: _selectedProgramId,
-                items: programs.map((p) => DropdownMenuItem(
+                items: programs.map((p) => DropdownItem(
                   value: p.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(p.name),
-                  ),
+                  label: p.name,
                 )).toList(),
                 onChanged: _selectedFacultyId == null ? null : (val) => setState(() => _selectedProgramId = val),
               ),
@@ -348,12 +377,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _buildDropdown<String>(
               hint: 'Select Year Level',
               value: _selectedYearLevel,
-              items: const ['1', '2', '3', '4', '5'].map((y) => DropdownMenuItem(
+              items: const ['1', '2', '3', '4', '5'].map((y) => DropdownItem(
                 value: y,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Text(y),
-                ),
+                label: y,
               )).toList(),
               onChanged: (val) => setState(() => _selectedYearLevel = val),
             ),
@@ -420,6 +446,86 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 onPressed: () => setState(() => _showPassword = !_showPassword),
                 icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary, size: 20),
               ),
+              validator: (val) {
+                if (val == null || val.isEmpty) return 'Field required';
+                final hasUppercase = val.contains(RegExp(r'[A-Z]'));
+                final hasLowercase = val.contains(RegExp(r'[a-z]'));
+                final hasNumber = val.contains(RegExp(r'[0-9]'));
+                final hasSpecial = val.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+                final hasMinLength = val.length >= 12;
+
+                int categoriesMet = 0;
+                if (hasUppercase) categoriesMet++;
+                if (hasLowercase) categoriesMet++;
+                if (hasNumber) categoriesMet++;
+                if (hasSpecial) categoriesMet++;
+
+                if (!hasMinLength) {
+                  return 'Password must be at least 12 characters long';
+                }
+                if (categoriesMet < 3) {
+                  return 'Password must meet at least 3 complexity categories';
+                }
+                return null;
+              },
+            ),
+            Builder(
+              builder: (context) {
+                final password = _passwordController.text;
+                final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+                final hasLowercase = password.contains(RegExp(r'[a-z]'));
+                final hasNumber = password.contains(RegExp(r'[0-9]'));
+                final hasSpecial = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+                final hasMinLength = password.length >= 12;
+
+                int categoriesMet = 0;
+                if (hasUppercase) categoriesMet++;
+                if (hasLowercase) categoriesMet++;
+                if (hasNumber) categoriesMet++;
+                if (hasSpecial) categoriesMet++;
+
+                final isComplexityMet = categoriesMet >= 3;
+                final isFullyMet = hasMinLength && isComplexityMet;
+
+                if (isFullyMet) {
+                  return const SizedBox.shrink();
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Password must contain:',
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRequirementItem('Minimum of 12 characters', hasMinLength),
+                          const SizedBox(height: 6),
+                          _buildRequirementItem('At least 3 of these categories (Current: $categoriesMet/4):', isComplexityMet),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 20, top: 6),
+                            child: Wrap(
+                              spacing: AppSpacing.md,
+                              runSpacing: AppSpacing.xs,
+                              children: [
+                                _buildSubRequirementItem('Uppercase', hasUppercase),
+                                _buildSubRequirementItem('Lowercase', hasLowercase),
+                                _buildSubRequirementItem('Number', hasNumber),
+                                _buildSubRequirementItem('Special Character', hasSpecial),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }
             ),
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Confirm Password'),
@@ -433,12 +539,78 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 icon: Icon(_showConfirmPassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary, size: 20),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: Checkbox(
+                    value: _agreeToTerms,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) {
+                      setState(() {
+                        _agreeToTerms = val ?? false;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: RichText(
+                      text: TextSpan(
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textGrey,
+                          height: 1.4,
+                        ),
+                        children: [
+                          const TextSpan(text: 'I agree to the '),
+                          TextSpan(
+                            text: 'Terms and Conditions',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _showDocumentDialog(
+                                    context,
+                                    'Terms and Conditions',
+                                    'lib/core/config/documents/terms_and_agreement.md',
+                                  ),
+                          ),
+                          const TextSpan(text: ' and '),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _showDocumentDialog(
+                                    context,
+                                    'Privacy Policy',
+                                    'lib/core/config/documents/privacy_policy.md',
+                                  ),
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: authState.isLoading
+                onPressed: (authState.isLoading || !_isFormValid)
                     ? null
                     : () {
                         if (_formKey.currentState?.validate() ?? false) {
@@ -532,6 +704,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
+  void _showDocumentDialog(BuildContext context, String title, String filePath) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => DocumentViewerDialog(
+        title: title,
+        filePath: filePath,
+      ),
+    );
+  }
+
   Widget _buildLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -539,6 +722,48 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         label,
         style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w600),
       ),
+    );
+  }
+
+  Widget _buildRequirementItem(String text, bool isMet) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isMet ? Icons.check_circle_rounded : Icons.circle_outlined,
+          color: isMet ? AppColors.success : AppColors.textGrey.withValues(alpha: 0.4),
+          size: 14,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: AppTextStyles.labelMedium.copyWith(
+            color: isMet ? AppColors.textDark : AppColors.textGrey,
+            fontWeight: isMet ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubRequirementItem(String text, bool isMet) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isMet ? Icons.check : Icons.circle_outlined,
+          color: isMet ? AppColors.success : AppColors.textGrey.withValues(alpha: 0.4),
+          size: 11,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: isMet ? AppColors.textDark : AppColors.textGrey,
+            fontWeight: isMet ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
     );
   }
 
@@ -552,34 +777,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Widget _buildDropdown<T>({
+    Key? key,
     required String hint,
     required T? value,
-    required List<DropdownMenuItem<T>> items,
+    required List<DropdownItem<T>> items,
     required ValueChanged<T?>? onChanged,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15), width: 1.5),
-        borderRadius: BorderRadius.circular(14),
-        color: AppColors.white,
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          hint: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(
-              hint,
-              style: AppTextStyles.bodySmall.copyWith(color: Colors.grey.shade500),
-            ),
-          ),
-          value: value,
-          style: AppTextStyles.bodySmall,
-          items: items,
-          onChanged: onChanged,
-          isExpanded: true,
-          icon: const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.expand_more_rounded, color: AppColors.primary)),
-        ),
-      ),
+    return CustomConnectedDropdown<T>(
+      key: key,
+      hint: hint,
+      value: value,
+      items: items,
+      onChanged: onChanged,
     );
   }
 
@@ -591,6 +800,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     Widget? suffixIcon,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    FormFieldValidator<String>? validator,
   }) {
     return TextFormField(
       controller: controller,
@@ -617,7 +827,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         suffixIcon: suffixIcon,
       ),
       style: AppTextStyles.bodyMedium,
-      validator: (val) => val == null || val.isEmpty ? 'Field required' : null,
+      validator: validator ?? ((val) => val == null || val.isEmpty ? 'Field required' : null),
     );
   }
 
@@ -633,6 +843,338 @@ class _SchoolIdFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class DropdownItem<T> {
+  final T value;
+  final String label;
+
+  const DropdownItem({required this.value, required this.label});
+}
+
+class CustomConnectedDropdown<T> extends StatefulWidget {
+  final String hint;
+  final T? value;
+  final List<DropdownItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+
+  const CustomConnectedDropdown({
+    super.key,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  State<CustomConnectedDropdown<T>> createState() => _CustomConnectedDropdownState<T>();
+}
+
+class _CustomConnectedDropdownState<T> extends State<CustomConnectedDropdown<T>> {
+  final LayerLink _layerLink = LayerLink();
+  final GlobalKey _buttonKey = GlobalKey();
+  OverlayEntry? _overlayEntry;
+  bool _isDropdownOpen = false;
+  ScrollPosition? _scrollPosition;
+
+  void _openDropdown() {
+    if (_isDropdownOpen || widget.onChanged == null) return;
+
+    final renderBox = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final width = renderBox.size.width;
+
+    // Calculate position and available height to prevent overextending past screen bottom
+    final position = renderBox.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final availableHeight = screenHeight - position.dy - renderBox.size.height - 16;
+    final maxHeight = availableHeight.clamp(80.0, 250.0);
+
+    // Register scroll listener to dismiss dropdown on parent scroll
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null) {
+      _scrollPosition = scrollable.position;
+      _scrollPosition?.addListener(_closeDropdown);
+    }
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Translucent tap barrier to close the dropdown on outer clicks
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _closeDropdown,
+            child: const SizedBox.expand(),
+          ),
+          CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, -1.5), // Offset to overlap borders seamlessly
+            child: Material(
+              color: Colors.transparent,
+              child: _DropdownMenu<T>(
+                items: widget.items,
+                selectedValue: widget.value,
+                width: width,
+                maxHeight: maxHeight,
+                onSelected: (val) {
+                  _closeDropdown();
+                  widget.onChanged?.call(val);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+    setState(() {
+      _isDropdownOpen = true;
+    });
+  }
+
+  void _closeDropdown() {
+    if (!_isDropdownOpen) return;
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _scrollPosition?.removeListener(_closeDropdown);
+    _scrollPosition = null;
+    if (mounted) {
+      setState(() {
+        _isDropdownOpen = false;
+      });
+    }
+  }
+
+  void _toggleDropdown() {
+    if (_isDropdownOpen) {
+      _closeDropdown();
+    } else {
+      _openDropdown();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollPosition?.removeListener(_closeDropdown);
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = widget.onChanged != null;
+    final selectedItem = widget.items.cast<DropdownItem<T>?>().firstWhere(
+          (item) => item?.value == widget.value,
+          orElse: () => null,
+        );
+
+    Color borderColor;
+    double borderWidth;
+    if (!isEnabled) {
+      borderColor = AppColors.border.withValues(alpha: 0.5);
+      borderWidth = 1.0;
+    } else if (_isDropdownOpen) {
+      borderColor = AppColors.primary;
+      borderWidth = 1.5;
+    } else {
+      borderColor = AppColors.border;
+      borderWidth = 1.0;
+    }
+
+    final borderRadius = _isDropdownOpen
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(AppSpacing.radiusMd),
+            topRight: Radius.circular(AppSpacing.radiusMd),
+          )
+        : BorderRadius.circular(AppSpacing.radiusMd);
+
+    final borderSide = BorderSide(
+      color: borderColor,
+      width: borderWidth,
+    );
+
+    final decoration = InputDecoration(
+      hintText: widget.hint,
+      suffixIcon: Icon(
+        Icons.expand_more_rounded,
+        color: isEnabled ? AppColors.primary : AppColors.textGrey,
+      ),
+      filled: true,
+      fillColor: isEnabled ? AppColors.white : Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: borderSide,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: borderSide,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: borderSide,
+      ),
+    );
+
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Material(
+        key: _buttonKey,
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? _toggleDropdown : null,
+          borderRadius: borderRadius,
+          child: InputDecorator(
+            decoration: decoration,
+            isEmpty: selectedItem == null,
+            child: selectedItem != null
+                ? Text(
+                    selectedItem.label,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: isEnabled ? AppColors.textDark : AppColors.textGrey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DropdownMenu<T> extends StatefulWidget {
+  final List<DropdownItem<T>> items;
+  final T? selectedValue;
+  final double width;
+  final double maxHeight;
+  final ValueChanged<T> onSelected;
+
+  const _DropdownMenu({
+    super.key,
+    required this.items,
+    required this.selectedValue,
+    required this.width,
+    required this.maxHeight,
+    required this.onSelected,
+  });
+
+  @override
+  State<_DropdownMenu<T>> createState() => _DropdownMenuState<T>();
+}
+
+class _DropdownMenuState<T> extends State<_DropdownMenu<T>> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _slideAnimation = Tween<double>(begin: -8, end: 0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuad),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {}, // Consume taps inside the dropdown card
+        child: Container(
+          width: widget.width,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(AppSpacing.radiusMd),
+              bottomRight: Radius.circular(AppSpacing.radiusMd),
+            ),
+            border: Border.all(
+              color: AppColors.primary,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(AppSpacing.radiusMd - 1.5),
+              bottomRight: Radius.circular(AppSpacing.radiusMd - 1.5),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: widget.maxHeight),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: widget.items.length,
+                itemBuilder: (context, index) {
+                  final item = widget.items[index];
+                  final isSelected = item.value == widget.selectedValue;
+
+                  return InkWell(
+                    onTap: () => widget.onSelected(item.value),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
+                      color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
+                      child: Text(
+                        item.label,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: isSelected ? AppColors.primary : AppColors.textDark,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
