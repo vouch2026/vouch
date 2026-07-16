@@ -47,7 +47,7 @@ class AboutUsPage extends StatelessWidget {
           _buildCardSection(
             title: 'History',
             content:
-                'Vouch was born from a drive to modernize the administrative experience at Davao Oriental State University. What began as an initiative to eliminate the friction of manual, paper-based clearance systems has evolved into a comprehensive digital platform. Designed to ensure accuracy, transparency, and convenience, Vouch bridges the gap between students and administrators, transforming complex academic compliance into a streamlined, digital reality.',
+                'Vouch was born out of necessity at Davao Oriental State University. We saw firsthand the friction, delays, and inefficiencies of manual, paper-based activity card clearance systems. What started as a targeted initiative to solve a local campus bottleneck has evolved into a comprehensive digital platform. By prioritizing accuracy, transparency, and convenience, Vouch bridges the gap between students and organizations—transforming complex academic compliance into a streamlined, error-free reality.',
           ),
           const SizedBox(height: AppSpacing.xl),
           _buildSectionLabel('Developed by'),
@@ -309,7 +309,7 @@ class AboutUsPage extends StatelessWidget {
       ),
       (
         'Empower',
-        'Equip both program-level and faculty-level administrators with precise monitoring and verification tools.',
+        'Equip both program-level and faculty-level organizations with precise monitoring and verification tools.',
       ),
       (
         'Evolve',
