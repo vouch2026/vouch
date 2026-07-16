@@ -288,12 +288,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               data: (campuses) => _buildDropdown<String>(
                 hint: 'Select Campus',
                 value: _selectedCampusId,
-                items: campuses.map((c) => DropdownMenuItem(
+                items: campuses.map((c) => DropdownItem(
                   value: c.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(c.name),
-                  ),
+                  label: c.name,
                 )).toList(),
                 onChanged: (val) => setState(() {
                   _selectedCampusId = val;
@@ -308,14 +305,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _buildLabel('Faculty'),
             facultiesAsync.when(
               data: (faculties) => _buildDropdown<String>(
+                key: ValueKey('faculty_$_selectedCampusId'),
                 hint: _selectedCampusId == null ? 'Select Campus first' : 'Select Faculty',
                 value: _selectedFacultyId,
-                items: faculties.map((f) => DropdownMenuItem(
+                items: faculties.map((f) => DropdownItem(
                   value: f.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(f.name),
-                  ),
+                  label: f.name,
                 )).toList(),
                 onChanged: _selectedCampusId == null ? null : (val) => setState(() {
                   _selectedFacultyId = val;
@@ -329,14 +324,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _buildLabel('Program'),
             programsAsync.when(
               data: (programs) => _buildDropdown<String>(
+                key: ValueKey('program_$_selectedFacultyId'),
                 hint: _selectedFacultyId == null ? 'Select Faculty first' : 'Select Program',
                 value: _selectedProgramId,
-                items: programs.map((p) => DropdownMenuItem(
+                items: programs.map((p) => DropdownItem(
                   value: p.id,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(p.name),
-                  ),
+                  label: p.name,
                 )).toList(),
                 onChanged: _selectedFacultyId == null ? null : (val) => setState(() => _selectedProgramId = val),
               ),
@@ -348,12 +341,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _buildDropdown<String>(
               hint: 'Select Year Level',
               value: _selectedYearLevel,
-              items: const ['1', '2', '3', '4', '5'].map((y) => DropdownMenuItem(
+              items: const ['1', '2', '3', '4', '5'].map((y) => DropdownItem(
                 value: y,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Text(y),
-                ),
+                label: y,
               )).toList(),
               onChanged: (val) => setState(() => _selectedYearLevel = val),
             ),
@@ -552,34 +542,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Widget _buildDropdown<T>({
+    Key? key,
     required String hint,
     required T? value,
-    required List<DropdownMenuItem<T>> items,
+    required List<DropdownItem<T>> items,
     required ValueChanged<T?>? onChanged,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15), width: 1.5),
-        borderRadius: BorderRadius.circular(14),
-        color: AppColors.white,
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          hint: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(
-              hint,
-              style: AppTextStyles.bodySmall.copyWith(color: Colors.grey.shade500),
-            ),
-          ),
-          value: value,
-          style: AppTextStyles.bodySmall,
-          items: items,
-          onChanged: onChanged,
-          isExpanded: true,
-          icon: const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.expand_more_rounded, color: AppColors.primary)),
-        ),
-      ),
+    return CustomConnectedDropdown<T>(
+      key: key,
+      hint: hint,
+      value: value,
+      items: items,
+      onChanged: onChanged,
     );
   }
 
@@ -633,6 +607,338 @@ class _SchoolIdFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class DropdownItem<T> {
+  final T value;
+  final String label;
+
+  const DropdownItem({required this.value, required this.label});
+}
+
+class CustomConnectedDropdown<T> extends StatefulWidget {
+  final String hint;
+  final T? value;
+  final List<DropdownItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+
+  const CustomConnectedDropdown({
+    super.key,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  State<CustomConnectedDropdown<T>> createState() => _CustomConnectedDropdownState<T>();
+}
+
+class _CustomConnectedDropdownState<T> extends State<CustomConnectedDropdown<T>> {
+  final LayerLink _layerLink = LayerLink();
+  final GlobalKey _buttonKey = GlobalKey();
+  OverlayEntry? _overlayEntry;
+  bool _isDropdownOpen = false;
+  ScrollPosition? _scrollPosition;
+
+  void _openDropdown() {
+    if (_isDropdownOpen || widget.onChanged == null) return;
+
+    final renderBox = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final width = renderBox.size.width;
+
+    // Calculate position and available height to prevent overextending past screen bottom
+    final position = renderBox.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final availableHeight = screenHeight - position.dy - renderBox.size.height - 16;
+    final maxHeight = availableHeight.clamp(80.0, 250.0);
+
+    // Register scroll listener to dismiss dropdown on parent scroll
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null) {
+      _scrollPosition = scrollable.position;
+      _scrollPosition?.addListener(_closeDropdown);
+    }
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Translucent tap barrier to close the dropdown on outer clicks
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _closeDropdown,
+            child: const SizedBox.expand(),
+          ),
+          CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, -1.5), // Offset to overlap borders seamlessly
+            child: Material(
+              color: Colors.transparent,
+              child: _DropdownMenu<T>(
+                items: widget.items,
+                selectedValue: widget.value,
+                width: width,
+                maxHeight: maxHeight,
+                onSelected: (val) {
+                  _closeDropdown();
+                  widget.onChanged?.call(val);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+    setState(() {
+      _isDropdownOpen = true;
+    });
+  }
+
+  void _closeDropdown() {
+    if (!_isDropdownOpen) return;
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _scrollPosition?.removeListener(_closeDropdown);
+    _scrollPosition = null;
+    if (mounted) {
+      setState(() {
+        _isDropdownOpen = false;
+      });
+    }
+  }
+
+  void _toggleDropdown() {
+    if (_isDropdownOpen) {
+      _closeDropdown();
+    } else {
+      _openDropdown();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollPosition?.removeListener(_closeDropdown);
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = widget.onChanged != null;
+    final selectedItem = widget.items.cast<DropdownItem<T>?>().firstWhere(
+          (item) => item?.value == widget.value,
+          orElse: () => null,
+        );
+
+    Color borderColor;
+    double borderWidth;
+    if (!isEnabled) {
+      borderColor = AppColors.border.withValues(alpha: 0.5);
+      borderWidth = 1.0;
+    } else if (_isDropdownOpen) {
+      borderColor = AppColors.primary;
+      borderWidth = 1.5;
+    } else {
+      borderColor = AppColors.border;
+      borderWidth = 1.0;
+    }
+
+    final borderRadius = _isDropdownOpen
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(AppSpacing.radiusMd),
+            topRight: Radius.circular(AppSpacing.radiusMd),
+          )
+        : BorderRadius.circular(AppSpacing.radiusMd);
+
+    final borderSide = BorderSide(
+      color: borderColor,
+      width: borderWidth,
+    );
+
+    final decoration = InputDecoration(
+      hintText: widget.hint,
+      suffixIcon: Icon(
+        Icons.expand_more_rounded,
+        color: isEnabled ? AppColors.primary : AppColors.textGrey,
+      ),
+      filled: true,
+      fillColor: isEnabled ? AppColors.white : Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: borderSide,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: borderSide,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: borderSide,
+      ),
+    );
+
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Material(
+        key: _buttonKey,
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? _toggleDropdown : null,
+          borderRadius: borderRadius,
+          child: InputDecorator(
+            decoration: decoration,
+            isEmpty: selectedItem == null,
+            child: selectedItem != null
+                ? Text(
+                    selectedItem.label,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: isEnabled ? AppColors.textDark : AppColors.textGrey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DropdownMenu<T> extends StatefulWidget {
+  final List<DropdownItem<T>> items;
+  final T? selectedValue;
+  final double width;
+  final double maxHeight;
+  final ValueChanged<T> onSelected;
+
+  const _DropdownMenu({
+    super.key,
+    required this.items,
+    required this.selectedValue,
+    required this.width,
+    required this.maxHeight,
+    required this.onSelected,
+  });
+
+  @override
+  State<_DropdownMenu<T>> createState() => _DropdownMenuState<T>();
+}
+
+class _DropdownMenuState<T> extends State<_DropdownMenu<T>> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _slideAnimation = Tween<double>(begin: -8, end: 0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuad),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {}, // Consume taps inside the dropdown card
+        child: Container(
+          width: widget.width,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(AppSpacing.radiusMd),
+              bottomRight: Radius.circular(AppSpacing.radiusMd),
+            ),
+            border: Border.all(
+              color: AppColors.primary,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(AppSpacing.radiusMd - 1.5),
+              bottomRight: Radius.circular(AppSpacing.radiusMd - 1.5),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: widget.maxHeight),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: widget.items.length,
+                itemBuilder: (context, index) {
+                  final item = widget.items[index];
+                  final isSelected = item.value == widget.selectedValue;
+
+                  return InkWell(
+                    onTap: () => widget.onSelected(item.value),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
+                      color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
+                      child: Text(
+                        item.label,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: isSelected ? AppColors.primary : AppColors.textDark,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

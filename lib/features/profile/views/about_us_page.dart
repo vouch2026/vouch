@@ -39,7 +39,7 @@ class AboutUsPage extends StatelessWidget {
           _buildCardSection(
             title: 'Vision',
             content:
-                'To redefine campus administration through a seamless, secure, and unified digital ecosystem.',
+                'To redefine the management of organizational activities through a seamless, secure, and unified digital ecosystem.',
           ),
           const SizedBox(height: AppSpacing.lg),
           _buildMissionCard(),
