@@ -22,6 +22,7 @@ class RouteNames {
   static const String myQrCode = 'my-qr-code';
   static const String aboutUs = 'about-us';
   static const String help = 'help';
+  static const String settings = 'settings';
   static const String emailVerification = 'email-verification';
   static const String resetPassword = 'reset-password';
   static const String changeEmail = 'change-email';
