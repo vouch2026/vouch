@@ -9,6 +9,7 @@ import '../../../routes/route_paths.dart';
 import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
+import '../../../core/widgets/dialogs/document_viewer_dialog.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -343,7 +344,47 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                 GestureDetector(
+                  onTap: () => _showDocumentDialog(
+                    context,
+                    'Terms and Conditions',
+                    'lib/core/config/documents/terms_and_agreement.md',
+                  ),
+                  child: Text(
+                    'Terms of Service',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+                Text(
+                  '  |  ',
+                  style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
+                ),
+                GestureDetector(
+                  onTap: () => _showDocumentDialog(
+                    context,
+                    'Privacy Policy',
+                    'lib/core/config/documents/privacy_policy.md',
+                  ),
+                  child: Text(
+                    'Privacy Policy',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               '© ${DateTime.now().year} Vouch SoftTech Services. All rights reserved.',
               style: AppTextStyles.labelSmall.copyWith(color: Colors.grey.shade400),
@@ -386,6 +427,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         suffixIcon: suffixIcon,
       ),
       style: AppTextStyles.bodyMedium,
+    );
+  }
+
+  void _showDocumentDialog(BuildContext context, String title, String filePath) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => DocumentViewerDialog(
+        title: title,
+        filePath: filePath,
+      ),
     );
   }
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/widgets/dialogs/document_viewer_dialog.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -42,6 +44,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String? _selectedFacultyId;
   String? _selectedProgramId;
   String? _selectedYearLevel;
+  bool _agreeToTerms = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
@@ -512,12 +515,78 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 icon: Icon(_showConfirmPassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary, size: 20),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: Checkbox(
+                    value: _agreeToTerms,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) {
+                      setState(() {
+                        _agreeToTerms = val ?? false;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: RichText(
+                      text: TextSpan(
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textGrey,
+                          height: 1.4,
+                        ),
+                        children: [
+                          const TextSpan(text: 'I agree to the '),
+                          TextSpan(
+                            text: 'Terms and Conditions',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _showDocumentDialog(
+                                    context,
+                                    'Terms and Conditions',
+                                    'lib/core/config/documents/terms_and_agreement.md',
+                                  ),
+                          ),
+                          const TextSpan(text: ' and '),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _showDocumentDialog(
+                                    context,
+                                    'Privacy Policy',
+                                    'lib/core/config/documents/privacy_policy.md',
+                                  ),
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: authState.isLoading
+                onPressed: (authState.isLoading || !_agreeToTerms)
                     ? null
                     : () {
                         if (_formKey.currentState?.validate() ?? false) {
@@ -607,6 +676,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDocumentDialog(BuildContext context, String title, String filePath) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => DocumentViewerDialog(
+        title: title,
+        filePath: filePath,
       ),
     );
   }
