@@ -51,16 +51,26 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    _passwordController.addListener(_onPasswordChanged);
+    _firstNameController.addListener(_onFieldChanged);
+    _lastNameController.addListener(_onFieldChanged);
+    _schoolIdController.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _passwordController.addListener(_onFieldChanged);
+    _confirmPasswordController.addListener(_onFieldChanged);
   }
 
-  void _onPasswordChanged() {
+  void _onFieldChanged() {
     setState(() {});
   }
 
   @override
   void dispose() {
-    _passwordController.removeListener(_onPasswordChanged);
+    _firstNameController.removeListener(_onFieldChanged);
+    _lastNameController.removeListener(_onFieldChanged);
+    _schoolIdController.removeListener(_onFieldChanged);
+    _emailController.removeListener(_onFieldChanged);
+    _passwordController.removeListener(_onFieldChanged);
+    _confirmPasswordController.removeListener(_onFieldChanged);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _schoolIdController.dispose();
@@ -68,6 +78,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  bool get _isFormValid {
+    return _selectedCampusId != null &&
+        _selectedFacultyId != null &&
+        _selectedProgramId != null &&
+        _selectedYearLevel != null &&
+        _firstNameController.text.trim().isNotEmpty &&
+        _lastNameController.text.trim().isNotEmpty &&
+        _schoolIdController.text.trim().isNotEmpty &&
+        _emailController.text.trim().isNotEmpty &&
+        _passwordController.text.trim().isNotEmpty &&
+        _confirmPasswordController.text.trim().isNotEmpty &&
+        _agreeToTerms;
   }
 
   @override
@@ -586,7 +610,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: (authState.isLoading || !_agreeToTerms)
+                onPressed: (authState.isLoading || !_isFormValid)
                     ? null
                     : () {
                         if (_formKey.currentState?.validate() ?? false) {
