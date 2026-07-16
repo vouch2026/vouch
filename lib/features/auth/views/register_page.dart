@@ -573,7 +573,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () => _showDocumentDialog(
@@ -588,7 +587,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () => _showDocumentDialog(

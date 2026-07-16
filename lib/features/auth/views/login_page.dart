@@ -359,7 +359,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ),
@@ -378,7 +377,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ),
