@@ -20,234 +20,315 @@ class ProfileMenuContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfile = ref.watch(userProfileProvider);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
 
     return userProfile.when(
       data: (profile) {
         final avatarUrl = profile?.avatarUrl;
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with Close Button (Matching Auth Vibe)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.sm, AppSpacing.sm),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Profile',
-                    style: AppTextStyles.titleLarge.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.primary),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ],
+        // Construct the list of menu items
+        final menuItems = [
+          _buildMenuItem(
+            context,
+            icon: Icons.person_outline_rounded,
+            label: 'Manage Account',
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push(RoutePaths.profile);
+            },
+          ),
+          if (profile?.role == 'student')
+            _buildMenuItem(
+              context,
+              icon: Icons.qr_code_rounded,
+              label: 'My QR Code',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.myQrCode);
+              },
+            ),
+          _buildMenuItem(
+            context,
+            icon: Icons.notifications_none_rounded,
+            label: 'Notifications',
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push(RoutePaths.notifications);
+            },
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.settings_outlined,
+            label: 'Settings',
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push(RoutePaths.settings);
+            },
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.info_outline_rounded,
+            label: 'About Us',
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push(RoutePaths.aboutUs);
+            },
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.help_outline_rounded,
+            label: 'Help & Support',
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push(RoutePaths.help);
+            },
+          ),
+        ];
+
+        final signOutButton = Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref.read(authControllerProvider.notifier).signOut();
+              },
+              icon: const Icon(Icons.logout_rounded, size: 20),
+              label: Text(
+                'Sign Out',
+                style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
+          ),
+        );
 
-            // Profile Card Section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.05),
-                      AppColors.accent.withValues(alpha: 0.02),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+        if (isMobile) {
+          // Mobile size: use LayoutBuilder + Spacer to align Sign Out button to the absolute bottom
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final safeAreaPadding = MediaQuery.paddingOf(context).vertical;
+              return ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: size.height - safeAreaPadding - 16,
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          width: 2.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 34,
-                        backgroundColor: Colors.grey.shade100,
-                        backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                            ? NetworkImage(avatarUrl)
-                            : const AssetImage('assets/images/my_profile.png') as ImageProvider,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.lg),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            profile?.fullName ?? 'User',
-                            style: AppTextStyles.titleLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: AppColors.textDark,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            profile?.email ?? '',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.black54,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              profile?.roleDisplay.toUpperCase() ?? 'STUDENT',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.white,
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with Close Button
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.sm, AppSpacing.sm),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Profile',
+                              style: AppTextStyles.titleLarge.copyWith(
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
-                                fontSize: 10,
+                                color: AppColors.primary,
                               ),
                             ),
-                          ),
-                        ],
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.primary),
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Profile Card Section
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+                        child: _buildProfileCard(avatarUrl, profile),
+                      ),
+
+                      const Divider(height: 1, indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+
+                      // Navigation Links
+                      ...menuItems,
+
+                      const Spacer(), // Pushes the Sign Out button to the bottom
+
+                      signOutButton,
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        } else {
+          // Desktop & Tablet (when displayed in small floating modal)
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with Close Button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.sm, AppSpacing.sm),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Profile',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.primary),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.accent.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
 
-            const Divider(height: 1, indent: AppSpacing.lg, endIndent: AppSpacing.lg),
-
-            // Navigation Links (Matching Textfield Prefix Icon Style)
-            _buildMenuItem(
-              context,
-              icon: Icons.person_outline_rounded,
-              label: 'Manage Account',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push(RoutePaths.profile);
-              },
-            ),
-            if (profile?.role == 'student')
-              _buildMenuItem(
-                context,
-                icon: Icons.qr_code_rounded,
-                label: 'My QR Code',
-                onTap: () {
-                  Navigator.of(context).pop();
-                  context.push(RoutePaths.myQrCode);
-                },
+              // Profile Card Section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+                child: _buildProfileCard(avatarUrl, profile),
               ),
-            _buildMenuItem(
-              context,
-              icon: Icons.notifications_none_rounded,
-              label: 'Notifications',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push(RoutePaths.notifications);
-              },
-            ),
-            _buildMenuItem(
-              context,
-              icon: Icons.info_outline_rounded,
-              label: 'About Us',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push(RoutePaths.aboutUs);
-              },
-            ),            _buildMenuItem(
-              context,
-              icon: Icons.help_outline_rounded,
-              label: 'Help & Support',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push(RoutePaths.help);
-              },
-            ),
 
-            const SizedBox(height: AppSpacing.md),
-            
-            // Sign Out Button (Matching Auth Button Style)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    ref.read(authControllerProvider.notifier).signOut();
-                  },
-                  icon: const Icon(Icons.logout_rounded, size: 20),
-                  label: Text(
-                    'Sign Out',
-                    style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            
-            if (!isModal) const SizedBox(height: AppSpacing.xl),
-          ],
-        );
+              const Divider(height: 1, indent: AppSpacing.lg, endIndent: AppSpacing.lg),
+
+              // Navigation Links
+              ...menuItems,
+
+              const SizedBox(height: AppSpacing.md),
+              signOutButton,
+              if (!isModal) const SizedBox(height: AppSpacing.xl),
+            ],
+          );
+        }
       },
       loading: () => const SizedBox(
         height: 300,
         child: Center(child: FlickrLoader()),
       ),
       error: (err, _) => Center(child: Text('Error: $err')),
+    );
+  }
+
+  Widget _buildProfileCard(String? avatarUrl, dynamic profile) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.05),
+            AppColors.accent.withValues(alpha: 0.02),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                width: 2.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 34,
+              backgroundColor: Colors.grey.shade100,
+              backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                  ? NetworkImage(avatarUrl)
+                  : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile?.fullName ?? 'User',
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: AppColors.textDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  profile?.email ?? '',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    profile?.roleDisplay.toUpperCase() ?? 'STUDENT',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
