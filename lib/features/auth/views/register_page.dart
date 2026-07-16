@@ -44,11 +44,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String? _selectedYearLevel;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
-  
 
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
+    _passwordController.removeListener(_onPasswordChanged);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _schoolIdController.dispose();
@@ -410,6 +419,86 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 onPressed: () => setState(() => _showPassword = !_showPassword),
                 icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary, size: 20),
               ),
+              validator: (val) {
+                if (val == null || val.isEmpty) return 'Field required';
+                final hasUppercase = val.contains(RegExp(r'[A-Z]'));
+                final hasLowercase = val.contains(RegExp(r'[a-z]'));
+                final hasNumber = val.contains(RegExp(r'[0-9]'));
+                final hasSpecial = val.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+                final hasMinLength = val.length >= 12;
+
+                int categoriesMet = 0;
+                if (hasUppercase) categoriesMet++;
+                if (hasLowercase) categoriesMet++;
+                if (hasNumber) categoriesMet++;
+                if (hasSpecial) categoriesMet++;
+
+                if (!hasMinLength) {
+                  return 'Password must be at least 12 characters long';
+                }
+                if (categoriesMet < 3) {
+                  return 'Password must meet at least 3 complexity categories';
+                }
+                return null;
+              },
+            ),
+            Builder(
+              builder: (context) {
+                final password = _passwordController.text;
+                final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+                final hasLowercase = password.contains(RegExp(r'[a-z]'));
+                final hasNumber = password.contains(RegExp(r'[0-9]'));
+                final hasSpecial = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+                final hasMinLength = password.length >= 12;
+
+                int categoriesMet = 0;
+                if (hasUppercase) categoriesMet++;
+                if (hasLowercase) categoriesMet++;
+                if (hasNumber) categoriesMet++;
+                if (hasSpecial) categoriesMet++;
+
+                final isComplexityMet = categoriesMet >= 3;
+                final isFullyMet = hasMinLength && isComplexityMet;
+
+                if (isFullyMet) {
+                  return const SizedBox.shrink();
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Password must contain:',
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRequirementItem('Minimum of 12 characters', hasMinLength),
+                          const SizedBox(height: 6),
+                          _buildRequirementItem('At least 3 of these categories (Current: $categoriesMet/4):', isComplexityMet),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 20, top: 6),
+                            child: Wrap(
+                              spacing: AppSpacing.md,
+                              runSpacing: AppSpacing.xs,
+                              children: [
+                                _buildSubRequirementItem('Uppercase', hasUppercase),
+                                _buildSubRequirementItem('Lowercase', hasLowercase),
+                                _buildSubRequirementItem('Number', hasNumber),
+                                _buildSubRequirementItem('Special Character', hasSpecial),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }
             ),
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Confirm Password'),
@@ -532,6 +621,48 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
+  Widget _buildRequirementItem(String text, bool isMet) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isMet ? Icons.check_circle_rounded : Icons.circle_outlined,
+          color: isMet ? AppColors.success : AppColors.textGrey.withValues(alpha: 0.4),
+          size: 14,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: AppTextStyles.labelMedium.copyWith(
+            color: isMet ? AppColors.textDark : AppColors.textGrey,
+            fontWeight: isMet ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubRequirementItem(String text, bool isMet) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isMet ? Icons.check : Icons.circle_outlined,
+          color: isMet ? AppColors.success : AppColors.textGrey.withValues(alpha: 0.4),
+          size: 11,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: isMet ? AppColors.textDark : AppColors.textGrey,
+            fontWeight: isMet ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDropdownPlaceholder(String hint) {
     return _buildDropdown<String>(
       hint: hint,
@@ -565,6 +696,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     Widget? suffixIcon,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    FormFieldValidator<String>? validator,
   }) {
     return TextFormField(
       controller: controller,
@@ -591,7 +723,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         suffixIcon: suffixIcon,
       ),
       style: AppTextStyles.bodyMedium,
-      validator: (val) => val == null || val.isEmpty ? 'Field required' : null,
+      validator: validator ?? ((val) => val == null || val.isEmpty ? 'Field required' : null),
     );
   }
 
