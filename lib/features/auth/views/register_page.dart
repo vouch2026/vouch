@@ -568,10 +568,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 if (hasSpecial) categoriesMet++;
 
                 if (!hasMinLength) {
-                  return 'Password must be at least 12 characters long';
+                  return 'Password must be at least 12 characters';
                 }
                 if (categoriesMet < 3) {
-                  return 'Password must meet at least 3 complexity categories';
+                  return 'Password must include uppercase, lowercase, numbers, or symbols';
                 }
                 return null;
               },
@@ -604,16 +604,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Password must contain:',
+                        'Password Requirements:',
                         style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildRequirementItem('Minimum of 12 characters', hasMinLength),
+                          _buildRequirementItem('At least 12 characters', hasMinLength),
                           const SizedBox(height: 6),
-                          _buildRequirementItem('At least 3 of these categories (Current: $categoriesMet/4):', isComplexityMet),
+                          _buildRequirementItem('Include at least 3 of the following:', isComplexityMet),
                           Padding(
                             padding: const EdgeInsets.only(left: 20, top: 6),
                             child: Wrap(
@@ -623,7 +623,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 _buildSubRequirementItem('Uppercase', hasUppercase),
                                 _buildSubRequirementItem('Lowercase', hasLowercase),
                                 _buildSubRequirementItem('Number', hasNumber),
-                                _buildSubRequirementItem('Special Character', hasSpecial),
+                                _buildSubRequirementItem('Special Symbol', hasSpecial),
                               ],
                             ),
                           ),
