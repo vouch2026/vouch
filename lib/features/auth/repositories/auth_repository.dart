@@ -175,4 +175,19 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  /// Checks if an email is already registered in the users table.
+  Future<bool> isEmailRegistered(String email) async {
+    try {
+      final response = await _client
+          .from('users')
+          .select('email')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      debugPrint('Error checking email registration: $e');
+      return false;
+    }
+  }
 }
