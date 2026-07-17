@@ -2,7 +2,7 @@
 
 **Effective Date:** July 16, 2026
 
-Vouch built the Vouch app as a commercial/institutional service. This Privacy Policy outlines exactly how we collect, process, manage, and secure user information within the application structure.
+Vouch built the Vouch app as a commercial/institutional service. This Privacy Policy outlines exactly how Vouch SoftTech Services ("we," "our," or "the Company") collects, processes, manages, and secures user information within the application structure.
 
 ### 1. Information Collection and Usage
 To optimize the clearance and student governance workflows, the platform processes explicitly designated data variables:
@@ -11,7 +11,7 @@ To optimize the clearance and student governance workflows, the platform process
 * **Fulfillment Evidence & Content:** Uploaded transactional verification reference values, verification images, excuse validation attachments, and personal tasks/academic schedule entries.
 
 ### 2. Storage and Media Handling
-All application media assets, including profile pictures, proof-of-payment sheets, and structural logos, are hosted via isolated cloud storage buckets (org-pictures). Public access permissions are strictly restricted to reading basic asset data. Write, update, and deletion actions are protected behind verified system authentication checks linked directly to active institutional officer permissions.
+All application media assets, including profile pictures, proof-of-payment sheets, and structural logos, are hosted via isolated cloud storage buckets (`org-pictures`). Public access permissions are strictly restricted to reading basic asset data. Write, update, and deletion actions are protected behind verified system authentication checks linked directly to active institutional officer permissions.
 
 ### 3. Row-Level Security and Data Access Controls
 Your privacy is fundamentally hardcoded into the backend architecture. The application enforces Row-Level Security (RLS) on all database tables to guarantee data partitioning:
@@ -20,10 +20,12 @@ Your privacy is fundamentally hardcoded into the backend architecture. The appli
 
 ### 4. Google Play Store Data Safety Compliance & Deletion Rights
 * **Data Encryption:** All data transmitted between the application interface and our storage layers is completely encrypted in transit.
-* **Requesting Deletion:** Users can request the deletion of their personal data directly in the application under Manage Account > Request Account Deletion, or by submitting our public Web Deletion Request Form.
+* **Requesting Deletion:** Users can request the deletion of their personal data directly in the application under `Manage Account > Request Account Deletion`, or by submitting our public Web Deletion Request Form.
 * **Retention for Institutional Compliance:** We retain your account data, attendance history, and payment reference files as long as you have active clearance pipelines. If your account has active clearance obligations, your deletion request will be held in a "Pending Review" state until those obligations are fulfilled or manually bypassed by an authorized institutional admin.
 * **Final Purge:** Once approved by an administrator, your authentication details and personal profile will be completely and permanently removed from our databases using secure system functions.
 * **Automated Lifecycle Purges:** To protect systemic privacy, user fulfillment histories (including payment sheets, specific event attendance tracks, and clearance signature rows) are systematically swept clean during routine academic changeovers via cyclical database protocols.
 
-### 5. Contact Information
-For questions regarding account deletions, system encryption models, or detailed data inquiries, please reach out to the institutional developer administration team.
+### 5. Support, Community Operations, and Contact Info
+* **Community-Driven Support:** To facilitate efficient troubleshooting, bug reporting, and feature discussions, we operate the official Vouch Community Facebook Group. Users are encouraged to utilize this forum to interact with the developer and collaborate with peer students to resolve operational app questions.
+* **Public Information Warning:** When posting inside the Vouch Community group, you must never share sensitive personal details, student password tokens, screenshots containing private student identification numbers, or confidential financial reference numbers. The Company is not responsible for data exposure caused by user posts in public social media forums.
+* **Direct Administrative Inquiries:** For formal legal notices, data inquiries, or account deletion escalations, you may contact the Vouch SoftTech Services administration team directly via our registered developer support channels.

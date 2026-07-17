@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/models/user_model.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/utils/role_mapper.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
   final client = SupabaseConfig.client;
@@ -50,6 +52,22 @@ final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
     
     return UserModel.fromJson(userData);
   }).where((user) => user.role != 'super_admin').toList();
+  
+  final activeRole = ref.watch(workspaceProvider).activeRole;
+  final userProfile = ref.watch(userProfileProvider).value;
+  
+  if (activeRole != null && userProfile != null) {
+    final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
+    if (roleKey == 'program_head') {
+      final programId = userProfile.programId;
+      if (programId == null) return [];
+      return users.where((u) => u.programId == programId && u.role == 'student').toList();
+    } else if (roleKey == 'dean') {
+      final facultyId = userProfile.facultyId;
+      if (facultyId == null) return [];
+      return users.where((u) => u.facultyId == facultyId && u.role == 'student').toList();
+    }
+  }
   
   return users;
 });

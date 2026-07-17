@@ -7,6 +7,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../routes/route_names.dart';
 import '../providers/users_provider.dart';
 import '../../auth/models/user_model.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../../../core/utils/role_mapper.dart';
 
 class UsersTable extends ConsumerWidget {
   const UsersTable({super.key});
@@ -14,6 +16,9 @@ class UsersTable extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(allUsersProvider);
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
+    final isRestricted = roleKey != 'super_admin';
 
     return usersAsync.when(
       data: (data) => LayoutBuilder(
@@ -21,7 +26,7 @@ class UsersTable extends ConsumerWidget {
           if (constraints.maxWidth < 800) {
             return _buildCardList(data);
           }
-          return _buildDataTable(context, data);
+          return _buildDataTable(context, data, isRestricted);
         },
       ),
       loading: () => const Center(child: FlickrLoader()),
@@ -29,7 +34,7 @@ class UsersTable extends ConsumerWidget {
     );
   }
 
-  Widget _buildDataTable(BuildContext context, List<UserModel> data) {
+  Widget _buildDataTable(BuildContext context, List<UserModel> data, bool isRestricted) {
     final theme = Theme.of(context);
     
     return Card(
@@ -42,14 +47,14 @@ class UsersTable extends ConsumerWidget {
         width: double.infinity,
         child: DataTable(
           headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
-          columns: const [
-            DataColumn(label: Text('ID / Number')),
-            DataColumn(label: Text('Full Name')),
-            DataColumn(label: Text('Role')),
-            DataColumn(label: Text('Faculty')),
-            DataColumn(label: Text('Program')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Actions')),
+          columns: [
+            const DataColumn(label: Text('ID / Number')),
+            const DataColumn(label: Text('Full Name')),
+            const DataColumn(label: Text('Role')),
+            const DataColumn(label: Text('Faculty')),
+            const DataColumn(label: Text('Program')),
+            const DataColumn(label: Text('Status')),
+            if (!isRestricted) const DataColumn(label: Text('Actions')),
           ],
           rows: data.map((user) {
             return DataRow(
@@ -83,23 +88,24 @@ class UsersTable extends ConsumerWidget {
                 DataCell(Text(user.facultyName ?? 'N/A', style: AppTextStyles.bodySmall)),
                 DataCell(Text(user.programName ?? 'N/A', style: AppTextStyles.bodySmall)),
                 DataCell(_StatusBadge(status: user.status)),
-                DataCell(PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, size: 20),
-                  onSelected: (value) {
-                    if (value == 'view') {
-                      context.pushNamed(
-                        RouteNames.userDetails,
-                        pathParameters: {'id': user.id!},
-                      );
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'view', child: Text('View Profile')),
-                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    const PopupMenuItem(value: 'status', child: Text('Change Status')),
-                    const PopupMenuItem(value: 'suspend', child: Text('Suspend')),
-                  ],
-                )),
+                if (!isRestricted)
+                  DataCell(PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded, size: 20),
+                    onSelected: (value) {
+                      if (value == 'view') {
+                        context.pushNamed(
+                          RouteNames.userDetails,
+                          pathParameters: {'id': user.id!},
+                        );
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'view', child: Text('View Profile')),
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      const PopupMenuItem(value: 'status', child: Text('Change Status')),
+                      const PopupMenuItem(value: 'suspend', child: Text('Suspend')),
+                    ],
+                  )),
               ],
             );
           }).toList(),

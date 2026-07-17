@@ -13,11 +13,12 @@ class SanctionRedirector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeRole = ref.watch(workspaceProvider).activeRole;
+    final isAdviser = activeRole?.roleName.toLowerCase() == 'adviser';
     
-    final canManage = activeRole?.hasAnyPermission([
+    final canManage = (activeRole?.hasAnyPermission([
       AppPermissions.createSanctionRules,
       AppPermissions.receiveSanctionItems,
-    ]) ?? false;
+    ]) ?? false) || isAdviser;
 
     if (canManage) {
       return const WorkspaceSanctionsPage();

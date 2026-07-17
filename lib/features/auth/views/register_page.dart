@@ -696,7 +696,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               ..onTap = () => _showDocumentDialog(
                                     context,
                                     'Terms and Conditions',
-                                    'lib/core/config/documents/terms_and_agreement.md',
+                                    'lib/core/config/documents/terms_and_conditions.md',
                                   ),
                           ),
                           const TextSpan(text: ' and '),

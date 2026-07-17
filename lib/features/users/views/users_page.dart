@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../widgets/user_management_header.dart';
@@ -6,12 +7,18 @@ import '../widgets/user_kpi_cards.dart';
 import '../widgets/advanced_user_filter_panel.dart';
 import '../widgets/users_table.dart';
 import '../widgets/modals/create_user_modal.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../../core/utils/role_mapper.dart';
 
-class UsersPage extends StatelessWidget {
+class UsersPage extends ConsumerWidget {
   const UsersPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
+    final isSuperAdmin = roleKey == 'super_admin';
+
     return DashboardLayout(
       title: 'User Management',
       child: SingleChildScrollView(
@@ -22,7 +29,7 @@ class UsersPage extends StatelessWidget {
             UserManagementHeader(
               title: 'Users',
               subtitle: 'Manage all university accounts, including students, faculty, and advisers',
-              actions: [
+              actions: isSuperAdmin ? [
                 HeaderActionButton(
                   icon: Icons.person_add_rounded,
                   label: 'Add User',
@@ -44,7 +51,7 @@ class UsersPage extends StatelessWidget {
                   label: 'Export',
                   onPressed: () {},
                 ),
-              ],
+              ] : [],
             ),
             const SizedBox(height: AppSpacing.xl),
             const UserKpiCards(),

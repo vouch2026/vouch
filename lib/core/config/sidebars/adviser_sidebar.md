@@ -26,11 +26,6 @@ Student Affairs
 Finance
    Fees
    Collections
-   Financial Reports
-
-Insights
-   Reports
 
 Governance
-   Officer Appointments
    Organization Settings

@@ -111,7 +111,7 @@ class MySanctionsPage extends ConsumerWidget {
                               const Icon(Icons.check_circle_outline_rounded, size: 16, color: AppColors.success),
                               const SizedBox(width: 8),
                               Text(
-                                'Cleared by ${sanction.receivedByName} on ${DateFormat('MMM dd, yyyy').format(sanction.receivedAt!)}',
+                                'Cleared by ${sanction.receivedByName ?? 'System/Admin'} on ${sanction.receivedAt != null ? DateFormat('MMM dd, yyyy').format(sanction.receivedAt!) : 'N/A'}',
                                 style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
                               ),
                             ],

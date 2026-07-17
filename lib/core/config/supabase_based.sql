@@ -47,6 +47,7 @@ DROP TABLE IF EXISTS public.tasks CASCADE;
 DROP TABLE IF EXISTS public.subject_schedules CASCADE;
 DROP TABLE IF EXISTS excuse_requests CASCADE;
 DROP TABLE IF EXISTS governance_audit_logs CASCADE;
+DROP TABLE IF EXISTS public.account_deletion_requests CASCADE;
 
 DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;

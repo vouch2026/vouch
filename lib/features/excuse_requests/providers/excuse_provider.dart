@@ -23,9 +23,9 @@ final studentExcusesProvider = FutureProvider.family<List<ExcuseRequestModel>, S
   if (org == null || term == null) return [];
   
   String? scopeId = org.campusId;
-  if (org.type == 'faculty-based') {
+  if (org.type == 'faculty-based' || org.type == 'faculty') {
     scopeId = org.facultyId;
-  } else if (org.type == 'program-based') {
+  } else if (org.type == 'program-based' || org.type == 'program') {
     scopeId = org.programId;
   }
   
@@ -43,9 +43,9 @@ final workspaceExcuseRequestsProvider = FutureProvider<List<ExcuseRequestModel>>
   if (org == null || term == null) return [];
   
   String? scopeId = org.campusId;
-  if (org.type == 'faculty-based') {
+  if (org.type == 'faculty-based' || org.type == 'faculty') {
     scopeId = org.facultyId;
-  } else if (org.type == 'program-based') {
+  } else if (org.type == 'program-based' || org.type == 'program') {
     scopeId = org.programId;
   }
   
@@ -64,9 +64,9 @@ final studentEventExcuseProvider = FutureProvider.family<ExcuseRequestModel?, St
   if (user == null || term == null || org == null) return null;
   
   String? scopeId = org.campusId;
-  if (org.type == 'faculty-based') {
+  if (org.type == 'faculty-based' || org.type == 'faculty') {
     scopeId = org.facultyId;
-  } else if (org.type == 'program-based') {
+  } else if (org.type == 'program-based' || org.type == 'program') {
     scopeId = org.programId;
   }
   

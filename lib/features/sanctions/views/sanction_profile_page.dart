@@ -601,7 +601,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                                         const SizedBox(width: AppSpacing.md),
                                         Expanded(
                                           child: Text(
-                                            'Marked as received by ${sanction.receivedByName} on ${DateFormat('MMM dd, yyyy').format(sanction.receivedAt!)}',
+                                            'Marked as received by ${sanction.receivedByName ?? 'System/Admin'} on ${sanction.receivedAt != null ? DateFormat('MMM dd, yyyy').format(sanction.receivedAt!) : 'N/A'}',
                                             style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w500),
                                           ),
                                         ),
