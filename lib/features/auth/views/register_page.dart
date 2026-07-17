@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../../../routes/route_names.dart';
 import '../controllers/auth_controller.dart';
+import '../providers/auth_provider.dart';
+import '../../../core/utils/validators.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../campuses/models/campus_model.dart';
@@ -48,13 +51,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
+  // Email Validation State
+  Timer? _emailDebounceTimer;
+  bool _isCheckingEmail = false;
+  bool _isEmailRegistered = false;
+  String? _emailValidationError;
+
   @override
   void initState() {
     super.initState();
     _firstNameController.addListener(_onFieldChanged);
     _lastNameController.addListener(_onFieldChanged);
     _schoolIdController.addListener(_onFieldChanged);
-    _emailController.addListener(_onFieldChanged);
+    _emailController.addListener(_onEmailChanged);
     _passwordController.addListener(_onFieldChanged);
     _confirmPasswordController.addListener(_onFieldChanged);
   }
@@ -63,14 +72,82 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     setState(() {});
   }
 
+  void _onEmailChanged() {
+    _onFieldChanged();
+    _emailDebounceTimer?.cancel();
+    
+    // Instantly clear the registration error status when typing starts again
+    if (_isEmailRegistered || _emailValidationError != null) {
+      setState(() {
+        _isEmailRegistered = false;
+        _emailValidationError = null;
+      });
+    }
+
+    _emailDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      if (_emailController.text.trim().isNotEmpty) {
+        _checkEmailAvailability(_emailController.text);
+      }
+    });
+  }
+
+  Future<void> _checkEmailAvailability(String email) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      setState(() {
+        _isEmailRegistered = false;
+        _emailValidationError = null;
+      });
+      return;
+    }
+
+    // Step 1: Perform client-side format validation first
+    final formatError = Validators.email(trimmedEmail);
+    if (formatError != null) {
+      setState(() {
+        _isEmailRegistered = false;
+        _emailValidationError = formatError;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingEmail = true;
+      _emailValidationError = null;
+    });
+
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      final exists = await repository.isEmailRegistered(trimmedEmail);
+      
+      if (mounted) {
+        setState(() {
+          _isEmailRegistered = exists;
+          _isCheckingEmail = false;
+          if (exists) {
+            _emailValidationError = 'This email is already registered';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCheckingEmail = false;
+          _emailValidationError = 'Error verifying email. Please try again.';
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _firstNameController.removeListener(_onFieldChanged);
     _lastNameController.removeListener(_onFieldChanged);
     _schoolIdController.removeListener(_onFieldChanged);
-    _emailController.removeListener(_onFieldChanged);
+    _emailController.removeListener(_onEmailChanged);
     _passwordController.removeListener(_onFieldChanged);
     _confirmPasswordController.removeListener(_onFieldChanged);
+    _emailDebounceTimer?.cancel();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _schoolIdController.dispose();
@@ -91,7 +168,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         _emailController.text.trim().isNotEmpty &&
         _passwordController.text.trim().isNotEmpty &&
         _confirmPasswordController.text.trim().isNotEmpty &&
-        _agreeToTerms;
+        _agreeToTerms &&
+        !_isCheckingEmail &&
+        !_isEmailRegistered &&
+        _emailValidationError == null;
   }
 
   @override
@@ -434,6 +514,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               hintText: 'Enter Email',
               icon: Icons.mail_outline,
               keyboardType: TextInputType.emailAddress,
+              errorText: _emailValidationError,
+              suffixIcon: _isCheckingEmail
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    )
+                  : (_emailController.text.isNotEmpty && Validators.email(_emailController.text) == null)
+                      ? _isEmailRegistered
+                          ? const Icon(Icons.error_outline, color: AppColors.error)
+                          : const Icon(Icons.check_circle_outline, color: AppColors.success)
+                      : null,
+              validator: (val) {
+                final formatError = Validators.email(val);
+                if (formatError != null) return formatError;
+
+                if (_emailValidationError != null) {
+                  return _emailValidationError;
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Password'),
@@ -461,10 +568,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 if (hasSpecial) categoriesMet++;
 
                 if (!hasMinLength) {
-                  return 'Password must be at least 12 characters long';
+                  return 'Password must be at least 12 characters';
                 }
                 if (categoriesMet < 3) {
-                  return 'Password must meet at least 3 complexity categories';
+                  return 'Password must include uppercase, lowercase, numbers, or symbols';
                 }
                 return null;
               },
@@ -497,16 +604,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Password must contain:',
+                        'Password Requirements:',
                         style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildRequirementItem('Minimum of 12 characters', hasMinLength),
+                          _buildRequirementItem('At least 12 characters', hasMinLength),
                           const SizedBox(height: 6),
-                          _buildRequirementItem('At least 3 of these categories (Current: $categoriesMet/4):', isComplexityMet),
+                          _buildRequirementItem('Include at least 3 of the following:', isComplexityMet),
                           Padding(
                             padding: const EdgeInsets.only(left: 20, top: 6),
                             child: Wrap(
@@ -516,7 +623,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 _buildSubRequirementItem('Uppercase', hasUppercase),
                                 _buildSubRequirementItem('Lowercase', hasLowercase),
                                 _buildSubRequirementItem('Number', hasNumber),
-                                _buildSubRequirementItem('Special Character', hasSpecial),
+                                _buildSubRequirementItem('Special Symbol', hasSpecial),
                               ],
                             ),
                           ),
@@ -534,10 +641,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               hintText: 'Re-enter Password',
               icon: Icons.lock_outline,
               obscureText: !_showConfirmPassword,
+              errorText: (_confirmPasswordController.text.isNotEmpty &&
+                      _confirmPasswordController.text != _passwordController.text)
+                  ? 'Passwords do not match'
+                  : null,
               suffixIcon: IconButton(
                 onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
                 icon: Icon(_showConfirmPassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary, size: 20),
               ),
+              validator: (val) {
+                if (val == null || val.isEmpty) return 'Field required';
+                if (val != _passwordController.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -573,7 +691,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () => _showDocumentDialog(
@@ -588,7 +705,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () => _showDocumentDialog(
@@ -801,6 +917,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     FormFieldValidator<String>? validator,
+    String? errorText,
   }) {
     return TextFormField(
       controller: controller,
@@ -809,6 +926,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hintText,
+        errorText: errorText,
         prefixIcon: icon == null ? null : Padding(
           padding: const EdgeInsets.only(left: 10, right: 8),
           child: Center(

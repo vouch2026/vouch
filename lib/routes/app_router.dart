@@ -6,6 +6,9 @@ import 'route_paths.dart';
 import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
+import '../features/auth/views/forgot_password_page.dart';
+import '../features/auth/views/change_email_page.dart';
+import '../features/auth/views/change_password_page.dart';
 import '../features/auth/views/splash_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
 import '../features/dashboard/views/calendar_page.dart';
@@ -28,6 +31,7 @@ import '../features/users/views/officers_page.dart';
 import '../features/users/views/user_profile_page.dart';
 import '../features/profile/views/my_qr_code_page.dart';
 import '../features/profile/views/manage_account_page.dart';
+import '../features/users/views/account_deletion_requests_page.dart';
 import '../features/profile/views/about_us_page.dart';
 import '../features/profile/views/help_support_page.dart';
 import '../features/elections/views/comselec_dashboard_page.dart';
@@ -117,6 +121,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (loggingIn) {
+        if (state.matchedLocation == RoutePaths.forgotPassword) {
+          return null;
+        }
         return RoutePaths.dashboard;
       }
 
@@ -156,6 +163,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.register,
         name: RouteNames.register,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.forgotPassword,
+        name: RouteNames.forgotPassword,
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.changeEmail,
+        name: RouteNames.changeEmail,
+        builder: (context, state) => const ChangeEmailPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.changePassword,
+        name: RouteNames.changePassword,
+        builder: (context, state) => const ChangePasswordPage(),
       ),
       GoRoute(
         path: RoutePaths.emailVerification,
@@ -294,6 +316,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.users,
         name: RouteNames.users,
         builder: (context, state) => const UsersPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.accountDeletionRequests,
+        name: RouteNames.accountDeletionRequests,
+        builder: (context, state) => const AccountDeletionRequestsPage(),
       ),
       GoRoute(
         path: RoutePaths.officers,

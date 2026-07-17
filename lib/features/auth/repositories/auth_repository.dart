@@ -175,4 +175,31 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  /// Checks if an email is already registered in the users table.
+  Future<bool> isEmailRegistered(String email) async {
+    try {
+      final response = await _client
+          .from('users')
+          .select('email')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      debugPrint('Error checking email registration: $e');
+      return false;
+    }
+  }
+
+  /// Sends a password reset OTP/link to the user's email.
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _client.auth.resetPasswordForEmail(email.trim().toLowerCase());
+  }
+
+  /// Updates the currently signed-in user's password.
+  Future<void> updatePassword(String newPassword) async {
+    await _client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
 }

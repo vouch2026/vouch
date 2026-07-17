@@ -112,6 +112,11 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
               icon: Icons.how_to_vote_rounded,
               path: RoutePaths.comselecDashboard,
             ),
+            SidebarItemConfig(
+              label: 'Deletion Requests',
+              icon: Icons.person_remove_alt_1_outlined,
+              path: RoutePaths.accountDeletionRequests,
+            ),
           ],
         ),
       ];

@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../controllers/profile_controller.dart';
+import 'package:intl/intl.dart';
+import '../providers/account_deletion_provider.dart';
+import '../widgets/delete_account_request_modal.dart';
+import '../../../routes/route_paths.dart';
 
 class ManageAccountPage extends ConsumerWidget {
   const ManageAccountPage({super.key});
@@ -60,47 +65,7 @@ class ManageAccountPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
-    final passController = TextEditingController();
 
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: TextField(
-          controller: passController,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'New Password'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (passController.text.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password must be at least 6 characters'), backgroundColor: AppColors.error),
-                );
-                return;
-              }
-              final success = await ref.read(profileControllerProvider.notifier).updatePassword(
-                passController.text.trim(),
-              );
-              if (success && context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password updated successfully'), backgroundColor: AppColors.success),
-                );
-              }
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _showYearLevelDialog(BuildContext context, WidgetRef ref, dynamic profile) async {
     int? selectedYear = profile.yearLevel;
@@ -199,7 +164,8 @@ class ManageAccountPage extends ConsumerWidget {
                         label: 'Email Address',
                         value: profile.email,
                         icon: LucideIcons.mail,
-                        canEdit: false,
+                        canEdit: true,
+                        onEdit: () => context.push(RoutePaths.changeEmail),
                       ),
                       _buildInfoTile(
                         label: 'ID Number',
@@ -239,19 +205,87 @@ class ManageAccountPage extends ConsumerWidget {
                       _buildActionTile(
                         label: 'Change Password',
                         icon: LucideIcons.lock,
-                        onTap: () => _showChangePasswordDialog(context, ref),
+                        onTap: () => context.push(RoutePaths.changePassword),
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.xxl),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          // TODO: Implement delete account
-                        },
-                        icon: const Icon(LucideIcons.trash2, color: AppColors.error, size: 18),
-                        label: Text(
-                          'Delete Account',
-                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                    ref.watch(myPendingDeletionRequestProvider).when(
+                      data: (pendingRequest) {
+                        if (pendingRequest != null) {
+                          return Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withOpacity(0.1),
+                                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(LucideIcons.alertTriangle, color: AppColors.warning, size: 18),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Text(
+                                        'Deletion Request Pending',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          color: AppColors.warning,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    'Submitted on: ${DateFormat('yyyy-MM-dd HH:mm').format(pendingRequest.createdAt ?? DateTime.now())}',
+                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        
+                        return Center(
+                          child: TextButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => DeleteAccountRequestModal(profile: profile),
+                              );
+                            },
+                            icon: const Icon(LucideIcons.trash2, color: AppColors.error, size: 18),
+                            label: Text(
+                              'Delete Account',
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      error: (err, _) => Center(
+                        child: TextButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => DeleteAccountRequestModal(profile: profile),
+                            );
+                          },
+                          icon: const Icon(LucideIcons.trash2, color: AppColors.error, size: 18),
+                          label: Text(
+                            'Delete Account',
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ),

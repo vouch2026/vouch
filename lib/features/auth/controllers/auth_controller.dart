@@ -132,6 +132,32 @@ class AuthController extends AsyncNotifier<void> {
     ref.invalidate(workspaceProvider);
     state = const AsyncData(null);
   }
+
+  Future<bool> sendPasswordReset(String email) async {
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() => _repository.sendPasswordResetEmail(email));
+    state = result;
+    return !result.hasError;
+  }
+
+  Future<bool> resetPassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() async {
+      await _repository.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.recovery,
+      );
+      await _repository.updatePassword(newPassword);
+      await _repository.signOut();
+    });
+    state = result;
+    return !result.hasError;
+  }
 }
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, void>(() {
