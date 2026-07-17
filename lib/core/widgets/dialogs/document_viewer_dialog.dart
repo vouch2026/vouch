@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_text_styles.dart';
 
 class DocumentViewerDialog extends StatelessWidget {
@@ -15,10 +16,9 @@ class DocumentViewerDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Screen size checks to make it highly responsive on mobile/desktop/tablet
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width >= 1024;
-    // On mobile, take full available width minus a clean 32px total margin (16px on each side)
+    // Adaptable responsiveness: wider modal on desktop, full-width with clean margins on mobile
     final dialogWidth = isDesktop ? 600.0 : (size.width - 32).clamp(280.0, 500.0);
     final dialogHeight = size.height * 0.8;
 
@@ -32,40 +32,35 @@ class DocumentViewerDialog extends StatelessWidget {
       child: Container(
         width: dialogWidth,
         height: dialogHeight,
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
+            // Header Row (Cohesive with CreateCampusModal title layout)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
                     title,
-                    style: AppTextStyles.headlineLarge.copyWith(
-                      color: AppColors.primary,
+                    style: AppTextStyles.titleLarge.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, color: AppColors.textGrey),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textGrey),
                   style: IconButton.styleFrom(
                     hoverColor: AppColors.accent.withValues(alpha: 0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             
-            // Content (Asynchronous File Reader)
+            // Content Pane
             Expanded(
               child: FutureBuilder<String>(
                 future: rootBundle.loadString(filePath),
@@ -80,17 +75,20 @@ class DocumentViewerDialog extends StatelessWidget {
                   if (snapshot.hasError) {
                     return Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-                            const SizedBox(height: 12),
+                            const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
+                            const SizedBox(height: AppSpacing.sm),
                             Text(
                               'Failed to load document.',
-                              style: AppTextStyles.titleMedium.copyWith(color: AppColors.error),
+                              style: AppTextStyles.titleMedium.copyWith(
+                                color: AppColors.error, 
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: AppSpacing.xs),
                             Text(
                               'Please try again later.',
                               style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
@@ -106,42 +104,42 @@ class DocumentViewerDialog extends StatelessWidget {
                     thumbVisibility: true,
                     trackVisibility: false,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.only(right: AppSpacing.md),
                       child: SimpleMarkdownWidget(text: data),
                     ),
                   );
                 },
               ),
             ),
-            const SizedBox(height: 16),
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             
-            // Footer Action
-            Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(
-                width: 120,
-                height: 44,
-                child: ElevatedButton(
+            // Footer Action Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    foregroundColor: Colors.white,
                     elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl, 
+                      vertical: AppSpacing.md,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   child: Text(
                     'Close',
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.white,
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -162,16 +160,16 @@ class SimpleMarkdownWidget extends StatelessWidget {
     for (final line in lines) {
       final trimmed = line.trim();
       if (trimmed.isEmpty) {
-        widgets.add(const SizedBox(height: 12));
+        widgets.add(const SizedBox(height: AppSpacing.sm));
         continue;
       }
 
       if (trimmed.startsWith('# ')) {
         widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 16, bottom: 8),
+          padding: const EdgeInsets.only(top: AppSpacing.lg, bottom: AppSpacing.xs),
           child: Text(
             trimmed.substring(2).trim(),
-            style: AppTextStyles.displaySmall.copyWith(
+            style: AppTextStyles.headlineLarge.copyWith(
               fontWeight: FontWeight.bold,
               color: AppColors.primary,
             ),
@@ -179,7 +177,7 @@ class SimpleMarkdownWidget extends StatelessWidget {
         ));
       } else if (trimmed.startsWith('### ')) {
         widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 6),
+          padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
           child: Text(
             trimmed.substring(4).trim(),
             style: AppTextStyles.headlineSmall.copyWith(
@@ -191,7 +189,7 @@ class SimpleMarkdownWidget extends StatelessWidget {
       } else if (trimmed.startsWith('* ')) {
         final content = trimmed.substring(2).trim();
         widgets.add(Padding(
-          padding: const EdgeInsets.only(left: 12, bottom: 8),
+          padding: const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.xs),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -214,7 +212,7 @@ class SimpleMarkdownWidget extends StatelessWidget {
         ));
       } else {
         widgets.add(Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
           child: RichText(
             text: _parseInlineFormatting(trimmed),
           ),
@@ -248,7 +246,7 @@ class SimpleMarkdownWidget extends StatelessWidget {
             color: isCode 
                 ? AppColors.primaryDark 
                 : (isBold ? AppColors.textDark : AppColors.textGrey),
-            height: 1.5,
+            height: 1.6,
             fontSize: isCode ? 12 : 13.5,
           ),
         ));

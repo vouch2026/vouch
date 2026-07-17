@@ -2,7 +2,7 @@
 
 **Effective Date:** July 16, 2026
 
-Welcome to Vouch (the "Application"). By creating an account or using the Application, you agree to be bound by these Terms and Conditions. If you do not agree to these Terms, please do not use the Application.
+Welcome to Vouch (the "Application"). By creating an account or using the Application, you agree to be bound by these Terms and Conditions. These terms constitute a legal agreement between you and Vouch SoftTech Services ("the Company"). If you do not agree to these Terms, please do not use the Application.
 
 ### 1. Description of Service
 Vouch is a centralized student governance, multi-tiered clearance, attendance mapping, and organization fee tracking platform designed for institutional campuses, faculties, and student programs. The platform offers multi-tenant workspaces handling localized requirements via distinct organizational roles.
@@ -28,10 +28,15 @@ The Application employs strict Role-Based Access Controls linked to structural s
 * **Excuses:** Students may upload legitimate documentation to support an excuse request if they fail to log presence. Officers retain complete authority over review parameters.
 * **Sanctions:** Failure to fulfill minimum attendance records triggers automatic sanction records requiring designated items as configured by organizational bylaws.
 
-### 6. Prohibited Activities
+### 6. User Support, Bug Reporting, and Community Guidelines
+* **Official Support Channel:** Technical support, feature requests, and bug software reports are systematically handled via the official Vouch Community Facebook group.
+* **User Cooperation:** As a software service tailored for institutional student bodies, users are encouraged to interact constructively within the community group to aid peers in navigating standard operational procedures.
+* **Prohibited Community Conduct:** Falsifying bug reports, weaponizing the support community to target institutional officers or student leaders, or using the group to distribute malicious exploits targeting the application architecture is strictly forbidden and grounds for immediate platform bans.
+
+### 7. Prohibited Activities
 You agree not to upload corrupted files, distribute malicious software through storage buckets, forge reference numbers, submit fraudulent imagery as payment validation, or falsify documentation inside the clearance workflow.
 
-### 7. Account and System Data Deletion
+### 8. Account and System Data Deletion
 * **User-Initiated Deletion:** In compliance with Google Play Store policies, users retain the right to have their data removed from the system completely.
 * **Non-Instant Deletion / Pending Review:** In order to maintain the integrity of institutional student clearances, event attendance accountability, and fee collections, account deletion is not instantaneous.
 * **Review Period:** Submitting a deletion request initiates a 14-day administrative hold. During this window, school administrators (Super Admins, Deans, or Program Heads) will review your academic record for any unresolved clearances, unpaid fees, or pending sanctions.
