@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -186,7 +187,35 @@ class AccountDeletionRequestsPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                DataCell(Text(request.studentIdNumber, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold))),
+                DataCell(
+                  Tooltip(
+                    message: 'Click to copy Student ID',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: request.studentIdNumber));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${request.studentIdNumber} copied to clipboard'),
+                            duration: const Duration(seconds: 1),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(request.studentIdNumber, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 4),
+                            const Icon(LucideIcons.copy, size: 12, color: AppColors.textGrey),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 DataCell(_buildAckBadge(request.acknowledgedClearance)),
                 DataCell(_buildAckBadge(request.acknowledgedDataLoss)),
                 DataCell(
@@ -303,7 +332,41 @@ class AccountDeletionRequestsPage extends ConsumerWidget {
                   ],
                 ),
                 Text('Email: ${request.email}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-                Text('Student ID: ${request.studentIdNumber}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                Row(
+                  children: [
+                    Text('Student ID: ', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: request.studentIdNumber));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${request.studentIdNumber} copied to clipboard'),
+                            duration: const Duration(seconds: 1),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              request.studentIdNumber,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(LucideIcons.copy, size: 10, color: AppColors.textGrey),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 Text('Submitted At: $dateStr', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
                 const Divider(height: AppSpacing.lg),
                 Row(
