@@ -347,6 +347,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                 hintText: 'Retype new password',
                 icon: Icons.lock_outline,
                 obscureText: !_showConfirmPassword,
+                errorText: (_confirmPasswordController.text.isNotEmpty &&
+                        _confirmPasswordController.text != _newPasswordController.text)
+                    ? 'Passwords do not match'
+                    : null,
                 suffixIcon: IconButton(
                   onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
                   icon: Icon(_showConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Colors.grey.shade600, size: 20),
@@ -486,6 +490,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     TextAlign textAlign = TextAlign.start,
     FormFieldValidator<String>? validator,
     bool enabled = true,
+    String? errorText,
   }) {
     return TextFormField(
       controller: controller,
@@ -496,6 +501,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       enabled: enabled,
       decoration: InputDecoration(
         hintText: hintText,
+        errorText: errorText,
         counterText: '',
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 10, right: 8),

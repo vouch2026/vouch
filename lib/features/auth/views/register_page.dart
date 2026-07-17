@@ -641,10 +641,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               hintText: 'Re-enter Password',
               icon: Icons.lock_outline,
               obscureText: !_showConfirmPassword,
+              errorText: (_confirmPasswordController.text.isNotEmpty &&
+                      _confirmPasswordController.text != _passwordController.text)
+                  ? 'Passwords do not match'
+                  : null,
               suffixIcon: IconButton(
                 onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
                 icon: Icon(_showConfirmPassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary, size: 20),
               ),
+              validator: (val) {
+                if (val == null || val.isEmpty) return 'Field required';
+                if (val != _passwordController.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             Row(
