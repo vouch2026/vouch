@@ -194,6 +194,42 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
   
             final currentUserProfile = ref.watch(userProfileProvider).value;
             final isCurrentUser = currentUserProfile?.id == activityCard.studentId;
+
+            final workspace = ref.watch(workspaceProvider);
+            final activeRole = workspace.activeRole;
+            final isOfficerOfWorkspace = workspace.selectedOrganization?.id == activityCard.organizationId &&
+                                         activeRole != null &&
+                                         activeRole.roleName != 'Member' &&
+                                         activeRole.roleName != 'Student';
+            final isSuperAdmin = currentUserProfile?.role == 'super_admin';
+
+            // Access control check
+            final isAuthorized = isCurrentUser || isOfficerOfWorkspace || isSuperAdmin;
+            if (!isAuthorized) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock_outline, size: 48, color: AppColors.error),
+                      SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Access Denied',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'You do not have permission to view this activity card.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             final studentProfileAsync = isCurrentUser 
               ? AsyncValue.data(currentUserProfile)
               : ref.watch(userProfileByIdProvider(activityCard.studentId));

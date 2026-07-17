@@ -136,6 +136,39 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
 
     final activeRole = ref.watch(workspaceProvider).activeRole;
     final canManageSanctions = activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false;
+    final isSuperAdmin = currentUser?.role == 'super_admin';
+
+    // Access control check: Check if user is viewing their own profile, is a super admin, or has sanction management permission
+    final isOwnProfile = widget.studentId == currentUser?.id;
+    final isAuthorized = isOwnProfile || isSuperAdmin || canManageSanctions;
+
+    if (!isAuthorized) {
+      return const DashboardLayout(
+        title: 'Access Denied',
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 48, color: AppColors.error),
+                SizedBox(height: AppSpacing.md),
+                Text(
+                  'Access Denied',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'You do not have permission to view this student\'s sanction profile.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     final attendanceEvents = attendanceAsync.value ?? [];
     final double totalSanctionScore = attendanceEvents.fold<double>(
