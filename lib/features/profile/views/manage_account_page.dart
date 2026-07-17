@@ -10,6 +10,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../controllers/profile_controller.dart';
+import 'package:intl/intl.dart';
+import '../providers/account_deletion_provider.dart';
+import '../widgets/delete_account_request_modal.dart';
 import '../../../routes/route_paths.dart';
 
 class ManageAccountPage extends ConsumerWidget {
@@ -206,15 +209,83 @@ class ManageAccountPage extends ConsumerWidget {
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.xxl),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          // TODO: Implement delete account
-                        },
-                        icon: const Icon(LucideIcons.trash2, color: AppColors.error, size: 18),
-                        label: Text(
-                          'Delete Account',
-                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                    ref.watch(myPendingDeletionRequestProvider).when(
+                      data: (pendingRequest) {
+                        if (pendingRequest != null) {
+                          return Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withOpacity(0.1),
+                                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(LucideIcons.alertTriangle, color: AppColors.warning, size: 18),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Text(
+                                        'Deletion Request Pending',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          color: AppColors.warning,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    'Submitted on: ${DateFormat('yyyy-MM-dd HH:mm').format(pendingRequest.createdAt ?? DateTime.now())}',
+                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        
+                        return Center(
+                          child: TextButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => DeleteAccountRequestModal(profile: profile),
+                              );
+                            },
+                            icon: const Icon(LucideIcons.trash2, color: AppColors.error, size: 18),
+                            label: Text(
+                              'Delete Account',
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      error: (err, _) => Center(
+                        child: TextButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => DeleteAccountRequestModal(profile: profile),
+                            );
+                          },
+                          icon: const Icon(LucideIcons.trash2, color: AppColors.error, size: 18),
+                          label: Text(
+                            'Delete Account',
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ),

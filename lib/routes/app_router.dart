@@ -31,6 +31,7 @@ import '../features/users/views/officers_page.dart';
 import '../features/users/views/user_profile_page.dart';
 import '../features/profile/views/my_qr_code_page.dart';
 import '../features/profile/views/manage_account_page.dart';
+import '../features/users/views/account_deletion_requests_page.dart';
 import '../features/profile/views/about_us_page.dart';
 import '../features/profile/views/help_support_page.dart';
 import '../features/elections/views/comselec_dashboard_page.dart';
@@ -315,6 +316,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.users,
         name: RouteNames.users,
         builder: (context, state) => const UsersPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.accountDeletionRequests,
+        name: RouteNames.accountDeletionRequests,
+        builder: (context, state) => const AccountDeletionRequestsPage(),
       ),
       GoRoute(
         path: RoutePaths.officers,
