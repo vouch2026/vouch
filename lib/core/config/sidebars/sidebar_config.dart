@@ -111,19 +111,11 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       items: [
         SidebarItemConfig(label: 'Fees', icon: Icons.payments_outlined, path: RoutePaths.workspaceFees),
         SidebarItemConfig(label: 'Collections', icon: Icons.account_balance_wallet_outlined, path: RoutePaths.workspaceCollections),
-        SidebarItemConfig(label: 'Financial Reports', icon: Icons.assessment_outlined, path: RoutePaths.workspaceFinanceReports),
-      ],
-    ),
-    const SidebarSectionConfig(
-      title: 'INSIGHTS',
-      items: [
-        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
       ],
     ),
     const SidebarSectionConfig(
       title: 'GOVERNANCE',
       items: [
-        SidebarItemConfig(label: 'Officer Appointments', icon: Icons.assignment_ind_outlined, path: RoutePaths.workspaceOfficerAppointments),
         SidebarItemConfig(label: 'Organization Settings', icon: Icons.settings_outlined, path: RoutePaths.workspaceSettings),
       ],
     ),
