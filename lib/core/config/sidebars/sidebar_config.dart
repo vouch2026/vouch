@@ -662,12 +662,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
         SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
       ],
     ),
-    const SidebarSectionConfig(
-      title: 'INSIGHTS',
-      items: [
-        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
-      ],
-    ),
   ],
 
   'program_head': [
@@ -703,12 +697,6 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       title: 'STUDENT AFFAIRS',
       items: [
         SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
-      ],
-    ),
-    const SidebarSectionConfig(
-      title: 'INSIGHTS',
-      items: [
-        SidebarItemConfig(label: 'Reports', icon: Icons.bar_chart_rounded, path: RoutePaths.workspaceReports),
       ],
     ),
   ],

@@ -18,7 +18,3 @@ Events
 
 Student Affairs
    Activity Clearances
-
-Reports
-
-Analytics
