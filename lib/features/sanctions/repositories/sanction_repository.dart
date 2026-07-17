@@ -265,7 +265,7 @@ class SanctionRepository {
       // Fetch existing sanction records for this organization and term to preserve status if unchanged
       final existingRecordsResponse = await _client
           .from('student_sanction_records')
-          .select('student_id, status, total_absences, required_item')
+          .select('student_id, status, total_absences, required_item, received_by_user_id, received_at')
           .eq('scope_id', orgId)
           .eq('academic_term_id', termId);
 
@@ -307,6 +307,8 @@ class SanctionRepository {
 
           final existing = existingMap[studentId];
           String status = 'Pending Item';
+          String? receivedByUserId;
+          String? receivedAt;
           if (existing != null) {
             final String existingStatus = existing['status'] as String? ?? 'Pending Item';
             final double existingAbsences = (existing['total_absences'] as num?)?.toDouble() ?? 0.0;
@@ -314,6 +316,8 @@ class SanctionRepository {
 
             if (existingStatus == 'Item Received' && score == existingAbsences && requiredItemText == existingItem) {
               status = 'Item Received';
+              receivedByUserId = existing['received_by_user_id'] as String?;
+              receivedAt = existing['received_at'] as String?;
             }
           }
 
@@ -325,6 +329,8 @@ class SanctionRepository {
             'total_absences': score,
             'required_item': requiredItemText,
             'status': status,
+            'received_by_user_id': receivedByUserId,
+            'received_at': receivedAt,
           });
         }
       });
