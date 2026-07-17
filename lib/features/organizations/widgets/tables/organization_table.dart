@@ -8,6 +8,8 @@ import '../../../../routes/route_names.dart';
 import '../../models/organization_model.dart';
 import '../../providers/organization_provider.dart';
 import '../../controllers/organization_controller.dart';
+import '../../providers/workspace_provider.dart';
+import '../../../../core/utils/role_mapper.dart';
 
 class OrganizationTable extends ConsumerStatefulWidget {
   const OrganizationTable({super.key});
@@ -23,6 +25,9 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
   @override
   Widget build(BuildContext context) {
     final organizationsAsync = ref.watch(organizationsProvider);
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
+    final isSuperAdmin = roleKey == 'super_admin';
 
     return organizationsAsync.when(
       data: (orgs) {
@@ -38,7 +43,7 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
             if (constraints.maxWidth < 600) {
               return _buildMobileCards(filteredOrgs);
             }
-            return _buildDataTable(filteredOrgs);
+            return _buildDataTable(filteredOrgs, isSuperAdmin);
           },
         );
       },
@@ -47,7 +52,7 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
     );
   }
 
-  Widget _buildDataTable(List<OrganizationModel> orgs) {
+  Widget _buildDataTable(List<OrganizationModel> orgs, bool isSuperAdmin) {
     final theme = Theme.of(context);
     
     return Column(
@@ -64,12 +69,12 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
             width: double.infinity,
             child: DataTable(
               headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
-              columns: const [
-                DataColumn(label: Text('Organization')),
-                DataColumn(label: Text('Adviser')),
-                DataColumn(label: Text('Members')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Actions')),
+              columns: [
+                const DataColumn(label: Text('Organization')),
+                const DataColumn(label: Text('Adviser')),
+                const DataColumn(label: Text('Members')),
+                const DataColumn(label: Text('Status')),
+                if (isSuperAdmin) const DataColumn(label: Text('Actions')),
               ],
               rows: orgs.map((org) => DataRow(
                 cells: [
@@ -121,72 +126,73 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
                   DataCell(Text(org.adviserName ?? 'Not Assigned', style: AppTextStyles.bodySmall)),
                   DataCell(Text('${org.memberCount}', style: AppTextStyles.bodySmall)),
                   DataCell(_StatusBadge(status: org.status)),
-                  DataCell(PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert_rounded, size: 20),
-                    onSelected: (value) async {
-                      if (value == 'view') {
-                        context.pushNamed(
-                          RouteNames.organizationDetails,
-                          pathParameters: {'id': org.id},
-                        );
-                      } else if (value == 'delete') {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Organization'),
-                            content: Text('Are you sure you want to delete ${org.name}? This action cannot be undone.'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        );
+                  if (isSuperAdmin)
+                    DataCell(PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, size: 20),
+                      onSelected: (value) async {
+                        if (value == 'view') {
+                          context.pushNamed(
+                            RouteNames.organizationDetails,
+                            pathParameters: {'id': org.id},
+                          );
+                        } else if (value == 'delete') {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Organization'),
+                              content: Text('Are you sure you want to delete ${org.name}? This action cannot be undone.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
 
-                        if (confirmed == true && mounted) {
-                          // Show a loading snackbar or indicator if needed, 
-                          // but the controller will set its state to loading.
-                          final success = await ref.read(organizationControllerProvider.notifier).deleteOrganization(org.id);
-                          
-                          if (mounted) {
-                            if (success) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Organization deleted successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } else {
-                              final error = ref.read(organizationControllerProvider).error;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to delete: ${error?.toString() ?? 'Unknown error'}'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+                          if (confirmed == true && mounted) {
+                            // Show a loading snackbar or indicator if needed, 
+                            // but the controller will set its state to loading.
+                            final success = await ref.read(organizationControllerProvider.notifier).deleteOrganization(org.id);
+                            
+                            if (mounted) {
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Organization deleted successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } else {
+                                final error = ref.read(organizationControllerProvider).error;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to delete: ${error?.toString() ?? 'Unknown error'}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
                             }
                           }
                         }
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'view', child: Text('View Details')),
-                      const PopupMenuItem(value: 'edit', child: Text('Edit Organization')),
-                      const PopupMenuItem(value: 'members', child: Text('Manage Members')),
-                      const PopupMenuItem(value: 'deactivate', child: Text('Deactivate')),
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(
-                        value: 'delete', 
-                        child: Text('Delete', style: TextStyle(color: Colors.red)),
-                      ),
-                    ],
-                  )),
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'view', child: Text('View Details')),
+                        const PopupMenuItem(value: 'edit', child: Text('Edit Organization')),
+                        const PopupMenuItem(value: 'members', child: Text('Manage Members')),
+                        const PopupMenuItem(value: 'deactivate', child: Text('Deactivate')),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'delete', 
+                          child: Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    )),
                 ],
               )).toList(),
             ),

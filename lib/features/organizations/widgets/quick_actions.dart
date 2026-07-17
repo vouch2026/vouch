@@ -16,8 +16,8 @@ class QuickActions extends ConsumerWidget {
 
     final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
     
-    // Deans and Program Heads should not see these quick actions
-    if (roleKey == 'program_head' || roleKey == 'dean') {
+    // Only Super Admins can see these quick actions
+    if (roleKey != 'super_admin') {
       return const SizedBox.shrink();
     }
     return Wrap(

@@ -17,13 +17,16 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
   
   if (org == null) return [];
   
-  final scopeType = org.type == 'campus-based' 
-      ? 'Institutional' 
-      : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
+  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
+  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
   
-  final scopeId = org.type == 'campus-based' 
+  final scopeType = isInstitutional 
+      ? 'Institutional' 
+      : (isFaculty ? 'Faculty' : 'Program');
+  
+  final scopeId = isInstitutional 
       ? org.campusId 
-      : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+      : (isFaculty ? org.facultyId : org.programId);
 
   if (scopeId == null) return [];
   
