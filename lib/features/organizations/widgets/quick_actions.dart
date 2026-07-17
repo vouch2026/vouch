@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/role_mapper.dart';
+import '../providers/workspace_provider.dart';
 import 'modals/organization_creation_modal.dart';
 import 'details/assign_adviser_dialog.dart';
 
-class QuickActions extends StatelessWidget {
+class QuickActions extends ConsumerWidget {
   const QuickActions({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    if (activeRole == null) return const SizedBox.shrink();
+
+    final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
+    
+    // Deans and Program Heads should not see these quick actions
+    if (roleKey == 'program_head' || roleKey == 'dean') {
+      return const SizedBox.shrink();
+    }
     return Wrap(
       spacing: AppSpacing.md,
       runSpacing: AppSpacing.sm,

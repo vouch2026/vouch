@@ -6,13 +6,35 @@ import '../models/organization_settings_history_model.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
+import 'workspace_provider.dart';
+import '../../../core/utils/role_mapper.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>((ref) {
   return OrganizationRepository(SupabaseConfig.client);
 });
 
 final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) async {
-  return ref.watch(organizationRepositoryProvider).getOrganizations();
+  final allOrgs = await ref.watch(organizationRepositoryProvider).getOrganizations();
+  
+  final activeRole = ref.watch(workspaceProvider).activeRole;
+  if (activeRole == null) return allOrgs;
+
+  final userProfile = ref.watch(userProfileProvider).value;
+  if (userProfile == null) return allOrgs;
+
+  final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
+  
+  if (roleKey == 'program_head') {
+    final programId = userProfile.programId;
+    if (programId == null) return [];
+    return allOrgs.where((org) => org.type == 'program-based' && org.programId == programId).toList();
+  } else if (roleKey == 'dean') {
+    final facultyId = userProfile.facultyId;
+    if (facultyId == null) return [];
+    return allOrgs.where((org) => org.type == 'faculty-based' && org.facultyId == facultyId).toList();
+  }
+
+  return allOrgs;
 });
 
 final userOrganizationsProvider = FutureProvider<List<OrganizationModel>>((ref) async {
