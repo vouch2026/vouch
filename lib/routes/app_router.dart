@@ -7,6 +7,8 @@ import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
 import '../features/auth/views/forgot_password_page.dart';
+import '../features/auth/views/change_email_page.dart';
+import '../features/auth/views/change_password_page.dart';
 import '../features/auth/views/splash_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
 import '../features/dashboard/views/calendar_page.dart';
@@ -165,6 +167,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.forgotPassword,
         name: RouteNames.forgotPassword,
         builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.changeEmail,
+        name: RouteNames.changeEmail,
+        builder: (context, state) => const ChangeEmailPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.changePassword,
+        name: RouteNames.changePassword,
+        builder: (context, state) => const ChangePasswordPage(),
       ),
       GoRoute(
         path: RoutePaths.emailVerification,

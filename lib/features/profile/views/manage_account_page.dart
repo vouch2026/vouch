@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../controllers/profile_controller.dart';
+import '../../../routes/route_paths.dart';
 
 class ManageAccountPage extends ConsumerWidget {
   const ManageAccountPage({super.key});
@@ -60,47 +62,7 @@ class ManageAccountPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
-    final passController = TextEditingController();
 
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: TextField(
-          controller: passController,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'New Password'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (passController.text.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password must be at least 6 characters'), backgroundColor: AppColors.error),
-                );
-                return;
-              }
-              final success = await ref.read(profileControllerProvider.notifier).updatePassword(
-                passController.text.trim(),
-              );
-              if (success && context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password updated successfully'), backgroundColor: AppColors.success),
-                );
-              }
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _showYearLevelDialog(BuildContext context, WidgetRef ref, dynamic profile) async {
     int? selectedYear = profile.yearLevel;
@@ -199,7 +161,8 @@ class ManageAccountPage extends ConsumerWidget {
                         label: 'Email Address',
                         value: profile.email,
                         icon: LucideIcons.mail,
-                        canEdit: false,
+                        canEdit: true,
+                        onEdit: () => context.push(RoutePaths.changeEmail),
                       ),
                       _buildInfoTile(
                         label: 'ID Number',
@@ -239,7 +202,7 @@ class ManageAccountPage extends ConsumerWidget {
                       _buildActionTile(
                         label: 'Change Password',
                         icon: LucideIcons.lock,
-                        onTap: () => _showChangePasswordDialog(context, ref),
+                        onTap: () => context.push(RoutePaths.changePassword),
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.xxl),

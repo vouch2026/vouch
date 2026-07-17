@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../auth/models/user_model.dart';
 
 class ProfileRepository {
   final SupabaseClient _client;
@@ -22,6 +21,17 @@ class ProfileRepository {
   Future<void> updateEmail(String newEmail) async {
     await _client.auth.updateUser(
       UserAttributes(email: newEmail),
+    );
+  }
+
+  Future<AuthResponse> verifyEmailChange({
+    required String newEmail,
+    required String token,
+  }) async {
+    return await _client.auth.verifyOTP(
+      email: newEmail,
+      token: token,
+      type: OtpType.emailChange,
     );
   }
 }
