@@ -319,7 +319,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             TextButton(
-              onPressed: () {},
+              onPressed: () => context.go(RoutePaths.forgotPassword),
               child: Text(
                 'Forgot your password?',
                 style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary),

@@ -6,6 +6,7 @@ import 'route_paths.dart';
 import '../features/auth/views/login_page.dart';
 import '../features/auth/views/register_page.dart';
 import '../features/auth/views/email_verification_page.dart';
+import '../features/auth/views/forgot_password_page.dart';
 import '../features/auth/views/splash_page.dart';
 import '../features/dashboard/views/dashboard_page.dart';
 import '../features/dashboard/views/calendar_page.dart';
@@ -117,6 +118,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (loggingIn) {
+        if (state.matchedLocation == RoutePaths.forgotPassword) {
+          return null;
+        }
         return RoutePaths.dashboard;
       }
 
@@ -156,6 +160,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.register,
         name: RouteNames.register,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.forgotPassword,
+        name: RouteNames.forgotPassword,
+        builder: (context, state) => const ForgotPasswordPage(),
       ),
       GoRoute(
         path: RoutePaths.emailVerification,
