@@ -9,15 +9,15 @@ import '../widgets/users_table.dart';
 import '../widgets/modals/create_user_modal.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/utils/role_mapper.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class UsersPage extends ConsumerWidget {
   const UsersPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeRole = ref.watch(workspaceProvider).activeRole;
-    final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
-    final isSuperAdmin = roleKey == 'super_admin';
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
 
     return DashboardLayout(
       title: 'User Management',

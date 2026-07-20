@@ -5,19 +5,18 @@ import '../../../../core/utils/role_mapper.dart';
 import '../providers/workspace_provider.dart';
 import 'modals/organization_creation_modal.dart';
 import 'details/assign_adviser_dialog.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class QuickActions extends ConsumerWidget {
   const QuickActions({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeRole = ref.watch(workspaceProvider).activeRole;
-    if (activeRole == null) return const SizedBox.shrink();
-
-    final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
     
     // Only Super Admins can see these quick actions
-    if (roleKey != 'super_admin') {
+    if (!isSuperAdmin) {
       return const SizedBox.shrink();
     }
     return Wrap(
