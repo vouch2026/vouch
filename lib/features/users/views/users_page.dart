@@ -19,6 +19,12 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../providers/users_provider.dart';
 import '../providers/user_stats_provider.dart';
 import '../models/user_stats_model.dart';
+import '../../campuses/providers/campus_provider.dart';
+import '../../faculties/providers/faculty_provider.dart';
+import '../../programs/providers/program_provider.dart';
+import '../../campuses/models/campus_model.dart';
+import '../../faculties/models/faculty_model.dart';
+import '../../programs/models/program_model.dart';
 import '../widgets/modals/create_user_modal.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../routes/route_names.dart';
@@ -443,24 +449,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     return chipContent;
   }
 
-  List<String> _getAvailableFaculties(List<UserModel> users) {
-    final faculties = users
-        .map((u) => u.facultyName?.trim() ?? '')
-        .where((f) => f.isNotEmpty && f != 'N/A')
+  List<String> _getAvailableYearLevels(List<UserModel> users) {
+    final years = users
+        .map((u) => u.yearLevel)
+        .where((y) => y != null && y != 0)
         .toSet()
         .toList()
       ..sort();
-    return ['All', ...faculties];
-  }
-
-  List<String> _getAvailablePrograms(List<UserModel> users) {
-    final programs = users
-        .map((u) => u.programName?.trim() ?? '')
-        .where((p) => p.isNotEmpty && p != 'N/A')
-        .toSet()
-        .toList()
-      ..sort();
-    return ['All', ...programs];
+    return ['All', ...years.map((y) => y.toString())];
   }
 
   String _getRoleFilterLabel(String roleValue) {
@@ -479,9 +475,61 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     return '$yearValue Year';
   }
 
-  Widget _buildFilterSection(List<UserModel> allUsers) {
-    final faculties = _getAvailableFaculties(allUsers);
-    final programs = _getAvailablePrograms(allUsers);
+  String _getCampusFilterLabel(String campusId, List<CampusModel> campuses) {
+    if (campusId == 'All') return 'Campus';
+    try {
+      final campus = campuses.firstWhere((c) => c.id == campusId);
+      return campus.name;
+    } catch (_) {
+      return 'Campus';
+    }
+  }
+
+  String _getFacultyFilterLabel(String facultyId, List<FacultyModel> faculties) {
+    if (facultyId == 'All') return 'Faculty';
+    try {
+      final faculty = faculties.firstWhere((f) => f.id == facultyId);
+      return faculty.code;
+    } catch (_) {
+      return 'Faculty';
+    }
+  }
+
+  String _getProgramFilterLabel(String programId, List<ProgramModel> programs) {
+    if (programId == 'All') return 'Program';
+    try {
+      final program = programs.firstWhere((p) => p.id == programId);
+      return program.code;
+    } catch (_) {
+      return 'Program';
+    }
+  }
+
+  Widget _buildFilterSection({
+    required List<UserModel> allUsers,
+    required List<CampusModel> campuses,
+    required List<FacultyModel> faculties,
+    required List<ProgramModel> programs,
+  }) {
+    final yearLevels = _getAvailableYearLevels(allUsers);
+
+    // Filter faculties list based on selected campus
+    final filteredFaculties = _selectedCampus == 'All'
+        ? faculties
+        : faculties.where((f) => f.campusId == _selectedCampus).toList();
+
+    // Filter programs list based on selected faculty (or campus)
+    final filteredPrograms = _selectedFaculty != 'All'
+        ? programs.where((p) => p.facultyId == _selectedFaculty).toList()
+        : (_selectedCampus != 'All'
+            ? (() {
+                final campusFacultyIds = faculties
+                    .where((f) => f.campusId == _selectedCampus)
+                    .map((f) => f.id)
+                    .toSet();
+                return programs.where((p) => campusFacultyIds.contains(p.facultyId)).toList();
+              })()
+            : programs);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -544,9 +592,12 @@ class _UsersPageState extends ConsumerState<UsersPage> {
 
           // 2. Campus Dropdown Filter
           PopupMenuButton<String>(
-            onSelected: (String campus) {
+            onSelected: (String campusId) {
               setState(() {
-                _selectedCampus = campus;
+                _selectedCampus = campusId;
+                // Connected reset: Reset dependent filters when campus changes
+                _selectedFaculty = 'All';
+                _selectedProgram = 'All';
               });
             },
             offset: const Offset(0, 45),
@@ -557,15 +608,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
             ),
             itemBuilder: (BuildContext context) {
-              final campuses = [
+              final items = [
                 {'label': 'All Campuses', 'value': 'All'},
-                {'label': 'Main Campus', 'value': 'main'},
-                {'label': 'Banaybanay', 'value': 'banay'},
+                ...campuses.map((c) => {'label': c.name, 'value': c.id}),
               ];
-              return campuses.map((camp) {
+              return items.map((camp) {
                 final isItemSelected = _selectedCampus == camp['value'];
                 return PopupMenuItem<String>(
-                  value: camp['value'],
+                  value: camp['value']!,
                   height: 42,
                   child: Row(
                     children: [
@@ -587,9 +637,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               }).toList();
             },
             child: _buildFilterChip(
-              label: _selectedCampus == 'All' 
-                  ? 'Campus' 
-                  : (_selectedCampus == 'main' ? 'Main Campus' : 'Banaybanay'),
+              label: _getCampusFilterLabel(_selectedCampus, campuses),
               isSelected: _selectedCampus != 'All',
               trailingIcon: LucideIcons.chevronDown,
             ),
@@ -598,9 +646,11 @@ class _UsersPageState extends ConsumerState<UsersPage> {
 
           // 3. Faculty Dropdown Filter
           PopupMenuButton<String>(
-            onSelected: (String faculty) {
+            onSelected: (String facultyId) {
               setState(() {
-                _selectedFaculty = faculty;
+                _selectedFaculty = facultyId;
+                // Connected reset: Reset dependent program filter when faculty changes
+                _selectedProgram = 'All';
               });
             },
             offset: const Offset(0, 45),
@@ -611,16 +661,20 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
             ),
             itemBuilder: (BuildContext context) {
-              return faculties.map((fac) {
-                final isItemSelected = _selectedFaculty == fac;
+              final items = [
+                {'label': 'All Faculties', 'value': 'All'},
+                ...filteredFaculties.map((f) => {'label': f.code, 'value': f.id}),
+              ];
+              return items.map((fac) {
+                final isItemSelected = _selectedFaculty == fac['value'];
                 return PopupMenuItem<String>(
-                  value: fac,
+                  value: fac['value']!,
                   height: 42,
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
-                          fac == 'All' ? 'All Faculties' : fac,
+                          fac['label']!,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
@@ -636,7 +690,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               }).toList();
             },
             child: _buildFilterChip(
-              label: _selectedFaculty == 'All' ? 'Faculty' : _selectedFaculty,
+              label: _getFacultyFilterLabel(_selectedFaculty, faculties),
               isSelected: _selectedFaculty != 'All',
               trailingIcon: LucideIcons.chevronDown,
             ),
@@ -645,9 +699,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
 
           // 4. Program Dropdown Filter
           PopupMenuButton<String>(
-            onSelected: (String program) {
+            onSelected: (String programId) {
               setState(() {
-                _selectedProgram = program;
+                _selectedProgram = programId;
               });
             },
             offset: const Offset(0, 45),
@@ -658,16 +712,20 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
             ),
             itemBuilder: (BuildContext context) {
-              return programs.map((prog) {
-                final isItemSelected = _selectedProgram == prog;
+              final items = [
+                {'label': 'All Programs', 'value': 'All'},
+                ...filteredPrograms.map((p) => {'label': p.code, 'value': p.id}),
+              ];
+              return items.map((prog) {
+                final isItemSelected = _selectedProgram == prog['value'];
                 return PopupMenuItem<String>(
-                  value: prog,
+                  value: prog['value']!,
                   height: 42,
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
-                          prog == 'All' ? 'All Programs' : prog,
+                          prog['label']!,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
@@ -683,7 +741,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               }).toList();
             },
             child: _buildFilterChip(
-              label: _selectedProgram == 'All' ? 'Program' : _selectedProgram,
+              label: _getProgramFilterLabel(_selectedProgram, programs),
               isSelected: _selectedProgram != 'All',
               trailingIcon: LucideIcons.chevronDown,
             ),
@@ -705,23 +763,16 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
             ),
             itemBuilder: (BuildContext context) {
-              final years = [
-                {'label': 'All Year Levels', 'value': 'All'},
-                {'label': '1st Year', 'value': '1'},
-                {'label': '2nd Year', 'value': '2'},
-                {'label': '3rd Year', 'value': '3'},
-                {'label': '4th Year', 'value': '4'},
-              ];
-              return years.map((y) {
-                final isItemSelected = _selectedYearLevel == y['value'];
+              return yearLevels.map((y) {
+                final isItemSelected = _selectedYearLevel == y;
                 return PopupMenuItem<String>(
-                  value: y['value'],
+                  value: y,
                   height: 42,
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
-                          y['label']!,
+                          y == 'All' ? 'All Year Levels' : _getYearLevelFilterLabel(y),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
@@ -1428,6 +1479,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     final usersAsync = ref.watch(allUsersProvider);
     final allUsers = usersAsync.value ?? <UserModel>[];
     final statsAsync = ref.watch(userStatsProvider);
+    final campusesAsync = ref.watch(campusesProvider);
+    final facultiesAsync = ref.watch(facultiesProvider);
+    final programsAsync = ref.watch(programsProvider);
+
+    final campuses = campusesAsync.valueOrNull ?? const <CampusModel>[];
+    final faculties = facultiesAsync.valueOrNull ?? const <FacultyModel>[];
+    final programs = programsAsync.valueOrNull ?? const <ProgramModel>[];
+
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return DashboardLayout(
@@ -1638,7 +1697,12 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             const SizedBox(height: 16),
 
             // Filter chips and dropdowns
-            _buildFilterSection(allUsers),
+            _buildFilterSection(
+              allUsers: allUsers,
+              campuses: campuses,
+              faculties: faculties,
+              programs: programs,
+            ),
             const SizedBox(height: 16),
 
             // User List or Excel Preview Table
@@ -1658,9 +1722,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
 
                   final matchesCampus = _selectedCampus == 'All' || user.campusId == _selectedCampus;
 
-                  final matchesFaculty = _selectedFaculty == 'All' || user.facultyName == _selectedFaculty;
+                  final matchesFaculty = _selectedFaculty == 'All' || user.facultyId == _selectedFaculty;
 
-                  final matchesProgram = _selectedProgram == 'All' || user.programName == _selectedProgram;
+                  final matchesProgram = _selectedProgram == 'All' || user.programId == _selectedProgram;
 
                   final matchesYear = _selectedYearLevel == 'All' || user.yearLevel?.toString() == _selectedYearLevel;
 
