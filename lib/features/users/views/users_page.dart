@@ -150,12 +150,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   Widget _buildAnalyticsSection(UserStatsModel stats) {
     final total = stats.totalUsers;
     final studentsCount = stats.totalStudents;
-    final facultyCount = stats.totalInstructors;
-    final governanceCount = stats.totalOfficers;
+    final personnelCount = stats.totalInstructors;
+    final programHeadsCount = stats.programHeadsCount;
+    final deansCount = stats.deansCount;
     
     final studentsPercent = total > 0 ? (studentsCount / total * 100).round() : 0;
-    final facultyPercent = total > 0 ? (facultyCount / total * 100).round() : 0;
-    final governancePercent = total > 0 ? (governanceCount / total * 100).round() : 0;
+    final personnelPercent = total > 0 ? (personnelCount / total * 100).round() : 0;
+    final programHeadsPercent = total > 0 ? (programHeadsCount / total * 100).round() : 0;
+    final deansPercent = total > 0 ? (deansCount / total * 100).round() : 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -180,28 +182,28 @@ class _UsersPageState extends ConsumerState<UsersPage> {
 
               return buildGridRow([
                 _buildKpiCard(
-                  title: 'Total Users',
-                  value: '$total',
-                  color: AppColors.primary,
-                  icon: LucideIcons.users,
-                ),
-                _buildKpiCard(
                   title: 'Students',
                   value: '$studentsCount',
                   color: Colors.blue,
                   icon: LucideIcons.user,
                 ),
                 _buildKpiCard(
-                  title: 'Faculty & Adviser',
-                  value: '$facultyCount',
+                  title: 'Personnel',
+                  value: '$personnelCount',
                   color: Colors.orange,
                   icon: LucideIcons.graduationCap,
                 ),
                 _buildKpiCard(
-                  title: 'Governance Roles',
-                  value: '$governanceCount',
-                  color: Colors.green,
-                  icon: LucideIcons.shieldCheck,
+                  title: 'Program Heads',
+                  value: '$programHeadsCount',
+                  color: Colors.teal,
+                  icon: LucideIcons.userCheck,
+                ),
+                _buildKpiCard(
+                  title: 'Deans',
+                  value: '$deansCount',
+                  color: Colors.purple,
+                  icon: LucideIcons.award,
                 ),
               ]);
             },
@@ -245,14 +247,20 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                               radius: 18,
                             ),
                             PieChartSectionData(
-                              value: facultyCount > 0 ? facultyCount.toDouble() : 0.001,
+                              value: personnelCount > 0 ? personnelCount.toDouble() : 0.001,
                               color: Colors.orange,
                               title: '',
                               radius: 18,
                             ),
                             PieChartSectionData(
-                              value: governanceCount > 0 ? governanceCount.toDouble() : 0.001,
-                              color: Colors.green,
+                              value: programHeadsCount > 0 ? programHeadsCount.toDouble() : 0.001,
+                              color: Colors.teal,
+                              title: '',
+                              radius: 18,
+                            ),
+                            PieChartSectionData(
+                              value: deansCount > 0 ? deansCount.toDouble() : 0.001,
+                              color: Colors.purple,
                               title: '',
                               radius: 18,
                             ),
@@ -260,9 +268,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         ),
                       ),
                       Text(
-                        '$studentsPercent%',
+                        '$total',
                         style: GoogleFonts.poppins(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primary,
                         ),
@@ -288,9 +296,11 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                       const SizedBox(height: 10),
                       _buildLegendItem('Students', Colors.blue, studentsCount, studentsPercent),
                       const SizedBox(height: 6),
-                      _buildLegendItem('Faculty & Advisers', Colors.orange, facultyCount, facultyPercent),
+                      _buildLegendItem('Personnel', Colors.orange, personnelCount, personnelPercent),
                       const SizedBox(height: 6),
-                      _buildLegendItem('Governance Roles', Colors.green, governanceCount, governancePercent),
+                      _buildLegendItem('Program Heads', Colors.teal, programHeadsCount, programHeadsPercent),
+                      const SizedBox(height: 6),
+                      _buildLegendItem('Deans', Colors.purple, deansCount, deansPercent),
                     ],
                   ),
                 ),
