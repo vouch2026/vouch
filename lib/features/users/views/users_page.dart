@@ -1518,23 +1518,34 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                     return DataRow(
                       selected: _selectedUserIds.contains(user.id),
                       onSelectChanged: (selected) {
-                        setState(() {
-                          if (selected == true) {
-                            if (user.id != null) _selectedUserIds.add(user.id!);
-                          } else {
-                            _selectedUserIds.remove(user.id);
+                        if (isSuperAdmin && _isSelectionMode) {
+                          setState(() {
+                            if (selected == true) {
+                              if (user.id != null) _selectedUserIds.add(user.id!);
+                            } else {
+                              _selectedUserIds.remove(user.id);
+                            }
+                          });
+                        } else {
+                          if (user.id != null) {
+                            context.pushNamed(
+                              RouteNames.userDetails,
+                              pathParameters: {'id': user.id!},
+                            );
                           }
-                        });
+                        }
                       },
                       cells: [
                         DataCell(
                           InkWell(
-                            onTap: () {
-                              context.pushNamed(
-                                RouteNames.userDetails,
-                                pathParameters: {'id': user.id!},
-                              );
-                            },
+                            onTap: _isSelectionMode
+                                ? null
+                                : () {
+                                    context.pushNamed(
+                                      RouteNames.userDetails,
+                                      pathParameters: {'id': user.id!},
+                                    );
+                                  },
                             child: Text(
                               user.schoolId,
                               style: GoogleFonts.poppins(
@@ -1547,12 +1558,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         ),
                         DataCell(
                           InkWell(
-                            onTap: () {
-                              context.pushNamed(
-                                RouteNames.userDetails,
-                                pathParameters: {'id': user.id!},
-                              );
-                            },
+                            onTap: _isSelectionMode
+                                ? null
+                                : () {
+                                    context.pushNamed(
+                                      RouteNames.userDetails,
+                                      pathParameters: {'id': user.id!},
+                                    );
+                                  },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -1705,22 +1718,42 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             ? Colors.orange
             : Colors.red;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (isSuperAdmin && _isSelectionMode) {
+          setState(() {
+            if (_selectedUserIds.contains(user.id)) {
+              _selectedUserIds.remove(user.id);
+            } else {
+              if (user.id != null) _selectedUserIds.add(user.id!);
+            }
+          });
+        } else {
+          if (user.id != null) {
+            context.pushNamed(
+              RouteNames.userDetails,
+              pathParameters: {'id': user.id!},
+            );
+          }
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
         children: [
           if (isSuperAdmin && _isSelectionMode) ...[
             Checkbox(
@@ -1850,8 +1883,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
