@@ -17,6 +17,7 @@ import '../../academic_structure/providers/term_provider.dart';
 import '../providers/clearance_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../../../core/utils/role_mapper.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
@@ -194,6 +195,44 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
   
             final currentUserProfile = ref.watch(userProfileProvider).value;
             final isCurrentUser = currentUserProfile?.id == activityCard.studentId;
+
+            final workspace = ref.watch(workspaceProvider);
+            final activeRole = workspace.activeRole;
+            final activeRoleName = activeRole?.roleName;
+            final normalizedActiveRole = activeRoleName != null ? RoleMapper.mapDbRoleToAppFormat(activeRoleName) : '';
+            final isOfficerOfWorkspace = workspace.selectedOrganization?.id == activityCard.organizationId &&
+                                         activeRole != null &&
+                                         normalizedActiveRole != 'member' &&
+                                         normalizedActiveRole != 'student';
+            final isSuperAdmin = currentUserProfile?.role == 'super_admin';
+
+            // Access control check
+            final isAuthorized = isCurrentUser || isOfficerOfWorkspace || isSuperAdmin;
+            if (!isAuthorized) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock_outline, size: 48, color: AppColors.error),
+                      SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Access Denied',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'You do not have permission to view this activity card.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             final studentProfileAsync = isCurrentUser 
               ? AsyncValue.data(currentUserProfile)
               : ref.watch(userProfileByIdProvider(activityCard.studentId));

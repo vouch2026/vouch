@@ -8,6 +8,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../routes/route_paths.dart';
 import '../providers/organization_provider.dart';
+import '../providers/workspace_provider.dart';
+import '../../../core/utils/role_mapper.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../widgets/details/org_details_header.dart';
 import '../widgets/details/org_details_analytics_cards.dart';
 import '../widgets/details/org_details_sidebar.dart';
@@ -21,12 +24,51 @@ class OrganizationDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final organizationAsync = ref.watch(organizationProvider(id));
+    final userProfile = ref.watch(userProfileProvider).value;
+    final activeRole = ref.watch(workspaceProvider).activeRole;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
 
     return DashboardLayout(
       title: 'Organization Details',
       child: organizationAsync.when(
         data: (org) {
           if (org == null) return const Center(child: Text('Organization not found'));
+
+          // Authorization check: Deans and Program Heads can only access organizations under their scope
+          bool isAuthorized = isSuperAdmin;
+          if (!isAuthorized && activeRole != null && userProfile != null) {
+            final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
+            if (roleKey == 'dean') {
+              isAuthorized = org.type == 'faculty-based' && org.facultyId == userProfile.facultyId;
+            } else if (roleKey == 'program_head') {
+              isAuthorized = org.type == 'program-based' && org.programId == userProfile.programId;
+            }
+          }
+
+          if (!isAuthorized) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline, size: 48, color: AppColors.error),
+                    SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Access Denied',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'You do not have permission to view this organization\'s details.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           
           return SingleChildScrollView(
             child: Column(

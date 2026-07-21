@@ -97,6 +97,19 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
         return;
       }
 
+      // Check if the user is authorized to select this workspace
+      final isSuperAdmin = profile.role == 'super_admin';
+      if (!isSuperAdmin) {
+        final userOrgs = await _repository.getUserOrganizations(profile.id!);
+        final isMember = userOrgs.any((o) => o.id == org.id);
+        if (!isMember) {
+          state = const WorkspaceState(isInitialized: true);
+          _clearPersistedWorkspace();
+          debugPrint('Unauthorized workspace selection attempt: ${org.name}');
+          return;
+        }
+      }
+
       final roleData = await _repository.getWorkspaceRoleAndPermissions(org.id, org.type);
 
       AppRole? role;

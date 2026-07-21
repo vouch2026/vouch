@@ -10,6 +10,7 @@ import '../../providers/organization_provider.dart';
 import '../../controllers/organization_controller.dart';
 import '../../providers/workspace_provider.dart';
 import '../../../../core/utils/role_mapper.dart';
+import '../../../auth/providers/auth_provider.dart';
 
 class OrganizationTable extends ConsumerStatefulWidget {
   const OrganizationTable({super.key});
@@ -25,9 +26,8 @@ class _OrganizationTableState extends ConsumerState<OrganizationTable> {
   @override
   Widget build(BuildContext context) {
     final organizationsAsync = ref.watch(organizationsProvider);
-    final activeRole = ref.watch(workspaceProvider).activeRole;
-    final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
-    final isSuperAdmin = roleKey == 'super_admin';
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
 
     return organizationsAsync.when(
       data: (orgs) {

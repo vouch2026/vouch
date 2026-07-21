@@ -66,6 +66,7 @@ import '../features/sanctions/views/workspace_create_sanction_rule_page.dart';
 import '../features/sanctions/views/workspace_edit_sanction_rule_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
+import '../core/utils/role_mapper.dart';
 
 /// A notifier that notifies the [GoRouter] when the authentication state 
 /// or workspace state changes.
@@ -127,9 +128,72 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.dashboard;
       }
 
-      // Redirect if accessing workspace routes without a selected organization
+      // Get user profile and workspace state
+      final userProfileAsync = ref.read(userProfileProvider);
+      final userProfile = userProfileAsync.value;
       final workspace = ref.read(workspaceProvider);
-      if (state.matchedLocation.startsWith('/workspace')) {
+
+      final isSuperAdmin = userProfile?.role == 'super_admin';
+      final location = state.matchedLocation;
+
+      // Helper to check prefix or exact match with params
+      bool matchesAny(String loc, List<String> paths) {
+        return paths.any((path) {
+          if (path.contains('/:')) {
+            final regexStr = '^${path.replaceAll(RegExp(r'/:[a-zA-Z0-9_]+'), '/[^/]+')}\$';
+            return RegExp(regexStr).hasMatch(loc);
+          }
+          return loc == path;
+        });
+      }
+
+      // 1. Super Admin/System Admin protection
+      final superAdminRoutes = [
+        RoutePaths.comselecsManager,
+        RoutePaths.academicStructure,
+        RoutePaths.campuses,
+        RoutePaths.campusDetails,
+        RoutePaths.faculties,
+        RoutePaths.facultyDetails,
+        RoutePaths.programs,
+        RoutePaths.programDetails,
+        RoutePaths.accountDeletionRequests,
+      ];
+
+      if (matchesAny(location, superAdminRoutes) && !isSuperAdmin) {
+        return RoutePaths.dashboard;
+      }
+
+      // 2. User/Student list & Organizations protection (accessible by Super Admin, Dean, and Program Head)
+      final activeRoleName = workspace.activeRole?.roleName;
+      final normalizedActiveRole = activeRoleName != null ? RoleMapper.mapDbRoleToAppFormat(activeRoleName) : '';
+      final isDean = normalizedActiveRole == 'dean';
+      final isProgramHead = normalizedActiveRole == 'program_head';
+      final adminAndAcademicRoutes = [
+        RoutePaths.users,
+        RoutePaths.officers,
+        RoutePaths.userDetails,
+        RoutePaths.organizations,
+        RoutePaths.organizationDetails,
+      ];
+
+      if (matchesAny(location, adminAndAcademicRoutes)) {
+        if (!isSuperAdmin && !isDean && !isProgramHead) {
+          return RoutePaths.dashboard;
+        }
+      }
+
+      // 3. Comselec protection
+      // Paths starting with /comselec can only be accessed by Super Admin OR when comselec workspace is selected
+      if (location.startsWith('/comselec')) {
+        final isComselecWorkspace = workspace.selectedOrganization?.type == 'comselec';
+        if (!isSuperAdmin && !isComselecWorkspace) {
+          return RoutePaths.dashboard;
+        }
+      }
+
+      // 4. Workspace routes protection
+      if (location.startsWith('/workspace')) {
         // Wait for workspace to initialize from persistence
         if (!workspace.isInitialized) return null;
 
@@ -137,11 +201,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           return RoutePaths.dashboard;
         }
 
+        final roleName = workspace.activeRole?.roleName;
+        final normalizedRole = roleName != null ? RoleMapper.mapDbRoleToAppFormat(roleName) : 'member';
+        final isMemberOrStudent = normalizedRole == 'student' || normalizedRole == 'member';
+
         // Redirect member/student role from officer workspace excuse requests page to student's myExcuseRequests page
-        if (state.matchedLocation == RoutePaths.workspaceExcuseRequests) {
-          final role = workspace.activeRole?.roleName;
-          if (role == 'Student' || role == 'Member') {
-            return RoutePaths.myExcuseRequests;
+        if (location == RoutePaths.workspaceExcuseRequests && isMemberOrStudent) {
+          return RoutePaths.myExcuseRequests;
+        }
+
+        // If the user is a Member or Student, block them from all other officer-only workspace screens
+        if (isMemberOrStudent) {
+          final allowedMemberWorkspaceRoutes = [
+            RoutePaths.workspaceDashboard,
+            RoutePaths.workspaceEvents,
+            RoutePaths.workspaceAnnouncements,
+            RoutePaths.myExcuseRequests,
+            RoutePaths.workspaceSanctions,
+            RoutePaths.workspaceFees,
+            RoutePaths.workspaceSettings,
+          ];
+
+          if (!matchesAny(location, allowedMemberWorkspaceRoutes)) {
+            return RoutePaths.workspaceDashboard;
           }
         }
       }
