@@ -17,6 +17,7 @@ import '../../academic_structure/providers/term_provider.dart';
 import '../providers/clearance_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../../../core/utils/role_mapper.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
@@ -197,10 +198,12 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
 
             final workspace = ref.watch(workspaceProvider);
             final activeRole = workspace.activeRole;
+            final activeRoleName = activeRole?.roleName;
+            final normalizedActiveRole = activeRoleName != null ? RoleMapper.mapDbRoleToAppFormat(activeRoleName) : '';
             final isOfficerOfWorkspace = workspace.selectedOrganization?.id == activityCard.organizationId &&
                                          activeRole != null &&
-                                         activeRole.roleName != 'Member' &&
-                                         activeRole.roleName != 'Student';
+                                         normalizedActiveRole != 'member' &&
+                                         normalizedActiveRole != 'student';
             final isSuperAdmin = currentUserProfile?.role == 'super_admin';
 
             // Access control check

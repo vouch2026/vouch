@@ -165,8 +165,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // 2. User/Student list protection (accessible by Super Admin, Dean, and Program Head)
-      final isDean = workspace.activeRole?.roleName.toLowerCase() == 'dean';
-      final isProgramHead = workspace.activeRole?.roleName.toLowerCase() == 'program_head';
+      final activeRoleName = workspace.activeRole?.roleName;
+      final normalizedActiveRole = activeRoleName != null ? RoleMapper.mapDbRoleToAppFormat(activeRoleName) : '';
+      final isDean = normalizedActiveRole == 'dean';
+      final isProgramHead = normalizedActiveRole == 'program_head';
       final userListRoutes = [
         RoutePaths.users,
         RoutePaths.officers,
