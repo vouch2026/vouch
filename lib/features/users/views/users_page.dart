@@ -846,6 +846,43 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               trailingIcon: LucideIcons.chevronDown,
             ),
           ),
+          if (_selectedRole != 'All' ||
+              _selectedCampus != 'All' ||
+              _selectedFaculty != 'All' ||
+              _selectedProgram != 'All' ||
+              _selectedYearLevel != 'All' ||
+              _selectedStatus != 'All') ...[
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _selectedRole = 'All';
+                  _selectedCampus = 'All';
+                  _selectedFaculty = 'All';
+                  _selectedProgram = 'All';
+                  _selectedYearLevel = 'All';
+                  _selectedStatus = 'All';
+                });
+              },
+              icon: const Icon(LucideIcons.x, size: 14, color: Colors.red),
+              label: Text(
+                'Clear Filters',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
+                ),
+                backgroundColor: Colors.red.withValues(alpha: 0.05),
+              ),
+            ),
+          ],
         ],
       ),
     );
