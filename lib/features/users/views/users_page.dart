@@ -1279,6 +1279,170 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     }
   }
 
+  Future<void> _handleSingleUserAction(String action, UserModel user) async {
+    if (user.id == null) return;
+
+    if (action == 'view') {
+      context.pushNamed(
+        RouteNames.userDetails,
+        pathParameters: {'id': user.id!},
+      );
+      return;
+    }
+
+    final client = SupabaseConfig.client;
+
+    if (action == 'suspend') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Suspend User', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          content: Text('Are you sure you want to suspend ${user.fullName}?', style: GoogleFonts.poppins(fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              child: Text('Confirm', style: GoogleFonts.poppins()),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      try {
+        await client.from('users').update({'account_status': 'suspended'}).eq('id', user.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully suspended ${user.fullName}', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        ref.invalidate(allUsersProvider);
+        ref.invalidate(userStatsProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to suspend user: $e', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    if (action == 'activate') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Activate User', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          content: Text('Are you sure you want to activate ${user.fullName}?', style: GoogleFonts.poppins(fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              child: Text('Confirm', style: GoogleFonts.poppins()),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      try {
+        await client.from('users').update({'account_status': 'active'}).eq('id', user.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully activated ${user.fullName}', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        ref.invalidate(allUsersProvider);
+        ref.invalidate(userStatsProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to activate user: $e', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    if (action == 'delete') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Delete User', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          content: Text(
+            'Are you sure you want to delete ${user.fullName}? This action is permanent and will delete the user from both the database and authentication.',
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: Text('Confirm', style: GoogleFonts.poppins()),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      try {
+        await client.rpc(
+          'delete_user_entirely',
+          params: {'p_user_id': user.id!},
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully deleted ${user.fullName}', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        ref.invalidate(allUsersProvider);
+        ref.invalidate(userStatsProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete user: $e', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      return;
+    }
+  }
+
   Widget _buildEmptyState() {
     final hasNoFilters = _searchController.text.isEmpty &&
         _selectedRole == 'All' &&
@@ -1664,30 +1828,25 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              onSelected: (value) {
-                                if (value == 'view') {
-                                  context.pushNamed(
-                                    RouteNames.userDetails,
-                                    pathParameters: {'id': user.id!},
-                                  );
-                                }
-                              },
+                              onSelected: (value) => _handleSingleUserAction(value, user),
                               itemBuilder: (context) => [
                                 const PopupMenuItem(
                                   value: 'view',
                                   child: Text('View Profile', style: TextStyle(fontSize: 13)),
                                 ),
+                                if (user.status.toLowerCase() == 'active')
+                                  const PopupMenuItem(
+                                    value: 'suspend',
+                                    child: Text('Suspend', style: TextStyle(fontSize: 13)),
+                                  )
+                                else
+                                  const PopupMenuItem(
+                                    value: 'activate',
+                                    child: Text('Activate', style: TextStyle(fontSize: 13)),
+                                  ),
                                 const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Text('Edit', style: TextStyle(fontSize: 13)),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'status',
-                                  child: Text('Change Status', style: TextStyle(fontSize: 13)),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'suspend',
-                                  child: Text('Suspend', style: TextStyle(fontSize: 13)),
+                                  value: 'delete',
+                                  child: Text('Delete', style: TextStyle(fontSize: 13, color: Colors.red)),
                                 ),
                               ],
                             ),
@@ -1856,30 +2015,25 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  onSelected: (value) {
-                    if (value == 'view') {
-                      context.pushNamed(
-                        RouteNames.userDetails,
-                        pathParameters: {'id': user.id!},
-                      );
-                    }
-                  },
+                  onSelected: (value) => _handleSingleUserAction(value, user),
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'view',
                       child: Text('View Profile', style: TextStyle(fontSize: 13)),
                     ),
+                    if (user.status.toLowerCase() == 'active')
+                      const PopupMenuItem(
+                        value: 'suspend',
+                        child: Text('Suspend', style: TextStyle(fontSize: 13)),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'activate',
+                        child: Text('Activate', style: TextStyle(fontSize: 13)),
+                      ),
                     const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit', style: TextStyle(fontSize: 13)),
-                    ),
-                    const PopupMenuItem(
-                      value: 'status',
-                      child: Text('Change Status', style: TextStyle(fontSize: 13)),
-                    ),
-                    const PopupMenuItem(
-                      value: 'suspend',
-                      child: Text('Suspend', style: TextStyle(fontSize: 13)),
+                      value: 'delete',
+                      child: Text('Delete', style: TextStyle(fontSize: 13, color: Colors.red)),
                     ),
                   ],
                 ),
