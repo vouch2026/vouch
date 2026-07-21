@@ -27,6 +27,9 @@ abstract class UserModel with _$UserModel {
     // Join fields (not in users table but useful for UI)
     String? facultyName,
     String? programName,
+    String? campusName,
+    String? facultyCode,
+    String? programCode,
     @JsonKey(name: 'expired_at') DateTime? expiredAt,
   }) = _UserModel;
 

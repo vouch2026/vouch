@@ -35,6 +35,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   bool _isExcelView = true;
   String _selectedRole = 'All';
   String _selectedCampus = 'All';
+  String _selectedFaculty = 'All';
+  String _selectedProgram = 'All';
+  String _selectedYearLevel = 'All';
   String _selectedStatus = 'All';
 
   @override
@@ -440,46 +443,106 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     return chipContent;
   }
 
-  Widget _buildFilterSection() {
+  List<String> _getAvailableFaculties(List<UserModel> users) {
+    final faculties = users
+        .map((u) => u.facultyName?.trim() ?? '')
+        .where((f) => f.isNotEmpty && f != 'N/A')
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...faculties];
+  }
+
+  List<String> _getAvailablePrograms(List<UserModel> users) {
+    final programs = users
+        .map((u) => u.programName?.trim() ?? '')
+        .where((p) => p.isNotEmpty && p != 'N/A')
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...programs];
+  }
+
+  String _getRoleFilterLabel(String roleValue) {
+    if (roleValue == 'All') return 'Role';
+    if (roleValue == 'program_head') return 'Program Head';
+    if (roleValue == 'super_admin') return 'Super Admin';
+    return roleValue[0].toUpperCase() + roleValue.substring(1).toLowerCase();
+  }
+
+  String _getYearLevelFilterLabel(String yearValue) {
+    if (yearValue == 'All') return 'Year Level';
+    if (yearValue == '1') return '1st Year';
+    if (yearValue == '2') return '2nd Year';
+    if (yearValue == '3') return '3rd Year';
+    if (yearValue == '4') return '4th Year';
+    return '$yearValue Year';
+  }
+
+  Widget _buildFilterSection(List<UserModel> allUsers) {
+    final faculties = _getAvailableFaculties(allUsers);
+    final programs = _getAvailablePrograms(allUsers);
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Row(
         children: [
-          _buildFilterChip(
-            label: 'All Roles',
-            isSelected: _selectedRole == 'All',
-            onTap: () => setState(() {
-              _selectedRole = 'All';
-            }),
+          // 1. Roles Dropdown Filter
+          PopupMenuButton<String>(
+            onSelected: (String role) {
+              setState(() {
+                _selectedRole = role;
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              final roles = [
+                {'label': 'All Roles', 'value': 'All'},
+                {'label': 'Student', 'value': 'student'},
+                {'label': 'Personnel', 'value': 'personnel'},
+                {'label': 'Program Head', 'value': 'program_head'},
+                {'label': 'Dean', 'value': 'dean'},
+              ];
+              return roles.map((roleOpt) {
+                final isItemSelected = _selectedRole == roleOpt['value'];
+                return PopupMenuItem<String>(
+                  value: roleOpt['value'],
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          roleOpt['label']!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? AppColors.primary : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _getRoleFilterLabel(_selectedRole),
+              isSelected: _selectedRole != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
           ),
           const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Students',
-            isSelected: _selectedRole == 'Student',
-            onTap: () => setState(() {
-              _selectedRole = 'Student';
-            }),
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Faculty & Advisers',
-            isSelected: _selectedRole == 'Faculty & Adviser',
-            onTap: () => setState(() {
-              _selectedRole = 'Faculty & Adviser';
-            }),
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Governance',
-            isSelected: _selectedRole == 'Governance Roles',
-            onTap: () => setState(() {
-              _selectedRole = 'Governance Roles';
-            }),
-          ),
-          const SizedBox(width: 8),
-          
-          // Campus Dropdown Filter
+
+          // 2. Campus Dropdown Filter
           PopupMenuButton<String>(
             onSelected: (String campus) {
               setState(() {
@@ -533,7 +596,155 @@ class _UsersPageState extends ConsumerState<UsersPage> {
           ),
           const SizedBox(width: 8),
 
-          // Status Dropdown Filter
+          // 3. Faculty Dropdown Filter
+          PopupMenuButton<String>(
+            onSelected: (String faculty) {
+              setState(() {
+                _selectedFaculty = faculty;
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              return faculties.map((fac) {
+                final isItemSelected = _selectedFaculty == fac;
+                return PopupMenuItem<String>(
+                  value: fac,
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          fac == 'All' ? 'All Faculties' : fac,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? AppColors.primary : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _selectedFaculty == 'All' ? 'Faculty' : _selectedFaculty,
+              isSelected: _selectedFaculty != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 4. Program Dropdown Filter
+          PopupMenuButton<String>(
+            onSelected: (String program) {
+              setState(() {
+                _selectedProgram = program;
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              return programs.map((prog) {
+                final isItemSelected = _selectedProgram == prog;
+                return PopupMenuItem<String>(
+                  value: prog,
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          prog == 'All' ? 'All Programs' : prog,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? AppColors.primary : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _selectedProgram == 'All' ? 'Program' : _selectedProgram,
+              isSelected: _selectedProgram != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 5. Year Level Dropdown Filter
+          PopupMenuButton<String>(
+            onSelected: (String year) {
+              setState(() {
+                _selectedYearLevel = year;
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              final years = [
+                {'label': 'All Year Levels', 'value': 'All'},
+                {'label': '1st Year', 'value': '1'},
+                {'label': '2nd Year', 'value': '2'},
+                {'label': '3rd Year', 'value': '3'},
+                {'label': '4th Year', 'value': '4'},
+              ];
+              return years.map((y) {
+                final isItemSelected = _selectedYearLevel == y['value'];
+                return PopupMenuItem<String>(
+                  value: y['value'],
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          y['label']!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? AppColors.primary : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _getYearLevelFilterLabel(_selectedYearLevel),
+              isSelected: _selectedYearLevel != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 6. Status Dropdown Filter
           PopupMenuButton<String>(
             onSelected: (String status) {
               setState(() {
@@ -666,6 +877,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   }
 
   Widget _buildEmptyState() {
+    final hasNoFilters = _searchController.text.isEmpty &&
+        _selectedRole == 'All' &&
+        _selectedCampus == 'All' &&
+        _selectedFaculty == 'All' &&
+        _selectedProgram == 'All' &&
+        _selectedYearLevel == 'All' &&
+        _selectedStatus == 'All';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -679,24 +898,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _searchController.text.isEmpty &&
-                        _selectedRole == 'All' &&
-                        _selectedCampus == 'All' &&
-                        _selectedStatus == 'All'
-                    ? LucideIcons.clipboard
-                    : LucideIcons.search,
+                hasNoFilters ? LucideIcons.clipboard : LucideIcons.search,
                 size: 60,
                 color: AppColors.primary.withValues(alpha: 0.2),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              _searchController.text.isEmpty &&
-                      _selectedRole == 'All' &&
-                      _selectedCampus == 'All' &&
-                      _selectedStatus == 'All'
-                  ? 'No users registered yet'
-                  : 'No matching users found',
+              hasNoFilters ? 'No users registered yet' : 'No matching users found',
               style: GoogleFonts.poppins(
                 color: Colors.black.withValues(alpha: 0.5),
                 fontSize: 15,
@@ -712,10 +921,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (!(_searchController.text.isEmpty &&
-                _selectedRole == 'All' &&
-                _selectedCampus == 'All' &&
-                _selectedStatus == 'All'))
+            if (!hasNoFilters)
               Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: TextButton(
@@ -724,6 +930,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                       _searchController.clear();
                       _selectedRole = 'All';
                       _selectedCampus = 'All';
+                      _selectedFaculty = 'All';
+                      _selectedProgram = 'All';
+                      _selectedYearLevel = 'All';
                       _selectedStatus = 'All';
                     });
                   },
@@ -811,6 +1020,16 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                     DataColumn(
                       label: Text(
                         'Role',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Campus',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -956,13 +1175,19 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         ),
                         DataCell(
                           Text(
-                            user.facultyName ?? 'N/A',
+                            user.campusName ?? 'N/A',
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            user.facultyCode ?? 'N/A',
                             style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
                           ),
                         ),
                         DataCell(
                           Text(
-                            user.programName ?? 'N/A',
+                            user.programCode ?? 'N/A',
                             style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
                           ),
                         ),
@@ -1201,6 +1426,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     final isRestricted = roleKey != 'super_admin';
 
     final usersAsync = ref.watch(allUsersProvider);
+    final allUsers = usersAsync.value ?? <UserModel>[];
     final statsAsync = ref.watch(userStatsProvider);
     final isMobile = MediaQuery.of(context).size.width < 768;
 
@@ -1312,8 +1538,8 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         ),
                       
                       // Working Excel export button
-                      usersAsync.maybeWhen(
-                        data: (allUsers) => FilledButton.icon(
+                      if (allUsers.isNotEmpty)
+                        FilledButton.icon(
                           onPressed: () => _downloadExcelReport(allUsers),
                           icon: const Icon(LucideIcons.download, size: 16),
                           label: Text(
@@ -1334,8 +1560,6 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                             ),
                           ),
                         ),
-                        orElse: () => const SizedBox.shrink(),
-                      ),
                     ],
                   ),
                 ],
@@ -1414,14 +1638,14 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             const SizedBox(height: 16),
 
             // Filter chips and dropdowns
-            _buildFilterSection(),
+            _buildFilterSection(allUsers),
             const SizedBox(height: 16),
 
             // User List or Excel Preview Table
             usersAsync.when(
-              data: (allUsers) {
+              data: (usersList) {
                 // Apply search and filter selections
-                final filteredUsers = allUsers.where((user) {
+                final filteredUsers = usersList.where((user) {
                   final query = _searchController.text.toLowerCase();
                   final matchesQuery = user.fullName.toLowerCase().contains(query) ||
                       user.schoolId.toLowerCase().contains(query) ||
@@ -1430,15 +1654,19 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                       (user.facultyName ?? '').toLowerCase().contains(query);
 
                   final matchesRole = _selectedRole == 'All' || 
-                      (_selectedRole == 'Student' && user.role == 'student') ||
-                      (_selectedRole == 'Faculty & Adviser' && (user.role.contains('dean') || user.role.contains('program_head') || user.role == 'adviser')) ||
-                      (_selectedRole == 'Governance Roles' && (user.role == 'governor' || user.role == 'secretary' || user.role == 'treasurer' || user.role == 'staff'));
+                      user.role == _selectedRole;
 
                   final matchesCampus = _selectedCampus == 'All' || user.campusId == _selectedCampus;
 
+                  final matchesFaculty = _selectedFaculty == 'All' || user.facultyName == _selectedFaculty;
+
+                  final matchesProgram = _selectedProgram == 'All' || user.programName == _selectedProgram;
+
+                  final matchesYear = _selectedYearLevel == 'All' || user.yearLevel?.toString() == _selectedYearLevel;
+
                   final matchesStatus = _selectedStatus == 'All' || user.status.toLowerCase() == _selectedStatus.toLowerCase();
 
-                  return matchesQuery && matchesRole && matchesCampus && matchesStatus;
+                  return matchesQuery && matchesRole && matchesCampus && matchesFaculty && matchesProgram && matchesYear && matchesStatus;
                 }).toList();
 
                 return _isExcelView
