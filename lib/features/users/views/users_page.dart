@@ -1206,7 +1206,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
         ),
         content: Text(
           action == 'delete'
-              ? 'Are you sure you want to delete ${_selectedUserIds.length} selected user(s)? This action cannot be undone.'
+              ? 'Are you sure you want to delete ${_selectedUserIds.length} selected user(s)? This action is permanent and will delete the user(s) from both the database and authentication.'
               : 'Are you sure you want to change the status of ${_selectedUserIds.length} selected user(s)?',
           style: GoogleFonts.poppins(fontSize: 14),
         ),
@@ -1233,7 +1233,12 @@ class _UsersPageState extends ConsumerState<UsersPage> {
       final ids = _selectedUserIds.toList();
 
       if (action == 'delete') {
-        await client.from('users').delete().inFilter('id', ids);
+        for (final id in ids) {
+          await client.rpc(
+            'delete_user_entirely',
+            params: {'p_user_id': id},
+          );
+        }
       } else if (action == 'activate') {
         await client.from('users').update({'account_status': 'active'}).inFilter('id', ids);
       } else if (action == 'suspend') {
