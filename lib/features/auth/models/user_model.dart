@@ -50,7 +50,7 @@ abstract class UserModel with _$UserModel {
   }
 
   String get yearLevelDisplay {
-    if (yearLevel == null) return 'N/A';
+    if (yearLevel == null || yearLevel == 0) return 'N/A';
     
     final n = yearLevel!;
     if (n >= 11 && n <= 13) {

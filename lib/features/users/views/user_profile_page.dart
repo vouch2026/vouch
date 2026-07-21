@@ -103,6 +103,13 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
 
     return DashboardLayout(
       title: 'User Profile',
+      onBack: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/users');
+        }
+      },
       child: userAsync.when(
         data: (user) {
           if (user == null) return const Center(child: Text('User not found'));
@@ -143,20 +150,42 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   }
 
   Widget _buildBreadcrumbs(UserModel user) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final topPadding = isMobile ? 16.0 : 24.0;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, topPadding, AppSpacing.lg, 0),
       child: Row(
         children: [
-          Icon(Icons.people_outline_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
+          Icon(Icons.people_outline_rounded, size: 14, color: Colors.grey[500]),
           const SizedBox(width: 8),
           InkWell(
-            onTap: () => context.go(RoutePaths.users),
-            child: Text('Users', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+            onTap: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/users');
+              }
+            },
+            child: Text(
+              'Users',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
-          Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
+          Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
           const SizedBox(width: 8),
-          Text(user.fullName, style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          Text(
+            user.fullName,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -517,69 +546,29 @@ class _OverviewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth > 900;
-          
-          final content = [
-            Expanded(
-              flex: isDesktop ? 2 : 1,
-              child: Column(
-                children: [
-                  _buildInfoCard(
-                    title: 'Personal Information',
-                    icon: Icons.person_outline,
-                    items: [
-                      _InfoRow(label: 'Email', value: user.email),
-                      const _InfoRow(label: 'Contact', value: '+63 912 345 6789'), // Mock
-                      const _InfoRow(label: 'Address', value: 'Mati City, Davao Oriental'), // Mock
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildInfoCard(
-                    title: 'Academic Information',
-                    icon: Icons.school_outlined,
-                    items: [
-                      const _InfoRow(label: 'Campus', value: 'DORSU Main Campus'),
-                      _InfoRow(label: 'Faculty', value: user.facultyName ?? 'N/A'),
-                      _InfoRow(label: 'Program', value: user.programName ?? 'N/A'),
-                      if (user.yearLevel != null) _InfoRow(label: 'Year Level', value: user.yearLevelDisplay),
-                    ],
-                  ),
-
-                ],
-              ),
-            ),
-            if (isDesktop) const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              flex: 1,
-              child: Column(
-                children: [
-                  _buildAnalyticsSummary(),
-                  const SizedBox(height: AppSpacing.lg),
-                  _buildGovernanceSummary(),
-                ],
-              ),
-            ),
-          ];
-
-          if (isDesktop) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: content,
-            );
-          }
-          
-          return Column(
-            children: [
-              content[0],
-              const SizedBox(height: AppSpacing.lg),
-              _buildAnalyticsSummary(),
-              const SizedBox(height: AppSpacing.lg),
-              _buildGovernanceSummary(),
+      child: Column(
+        children: [
+          _buildInfoCard(
+            title: 'Personal Information',
+            icon: Icons.person_outline,
+            items: [
+              _InfoRow(label: 'ID No.', value: user.schoolId),
+              _InfoRow(label: 'Name', value: user.fullName),
+              _InfoRow(label: 'Email', value: user.email),
             ],
-          );
-        },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _buildInfoCard(
+            title: 'Academic Information',
+            icon: Icons.school_outlined,
+            items: [
+              const _InfoRow(label: 'Campus', value: 'DORSU Main Campus'),
+              _InfoRow(label: 'Faculty', value: user.facultyName ?? 'N/A'),
+              _InfoRow(label: 'Program', value: user.programName ?? 'N/A'),
+              _InfoRow(label: 'Year Level', value: user.yearLevelDisplay),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -607,47 +596,6 @@ class _OverviewTab extends StatelessWidget {
             child: Divider(),
           ),
           ...items,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalyticsSummary() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Participation Metrics', style: AppTextStyles.titleSmall.copyWith(color: AppColors.white)),
-          const SizedBox(height: AppSpacing.lg),
-          const _AnalyticsItem(label: 'Attendance', value: '92%', icon: Icons.how_to_reg_outlined),
-          const _AnalyticsItem(label: 'Payment Compliance', value: '100%', icon: Icons.payments_outlined),
-          const _AnalyticsItem(label: 'Event Participation', value: '15', icon: Icons.event_available_outlined),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGovernanceSummary() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Governance Summary', style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.md),
-          const _GovernanceRoleItem(org: 'CSS Society', role: 'Treasurer'),
-          const _GovernanceRoleItem(org: 'COMSELEC', role: 'Staff'),
-          const _GovernanceRoleItem(org: 'SSC', role: 'Secretary'),
         ],
       ),
     );
@@ -1114,84 +1062,4 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _AnalyticsItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  const _AnalyticsItem({required this.label, required this.value, required this.icon});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.accent, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColors.white.withOpacity(0.8))),
-                Text(value, style: AppTextStyles.titleMedium.copyWith(color: AppColors.white, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GovernanceRoleItem extends StatelessWidget {
-  final String org;
-  final String role;
-  const _GovernanceRoleItem({required this.org, required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 12),
-          Text('$org → ', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
-          Text(role, style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  final String name;
-  final UserModel user;
-  const _PlaceholderTab({required this.name, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.construction_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.5)),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            '$name Tab coming soon',
-            style: AppTextStyles.headlineSmall.copyWith(color: AppColors.textGrey),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Managing data for ${user.fullName}',
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -2113,32 +2113,13 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Row(
                 children: [
-                  Icon(LucideIcons.users, size: 14, color: Colors.grey[500]),
+                  Icon(Icons.people_outline_rounded, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () {
-                      // Navigate to home dashboard
-                    },
-                    child: Text(
-                      'Dashboard',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'User Management',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    'Users',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
