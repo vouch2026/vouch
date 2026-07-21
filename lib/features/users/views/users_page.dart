@@ -28,6 +28,7 @@ import '../../programs/models/program_model.dart';
 import '../widgets/modals/create_user_modal.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../routes/route_names.dart';
+import '../../../core/config/supabase_config.dart';
 
 class UsersPage extends ConsumerStatefulWidget {
   const UsersPage({super.key});
@@ -45,6 +46,8 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   String _selectedProgram = 'All';
   String _selectedYearLevel = 'All';
   String _selectedStatus = 'All';
+  Set<String> _selectedUserIds = {};
+  bool _isSelectionMode = false;
 
   @override
   void initState() {
@@ -533,7 +536,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: EdgeInsets.zero,
       child: Row(
         children: [
           // 1. Roles Dropdown Filter
@@ -964,6 +967,313 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     );
   }
 
+  Widget _buildBulkActionsMenu(List<UserModel> filteredUsers) {
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.more_vert_rounded, color: AppColors.primary, size: 20),
+      ),
+      tooltip: 'Bulk Actions',
+      onSelected: (action) => _handleBulkAction(action, filteredUsers),
+      offset: const Offset(0, 45),
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+      ),
+      itemBuilder: (context) => [
+        if (!_isSelectionMode)
+          PopupMenuItem(
+            value: 'enable_selection',
+            child: Row(
+              children: [
+                const Icon(LucideIcons.checkSquare, size: 16, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Text(
+                  'Enable Selection',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          )
+        else
+          PopupMenuItem(
+            value: 'disable_selection',
+            child: Row(
+              children: [
+                const Icon(LucideIcons.xSquare, size: 16, color: Colors.grey),
+                const SizedBox(width: 10),
+                Text(
+                  'Cancel Selection',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        PopupMenuItem(
+          value: 'select_students',
+          child: Row(
+            children: [
+              const Icon(LucideIcons.userCheck, size: 16, color: Colors.blue),
+              const SizedBox(width: 10),
+              Text(
+                'Select Students',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'select_faculty',
+          child: Row(
+            children: [
+              const Icon(LucideIcons.users, size: 16, color: Colors.indigo),
+              const SizedBox(width: 10),
+              Text(
+                'Select Faculty',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'select_all',
+          child: Row(
+            children: [
+              const Icon(LucideIcons.checkSquare, size: 16, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                'Select All',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        if (_isSelectionMode) ...[
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'activate',
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.playCircle,
+                  size: 16,
+                  color: Colors.green,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Activate Selected${_selectedUserIds.isNotEmpty ? " (${_selectedUserIds.length})" : ""}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'suspend',
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.alertCircle,
+                  size: 16,
+                  color: Colors.orange,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Suspend Selected${_selectedUserIds.isNotEmpty ? " (${_selectedUserIds.length})" : ""}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.trash2,
+                  size: 16,
+                  color: Colors.red,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Delete Selected${_selectedUserIds.isNotEmpty ? " (${_selectedUserIds.length})" : ""}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _handleBulkAction(String action, List<UserModel> filteredUsers) async {
+    if (action == 'enable_selection') {
+      setState(() {
+        _isSelectionMode = true;
+      });
+      return;
+    }
+    if (action == 'disable_selection') {
+      setState(() {
+        _isSelectionMode = false;
+        _selectedUserIds.clear();
+      });
+      return;
+    }
+    if (action == 'select_students') {
+      setState(() {
+        _isSelectionMode = true;
+        _selectedUserIds = filteredUsers
+            .where((u) => u.role == 'student' && u.id != null)
+            .map((u) => u.id!)
+            .toSet();
+      });
+      return;
+    }
+    if (action == 'select_faculty') {
+      setState(() {
+        _isSelectionMode = true;
+        _selectedUserIds = filteredUsers
+            .where((u) => (u.role == 'personnel' || u.role == 'program_head' || u.role == 'dean') && u.id != null)
+            .map((u) => u.id!)
+            .toSet();
+      });
+      return;
+    }
+    if (action == 'select_all') {
+      setState(() {
+        _isSelectionMode = true;
+        _selectedUserIds = filteredUsers
+            .where((u) => u.id != null)
+            .map((u) => u.id!)
+            .toSet();
+      });
+      return;
+    }
+
+    if (action == 'activate' || action == 'suspend' || action == 'delete') {
+      if (_selectedUserIds.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Please select at least one user first.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          action == 'delete'
+              ? 'Delete Users'
+              : action == 'activate'
+                  ? 'Activate Users'
+                  : 'Suspend Users',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          action == 'delete'
+              ? 'Are you sure you want to delete ${_selectedUserIds.length} selected user(s)? This action cannot be undone.'
+              : 'Are you sure you want to change the status of ${_selectedUserIds.length} selected user(s)?',
+          style: GoogleFonts.poppins(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: action == 'delete' ? Colors.red : AppColors.primary,
+            ),
+            child: Text('Confirm', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final client = SupabaseConfig.client;
+      final ids = _selectedUserIds.toList();
+
+      if (action == 'delete') {
+        await client.from('users').delete().inFilter('id', ids);
+      } else if (action == 'activate') {
+        await client.from('users').update({'account_status': 'active'}).inFilter('id', ids);
+      } else if (action == 'suspend') {
+        await client.from('users').update({'account_status': 'suspended'}).inFilter('id', ids);
+      }
+
+      // Show success toast
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              action == 'delete'
+                  ? 'Successfully deleted users'
+                  : 'Successfully updated user statuses',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Clear selections and refresh
+      setState(() {
+        _selectedUserIds.clear();
+        _isSelectionMode = false;
+      });
+      ref.invalidate(allUsersProvider);
+      ref.invalidate(userStatsProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bulk action failed: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildEmptyState() {
     final hasNoFilters = _searchController.text.isEmpty &&
         _selectedRole == 'All' &&
@@ -1039,7 +1349,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     );
   }
 
-  Widget _buildExcelPreviewTable(List<UserModel> users, bool isRestricted) {
+  Widget _buildExcelPreviewTable(List<UserModel> users, bool isSuperAdmin) {
     if (users.isEmpty) {
       return _buildEmptyState();
     }
@@ -1068,6 +1378,18 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
                 child: DataTable(
+                  showCheckboxColumn: isSuperAdmin && _isSelectionMode,
+                  onSelectAll: (selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _selectedUserIds.addAll(users.where((u) => u.id != null).map((u) => u.id!));
+                      } else {
+                        for (final u in users) {
+                          _selectedUserIds.remove(u.id);
+                        }
+                      }
+                    });
+                  },
                   headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.04)),
                   dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
                     if (states.contains(WidgetState.hovered)) {
@@ -1165,7 +1487,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         ),
                       ),
                     ),
-                    if (!isRestricted)
+                    if (isSuperAdmin)
                       DataColumn(
                         label: Text(
                           'Actions',
@@ -1194,6 +1516,16 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                     }
 
                     return DataRow(
+                      selected: _selectedUserIds.contains(user.id),
+                      onSelectChanged: (selected) {
+                        setState(() {
+                          if (selected == true) {
+                            if (user.id != null) _selectedUserIds.add(user.id!);
+                          } else {
+                            _selectedUserIds.remove(user.id);
+                          }
+                        });
+                      },
                       cells: [
                         DataCell(
                           InkWell(
@@ -1304,7 +1636,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                             ),
                           ),
                         ),
-                        if (!isRestricted)
+                        if (isSuperAdmin)
                           DataCell(
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert_rounded, size: 20),
@@ -1354,19 +1686,19 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     );
   }
 
-  Widget _buildCardList(List<UserModel> users, bool isRestricted) {
+  Widget _buildCardList(List<UserModel> users, bool isSuperAdmin) {
     if (users.isEmpty) {
       return _buildEmptyState();
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
-        children: users.map((user) => _buildUserCard(user, isRestricted)).toList(),
+        children: users.map((user) => _buildUserCard(user, isSuperAdmin)).toList(),
       ),
     );
   }
 
-  Widget _buildUserCard(UserModel user, bool isRestricted) {
+  Widget _buildUserCard(UserModel user, bool isSuperAdmin) {
     final statusColor = user.status.toLowerCase() == 'active'
         ? Colors.green
         : user.status.toLowerCase() == 'pending'
@@ -1390,6 +1722,22 @@ class _UsersPageState extends ConsumerState<UsersPage> {
       ),
       child: Row(
         children: [
+          if (isSuperAdmin && _isSelectionMode) ...[
+            Checkbox(
+              value: _selectedUserIds.contains(user.id),
+              onChanged: (selected) {
+                setState(() {
+                  if (selected == true) {
+                    if (user.id != null) _selectedUserIds.add(user.id!);
+                  } else {
+                    _selectedUserIds.remove(user.id);
+                  }
+                });
+              },
+              activeColor: AppColors.primary,
+            ),
+            const SizedBox(width: 4),
+          ],
           CircleAvatar(
             radius: 22,
             backgroundColor: AppColors.primary.withValues(alpha: 0.08),
@@ -1460,7 +1808,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                   ),
                 ),
               ),
-              if (!isRestricted) ...[
+              if (isSuperAdmin) ...[
                 const SizedBox(height: 6),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_horiz_rounded, size: 18, color: Colors.grey),
@@ -1511,7 +1859,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     final isSuperAdmin = userProfile?.role == 'super_admin';
     final activeRole = ref.watch(workspaceProvider).activeRole;
     final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
-    final isRestricted = roleKey != 'super_admin';
+
 
     final usersAsync = ref.watch(allUsersProvider);
     final allUsers = usersAsync.value ?? <UserModel>[];
@@ -1525,6 +1873,30 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     final programs = programsAsync.valueOrNull ?? const <ProgramModel>[];
 
     final isMobile = MediaQuery.of(context).size.width < 768;
+
+    final filteredUsers = allUsers.where((user) {
+      final query = _searchController.text.toLowerCase();
+      final matchesQuery = user.fullName.toLowerCase().contains(query) ||
+          user.schoolId.toLowerCase().contains(query) ||
+          user.email.toLowerCase().contains(query) ||
+          (user.programName ?? '').toLowerCase().contains(query) ||
+          (user.facultyName ?? '').toLowerCase().contains(query);
+
+      final matchesRole = _selectedRole == 'All' || 
+          user.role == _selectedRole;
+
+      final matchesCampus = _selectedCampus == 'All' || user.campusId == _selectedCampus;
+
+      final matchesFaculty = _selectedFaculty == 'All' || user.facultyId == _selectedFaculty;
+
+      final matchesProgram = _selectedProgram == 'All' || user.programId == _selectedProgram;
+
+      final matchesYear = _selectedYearLevel == 'All' || user.yearLevel?.toString() == _selectedYearLevel;
+
+      final matchesStatus = _selectedStatus == 'All' || user.status.toLowerCase() == _selectedStatus.toLowerCase();
+
+      return matchesQuery && matchesRole && matchesCampus && matchesFaculty && matchesProgram && matchesYear && matchesStatus;
+    }).toList();
 
     return DashboardLayout(
       title: 'User Management',
@@ -1733,46 +2105,34 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             ),
             const SizedBox(height: 16),
 
-            // Filter chips and dropdowns
-            _buildFilterSection(
-              allUsers: allUsers,
-              campuses: campuses,
-              faculties: faculties,
-              programs: programs,
+            // Filter chips and dropdowns with pinned bulk actions menu
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildFilterSection(
+                      allUsers: allUsers,
+                      campuses: campuses,
+                      faculties: faculties,
+                      programs: programs,
+                    ),
+                  ),
+                  if (isSuperAdmin) ...[
+                    const SizedBox(width: 8),
+                    _buildBulkActionsMenu(filteredUsers),
+                  ],
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
             // User List or Excel Preview Table
             usersAsync.when(
               data: (usersList) {
-                // Apply search and filter selections
-                final filteredUsers = usersList.where((user) {
-                  final query = _searchController.text.toLowerCase();
-                  final matchesQuery = user.fullName.toLowerCase().contains(query) ||
-                      user.schoolId.toLowerCase().contains(query) ||
-                      user.email.toLowerCase().contains(query) ||
-                      (user.programName ?? '').toLowerCase().contains(query) ||
-                      (user.facultyName ?? '').toLowerCase().contains(query);
-
-                  final matchesRole = _selectedRole == 'All' || 
-                      user.role == _selectedRole;
-
-                  final matchesCampus = _selectedCampus == 'All' || user.campusId == _selectedCampus;
-
-                  final matchesFaculty = _selectedFaculty == 'All' || user.facultyId == _selectedFaculty;
-
-                  final matchesProgram = _selectedProgram == 'All' || user.programId == _selectedProgram;
-
-                  final matchesYear = _selectedYearLevel == 'All' || user.yearLevel?.toString() == _selectedYearLevel;
-
-                  final matchesStatus = _selectedStatus == 'All' || user.status.toLowerCase() == _selectedStatus.toLowerCase();
-
-                  return matchesQuery && matchesRole && matchesCampus && matchesFaculty && matchesProgram && matchesYear && matchesStatus;
-                }).toList();
-
                 return _isExcelView
-                    ? _buildExcelPreviewTable(filteredUsers, isRestricted)
-                    : _buildCardList(filteredUsers, isRestricted);
+                    ? _buildExcelPreviewTable(filteredUsers, isSuperAdmin)
+                    : _buildCardList(filteredUsers, isSuperAdmin);
               },
               loading: () => const Center(child: FlickrLoader()),
               error: (err, stack) => Padding(
