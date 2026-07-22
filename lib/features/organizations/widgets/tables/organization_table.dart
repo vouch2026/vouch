@@ -207,9 +207,16 @@ class OrganizationTable extends ConsumerWidget {
 
           return DataRow(
             selected: isSuperAdmin && isSelectionMode && selectedOrgIds.contains(org.id),
-            onSelectChanged: isSuperAdmin && isSelectionMode
-                ? (selected) => onSelectChanged?.call(org.id, selected)
-                : null,
+            onSelectChanged: (selected) {
+              if (isSuperAdmin && isSelectionMode) {
+                onSelectChanged?.call(org.id, selected);
+              } else {
+                context.pushNamed(
+                  RouteNames.organizationDetails,
+                  pathParameters: {'id': org.id},
+                );
+              }
+            },
             cells: [
               DataCell(
                 InkWell(
