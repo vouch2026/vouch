@@ -540,26 +540,53 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     required List<CampusModel> campuses,
     required List<FacultyModel> faculties,
     required List<ProgramModel> programs,
+    required bool isSuperAdmin,
+    required UserModel? userProfile,
   }) {
     final yearLevels = _getAvailableYearLevels(allUsers);
 
+    // Apply role-based restrictions to faculties and programs lists
+    List<FacultyModel> restrictedFaculties = faculties;
+    List<ProgramModel> restrictedPrograms = programs;
+
+    if (userProfile?.role == 'dean') {
+      final facultyId = userProfile?.facultyId;
+      restrictedFaculties = faculties.where((f) => f.id == facultyId).toList();
+      restrictedPrograms = programs.where((p) => p.facultyId == facultyId).toList();
+    } else if (userProfile?.role == 'program_head') {
+      final programId = userProfile?.programId;
+      ProgramModel? program;
+      try {
+        program = programs.firstWhere((p) => p.id == programId);
+      } catch (_) {
+        program = null;
+      }
+      if (program != null) {
+        restrictedFaculties = faculties.where((f) => f.id == program!.facultyId).toList();
+        restrictedPrograms = programs.where((p) => p.id == programId).toList();
+      } else {
+        restrictedFaculties = [];
+        restrictedPrograms = [];
+      }
+    }
+
     // Filter faculties list based on selected campus
     final filteredFaculties = _selectedCampus == 'All'
-        ? faculties
-        : faculties.where((f) => f.campusId == _selectedCampus).toList();
+        ? restrictedFaculties
+        : restrictedFaculties.where((f) => f.campusId == _selectedCampus).toList();
 
     // Filter programs list based on selected faculty (or campus)
     final filteredPrograms = _selectedFaculty != 'All'
-        ? programs.where((p) => p.facultyId == _selectedFaculty).toList()
+        ? restrictedPrograms.where((p) => p.facultyId == _selectedFaculty).toList()
         : (_selectedCampus != 'All'
             ? (() {
-                final campusFacultyIds = faculties
+                final campusFacultyIds = restrictedFaculties
                     .where((f) => f.campusId == _selectedCampus)
                     .map((f) => f.id)
                     .toSet();
-                return programs.where((p) => campusFacultyIds.contains(p.facultyId)).toList();
+                return restrictedPrograms.where((p) => campusFacultyIds.contains(p.facultyId)).toList();
               })()
-            : programs);
+            : restrictedPrograms);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -567,112 +594,116 @@ class _UsersPageState extends ConsumerState<UsersPage> {
       child: Row(
         children: [
           // 1. Roles Dropdown Filter
-          PopupMenuButton<String>(
-            onSelected: (String role) {
-              setState(() {
-                _selectedRole = role;
-              });
-            },
-            offset: const Offset(0, 45),
-            elevation: 6,
-            shadowColor: Colors.black.withValues(alpha: 0.3),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
-            ),
-            itemBuilder: (BuildContext context) {
-              final roles = [
-                {'label': 'All Roles', 'value': 'All'},
-                {'label': 'Student', 'value': 'student'},
-                {'label': 'Personnel', 'value': 'personnel'},
-                {'label': 'Program Head', 'value': 'program_head'},
-                {'label': 'Dean', 'value': 'dean'},
-              ];
-              return roles.map((roleOpt) {
-                final isItemSelected = _selectedRole == roleOpt['value'];
-                return PopupMenuItem<String>(
-                  value: roleOpt['value'],
-                  height: 42,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          roleOpt['label']!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isItemSelected ? AppColors.primary : Colors.black87,
+          if (isSuperAdmin) ...[
+            PopupMenuButton<String>(
+              onSelected: (String role) {
+                setState(() {
+                  _selectedRole = role;
+                });
+              },
+              offset: const Offset(0, 45),
+              elevation: 6,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+              ),
+              itemBuilder: (BuildContext context) {
+                final roles = [
+                  {'label': 'All Roles', 'value': 'All'},
+                  {'label': 'Student', 'value': 'student'},
+                  {'label': 'Personnel', 'value': 'personnel'},
+                  {'label': 'Program Head', 'value': 'program_head'},
+                  {'label': 'Dean', 'value': 'dean'},
+                ];
+                return roles.map((roleOpt) {
+                  final isItemSelected = _selectedRole == roleOpt['value'];
+                  return PopupMenuItem<String>(
+                    value: roleOpt['value'],
+                    height: 42,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            roleOpt['label']!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isItemSelected ? AppColors.primary : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
-                      if (isItemSelected)
-                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
-                    ],
-                  ),
-                );
-              }).toList();
-            },
-            child: _buildFilterChip(
-              label: _getRoleFilterLabel(_selectedRole),
-              isSelected: _selectedRole != 'All',
-              trailingIcon: LucideIcons.chevronDown,
+                        if (isItemSelected)
+                          const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                      ],
+                    ),
+                  );
+                }).toList();
+              },
+              child: _buildFilterChip(
+                label: _getRoleFilterLabel(_selectedRole),
+                isSelected: _selectedRole != 'All',
+                trailingIcon: LucideIcons.chevronDown,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
 
           // 2. Campus Dropdown Filter
-          PopupMenuButton<String>(
-            onSelected: (String campusId) {
-              setState(() {
-                _selectedCampus = campusId;
-                // Connected reset: Reset dependent filters when campus changes
-                _selectedFaculty = 'All';
-                _selectedProgram = 'All';
-              });
-            },
-            offset: const Offset(0, 45),
-            elevation: 6,
-            shadowColor: Colors.black.withValues(alpha: 0.3),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
-            ),
-            itemBuilder: (BuildContext context) {
-              final items = [
-                {'label': 'All Campuses', 'value': 'All'},
-                ...campuses.map((c) => {'label': c.name, 'value': c.id}),
-              ];
-              return items.map((camp) {
-                final isItemSelected = _selectedCampus == camp['value'];
-                return PopupMenuItem<String>(
-                  value: camp['value']!,
-                  height: 42,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          camp['label']!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isItemSelected ? AppColors.primary : Colors.black87,
+          if (isSuperAdmin) ...[
+            PopupMenuButton<String>(
+              onSelected: (String campusId) {
+                setState(() {
+                  _selectedCampus = campusId;
+                  // Connected reset: Reset dependent filters when campus changes
+                  _selectedFaculty = 'All';
+                  _selectedProgram = 'All';
+                });
+              },
+              offset: const Offset(0, 45),
+              elevation: 6,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+              ),
+              itemBuilder: (BuildContext context) {
+                final items = [
+                  {'label': 'All Campuses', 'value': 'All'},
+                  ...campuses.map((c) => {'label': c.name, 'value': c.id}),
+                ];
+                return items.map((camp) {
+                  final isItemSelected = _selectedCampus == camp['value'];
+                  return PopupMenuItem<String>(
+                    value: camp['value']!,
+                    height: 42,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            camp['label']!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isItemSelected ? AppColors.primary : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
-                      if (isItemSelected)
-                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
-                    ],
-                  ),
-                );
-              }).toList();
-            },
-            child: _buildFilterChip(
-              label: _getCampusFilterLabel(_selectedCampus, campuses),
-              isSelected: _selectedCampus != 'All',
-              trailingIcon: LucideIcons.chevronDown,
+                        if (isItemSelected)
+                          const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                      ],
+                    ),
+                  );
+                }).toList();
+              },
+              child: _buildFilterChip(
+                label: _getCampusFilterLabel(_selectedCampus, campuses),
+                isSelected: _selectedCampus != 'All',
+                trailingIcon: LucideIcons.chevronDown,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
 
           // 3. Faculty Dropdown Filter
           PopupMenuButton<String>(
@@ -2349,6 +2380,8 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                                 campuses: campuses,
                                 faculties: faculties,
                                 programs: programs,
+                                isSuperAdmin: isSuperAdmin,
+                                userProfile: userProfile,
                               ),
                             ),
                             if (isSuperAdmin) ...[
