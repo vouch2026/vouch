@@ -19,6 +19,9 @@ class AcademicHierarchyFilter extends StatefulWidget {
   final Function(String) onFacultySelected;
   final Function(String) onProgramSelected;
   final VoidCallback onClearFilters;
+  final String userRole;
+  final String? userFacultyId;
+  final String? userProgramId;
 
   const AcademicHierarchyFilter({
     super.key,
@@ -33,6 +36,9 @@ class AcademicHierarchyFilter extends StatefulWidget {
     required this.onFacultySelected,
     required this.onProgramSelected,
     required this.onClearFilters,
+    required this.userRole,
+    this.userFacultyId,
+    this.userProgramId,
   });
 
   @override
@@ -42,6 +48,7 @@ class AcademicHierarchyFilter extends StatefulWidget {
 class _AcademicHierarchyFilterState extends State<AcademicHierarchyFilter> {
   final Set<String> _expandedCampuses = {};
   final Set<String> _expandedFaculties = {};
+  bool _hasToggledDeanFacultyInitially = false;
 
   void _toggleCampus(String id) {
     setState(() {
@@ -80,6 +87,252 @@ class _AcademicHierarchyFilterState extends State<AcademicHierarchyFilter> {
     final hasActiveFilter = widget.selectedCampusId != 'All' ||
         widget.selectedFacultyId != 'All' ||
         widget.selectedProgramId != 'All';
+
+    // Conditionally determine top-level content based on userRole
+    Widget treeContent;
+
+    if (widget.userRole == 'dean') {
+      FacultyModel? deanFaculty;
+      try {
+        deanFaculty = widget.faculties.firstWhere((f) => f.id == widget.userFacultyId);
+      } catch (_) {
+        deanFaculty = null;
+      }
+
+      if (deanFaculty == null) {
+        treeContent = Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              'No faculty assigned',
+              style: GoogleFonts.poppins(
+                color: Colors.grey[400],
+                fontSize: 13,
+              ),
+            ),
+          ),
+        );
+      } else {
+        final facultyPrograms = widget.programs
+            .where((p) => p.facultyId == deanFaculty!.id)
+            .toList();
+        final isFacultySelected = widget.selectedFacultyId == deanFaculty.id &&
+            widget.selectedProgramId == 'All';
+        final isExpanded = _expandedFaculties.contains(deanFaculty.id) ||
+            !_hasToggledDeanFacultyInitially;
+        final userCount = _getFacultyUserCount(deanFaculty.id);
+
+        treeContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFacultyRow(
+              faculty: deanFaculty,
+              userCount: userCount,
+              isSelected: isFacultySelected,
+              isExpanded: isExpanded,
+              onTap: () {
+                widget.onFacultySelected(deanFaculty!.id);
+              },
+              onToggleExpand: () {
+                setState(() {
+                  _hasToggledDeanFacultyInitially = true;
+                });
+                _toggleFaculty(deanFaculty!.id);
+              },
+            ),
+            if (isExpanded)
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: facultyPrograms.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Text(
+                          'No programs found',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: Colors.grey[400],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: facultyPrograms.map((program) {
+                          final isProgramSelected = widget.selectedProgramId == program.id;
+                          final programCount = _getProgramUserCount(program.id);
+
+                          return _buildProgramRow(
+                            program: program,
+                            userCount: programCount,
+                            isSelected: isProgramSelected,
+                            onTap: () {
+                              widget.onProgramSelected(program.id);
+                            },
+                          );
+                        }).toList(),
+                      ),
+              ),
+          ],
+        );
+      }
+    } else if (widget.userRole == 'program_head') {
+      ProgramModel? headProgram;
+      try {
+        headProgram = widget.programs.firstWhere((p) => p.id == widget.userProgramId);
+      } catch (_) {
+        headProgram = null;
+      }
+
+      if (headProgram == null) {
+        treeContent = Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              'No program assigned',
+              style: GoogleFonts.poppins(
+                color: Colors.grey[400],
+                fontSize: 13,
+              ),
+            ),
+          ),
+        );
+      } else {
+        final isProgramSelected = widget.selectedProgramId == headProgram.id;
+        final programCount = _getProgramUserCount(headProgram.id);
+
+        treeContent = _buildProgramRow(
+          program: headProgram,
+          userCount: programCount,
+          isSelected: isProgramSelected,
+          onTap: () {
+            widget.onProgramSelected(headProgram!.id);
+          },
+        );
+      }
+    } else {
+      // Default: Super Admin and other roles
+      if (widget.campuses.isEmpty) {
+        treeContent = Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              'No campus data available',
+              style: GoogleFonts.poppins(
+                color: Colors.grey[400],
+                fontSize: 13,
+              ),
+            ),
+          ),
+        );
+      } else {
+        treeContent = ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: widget.campuses.length,
+          itemBuilder: (context, index) {
+            final campus = widget.campuses[index];
+            final isSelected = widget.selectedCampusId == campus.id &&
+                widget.selectedFacultyId == 'All' &&
+                widget.selectedProgramId == 'All';
+            final isExpanded = _expandedCampuses.contains(campus.id);
+            final userCount = _getCampusUserCount(campus.id);
+
+            final campusFaculties = widget.faculties
+                .where((f) => f.campusId == campus.id)
+                .toList();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildCampusRow(
+                  campus: campus,
+                  userCount: userCount,
+                  isSelected: isSelected,
+                  isExpanded: isExpanded,
+                  onTap: () {
+                    widget.onCampusSelected(campus.id);
+                  },
+                  onToggleExpand: () => _toggleCampus(campus.id),
+                ),
+                if (isExpanded)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
+                    child: campusFaculties.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text(
+                              'No faculties found',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[400],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          )
+                        : Column(
+                            children: campusFaculties.map((faculty) {
+                              final isFacultySelected = widget.selectedFacultyId == faculty.id &&
+                                  widget.selectedProgramId == 'All';
+                              final isFacultyExpanded = _expandedFaculties.contains(faculty.id);
+                              final facultyCount = _getFacultyUserCount(faculty.id);
+                              final facultyPrograms = widget.programs
+                                  .where((p) => p.facultyId == faculty.id)
+                                  .toList();
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildFacultyRow(
+                                    faculty: faculty,
+                                    userCount: facultyCount,
+                                    isSelected: isFacultySelected,
+                                    isExpanded: isFacultyExpanded,
+                                    onTap: () {
+                                      widget.onFacultySelected(faculty.id);
+                                    },
+                                    onToggleExpand: () => _toggleFaculty(faculty.id),
+                                  ),
+                                  if (isFacultyExpanded)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 20),
+                                      child: facultyPrograms.isEmpty
+                                          ? Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                              child: Text(
+                                                'No programs found',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[400],
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            )
+                                          : Column(
+                                              children: facultyPrograms.map((program) {
+                                                final isProgramSelected = widget.selectedProgramId == program.id;
+                                                final programCount = _getProgramUserCount(program.id);
+
+                                                return _buildProgramRow(
+                                                  program: program,
+                                                  userCount: programCount,
+                                                  isSelected: isProgramSelected,
+                                                  onTap: () {
+                                                    widget.onProgramSelected(program.id);
+                                                  },
+                                                );
+                                              }).toList(),
+                                            ),
+                                    ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                  ),
+              ],
+            );
+          },
+        );
+      }
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -149,129 +402,7 @@ class _AcademicHierarchyFilterState extends State<AcademicHierarchyFilter> {
             ),
           ),
           const Divider(height: 1),
-          
-          // Campus list
-          if (widget.campuses.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Text(
-                  'No campus data available',
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey[400],
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.campuses.length,
-              itemBuilder: (context, index) {
-                final campus = widget.campuses[index];
-                final isSelected = widget.selectedCampusId == campus.id &&
-                    widget.selectedFacultyId == 'All' &&
-                    widget.selectedProgramId == 'All';
-                final isExpanded = _expandedCampuses.contains(campus.id);
-                final userCount = _getCampusUserCount(campus.id);
-
-                final campusFaculties = widget.faculties
-                    .where((f) => f.campusId == campus.id)
-                    .toList();
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildCampusRow(
-                      campus: campus,
-                      userCount: userCount,
-                      isSelected: isSelected,
-                      isExpanded: isExpanded,
-                      onTap: () {
-                        widget.onCampusSelected(campus.id);
-                      },
-                      onToggleExpand: () => _toggleCampus(campus.id),
-                    ),
-                    if (isExpanded)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20),
-                        child: campusFaculties.isEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                child: Text(
-                                  'No faculties found',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey[400],
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              )
-                            : Column(
-                                children: campusFaculties.map((faculty) {
-                                  final isFacultySelected = widget.selectedFacultyId == faculty.id &&
-                                      widget.selectedProgramId == 'All';
-                                  final isFacultyExpanded = _expandedFaculties.contains(faculty.id);
-                                  final facultyCount = _getFacultyUserCount(faculty.id);
-                                  final facultyPrograms = widget.programs
-                                      .where((p) => p.facultyId == faculty.id)
-                                      .toList();
-
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildFacultyRow(
-                                        faculty: faculty,
-                                        userCount: facultyCount,
-                                        isSelected: isFacultySelected,
-                                        isExpanded: isFacultyExpanded,
-                                        onTap: () {
-                                          widget.onFacultySelected(faculty.id);
-                                        },
-                                        onToggleExpand: () => _toggleFaculty(faculty.id),
-                                      ),
-                                      if (isFacultyExpanded)
-                                        Padding(
-                                          padding: const EdgeInsets.only(left: 20),
-                                          child: facultyPrograms.isEmpty
-                                              ? Padding(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                  child: Text(
-                                                    'No programs found',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 11,
-                                                      color: Colors.grey[400],
-                                                      fontStyle: FontStyle.italic,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Column(
-                                                  children: facultyPrograms.map((program) {
-                                                    final isProgramSelected = widget.selectedProgramId == program.id;
-                                                    final programCount = _getProgramUserCount(program.id);
-
-                                                    return _buildProgramRow(
-                                                      program: program,
-                                                      userCount: programCount,
-                                                      isSelected: isProgramSelected,
-                                                      onTap: () {
-                                                        widget.onProgramSelected(program.id);
-                                                      },
-                                                    );
-                                                  }).toList(),
-                                                ),
-                                        ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                      ),
-                  ],
-                );
-              },
-            ),
+          treeContent,
           const SizedBox(height: 8),
         ],
       ),

@@ -2389,6 +2389,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                       selectedCampusId: _selectedCampus,
                       selectedFacultyId: _selectedFaculty,
                       selectedProgramId: _selectedProgram,
+                      userRole: userProfile?.role ?? 'student',
+                      userFacultyId: userProfile?.facultyId,
+                      userProgramId: userProfile?.programId,
                       onCampusSelected: (campusId) {
                         setState(() {
                           _selectedCampus = campusId;
