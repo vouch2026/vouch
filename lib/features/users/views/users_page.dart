@@ -706,57 +706,59 @@ class _UsersPageState extends ConsumerState<UsersPage> {
           ],
 
           // 3. Faculty Dropdown Filter
-          PopupMenuButton<String>(
-            onSelected: (String facultyId) {
-              setState(() {
-                _selectedFaculty = facultyId;
-                // Connected reset: Reset dependent program filter when faculty changes
-                _selectedProgram = 'All';
-              });
-            },
-            offset: const Offset(0, 45),
-            elevation: 6,
-            shadowColor: Colors.black.withValues(alpha: 0.3),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
-            ),
-            itemBuilder: (BuildContext context) {
-              final items = [
-                {'label': 'All Faculties', 'value': 'All'},
-                ...filteredFaculties.map((f) => {'label': f.code, 'value': f.id}),
-              ];
-              return items.map((fac) {
-                final isItemSelected = _selectedFaculty == fac['value'];
-                return PopupMenuItem<String>(
-                  value: fac['value']!,
-                  height: 42,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          fac['label']!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isItemSelected ? AppColors.primary : Colors.black87,
+          if (isSuperAdmin || userProfile?.role == 'dean') ...[
+            PopupMenuButton<String>(
+              onSelected: (String facultyId) {
+                setState(() {
+                  _selectedFaculty = facultyId;
+                  // Connected reset: Reset dependent program filter when faculty changes
+                  _selectedProgram = 'All';
+                });
+              },
+              offset: const Offset(0, 45),
+              elevation: 6,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+              ),
+              itemBuilder: (BuildContext context) {
+                final items = [
+                  {'label': 'All Faculties', 'value': 'All'},
+                  ...filteredFaculties.map((f) => {'label': f.code, 'value': f.id}),
+                ];
+                return items.map((fac) {
+                  final isItemSelected = _selectedFaculty == fac['value'];
+                  return PopupMenuItem<String>(
+                    value: fac['value']!,
+                    height: 42,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            fac['label']!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isItemSelected ? AppColors.primary : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
-                      if (isItemSelected)
-                        const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
-                    ],
-                  ),
-                );
-              }).toList();
-            },
-            child: _buildFilterChip(
-              label: _getFacultyFilterLabel(_selectedFaculty, faculties),
-              isSelected: _selectedFaculty != 'All',
-              trailingIcon: LucideIcons.chevronDown,
+                        if (isItemSelected)
+                          const Icon(LucideIcons.checkCircle, size: 16, color: AppColors.primary),
+                      ],
+                    ),
+                  );
+                }).toList();
+              },
+              child: _buildFilterChip(
+                label: _getFacultyFilterLabel(_selectedFaculty, faculties),
+                isSelected: _selectedFaculty != 'All',
+                trailingIcon: LucideIcons.chevronDown,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
 
           // 4. Program Dropdown Filter
           PopupMenuButton<String>(
@@ -773,10 +775,12 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
             ),
             itemBuilder: (BuildContext context) {
-              final items = [
-                {'label': 'All Programs', 'value': 'All'},
-                ...filteredPrograms.map((p) => {'label': p.code, 'value': p.id}),
-              ];
+              final items = userProfile?.role == 'program_head'
+                  ? filteredPrograms.map((p) => {'label': p.code, 'value': p.id}).toList()
+                  : [
+                      {'label': 'All Programs', 'value': 'All'},
+                      ...filteredPrograms.map((p) => {'label': p.code, 'value': p.id}),
+                    ];
               return items.map((prog) {
                 final isItemSelected = _selectedProgram == prog['value'];
                 return PopupMenuItem<String>(
@@ -2108,6 +2112,21 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
+
+    ref.listen<AsyncValue<UserModel?>>(userProfileProvider, (previous, next) {
+      final user = next.value;
+      if (user != null) {
+        if (user.role == 'dean' && _selectedFaculty == 'All') {
+          setState(() {
+            _selectedFaculty = user.facultyId ?? 'All';
+          });
+        } else if (user.role == 'program_head' && _selectedProgram == 'All') {
+          setState(() {
+            _selectedProgram = user.programId ?? 'All';
+          });
+        }
+      }
+    });
 
 
     final usersAsync = ref.watch(allUsersProvider);
