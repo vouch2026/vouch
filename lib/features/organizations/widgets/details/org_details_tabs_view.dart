@@ -14,7 +14,6 @@ import '../../../academic_structure/providers/term_provider.dart';
 import './assign_officer_dialog.dart';
 import './assign_adviser_dialog.dart';
 import './organization_settings_panel.dart';
-import './org_details_analytics_cards.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -92,8 +91,12 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
         return _MembersTab(orgId: widget.org.id);
       case 'Officers':
         return _OfficersTab(org: widget.org);
+      case 'Events':
+        return _EventsTab(org: widget.org);
       case 'Fees':
         return _FeesTab(org: widget.org);
+      case 'Announcements':
+        return _AnnouncementsTab(org: widget.org);
       case 'Governance':
         return _GovernanceTab(org: widget.org);
       case 'Settings':
@@ -860,6 +863,283 @@ class _FeesTab extends ConsumerWidget {
             },
             loading: () => const Center(child: FlickrLoader()),
             error: (err, _) => Center(child: Text('Error loading fees: $err')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventsTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _EventsTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(orgEventsProvider(org));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Organization Events', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.lg),
+          eventsAsync.when(
+            data: (events) {
+              if (events.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.event_busy_rounded, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text('No events found for this organization.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: events.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    final now = DateTime.now();
+                    final todayStart = DateTime(now.year, now.month, now.day);
+                    
+                    final isUpcoming = event.eventDate.isAfter(todayStart);
+                    final isToday = event.eventDate.year == todayStart.year &&
+                                    event.eventDate.month == todayStart.month &&
+                                    event.eventDate.day == todayStart.day;
+                                    
+                    Color statusColor = AppColors.textGrey;
+                    String statusText = 'PAST';
+                    if (isUpcoming) {
+                      statusColor = AppColors.success;
+                      statusText = 'UPCOMING';
+                    } else if (isToday) {
+                      statusColor = AppColors.primary;
+                      statusText = 'TODAY';
+                    }
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.event_available_rounded, color: statusColor, size: 20),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(event.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            'Date: ${event.eventDate.year}-${event.eventDate.month.toString().padLeft(2, '0')}-${event.eventDate.day.toString().padLeft(2, '0')} • Time: ${event.timeInStart} - ${event.timeOutEnd}',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                          if (event.location.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text('Location: ${event.location}', style: AppTextStyles.bodySmall),
+                          ],
+                          if (event.shortDescription != null && event.shortDescription!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              event.shortDescription!,
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                      trailing: event.isMandatory
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'MANDATORY',
+                                style: TextStyle(
+                                  color: AppColors.error,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => const Center(child: FlickrLoader()),
+            error: (err, _) => Center(child: Text('Error loading events: $err')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnnouncementsTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _AnnouncementsTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final announcementsAsync = ref.watch(orgAnnouncementsProvider(org));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Organization Announcements', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.lg),
+          announcementsAsync.when(
+            data: (announcements) {
+              if (announcements.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.campaign_outlined, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text('No announcements found for this organization.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: announcements.length,
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+                itemBuilder: (context, index) {
+                  final announcement = announcements[index];
+                  final isUrgent = announcement.type.toLowerCase() == 'urgent';
+
+                  return Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: isUrgent ? AppColors.error : AppColors.border,
+                        width: isUrgent ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: (isUrgent ? AppColors.error : AppColors.primary).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  announcement.type.toUpperCase(),
+                                  style: TextStyle(
+                                    color: isUrgent ? AppColors.error : AppColors.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'By ${announcement.authorName ?? "System"}',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textGrey,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            announcement.title,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isUrgent ? AppColors.error : AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            announcement.content,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              height: 1.5,
+                              color: AppColors.textDark.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: FlickrLoader()),
+            error: (err, _) => Center(child: Text('Error loading announcements: $err')),
           ),
         ],
       ),

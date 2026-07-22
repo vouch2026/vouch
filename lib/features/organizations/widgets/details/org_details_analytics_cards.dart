@@ -5,56 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../providers/organization_provider.dart';
-import '../../models/organization_model.dart';
-import '../../../events/models/event_model.dart';
-import '../../../finance/models/fee_model.dart';
-import '../../../../core/config/supabase_config.dart';
 
-final orgEventsProvider = FutureProvider.family<List<EventModel>, OrganizationModel>((ref, org) async {
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional 
-      ? 'Institutional' 
-      : (isFaculty ? 'Faculty' : 'Program');
-  
-  final scopeId = isInstitutional 
-      ? org.campusId 
-      : (isFaculty ? org.facultyId : org.programId);
-
-  if (scopeId == null) return [];
-  
-  final response = await SupabaseConfig.client
-      .from('events')
-      .select()
-      .eq('scope_type', scopeType)
-      .eq('scope_id', scopeId);
-      
-  return (response as List).map((json) => EventModel.fromJson(json)).toList();
-});
-
-final orgFeesProvider = FutureProvider.family<List<FeeModel>, OrganizationModel>((ref, org) async {
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional 
-      ? 'Institutional' 
-      : (isFaculty ? 'Faculty' : 'Program');
-  
-  final scopeId = isInstitutional 
-      ? org.campusId 
-      : (isFaculty ? org.facultyId : org.programId);
-
-  if (scopeId == null) return [];
-  
-  final response = await SupabaseConfig.client
-      .from('fees')
-      .select()
-      .eq('scope_type', scopeType)
-      .eq('scope_id', scopeId);
-      
-  return (response as List).map((json) => FeeModel.fromJson(json)).toList();
-});
 
 class OrgDetailsAnalyticsCards extends ConsumerWidget {
   final String orgId;
