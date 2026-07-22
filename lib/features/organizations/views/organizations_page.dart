@@ -1075,6 +1075,8 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
                             }
                             return OrganizationTable(
                               organizations: filteredOrgs,
+                              faculties: faculties,
+                              programs: programs,
                               isSelectionMode: _isSelectionMode,
                               selectedOrgIds: _selectedOrgIds,
                               onSelectAll: (selected) {
