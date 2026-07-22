@@ -30,6 +30,13 @@ class OrganizationDetailsPage extends ConsumerWidget {
 
     return DashboardLayout(
       title: 'Organization Details',
+      onBack: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(RoutePaths.organizations);
+        }
+      },
       child: organizationAsync.when(
         data: (org) {
           if (org == null) return const Center(child: Text('Organization not found'));
@@ -75,22 +82,48 @@ class OrganizationDetailsPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Breadcrumbs
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.business_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => context.go(RoutePaths.organizations),
-                        child: Text('Organizations', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey)),
+                Builder(
+                  builder: (context) {
+                    final size = MediaQuery.of(context).size;
+                    final isMobile = size.width < 768;
+                    final topPadding = isMobile ? 16.0 : 24.0;
+
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(AppSpacing.lg, topPadding, AppSpacing.lg, 0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.business_center_outlined, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go(RoutePaths.organizations);
+                              }
+                            },
+                            child: Text(
+                              'Organizations',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 8),
+                          Text(
+                            org.code,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textGrey.withOpacity(0.5)),
-                      const SizedBox(width: 8),
-                      Text(org.code, style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                    );
+                  }
                 ),
                 const SizedBox(height: AppSpacing.md),
                 
