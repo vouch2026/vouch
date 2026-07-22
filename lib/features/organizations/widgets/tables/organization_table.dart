@@ -11,10 +11,18 @@ import '../../../auth/providers/auth_provider.dart';
 
 class OrganizationTable extends ConsumerWidget {
   final List<OrganizationModel> organizations;
+  final bool isSelectionMode;
+  final Set<String> selectedOrgIds;
+  final Function(String orgId, bool? selected)? onSelectChanged;
+  final Function(bool? selected)? onSelectAll;
 
   const OrganizationTable({
     super.key,
     required this.organizations,
+    this.isSelectionMode = false,
+    required this.selectedOrgIds,
+    this.onSelectChanged,
+    this.onSelectAll,
   });
 
   @override
@@ -51,6 +59,10 @@ class OrganizationTable extends ConsumerWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: DataTable(
+        showCheckboxColumn: isSuperAdmin && isSelectionMode,
+        onSelectAll: (selected) {
+          onSelectAll?.call(selected);
+        },
         headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.04)),
         dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
           if (states.contains(WidgetState.hovered)) {
@@ -121,15 +133,21 @@ class OrganizationTable extends ConsumerWidget {
             ),
         ],
         rows: orgs.map((org) => DataRow(
+          selected: isSuperAdmin && isSelectionMode && selectedOrgIds.contains(org.id),
+          onSelectChanged: isSuperAdmin && isSelectionMode
+              ? (selected) => onSelectChanged?.call(org.id, selected)
+              : null,
           cells: [
             DataCell(
               InkWell(
-                onTap: () {
-                  context.pushNamed(
-                    RouteNames.organizationDetails,
-                    pathParameters: {'id': org.id},
-                  );
-                },
+                onTap: isSelectionMode
+                    ? null
+                    : () {
+                        context.pushNamed(
+                          RouteNames.organizationDetails,
+                          pathParameters: {'id': org.id},
+                        );
+                      },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -286,30 +304,39 @@ class OrganizationTable extends ConsumerWidget {
           side: BorderSide(color: Colors.grey.shade200),
         ),
         child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-            child: org.logoUrl == null 
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    'assets/logos/vouch.png',
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Text(org.code.isNotEmpty ? org.code[0] : 'O'),
-                  ),
-                ) 
-              : null,
-          ),
+          leading: isSelectionMode
+              ? Checkbox(
+                  value: selectedOrgIds.contains(org.id),
+                  onChanged: (val) => onSelectChanged?.call(org.id, val),
+                )
+              : CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
+                  child: org.logoUrl == null 
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/logos/vouch.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Text(org.code.isNotEmpty ? org.code[0] : 'O'),
+                        ),
+                      ) 
+                    : null,
+                ),
           title: Text(org.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
           subtitle: Text('${org.memberCount} members', style: GoogleFonts.poppins(fontSize: 11)),
           trailing: _StatusBadge(status: org.status),
           onTap: () {
-            context.pushNamed(
-              RouteNames.organizationDetails,
-              pathParameters: {'id': org.id},
-            );
+            if (isSelectionMode) {
+              onSelectChanged?.call(org.id, !selectedOrgIds.contains(org.id));
+            } else {
+              context.pushNamed(
+                RouteNames.organizationDetails,
+                pathParameters: {'id': org.id},
+              );
+            }
           },
         ),
       )).toList(),

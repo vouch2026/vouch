@@ -11,6 +11,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/utils/file_saver_helper.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/workspace_provider.dart';
 import '../../../core/utils/role_mapper.dart';
@@ -31,6 +32,9 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedStatus = 'All';
   String _selectedType = 'All';
+  
+  Set<String> _selectedOrgIds = {};
+  bool _isSelectionMode = false;
 
   @override
   void initState() {
@@ -425,6 +429,265 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
     return 'Status: ${status.toUpperCase()}';
   }
 
+  Widget _buildBulkActionsMenu(List<OrganizationModel> filteredOrgs) {
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.more_vert_rounded, color: AppColors.primary, size: 20),
+      ),
+      tooltip: 'Bulk Actions',
+      onSelected: (action) => _handleBulkAction(action, filteredOrgs),
+      offset: const Offset(0, 45),
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.05)),
+      ),
+      itemBuilder: (context) => [
+        if (!_isSelectionMode)
+          PopupMenuItem(
+            value: 'enable_selection',
+            child: Row(
+              children: [
+                const Icon(LucideIcons.checkSquare, size: 16, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Text(
+                  'Enable Selection',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          )
+        else
+          PopupMenuItem(
+            value: 'disable_selection',
+            child: Row(
+              children: [
+                const Icon(LucideIcons.xSquare, size: 16, color: Colors.grey),
+                const SizedBox(width: 10),
+                Text(
+                  'Cancel Selection',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        PopupMenuItem(
+          value: 'select_all',
+          child: Row(
+            children: [
+              const Icon(LucideIcons.checkSquare, size: 16, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                'Select All',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        if (_isSelectionMode) ...[
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'activate',
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.playCircle,
+                  size: 16,
+                  color: Colors.green,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Activate Selected${_selectedOrgIds.isNotEmpty ? " (${_selectedOrgIds.length})" : ""}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'deactivate',
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.stopCircle,
+                  size: 16,
+                  color: Colors.orange,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Deactivate Selected${_selectedOrgIds.isNotEmpty ? " (${_selectedOrgIds.length})" : ""}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.trash2,
+                  size: 16,
+                  color: Colors.red,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Delete Selected${_selectedOrgIds.isNotEmpty ? " (${_selectedOrgIds.length})" : ""}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _handleBulkAction(String action, List<OrganizationModel> filteredOrgs) async {
+    if (action == 'enable_selection') {
+      setState(() {
+        _isSelectionMode = true;
+      });
+      return;
+    }
+    if (action == 'disable_selection') {
+      setState(() {
+        _isSelectionMode = false;
+        _selectedOrgIds.clear();
+      });
+      return;
+    }
+    if (action == 'select_all') {
+      setState(() {
+        _isSelectionMode = true;
+        _selectedOrgIds = filteredOrgs
+            .map((o) => o.id)
+            .toSet();
+      });
+      return;
+    }
+
+    if (action == 'activate' || action == 'deactivate' || action == 'delete') {
+      if (_selectedOrgIds.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Please select at least one organization first.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          action == 'delete'
+              ? 'Delete Organizations'
+              : action == 'activate'
+                  ? 'Activate Organizations'
+                  : 'Deactivate Organizations',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          action == 'delete'
+              ? 'Are you sure you want to delete ${_selectedOrgIds.length} selected organization(s)? This action is permanent and cannot be undone.'
+              : 'Are you sure you want to change the status of ${_selectedOrgIds.length} selected organization(s)?',
+          style: GoogleFonts.poppins(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: action == 'delete' ? Colors.red : AppColors.primary,
+            ),
+            child: Text('Confirm', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final client = SupabaseConfig.client;
+      final ids = _selectedOrgIds.toList();
+
+      if (action == 'delete') {
+        await client.from('organizations').delete().inFilter('id', ids);
+      } else if (action == 'activate') {
+        await client.from('organizations').update({'status': 'active'}).inFilter('id', ids);
+      } else if (action == 'deactivate') {
+        await client.from('organizations').update({'status': 'inactive'}).inFilter('id', ids);
+      }
+
+      // Show success toast
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              action == 'delete'
+                  ? 'Successfully deleted organizations'
+                  : 'Successfully updated organization statuses',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Clear selections and refresh
+      setState(() {
+        _selectedOrgIds.clear();
+        _isSelectionMode = false;
+      });
+      ref.invalidate(organizationsProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bulk action failed: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider).value;
@@ -630,28 +893,38 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
                           color: AppColors.primary,
                         ),
                       ),
-                      if (filteredOrgs.isNotEmpty)
-                        FilledButton.icon(
-                          onPressed: () => _downloadExcelReport(filteredOrgs),
-                          icon: const Icon(LucideIcons.download, size: 16),
-                          label: Text(
-                            isMobile ? 'Export' : 'Download Excel',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (filteredOrgs.isNotEmpty) ...[
+                            FilledButton.icon(
+                              onPressed: () => _downloadExcelReport(filteredOrgs),
+                              icon: const Icon(LucideIcons.download, size: 16),
+                              label: Text(
+                                isMobile ? 'Export' : 'Download Excel',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+                                ),
+                              ),
                             ),
-                          ),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: AppColors.primary,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
-                            ),
-                          ),
-                        ),
+                            if (isSuperAdmin) ...[
+                              const SizedBox(width: 8),
+                              _buildBulkActionsMenu(filteredOrgs),
+                            ],
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -727,7 +1000,31 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
                           ),
                         );
                       }
-                      return OrganizationTable(organizations: filteredOrgs);
+                      return OrganizationTable(
+                        organizations: filteredOrgs,
+                        isSelectionMode: _isSelectionMode,
+                        selectedOrgIds: _selectedOrgIds,
+                        onSelectAll: (selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _selectedOrgIds.addAll(filteredOrgs.map((o) => o.id));
+                            } else {
+                              for (final org in filteredOrgs) {
+                                _selectedOrgIds.remove(org.id);
+                              }
+                            }
+                          });
+                        },
+                        onSelectChanged: (orgId, selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _selectedOrgIds.add(orgId);
+                            } else {
+                              _selectedOrgIds.remove(orgId);
+                            }
+                          });
+                        },
+                      );
                     },
                     loading: () => const Center(child: FlickrLoader()),
                     error: (error, stack) => Center(child: Text('Error: $error')),
