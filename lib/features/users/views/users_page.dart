@@ -11,11 +11,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
-import '../../../core/utils/role_mapper.dart';
 import '../../../core/utils/file_saver_helper.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
-import '../../organizations/providers/workspace_provider.dart';
 import '../providers/users_provider.dart';
 import '../providers/user_stats_provider.dart';
 import '../models/user_stats_model.dart';
@@ -29,6 +27,7 @@ import '../widgets/modals/create_user_modal.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../routes/route_names.dart';
 import '../../../core/config/supabase_config.dart';
+import '../widgets/academic_hierarchy_filter.dart';
 
 class UsersPage extends ConsumerStatefulWidget {
   const UsersPage({super.key});
@@ -40,6 +39,7 @@ class UsersPage extends ConsumerStatefulWidget {
 class _UsersPageState extends ConsumerState<UsersPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isExcelView = true;
+  bool _isAcademicHierarchyView = false;
   String _selectedRole = 'All';
   String _selectedCampus = 'All';
   String _selectedFaculty = 'All';
@@ -186,24 +186,32 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                   value: '$studentsCount',
                   color: Colors.blue,
                   icon: LucideIcons.user,
+                  isSelected: _selectedRole == 'student',
+                  onTap: () => setState(() => _selectedRole = _selectedRole == 'student' ? 'All' : 'student'),
                 ),
                 _buildKpiCard(
                   title: 'Personnel',
                   value: '$personnelCount',
                   color: Colors.orange,
                   icon: LucideIcons.graduationCap,
+                  isSelected: _selectedRole == 'personnel',
+                  onTap: () => setState(() => _selectedRole = _selectedRole == 'personnel' ? 'All' : 'personnel'),
                 ),
                 _buildKpiCard(
                   title: 'Program Heads',
                   value: '$programHeadsCount',
                   color: Colors.teal,
                   icon: LucideIcons.userCheck,
+                  isSelected: _selectedRole == 'program_head',
+                  onTap: () => setState(() => _selectedRole = _selectedRole == 'program_head' ? 'All' : 'program_head'),
                 ),
                 _buildKpiCard(
                   title: 'Deans',
                   value: '$deansCount',
                   color: Colors.purple,
                   icon: LucideIcons.award,
+                  isSelected: _selectedRole == 'dean',
+                  onTap: () => setState(() => _selectedRole = _selectedRole == 'dean' ? 'All' : 'dean'),
                 ),
               ]);
             },
@@ -317,52 +325,61 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     required String value,
     required Color color,
     required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: isSelected ? 2.0 : 1.0,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? color.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.03),
+              blurRadius: isSelected ? 12 : 8,
+              offset: const Offset(0, 3),
             ),
-            child: Icon(icon, color: color, size: 16),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 16),
             ),
-          ),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.black45,
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
             ),
-          ),
-        ],
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Colors.black45,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2060,8 +2077,6 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
-    final activeRole = ref.watch(workspaceProvider).activeRole;
-    final roleKey = activeRole != null ? RoleMapper.mapDbRoleToAppFormat(activeRole.roleName) : null;
 
 
     final usersAsync = ref.watch(allUsersProvider);
@@ -2228,101 +2243,245 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                 child: Text('Failed to load user analytics: $err'),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Search and Filter Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(height: 24),            LayoutBuilder(
+              builder: (context, constraints) {
+                final isWideScreen = constraints.maxWidth >= 1024;
+                
+                // Helper to build the right-side/standard content (Search bar, Filters, and Table/Card list)
+                Widget buildMainContentList() {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'User Accounts',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                      // Search and Filter Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'User Accounts',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Academic Directory',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _isAcademicHierarchyView ? AppColors.primary : Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Switch(
+                                      value: _isAcademicHierarchyView,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _isAcademicHierarchyView = val;
+                                        });
+                                      },
+                                      activeThumbColor: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _buildViewToggle(),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Search bar
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Search by user name, ID, email or program...',
+                                  hintStyle: GoogleFonts.poppins(
+                                    color: Colors.grey[400],
+                                    fontSize: 13,
+                                  ),
+                                  prefixIcon: const Icon(LucideIcons.search, size: 20, color: Colors.grey),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      _buildViewToggle(),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Search bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search by user name, ID, email or program...',
-                        hintStyle: GoogleFonts.poppins(
-                          color: Colors.grey[400],
-                          fontSize: 13,
-                        ),
-                        prefixIcon: const Icon(LucideIcons.search, size: 20, color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-            // Filter chips and dropdowns with pinned bulk actions menu
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildFilterSection(
-                      allUsers: allUsers,
+                      // Filter chips and dropdowns with pinned bulk actions menu
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _buildFilterSection(
+                                allUsers: allUsers,
+                                campuses: campuses,
+                                faculties: faculties,
+                                programs: programs,
+                              ),
+                            ),
+                            if (isSuperAdmin) ...[
+                              const SizedBox(width: 8),
+                              _buildBulkActionsMenu(filteredUsers),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // User List or Excel Preview Table
+                      usersAsync.when(
+                        data: (usersList) {
+                          return _isExcelView
+                              ? _buildExcelPreviewTable(filteredUsers, isSuperAdmin)
+                              : _buildCardList(filteredUsers, isSuperAdmin);
+                        },
+                        loading: () => const Center(child: FlickrLoader()),
+                        error: (err, stack) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          child: Center(child: Text('Error loading users: $err')),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                // If academic directory mode is active
+                if (_isAcademicHierarchyView) {
+                  final hierarchyWidget = Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: AcademicHierarchyFilter(
                       campuses: campuses,
                       faculties: faculties,
                       programs: programs,
+                      allUsers: allUsers,
+                      selectedCampusId: _selectedCampus,
+                      selectedFacultyId: _selectedFaculty,
+                      selectedProgramId: _selectedProgram,
+                      onCampusSelected: (campusId) {
+                        setState(() {
+                          _selectedCampus = campusId;
+                          _selectedFaculty = 'All';
+                          _selectedProgram = 'All';
+                        });
+                      },
+                      onFacultySelected: (facultyId) {
+                        final faculty = faculties.firstWhere((f) => f.id == facultyId);
+                        setState(() {
+                          _selectedCampus = faculty.campusId;
+                          _selectedFaculty = facultyId;
+                          _selectedProgram = 'All';
+                        });
+                      },
+                      onProgramSelected: (programId) {
+                        final program = programs.firstWhere((p) => p.id == programId);
+                        final faculty = faculties.firstWhere((f) => f.id == program.facultyId);
+                        setState(() {
+                          _selectedCampus = faculty.campusId;
+                          _selectedFaculty = program.facultyId;
+                          _selectedProgram = programId;
+                        });
+                      },
+                      onClearFilters: () {
+                        setState(() {
+                          _selectedCampus = 'All';
+                          _selectedFaculty = 'All';
+                          _selectedProgram = 'All';
+                        });
+                      },
                     ),
-                  ),
-                  if (isSuperAdmin) ...[
-                    const SizedBox(width: 8),
-                    _buildBulkActionsMenu(filteredUsers),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+                  );
 
-            // User List or Excel Preview Table
-            usersAsync.when(
-              data: (usersList) {
-                return _isExcelView
-                    ? _buildExcelPreviewTable(filteredUsers, isSuperAdmin)
-                    : _buildCardList(filteredUsers, isSuperAdmin);
+                  if (isWideScreen) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left column: Academic structure tree view
+                        SizedBox(
+                          width: 320,
+                          child: hierarchyWidget,
+                        ),
+                        // Right column: Standard user table & filters
+                        Expanded(
+                          child: buildMainContentList(),
+                        ),
+                      ],
+                    );
+                  } else {
+                    // Mobile stacked layout
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Collapsible directory filter at the top on mobile
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          child: Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              title: Text(
+                                'Filter by Academic Directory',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              leading: const Icon(LucideIcons.gitMerge, color: AppColors.primary, size: 18),
+                              backgroundColor: Colors.transparent,
+                              collapsedBackgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              collapsedShape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              children: [
+                                hierarchyWidget,
+                                const SizedBox(height: 12),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        buildMainContentList(),
+                      ],
+                    );
+                  }
+                }
+
+                // Default standard full-width layout
+                return buildMainContentList();
               },
-              loading: () => const Center(child: FlickrLoader()),
-              error: (err, stack) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Center(child: Text('Error loading users: $err')),
-              ),
             ),
           ],
         ),
