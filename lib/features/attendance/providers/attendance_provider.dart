@@ -14,3 +14,7 @@ final userEventAttendanceProvider = FutureProvider.family<AttendanceModel?, Stri
   
   return ref.watch(attendanceRepositoryProvider).getUserAttendanceForEvent(eventId, user.id!);
 });
+
+final userAttendanceHistoryProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, studentId) async {
+  return ref.watch(attendanceRepositoryProvider).getUserAttendanceHistory(studentId);
+});

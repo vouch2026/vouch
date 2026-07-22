@@ -162,4 +162,20 @@ class FinanceRepository {
     
     await _client.from('student_payments').insert(data);
   }
+
+  Future<List<StudentPaymentModel>> getStudentPayments(String studentId) async {
+    final response = await _client
+        .from('student_payments')
+        .select('*, fee:fees(*)')
+        .eq('student_id', studentId)
+        .order('paid_at', ascending: false);
+    
+    return (response as List).map<StudentPaymentModel>((json) {
+      final model = StudentPaymentModel.fromJson(json);
+      final fee = json['fee'] as Map<String, dynamic>?;
+      return model.copyWith(
+        feeName: fee != null ? fee['name'] : 'Unknown Fee',
+      );
+    }).toList();
+  }
 }

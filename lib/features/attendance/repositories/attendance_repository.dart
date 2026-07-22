@@ -167,4 +167,13 @@ class AttendanceRepository {
 
     return (response as List).length;
   }
+
+  Future<List<Map<String, dynamic>>> getUserAttendanceHistory(String studentId) async {
+    final response = await _client
+        .from('student_attendance')
+        .select('*, event:events(*)')
+        .eq('student_id', studentId)
+        .order('updated_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
 }

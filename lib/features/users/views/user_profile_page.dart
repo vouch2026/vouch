@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -12,6 +13,13 @@ import '../providers/user_profile_provider.dart';
 import '../controllers/user_controller.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart' as auth;
+import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/repositories/organization_repository.dart';
+import '../../attendance/providers/attendance_provider.dart';
+import '../../finance/providers/finance_provider.dart';
+import '../../finance/models/student_payment_model.dart';
+import '../../activity_cards/providers/activity_card_provider.dart';
+import '../../activity_cards/models/activity_card_models.dart';
 
 class UserProfilePage extends ConsumerStatefulWidget {
   final String id;
@@ -27,7 +35,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -97,6 +105,37 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
     );
   }
 
+  Widget _buildBackgroundDecorations() {
+    return Stack(
+      children: [
+        Positioned(
+          top: 60,
+          right: -80,
+          child: Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(140),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 120,
+          left: -60,
+          child: Container(
+            width: 240,
+            height: 240,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(120),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider(widget.id));
@@ -114,31 +153,38 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
         data: (user) {
           if (user == null) return const Center(child: Text('User not found'));
           
-          return Column(
+          final membershipsAsync = ref.watch(userMembershipsProvider(user.id!));
+          final orgsCount = membershipsAsync.valueOrNull?.length ?? user.organizationIds.length;
+          
+          return Stack(
             children: [
-              _buildBreadcrumbs(user),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildProfileHero(user),
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildTabBar(user),
-                      Container(
-                        constraints: const BoxConstraints(minHeight: 600),
-                        color: AppColors.background,
-                        child: [
-                          _OverviewTab(user: user),
-                          _OrganizationsTab(user: user),
-                          _AttendanceTab(user: user),
-                          _EventsTab(user: user),
-                          _PaymentsTab(user: user),
-                          _ActivityCardsTab(user: user),
-                        ][_tabController.index],
+              Positioned.fill(child: _buildBackgroundDecorations()),
+              Column(
+                children: [
+                  _buildBreadcrumbs(user),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _buildProfileHero(user, orgsCount: orgsCount),
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildTabBar(user),
+                          Container(
+                            constraints: const BoxConstraints(minHeight: 600),
+                            color: Colors.transparent,
+                            child: [
+                              _OverviewTab(user: user),
+                              _OrganizationsTab(user: user),
+                              _AttendanceTab(user: user),
+                              _PaymentsTab(user: user),
+                              _ActivityCardsTab(user: user),
+                            ][_tabController.index],
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           );
@@ -191,45 +237,70 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
     );
   }
 
-  Widget _buildProfileHero(UserModel user) {
+  Widget _buildProfileHero(UserModel user, {required int orgsCount}) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: const BoxDecoration(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
         color: AppColors.white,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isMobile = constraints.maxWidth < 600;
-          
-          if (isMobile) {
-            return Column(
-              children: [
-                _buildAvatar(user, size: 100),
-                const SizedBox(height: AppSpacing.md),
-                _buildProfileInfo(user, isCenter: true),
-                const SizedBox(height: AppSpacing.lg),
-                _buildQuickActions(user, isFullWidth: true),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.white,
+                AppColors.primary.withValues(alpha: 0.02),
               ],
-            );
-          }
-          
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAvatar(user, size: 120),
-              const SizedBox(width: AppSpacing.xl),
-              Expanded(child: _buildProfileInfo(user)),
-              _buildQuickActions(user),
-            ],
-          );
-        },
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              
+              if (isMobile) {
+                return Column(
+                  children: [
+                    _buildAvatar(user, size: 100),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildProfileInfo(user, orgsCount: orgsCount, isCenter: true),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildQuickActions(user, isFullWidth: true),
+                  ],
+                );
+              }
+              
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildAvatar(user, size: 120),
+                  const SizedBox(width: AppSpacing.xl),
+                  Expanded(child: _buildProfileInfo(user, orgsCount: orgsCount)),
+                  const SizedBox(width: AppSpacing.lg),
+                  _buildQuickActions(user),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildAvatar(UserModel user, {double size = 120}) {
+    final placeholder = user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U';
     return Container(
       width: size,
       height: size,
@@ -238,24 +309,31 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
         border: Border.all(color: AppColors.accent, width: 3),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: CircleAvatar(
         radius: size / 2,
-        backgroundColor: AppColors.primary.withOpacity(0.1),
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
         backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
         child: user.avatarUrl == null
-            ? Icon(Icons.person_rounded, size: size * 0.5, color: AppColors.primary)
+            ? Text(
+                placeholder,
+                style: GoogleFonts.poppins(
+                  fontSize: size * 0.4,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              )
             : null,
       ),
     );
   }
 
-  Widget _buildProfileInfo(UserModel user, {bool isCenter = false}) {
+  Widget _buildProfileInfo(UserModel user, {required int orgsCount, bool isCenter = false}) {
     return Column(
       crossAxisAlignment: isCenter ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
@@ -286,7 +364,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
           children: [
             _buildRoleBadge(user.roleDisplay),
             if (user.programName != null) _buildRoleBadge(user.programName!),
-            _buildCountBadge(Icons.corporate_fare_outlined, '${user.organizationIds.length} Organizations'),
+            _buildCountBadge(Icons.corporate_fare_outlined, '$orgsCount Organization${orgsCount == 1 ? "" : "s"}'),
           ],
         ),
       ],
@@ -482,7 +560,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> with SingleTi
           Tab(text: 'Overview'),
           Tab(text: 'Organizations'),
           Tab(text: 'Attendance'),
-          Tab(text: 'Events'),
           Tab(text: 'Payments'),
           Tab(text: 'Activity Cards'),
         ],
@@ -544,32 +621,48 @@ class _OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth > 800;
+
+    final personalCard = _buildInfoCard(
+      title: 'Personal Information',
+      icon: Icons.person_outline,
+      items: [
+        _InfoRow(label: 'ID No.', value: user.schoolId),
+        _InfoRow(label: 'Name', value: user.fullName),
+        _InfoRow(label: 'Email', value: user.email),
+      ],
+    );
+
+    final academicCard = _buildInfoCard(
+      title: 'Academic Information',
+      icon: Icons.school_outlined,
+      items: [
+        const _InfoRow(label: 'Campus', value: 'DORSU Main Campus'),
+        _InfoRow(label: 'Faculty', value: user.facultyName ?? 'N/A'),
+        _InfoRow(label: 'Program', value: user.programName ?? 'N/A'),
+        _InfoRow(label: 'Year Level', value: user.yearLevelDisplay),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        children: [
-          _buildInfoCard(
-            title: 'Personal Information',
-            icon: Icons.person_outline,
-            items: [
-              _InfoRow(label: 'ID No.', value: user.schoolId),
-              _InfoRow(label: 'Name', value: user.fullName),
-              _InfoRow(label: 'Email', value: user.email),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _buildInfoCard(
-            title: 'Academic Information',
-            icon: Icons.school_outlined,
-            items: [
-              const _InfoRow(label: 'Campus', value: 'DORSU Main Campus'),
-              _InfoRow(label: 'Faculty', value: user.facultyName ?? 'N/A'),
-              _InfoRow(label: 'Program', value: user.programName ?? 'N/A'),
-              _InfoRow(label: 'Year Level', value: user.yearLevelDisplay),
-            ],
-          ),
-        ],
-      ),
+      child: isWide
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: personalCard),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(child: academicCard),
+              ],
+            )
+          : Column(
+              children: [
+                personalCard,
+                const SizedBox(height: AppSpacing.lg),
+                academicCard,
+              ],
+            ),
     );
   }
 
@@ -602,12 +695,14 @@ class _OverviewTab extends StatelessWidget {
   }
 }
 
-class _OrganizationsTab extends StatelessWidget {
+class _OrganizationsTab extends ConsumerWidget {
   final UserModel user;
   const _OrganizationsTab({required this.user});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membershipsAsync = ref.watch(userMembershipsProvider(user.id!));
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -615,7 +710,25 @@ class _OrganizationsTab extends StatelessWidget {
         children: [
           _buildTabHeader('Joined Organizations', 'View and manage user memberships'),
           const SizedBox(height: AppSpacing.lg),
-          _buildOrganizationTable(context),
+          membershipsAsync.when(
+            data: (memberships) {
+              if (memberships.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Center(child: Text('Not a member of any organization yet.')),
+                );
+              }
+              return _buildOrganizationTable(context, memberships);
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Error: $e')),
+          ),
         ],
       ),
     );
@@ -631,7 +744,7 @@ class _OrganizationsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildOrganizationTable(BuildContext context) {
+  Widget _buildOrganizationTable(BuildContext context, List<UserOrganizationMembershipInfo> memberships) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -646,91 +759,178 @@ class _OrganizationsTab extends StatelessWidget {
             DataColumn(label: Text('Role')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Joined Date')),
-            DataColumn(label: Text('Actions')),
           ],
-          rows: [
-            _buildOrgRow('CSS Society', 'Treasurer', 'Active', 'Sept 15, 2024'),
-            _buildOrgRow('SSC', 'Secretary', 'Active', 'Aug 20, 2024'),
-            _buildOrgRow('COMSELEC', 'Staff', 'Active', 'Oct 05, 2024'),
-          ],
+          rows: memberships.map((m) {
+            final dateStr = m.membership.joinedAt != null
+                ? DateFormat('MMM dd, yyyy').format(m.membership.joinedAt!)
+                : 'N/A';
+            return _buildOrgRow(
+              m.organization.name,
+              m.membership.roleName ?? 'Member',
+              m.membership.status.toUpperCase(),
+              dateStr,
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
   DataRow _buildOrgRow(String org, String role, String status, String date) {
+    final isActive = status.toLowerCase() == 'active';
+    final statusColor = isActive ? AppColors.success : AppColors.textGrey;
+    
     return DataRow(cells: [
       DataCell(Text(org, style: const TextStyle(fontWeight: FontWeight.w600))),
       DataCell(Text(role)),
       DataCell(Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-        child: Text(status, style: const TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+        decoration: BoxDecoration(
+          color: statusColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          status,
+          style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+        ),
       )),
       DataCell(Text(date)),
-      DataCell(PopupMenuButton(
-        itemBuilder: (context) => [
-          const PopupMenuItem(child: Text('Change Role')),
-          const PopupMenuItem(child: Text('Remove Membership')),
-          const PopupMenuItem(child: Text('View Details')),
-        ],
-      )),
     ]);
   }
 }
 
-class _AttendanceTab extends StatelessWidget {
+class _AttendanceTab extends ConsumerWidget {
   final UserModel user;
   const _AttendanceTab({required this.user});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final attendanceAsync = ref.watch(userAttendanceHistoryProvider(user.id!));
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: attendanceAsync.when(
+        data: (history) {
+          int presentCount = 0;
+          int lateCount = 0;
+          int absentCount = 0;
+          int excusedCount = 0;
+
+          for (var att in history) {
+            final status = (att['status'] as String? ?? '').toLowerCase();
+            if (status == 'present') {
+              presentCount++;
+            } else if (status == 'late') {
+              lateCount++;
+            } else if (status == 'absent') {
+              absentCount++;
+            } else if (status == 'excused') {
+              excusedCount++;
+            }
+          }
+
+          final totalEvents = history.length;
+          final rate = totalEvents == 0
+              ? 100
+              : ((presentCount + lateCount + excusedCount) / totalEvents * 100).round();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Attendance History', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
-                  Text('Overall participation rate: 92%', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Attendance History', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
+                      Text('Overall participation rate: $rate%', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                    ],
+                  ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.download),
-                label: const Text('Export Report'),
+              const SizedBox(height: AppSpacing.lg),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final cards = [
+                    _AnalyticsCard(title: 'Present', value: presentCount.toString(), color: AppColors.success, icon: Icons.check_circle_outline),
+                    _AnalyticsCard(title: 'Late', value: lateCount.toString(), color: AppColors.warning, icon: Icons.access_time),
+                    _AnalyticsCard(title: 'Absent', value: absentCount.toString(), color: AppColors.error, icon: Icons.cancel_outlined),
+                    _AnalyticsCard(title: 'Excused', value: excusedCount.toString(), color: AppColors.primary, icon: Icons.info_outline),
+                  ];
+
+                  if (screenWidth > 900) {
+                    return Row(
+                      children: [
+                        cards[0],
+                        const SizedBox(width: AppSpacing.md),
+                        cards[1],
+                        const SizedBox(width: AppSpacing.md),
+                        cards[2],
+                        const SizedBox(width: AppSpacing.md),
+                        cards[3],
+                      ],
+                    );
+                  } else if (screenWidth > 550) {
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            cards[0],
+                            const SizedBox(width: AppSpacing.md),
+                            cards[1],
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            cards[2],
+                            const SizedBox(width: AppSpacing.md),
+                            cards[3],
+                          ],
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        Row(children: [cards[0]]),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(children: [cards[1]]),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(children: [cards[2]]),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(children: [cards[3]]),
+                      ],
+                    );
+                  }
+                },
               ),
+              const SizedBox(height: AppSpacing.lg),
+              if (history.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Center(child: Text('No attendance records found.')),
+                )
+              else
+                _buildAttendanceTable(history),
             ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _buildAttendanceAnalytics(),
-          const SizedBox(height: AppSpacing.lg),
-          _buildAttendanceTable(),
-        ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildAttendanceAnalytics() {
-    return Row(
-      children: [
-        _AnalyticsCard(title: 'Present', value: '24', color: AppColors.success, icon: Icons.check_circle_outline),
-        const SizedBox(width: AppSpacing.md),
-        _AnalyticsCard(title: 'Late', value: '2', color: AppColors.warning, icon: Icons.access_time),
-        const SizedBox(width: AppSpacing.md),
-        _AnalyticsCard(title: 'Absent', value: '2', color: AppColors.error, icon: Icons.cancel_outlined),
-        const SizedBox(width: AppSpacing.md),
-        _AnalyticsCard(title: 'Excused', value: '1', color: AppColors.primary, icon: Icons.info_outline),
-      ],
-    );
-  }
-
-  Widget _buildAttendanceTable() {
+  Widget _buildAttendanceTable(List<Map<String, dynamic>> history) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -747,24 +947,43 @@ class _AttendanceTab extends StatelessWidget {
             DataColumn(label: Text('Time In')),
             DataColumn(label: Text('Time Out')),
           ],
-          rows: [
-            _buildAttendanceRow('Freshmen Orientation', 'Aug 25, 2024', 'Present', '08:00 AM', '05:00 PM'),
-            _buildAttendanceRow('University Day', 'Sept 10, 2024', 'Late', '08:45 AM', '04:30 PM'),
-            _buildAttendanceRow('General Assembly', 'Oct 12, 2024', 'Present', '01:00 PM', '04:00 PM'),
-          ],
+          rows: history.map((att) {
+            final event = att['event'] as Map<String, dynamic>?;
+            final eventName = event?['name'] as String? ?? 'Unknown Event';
+            final eventDateRaw = event?['event_date'] as String?;
+            final dateStr = eventDateRaw != null
+                ? DateFormat('MMM dd, yyyy').format(DateTime.parse(eventDateRaw))
+                : 'N/A';
+            final status = att['status'] as String? ?? 'Pending';
+            final timeInRaw = att['actual_time_in'] as String?;
+            final timeOutRaw = att['actual_time_out'] as String?;
+
+            final timeInStr = timeInRaw != null
+                ? DateFormat('hh:mm a').format(DateTime.parse(timeInRaw))
+                : '---';
+            final timeOutStr = timeOutRaw != null
+                ? DateFormat('hh:mm a').format(DateTime.parse(timeOutRaw))
+                : '---';
+
+            return _buildAttendanceRow(eventName, dateStr, status, timeInStr, timeOutStr);
+          }).toList(),
         ),
       ),
     );
   }
 
   DataRow _buildAttendanceRow(String event, String date, String status, String timeIn, String timeOut) {
-    final statusColor = status == 'Present' ? AppColors.success : (status == 'Late' ? AppColors.warning : AppColors.error);
+    final statusLower = status.toLowerCase();
+    final statusColor = statusLower == 'present'
+        ? AppColors.success
+        : (statusLower == 'late' ? AppColors.warning : AppColors.error);
+
     return DataRow(cells: [
       DataCell(Text(event, style: const TextStyle(fontWeight: FontWeight.w600))),
       DataCell(Text(date)),
       DataCell(Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+        decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
         child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
       )),
       DataCell(Text(timeIn)),
@@ -773,85 +992,87 @@ class _AttendanceTab extends StatelessWidget {
   }
 }
 
-class _EventsTab extends StatelessWidget {
-  final UserModel user;
-  const _EventsTab({required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Event Participation', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.lg),
-          _buildEventsTable(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEventsTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('Event')),
-            DataColumn(label: Text('Organization')),
-            DataColumn(label: Text('Attendance')),
-            DataColumn(label: Text('Date')),
-            DataColumn(label: Text('Role')),
-          ],
-          rows: [
-            const DataRow(cells: [
-              DataCell(Text('Bootcamp 2024', style: TextStyle(fontWeight: FontWeight.w600))),
-              DataCell(Text('CSS Society')),
-              DataCell(Text('Present')),
-              DataCell(Text('Oct 15, 2024')),
-              DataCell(Text('Participant')),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PaymentsTab extends StatelessWidget {
+class _PaymentsTab extends ConsumerWidget {
   final UserModel user;
   const _PaymentsTab({required this.user});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final paymentsAsync = ref.watch(userStudentPaymentsProvider(user.id!));
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: paymentsAsync.when(
+        data: (payments) {
+          double totalPaid = 0;
+          double totalBalance = 0;
+
+          for (var payment in payments) {
+            if (payment.status == 'Paid') {
+              totalPaid += payment.amountPaid;
+            } else if (payment.status == 'Pending' || payment.status == 'Unpaid') {
+              totalBalance += payment.amountPaid;
+            }
+          }
+
+          final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱ ');
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AnalyticsCard(title: 'Total Paid', value: '₱ 2,500', color: AppColors.success, icon: Icons.payments_outlined),
-              const SizedBox(width: AppSpacing.md),
-              _AnalyticsCard(title: 'Balance', value: '₱ 500', color: AppColors.error, icon: Icons.account_balance_wallet_outlined),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final cards = [
+                    _AnalyticsCard(title: 'Total Paid', value: formatter.format(totalPaid), color: AppColors.success, icon: Icons.payments_outlined),
+                    _AnalyticsCard(title: 'Balance / Pending', value: formatter.format(totalBalance), color: AppColors.error, icon: Icons.account_balance_wallet_outlined),
+                  ];
+
+                  if (screenWidth > 600) {
+                    return Row(
+                      children: [
+                        cards[0],
+                        const SizedBox(width: AppSpacing.md),
+                        cards[1],
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        Row(children: [cards[0]]),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(children: [cards[1]]),
+                      ],
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Payment History', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: AppSpacing.md),
+              if (payments.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Center(child: Text('No payment records found.')),
+                )
+              else
+                _buildPaymentsTable(payments, formatter),
             ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Payment History', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.md),
-          _buildPaymentsTable(),
-        ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildPaymentsTable() {
+  Widget _buildPaymentsTable(List<StudentPaymentModel> payments, NumberFormat formatter) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -868,11 +1089,17 @@ class _PaymentsTab extends StatelessWidget {
             DataColumn(label: Text('Date Paid')),
             DataColumn(label: Text('Reference')),
           ],
-          rows: [
-            _buildPaymentRow('CSS Membership Fee', '₱ 250.00', 'Paid', 'Aug 20, 2024', 'REF-00123'),
-            _buildPaymentRow('SSG Development Fee', '₱ 150.00', 'Paid', 'Sept 05, 2024', 'REF-00456'),
-            _buildPaymentRow('Acquaintance Party', '₱ 500.00', 'Pending', '---', '---'),
-          ],
+          rows: payments.map((payment) {
+            final fee = payment.feeName ?? 'Unknown Fee';
+            final amount = formatter.format(payment.amountPaid);
+            final status = payment.status;
+            final dateStr = payment.paidAt != null
+                ? DateFormat('MMM dd, yyyy').format(payment.paidAt!)
+                : '---';
+            final ref = payment.referenceNumber;
+
+            return _buildPaymentRow(fee, amount, status, dateStr, ref);
+          }).toList(),
         ),
       ),
     );
@@ -885,7 +1112,7 @@ class _PaymentsTab extends StatelessWidget {
       DataCell(Text(amount)),
       DataCell(Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+        decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
         child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
       )),
       DataCell(Text(date)),
@@ -894,66 +1121,94 @@ class _PaymentsTab extends StatelessWidget {
   }
 }
 
-class _ActivityCardsTab extends StatelessWidget {
+class _ActivityCardsTab extends ConsumerWidget {
   final UserModel user;
   const _ActivityCardsTab({required this.user});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cardsAsync = ref.watch(studentActivityCardsByIdProvider(user.id!));
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Activity Card Progress', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.lg),
-          _buildProgressTracker(),
-          const SizedBox(height: AppSpacing.xl),
-          _buildSignaturesTable(),
-        ],
+      child: cardsAsync.when(
+        data: (cards) {
+          if (cards.isEmpty) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Center(child: Text('No active activity cards found for this student.')),
+            );
+          }
+
+          final card = cards.first;
+          final signedCount = card.signatures.where((s) => s.status == SignatureStatus.signed).length;
+          final pendingCount = card.signatures.where((s) => s.status == SignatureStatus.pending).length;
+          
+          final double progress = card.completionPercentage / 100.0;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${card.organizationName} Activity Card Progress', style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: AppSpacing.lg),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Overall Clearance Status', style: AppTextStyles.titleMedium),
+                        Text(
+                          '${card.completionPercentage.round()}%',
+                          style: AppTextStyles.headlineSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    LinearProgressIndicator(
+                      value: progress.clamp(0.0, 1.0),
+                      minHeight: 12,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        _StatusBadge(label: '$signedCount Signed', color: AppColors.success),
+                        const SizedBox(width: AppSpacing.sm),
+                        _StatusBadge(label: '$pendingCount Pending', color: AppColors.warning),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text('Required Signatures Workflow', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: AppSpacing.md),
+              _buildSignaturesTable(card.signatures),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildProgressTracker() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Overall Clearance Status', style: AppTextStyles.titleMedium),
-              Text('75%', style: AppTextStyles.headlineSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          LinearProgressIndicator(
-            value: 0.75,
-            minHeight: 12,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
-            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              _StatusBadge(label: '6 Signed', color: AppColors.success),
-              const SizedBox(width: AppSpacing.sm),
-              _StatusBadge(label: '2 Pending', color: AppColors.warning),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSignaturesTable() {
+  Widget _buildSignaturesTable(List<ActivityCardSignature> signatures) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -967,20 +1222,24 @@ class _ActivityCardsTab extends StatelessWidget {
           DataColumn(label: Text('Signatory')),
           DataColumn(label: Text('Date Signed')),
         ],
-        rows: const [
-          DataRow(cells: [
-            DataCell(Text('Program Head', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataCell(Text('Signed', style: TextStyle(color: AppColors.success))),
-            DataCell(Text('Dr. Jane Smith')),
-            DataCell(Text('Nov 10, 2024')),
-          ]),
-          DataRow(cells: [
-            DataCell(Text('Faculty Dean', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataCell(Text('Pending', style: TextStyle(color: AppColors.warning))),
-            DataCell(Text('Dr. Robert Wilson')),
-            DataCell(Text('---')),
-          ]),
-        ],
+        rows: signatures.map((sig) {
+          final role = sig.roleName;
+          final statusStr = sig.status.name.toUpperCase();
+          final statusColor = sig.status == SignatureStatus.signed
+              ? AppColors.success
+              : (sig.status == SignatureStatus.pending ? AppColors.warning : AppColors.error);
+          final signatory = sig.signedByUserName ?? '---';
+          final dateStr = sig.signedAt != null
+              ? DateFormat('MMM dd, yyyy').format(sig.signedAt!)
+              : '---';
+
+          return DataRow(cells: [
+            DataCell(Text(role, style: const TextStyle(fontWeight: FontWeight.w600))),
+            DataCell(Text(statusStr, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold))),
+            DataCell(Text(signatory)),
+            DataCell(Text(dateStr)),
+          ]);
+        }).toList(),
       ),
     );
   }
