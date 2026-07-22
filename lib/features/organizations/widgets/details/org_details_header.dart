@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/config/supabase_config.dart';
 import '../../models/organization_model.dart';
+import '../../providers/organization_provider.dart';
+import '../../controllers/organization_controller.dart';
+import '../../../auth/providers/auth_provider.dart';
+import './org_details_analytics_cards.dart';
 
-class OrgDetailsHeader extends StatelessWidget {
+class OrgDetailsHeader extends ConsumerWidget {
   final OrganizationModel org;
 
   const OrgDetailsHeader({super.key, required this.org});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isSuperAdmin = userProfile?.role == 'super_admin';
+    final eventsAsync = ref.watch(orgEventsProvider(org));
+
+    final upcomingCount = eventsAsync.valueOrNull?.where((e) {
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      // Event is today or in the future
+      return e.eventDate.isAfter(todayStart) || 
+             e.eventDate.year == todayStart.year && 
+             e.eventDate.month == todayStart.month && 
+             e.eventDate.day == todayStart.day;
+    }).length ?? 0;
     
     return Column(
       children: [
@@ -24,7 +43,7 @@ class OrgDetailsHeader extends StatelessWidget {
               height: 200,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 image: org.bannerUrl != null
                     ? DecorationImage(
                         image: NetworkImage(org.bannerUrl!),
@@ -37,7 +56,7 @@ class OrgDetailsHeader extends StatelessWidget {
                       child: Icon(
                         Icons.business_rounded,
                         size: 64,
-                        color: AppColors.primary.withOpacity(0.2),
+                        color: AppColors.primary.withValues(alpha: 0.2),
                       ),
                     )
                   : null,
@@ -45,7 +64,7 @@ class OrgDetailsHeader extends StatelessWidget {
             // Logo overlay
             Positioned(
               bottom: -40,
-              left: AppSpacing.xl,
+              left: AppSpacing.lg,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -53,7 +72,7 @@ class OrgDetailsHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -86,7 +105,7 @@ class OrgDetailsHeader extends StatelessWidget {
         const SizedBox(height: 50),
         // Title and Info Section
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -105,8 +124,6 @@ class OrgDetailsHeader extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.md),
                         _buildStatusBadge(org.status),
-                        const SizedBox(width: AppSpacing.sm),
-                        _buildPremiumBadge('Accredited', Colors.amber),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -119,16 +136,14 @@ class OrgDetailsHeader extends StatelessWidget {
                       spacing: AppSpacing.sm,
                       children: [
                         _buildInfoChip(Icons.person_outline_rounded, 'Adviser: ${org.adviserName ?? "Not Assigned"}'),
-                        _buildInfoChip(Icons.people_outline_rounded, '${org.memberCount} Members'),
-                        _buildInfoChip(Icons.event_available_rounded, '12 Upcoming Events'),
-                        _buildPremiumBadge('Top Performing', AppColors.primary, isSmall: true),
+                        _buildInfoChip(Icons.event_available_rounded, '$upcomingCount Upcoming Events'),
                       ],
                     ),
                   ],
                 ),
               ),
               // Action Buttons
-              _buildActionButtons(context),
+              _buildActionButtons(context, ref, isSuperAdmin),
             ],
           ),
         ),
@@ -140,9 +155,9 @@ class OrgDetailsHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.success.withOpacity(0.5)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -169,26 +184,6 @@ class OrgDetailsHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildPremiumBadge(String label, Color color, {bool isSmall = false}) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 10, vertical: isSmall ? 2 : 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.labelSmall.copyWith(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: isSmall ? 9 : 10,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
   Widget _buildInfoChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -208,30 +203,177 @@ class OrgDetailsHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
-    return Row(
-      children: [
-        OutlinedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          label: const Text('Edit'),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
+  Widget _buildActionButtons(BuildContext context, WidgetRef ref, bool isSuperAdmin) {
+    if (!isSuperAdmin) return const SizedBox.shrink();
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_horiz_rounded),
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      onSelected: (value) async {
+        if (value == 'edit') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Use the Settings tab below to modify organization details.'),
+            ),
+          );
+        } else if (value == 'suspend') {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Suspend Organization', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Text('Are you sure you want to suspend ${org.name}?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                  child: const Text('Confirm'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            try {
+              await SupabaseConfig.client
+                  .from('organizations')
+                  .update({'status': 'suspended'})
+                  .eq('id', org.id);
+              ref.invalidate(organizationProvider(org.id));
+              ref.invalidate(organizationsProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Organization suspended successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to suspend: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          }
+        } else if (value == 'activate') {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Activate Organization', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Text('Are you sure you want to activate ${org.name}?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                  child: const Text('Confirm'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            try {
+              await SupabaseConfig.client
+                  .from('organizations')
+                  .update({'status': 'active'})
+                  .eq('id', org.id);
+              ref.invalidate(organizationProvider(org.id));
+              ref.invalidate(organizationsProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Organization activated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to activate: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          }
+        } else if (value == 'delete') {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Delete Organization', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Text('Are you sure you want to delete ${org.name}? This action cannot be undone.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            final success = await ref.read(organizationControllerProvider.notifier).deleteOrganization(org.id);
+            if (context.mounted) {
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Organization deleted successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                context.go('/organizations');
+              } else {
+                final error = ref.read(organizationControllerProvider).error;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to delete: ${error?.toString() ?? 'Unknown error'}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'edit',
+          child: Text('Edit', style: TextStyle(fontSize: 13)),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_horiz_rounded),
-          offset: const Offset(0, 40),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: 'add_member', child: Text('Add Member')),
-            const PopupMenuItem(value: 'assign_officer', child: Text('Assign Officer')),
-            const PopupMenuItem(value: 'create_event', child: Text('Create Event')),
-            const PopupMenuItem(value: 'manage_fees', child: Text('Manage Fees')),
-            const PopupMenuDivider(),
-            const PopupMenuItem(value: 'archive', child: Text('Archive Organization', style: TextStyle(color: AppColors.error))),
-          ],
+        if (org.status.toLowerCase() == 'suspended')
+          const PopupMenuItem(
+            value: 'activate',
+            child: Text('Activate', style: TextStyle(fontSize: 13)),
+          )
+        else
+          const PopupMenuItem(
+            value: 'suspend',
+            child: Text('Suspend', style: TextStyle(fontSize: 13)),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Text('Delete', style: TextStyle(color: Colors.red, fontSize: 13)),
         ),
       ],
     );

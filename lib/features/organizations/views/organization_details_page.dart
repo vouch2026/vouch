@@ -13,7 +13,6 @@ import '../../../core/utils/role_mapper.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../widgets/details/org_details_header.dart';
 import '../widgets/details/org_details_analytics_cards.dart';
-import '../widgets/details/org_details_sidebar.dart';
 import '../widgets/details/org_details_tabs_view.dart';
 
 class OrganizationDetailsPage extends ConsumerWidget {
@@ -131,7 +130,7 @@ class OrganizationDetailsPage extends ConsumerWidget {
                 OrgDetailsHeader(org: org),
                 
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -139,39 +138,8 @@ class OrganizationDetailsPage extends ConsumerWidget {
                       OrgDetailsAnalyticsCards(orgId: id),
                       const SizedBox(height: AppSpacing.xl),
                       
-                      // 3. Main Content Area (Tabs + Sidebar)
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth > 1100) {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Left Column: Enterprise Tabs
-                                Expanded(
-                                  flex: 3,
-                                  child: OrgDetailsTabsView(org: org),
-                                ),
-                                const SizedBox(width: AppSpacing.xl),
-                                // Right Column: Sticky Performance Sidebar
-                                const Expanded(
-                                  flex: 1,
-                                  child: OrgDetailsSidebar(),
-                                ),
-                              ],
-                            );
-                          }
-                          
-                          // Tablet/Mobile: Stacked Layout
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              OrgDetailsTabsView(org: org),
-                              const SizedBox(height: AppSpacing.xl),
-                              const OrgDetailsSidebar(),
-                            ],
-                          );
-                        },
-                      ),
+                      // 3. Main Content Area (Tabs only)
+                      OrgDetailsTabsView(org: org),
                     ],
                   ),
                 ),
