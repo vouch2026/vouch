@@ -38,28 +38,23 @@ class OrgDetailsHeader extends ConsumerWidget {
         Stack(
           clipBehavior: Clip.none,
           children: [
-            // Banner
             Container(
               height: 200,
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                image: org.bannerUrl != null
-                    ? DecorationImage(
-                        image: NetworkImage(org.bannerUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: org.bannerUrl == null
-                  ? Center(
-                      child: Icon(
-                        Icons.business_rounded,
-                        size: 64,
-                        color: AppColors.primary.withValues(alpha: 0.2),
+              color: AppColors.primary,
+              child: org.bannerUrl != null && org.bannerUrl!.isNotEmpty
+                  ? Image.network(
+                      org.bannerUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Opacity(
+                        opacity: 0.1,
+                        child: Icon(Icons.image, size: 100, color: Colors.white),
                       ),
                     )
-                  : null,
+                  : const Opacity(
+                      opacity: 0.1,
+                      child: Icon(Icons.image, size: 100, color: Colors.white),
+                    ),
             ),
             // Logo overlay
             Positioned(

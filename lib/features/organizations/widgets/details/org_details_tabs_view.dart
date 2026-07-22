@@ -14,6 +14,7 @@ import '../../../academic_structure/providers/term_provider.dart';
 import './assign_officer_dialog.dart';
 import './assign_adviser_dialog.dart';
 import './organization_settings_panel.dart';
+import './org_details_analytics_cards.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -32,6 +33,7 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
     'Members',
     'Officers',
     'Events',
+    'Fees',
     'Announcements',
     'Governance',
     'Settings',
@@ -90,6 +92,8 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
         return _MembersTab(orgId: widget.org.id);
       case 'Officers':
         return _OfficersTab(org: widget.org);
+      case 'Fees':
+        return _FeesTab(org: widget.org);
       case 'Governance':
         return _GovernanceTab(org: widget.org);
       case 'Settings':
@@ -114,17 +118,7 @@ class _MembersTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Organization Members', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-              FilledButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.person_add_rounded, size: 18),
-                label: const Text('Add Member'),
-              ),
-            ],
-          ),
+          Text('Organization Members', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
           membersAsync.when(
             data: (members) => _buildMembersTable(context, members),
@@ -771,9 +765,102 @@ class _PlaceholderTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.construction_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
+          Icon(Icons.construction_rounded, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
           const SizedBox(height: AppSpacing.md),
           Text('$name module is under development', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeesTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _FeesTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final feesAsync = ref.watch(orgFeesProvider(org));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Organization Fees', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          feesAsync.when(
+            data: (fees) {
+              if (fees.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.payments_outlined, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text('No fees found for this organization.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: fees.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final fee = fees[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.payments_rounded, color: AppColors.success, size: 20),
+                      ),
+                      title: Text(fee.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                        'Due: ${fee.dueDate.year}-${fee.dueDate.month.toString().padLeft(2, '0')}-${fee.dueDate.day.toString().padLeft(2, '0')} • ${fee.isMandatory ? "Mandatory" : "Optional"}',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                      trailing: Text(
+                        '₱${fee.amount.toStringAsFixed(2)}',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => const Center(child: FlickrLoader()),
+            error: (err, _) => Center(child: Text('Error loading fees: $err')),
+          ),
         ],
       ),
     );
