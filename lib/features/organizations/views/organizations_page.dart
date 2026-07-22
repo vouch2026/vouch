@@ -13,13 +13,21 @@ import '../../../core/utils/file_saver_helper.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/models/user_model.dart';
 import '../providers/workspace_provider.dart';
 import '../../../core/utils/role_mapper.dart';
 import '../providers/organization_provider.dart';
 import '../models/organization_model.dart';
+import '../../campuses/providers/campus_provider.dart';
+import '../../faculties/providers/faculty_provider.dart';
+import '../../programs/providers/program_provider.dart';
+import '../../campuses/models/campus_model.dart';
+import '../../faculties/models/faculty_model.dart';
+import '../../programs/models/program_model.dart';
 import '../widgets/tables/organization_table.dart';
 import '../widgets/modals/organization_creation_modal.dart';
 import '../widgets/details/assign_adviser_dialog.dart';
+import '../widgets/academic_hierarchy_org_filter.dart';
 
 class OrganizationsPage extends ConsumerStatefulWidget {
   const OrganizationsPage({super.key});
@@ -33,6 +41,11 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
   String _selectedStatus = 'All';
   String _selectedType = 'All';
   
+  String _selectedCampus = 'All';
+  String _selectedFaculty = 'All';
+  String _selectedProgram = 'All';
+  
+  bool _isAcademicHierarchyView = false;
   Set<String> _selectedOrgIds = {};
   bool _isSelectionMode = false;
 
@@ -730,6 +743,21 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
       );
     }
 
+    ref.listen<AsyncValue<UserModel?>>(userProfileProvider, (previous, next) {
+      final user = next.value;
+      if (user != null) {
+        if (user.role == 'dean' && _selectedFaculty == 'All') {
+          setState(() {
+            _selectedFaculty = user.facultyId ?? 'All';
+          });
+        } else if (user.role == 'program_head' && _selectedProgram == 'All') {
+          setState(() {
+            _selectedProgram = user.programId ?? 'All';
+          });
+        }
+      }
+    });
+
     final organizationsAsync = ref.watch(organizationsProvider);
     final allOrgs = organizationsAsync.value ?? <OrganizationModel>[];
 
@@ -741,8 +769,20 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
       final matchesType = _selectedType == 'All' || org.type == _selectedType;
       final matchesStatus = _selectedStatus == 'All' || org.status.toLowerCase() == _selectedStatus.toLowerCase();
 
-      return matchesSearch && matchesType && matchesStatus;
+      final matchesCampus = _selectedCampus == 'All' || org.campusId == _selectedCampus;
+      final matchesFaculty = _selectedFaculty == 'All' || org.facultyId == _selectedFaculty;
+      final matchesProgram = _selectedProgram == 'All' || org.programId == _selectedProgram;
+
+      return matchesSearch && matchesType && matchesStatus && matchesCampus && matchesFaculty && matchesProgram;
     }).toList();
+
+    final campusesAsync = ref.watch(campusesProvider);
+    final facultiesAsync = ref.watch(facultiesProvider);
+    final programsAsync = ref.watch(programsProvider);
+
+    final campuses = campusesAsync.valueOrNull ?? const <CampusModel>[];
+    final faculties = facultiesAsync.valueOrNull ?? const <FacultyModel>[];
+    final programs = programsAsync.valueOrNull ?? const <ProgramModel>[];
 
     final isMobile = MediaQuery.of(context).size.width < 768;
 
@@ -876,161 +916,302 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
             ),
             const SizedBox(height: 24),
 
-            // Directory sheet card container
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isWideScreen = constraints.maxWidth >= 1024;
+
+                Widget buildMainContentList() {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Registered Organizations',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (filteredOrgs.isNotEmpty) ...[
-                            FilledButton.icon(
-                              onPressed: () => _downloadExcelReport(filteredOrgs),
-                              icon: const Icon(LucideIcons.download, size: 16),
-                              label: Text(
-                                isMobile ? 'Export' : 'Download Excel',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Registered Organizations',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Academic Directory',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _isAcademicHierarchyView ? AppColors.primary : Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Switch(
+                                      value: _isAcademicHierarchyView,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _isAcademicHierarchyView = val;
+                                        });
+                                      },
+                                      activeThumbColor: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    if (filteredOrgs.isNotEmpty) ...[
+                                      FilledButton.icon(
+                                        onPressed: () => _downloadExcelReport(filteredOrgs),
+                                        icon: const Icon(LucideIcons.download, size: 16),
+                                        label: Text(
+                                          isMobile ? 'Export' : 'Download Excel',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: AppColors.accent,
+                                          foregroundColor: AppColors.primary,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+                                          ),
+                                        ),
+                                      ),
+                                      if (isSuperAdmin) ...[
+                                        const SizedBox(width: 8),
+                                        _buildBulkActionsMenu(filteredOrgs),
+                                      ],
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Unified Search bar
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.accent,
-                                foregroundColor: AppColors.primary,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Search by organization name or code...',
+                                  hintStyle: GoogleFonts.poppins(
+                                    color: Colors.grey[400],
+                                    fontSize: 13,
+                                  ),
+                                  prefixIcon: const Icon(LucideIcons.search, size: 20, color: Colors.grey),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ),
-                            if (isSuperAdmin) ...[
-                              const SizedBox(width: 8),
-                              _buildBulkActionsMenu(filteredOrgs),
-                            ],
                           ],
-                        ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: _buildFilterSection(),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Main Organization Table
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: organizationsAsync.when(
+                          data: (orgsList) {
+                            if (filteredOrgs.isEmpty) {
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(40),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.search_off_rounded, size: 48, color: Colors.grey[400]),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'No Organizations Found',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Try refining your search query or filter settings.',
+                                      style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return OrganizationTable(
+                              organizations: filteredOrgs,
+                              isSelectionMode: _isSelectionMode,
+                              selectedOrgIds: _selectedOrgIds,
+                              onSelectAll: (selected) {
+                                setState(() {
+                                  if (selected == true) {
+                                    _selectedOrgIds.addAll(filteredOrgs.map((o) => o.id));
+                                  } else {
+                                    for (final org in filteredOrgs) {
+                                      _selectedOrgIds.remove(org.id);
+                                    }
+                                  }
+                                });
+                              },
+                              onSelectChanged: (orgId, selected) {
+                                setState(() {
+                                  if (selected == true) {
+                                    _selectedOrgIds.add(orgId);
+                                  } else {
+                                    _selectedOrgIds.remove(orgId);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                          loading: () => const Center(child: FlickrLoader()),
+                          error: (error, stack) => Center(child: Text('Error: $error')),
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
+                  );
+                }
 
-                  // Unified Search bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                if (_isAcademicHierarchyView) {
+                  final hierarchyWidget = Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: AcademicHierarchyOrgFilter(
+                      campuses: campuses,
+                      faculties: faculties,
+                      programs: programs,
+                      organizations: allOrgs,
+                      selectedCampusId: _selectedCampus,
+                      selectedFacultyId: _selectedFaculty,
+                      selectedProgramId: _selectedProgram,
+                      userRole: userProfile?.role ?? 'student',
+                      userFacultyId: userProfile?.facultyId,
+                      userProgramId: userProfile?.programId,
+                      onCampusSelected: (campusId) {
+                        setState(() {
+                          _selectedCampus = campusId;
+                          _selectedFaculty = 'All';
+                          _selectedProgram = 'All';
+                        });
+                      },
+                      onFacultySelected: (facultyId) {
+                        final faculty = faculties.firstWhere((f) => f.id == facultyId);
+                        setState(() {
+                          _selectedCampus = faculty.campusId;
+                          _selectedFaculty = facultyId;
+                          _selectedProgram = 'All';
+                        });
+                      },
+                      onProgramSelected: (programId) {
+                        final program = programs.firstWhere((p) => p.id == programId);
+                        final faculty = faculties.firstWhere((f) => f.id == program.facultyId);
+                        setState(() {
+                          _selectedCampus = faculty.campusId;
+                          _selectedFaculty = program.facultyId;
+                          _selectedProgram = programId;
+                        });
+                      },
+                      onClearFilters: () {
+                        setState(() {
+                          _selectedCampus = 'All';
+                          _selectedFaculty = 'All';
+                          _selectedProgram = 'All';
+                        });
+                      },
+                    ),
+                  );
+
+                  if (isWideScreen) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 320,
+                          child: hierarchyWidget,
+                        ),
+                        Expanded(
+                          child: buildMainContentList(),
                         ),
                       ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search by organization name or code...',
-                        hintStyle: GoogleFonts.poppins(
-                          color: Colors.grey[400],
-                          fontSize: 13,
-                        ),
-                        prefixIcon: const Icon(LucideIcons.search, size: 20, color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Filters Section (Type, Status)
-                  _buildFilterSection(),
-                  const SizedBox(height: 16),
-
-                  // Main Organization Table
-                  organizationsAsync.when(
-                    data: (orgsList) {
-                      if (filteredOrgs.isEmpty) {
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(40),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off_rounded, size: 48, color: Colors.grey[400]),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                'No Organizations Found',
+                    );
+                  } else {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                          child: Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              title: Text(
+                                'Filter by Academic Directory',
                                 style: GoogleFonts.poppins(
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey[600],
+                                  color: AppColors.primary,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Try refining your search query or filter settings.',
-                                style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12),
+                              leading: const Icon(LucideIcons.gitMerge, color: AppColors.primary, size: 18),
+                              backgroundColor: Colors.transparent,
+                              collapsedBackgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: Colors.grey.shade200),
                               ),
-                            ],
+                              collapsedShape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              children: [
+                                hierarchyWidget,
+                                const SizedBox(height: 12),
+                              ],
+                            ),
                           ),
-                        );
-                      }
-                      return OrganizationTable(
-                        organizations: filteredOrgs,
-                        isSelectionMode: _isSelectionMode,
-                        selectedOrgIds: _selectedOrgIds,
-                        onSelectAll: (selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _selectedOrgIds.addAll(filteredOrgs.map((o) => o.id));
-                            } else {
-                              for (final org in filteredOrgs) {
-                                _selectedOrgIds.remove(org.id);
-                              }
-                            }
-                          });
-                        },
-                        onSelectChanged: (orgId, selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _selectedOrgIds.add(orgId);
-                            } else {
-                              _selectedOrgIds.remove(orgId);
-                            }
-                          });
-                        },
-                      );
-                    },
-                    loading: () => const Center(child: FlickrLoader()),
-                    error: (error, stack) => Center(child: Text('Error: $error')),
-                  ),
-                ],
-              ),
+                        ),
+                        const SizedBox(height: 16),
+                        buildMainContentList(),
+                      ],
+                    );
+                  }
+                }
+
+                return buildMainContentList();
+              },
             ),
           ],
         ),
