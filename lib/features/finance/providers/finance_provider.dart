@@ -75,3 +75,7 @@ final workspaceStudentPaymentsProvider = FutureProvider<List<StudentPaymentModel
   
   return ref.watch(financeRepositoryProvider).getStudentPaymentsByScope(scopeType, scopeId);
 });
+
+final userStudentPaymentsProvider = FutureProvider.family<List<StudentPaymentModel>, String>((ref, studentId) async {
+  return ref.watch(financeRepositoryProvider).getStudentPayments(studentId);
+});

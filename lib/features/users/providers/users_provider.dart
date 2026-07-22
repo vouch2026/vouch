@@ -8,25 +8,39 @@ import '../../auth/providers/auth_provider.dart';
 final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
   final client = SupabaseConfig.client;
   
-  // Fetch users with joins for faculty, program, and roles
+  // Fetch users with joins for campus, faculty, program, and roles
   final response = await client
       .from('users')
       .select('''
         *,
-        faculties:faculty_id(name),
-        programs:program_id(name),
+        campuses:campus_id(id, name),
+        faculties:faculty_id(id, name, code, campus_id),
+        programs:program_id(id, name, code),
         user_roles:user_roles!user_roles_user_id_fkey(roles(name, hierarchy_level))
       ''');
   
   final users = (response as List).map((data) {
     final userData = Map<String, dynamic>.from(data);
     
-    // Flatten faculty and program names
+    // Flatten campus, faculty and program names/codes and restore IDs
+    if (userData['campuses'] != null) {
+      userData['campus_id'] = userData['campuses']['id'];
+      userData['campusName'] = userData['campuses']['name'];
+    }
     if (userData['faculties'] != null) {
+      userData['faculty_id'] = userData['faculties']['id'];
       userData['facultyName'] = userData['faculties']['name'];
+      userData['facultyCode'] = userData['faculties']['code'];
     }
     if (userData['programs'] != null) {
+      userData['program_id'] = userData['programs']['id'];
       userData['programName'] = userData['programs']['name'];
+      userData['programCode'] = userData['programs']['code'];
+    }
+
+    // Derive campus_id from faculty if it is null on the user record
+    if ((userData['campus_id'] == null || userData['campus_id'] == '') && userData['faculties'] != null) {
+      userData['campus_id'] = userData['faculties']['campus_id'];
     }
     
     // Handle role extraction (highest hierarchy level)

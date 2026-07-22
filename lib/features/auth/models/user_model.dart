@@ -27,6 +27,9 @@ abstract class UserModel with _$UserModel {
     // Join fields (not in users table but useful for UI)
     String? facultyName,
     String? programName,
+    String? campusName,
+    String? facultyCode,
+    String? programCode,
     @JsonKey(name: 'expired_at') DateTime? expiredAt,
   }) = _UserModel;
 
@@ -47,7 +50,7 @@ abstract class UserModel with _$UserModel {
   }
 
   String get yearLevelDisplay {
-    if (yearLevel == null) return 'N/A';
+    if (yearLevel == null || yearLevel == 0) return 'N/A';
     
     final n = yearLevel!;
     if (n >= 11 && n <= 13) {

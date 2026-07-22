@@ -729,5 +729,41 @@ class OrganizationRepository {
       },
     );
   }
+
+  Future<List<UserOrganizationMembershipInfo>> getUserMemberships(String userId) async {
+    final response = await _client
+        .from('organization_members')
+        .select('*, organization:organizations(*), term:academic_terms(*), role:roles(*)')
+        .eq('user_id', userId);
+    
+    return (response as List).map((json) {
+      final role = json['role'] as Map<String, dynamic>?;
+      final roleName = role?['role_name'] as String?;
+      
+      final membershipJson = <String, dynamic>{
+        ...Map<String, dynamic>.from(json),
+        if (roleName != null) 'role_name': roleName,
+      };
+      
+      final membership = OrganizationMembershipModel.fromJson(membershipJson);
+      final orgJson = Map<String, dynamic>.from(json['organization'] as Map? ?? {});
+      final organization = OrganizationModel.fromJson(orgJson);
+      
+      return UserOrganizationMembershipInfo(
+        membership: membership,
+        organization: organization,
+      );
+    }).toList();
+  }
+}
+
+class UserOrganizationMembershipInfo {
+  final OrganizationMembershipModel membership;
+  final OrganizationModel organization;
+  
+  UserOrganizationMembershipInfo({
+    required this.membership,
+    required this.organization,
+  });
 }
 
