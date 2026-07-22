@@ -2234,16 +2234,19 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             ),
             const SizedBox(height: 24),
 
-            // Analytics KPI and Chart Card
-            statsAsync.when(
-              data: (stats) => _buildAnalyticsSection(stats),
-              loading: () => const Center(child: FlickrLoader()),
-              error: (err, stack) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Text('Failed to load user analytics: $err'),
+            // Analytics KPI and Chart Card (Only visible to Super Admin)
+            if (isSuperAdmin) ...[
+              statsAsync.when(
+                data: (stats) => _buildAnalyticsSection(stats),
+                loading: () => const Center(child: FlickrLoader()),
+                error: (err, stack) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: Text('Failed to load user analytics: $err'),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),            LayoutBuilder(
+              const SizedBox(height: 24),
+            ],
+            LayoutBuilder(
               builder: (context, constraints) {
                 final isWideScreen = constraints.maxWidth >= 1024;
                 
