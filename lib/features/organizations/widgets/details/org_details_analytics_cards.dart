@@ -6,19 +6,29 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../providers/organization_provider.dart';
 
+
 class OrgDetailsAnalyticsCards extends ConsumerWidget {
   final String orgId;
   const OrgDetailsAnalyticsCards({super.key, required this.orgId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final orgAsync = ref.watch(organizationProvider(orgId));
     final membersAsync = ref.watch(organizationMembersProvider(orgId));
+    final officersAsync = ref.watch(organizationOfficersProvider(orgId));
 
-    return membersAsync.when(
-      data: (members) {
-        final totalMembers = members.length;
-        final attendanceRate = 88.4; // Still mock for now
-        
+    return orgAsync.when(
+      data: (org) {
+        if (org == null) return const SizedBox.shrink();
+
+        final eventsAsync = ref.watch(orgEventsProvider(org));
+        final feesAsync = ref.watch(orgFeesProvider(org));
+
+        final totalMembers = membersAsync.valueOrNull?.length ?? 0;
+        final totalOfficers = officersAsync.valueOrNull?.length ?? 0;
+        final mandatoryEvents = eventsAsync.valueOrNull?.where((e) => e.isMandatory).length ?? 0;
+        final mandatoryFees = feesAsync.valueOrNull?.where((f) => f.isMandatory).length ?? 0;
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
@@ -34,30 +44,26 @@ class OrgDetailsAnalyticsCards extends ConsumerWidget {
                 _AnalyticsCard(
                   title: 'Total Members',
                   value: totalMembers.toString(),
-                  trend: 0.0,
                   icon: Icons.people_alt_rounded,
                   color: AppColors.primary,
                 ),
                 _AnalyticsCard(
-                  title: 'Attendance Rate',
-                  value: '$attendanceRate%',
-                  trend: 5.2,
-                  icon: Icons.fact_check_rounded,
-                  color: AppColors.success,
+                  title: 'Total Officers',
+                  value: totalOfficers.toString(),
+                  icon: Icons.admin_panel_settings_rounded,
+                  color: Colors.orange,
                 ),
                 _AnalyticsCard(
-                  title: 'Collection Rate',
-                  value: '92.1%',
-                  trend: -2.4,
+                  title: 'Mandatory Events',
+                  value: mandatoryEvents.toString(),
+                  icon: Icons.event_available_rounded,
+                  color: Colors.purple,
+                ),
+                _AnalyticsCard(
+                  title: 'Mandatory Fees',
+                  value: mandatoryFees.toString(),
                   icon: Icons.payments_rounded,
-                  color: AppColors.warning,
-                ),
-                _AnalyticsCard(
-                  title: 'Governance Score',
-                  value: '95/100',
-                  trend: 0.8,
-                  icon: Icons.gavel_rounded,
-                  color: AppColors.info,
+                  color: Colors.green,
                 ),
               ],
             );
@@ -65,7 +71,7 @@ class OrgDetailsAnalyticsCards extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error: $err')),
+      error: (err, _) => Center(child: Text('Error loading stats: $err')),
     );
   }
 }
@@ -73,27 +79,23 @@ class OrgDetailsAnalyticsCards extends ConsumerWidget {
 class _AnalyticsCard extends StatelessWidget {
   final String title;
   final String value;
-  final double trend;
   final IconData icon;
   final Color color;
 
   const _AnalyticsCard({
     required this.title,
     required this.value,
-    required this.trend,
     required this.icon,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = trend > 0;
-    
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+        side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -107,12 +109,11 @@ class _AnalyticsCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, color: color, size: 20),
                 ),
-                _TrendIndicator(trend: trend),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -131,37 +132,6 @@ class _AnalyticsCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TrendIndicator extends StatelessWidget {
-  final double trend;
-
-  const _TrendIndicator({required this.trend});
-
-  @override
-  Widget build(BuildContext context) {
-    final isPositive = trend > 0;
-    final color = isPositive ? AppColors.success : AppColors.error;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-          color: color,
-          size: 14,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '${trend.abs()}%',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -11,11 +11,8 @@ import 'package:vouch_v2/features/organizations/providers/workspace_provider.dar
 import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
-import '../../../academic_structure/models/academic_term_model.dart';
-import '../../../../core/config/supabase_config.dart';
 import './assign_officer_dialog.dart';
 import './assign_adviser_dialog.dart';
-import '../../../sanctions/views/sanction_rules_page.dart';
 import './organization_settings_panel.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
@@ -35,13 +32,9 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
     'Members',
     'Officers',
     'Events',
-    'Attendance',
-    'Finance',
+    'Fees',
     'Announcements',
     'Governance',
-    'Analytics',
-    'Documents',
-    'Audit Logs',
     'Settings',
   ];
 
@@ -98,170 +91,22 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
         return _MembersTab(orgId: widget.org.id);
       case 'Officers':
         return _OfficersTab(org: widget.org);
+      case 'Events':
+        return _EventsTab(org: widget.org);
+      case 'Fees':
+        return _FeesTab(org: widget.org);
+      case 'Announcements':
+        return _AnnouncementsTab(org: widget.org);
       case 'Governance':
         return _GovernanceTab(org: widget.org);
       case 'Settings':
         return _SettingsTab(org: widget.org);
-      case 'Attendance':
-        return _AttendanceTab();
-      case 'Finance':
-        return _FinanceTab();
-      case 'Audit Logs':
-        return _AuditLogsTab(org: widget.org);
       default:
         return _PlaceholderTab(name: tabName);
     }
   }
 }
 
-class _AttendanceTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Attendance Analytics', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.lg),
-          _buildAttendanceStats(),
-          const SizedBox(height: AppSpacing.xl),
-          _buildAttendanceLog(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttendanceStats() {
-    return Row(
-      children: [
-        Expanded(child: _buildMiniStat('Overall Rate', '88.4%', AppColors.success)),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(child: _buildMiniStat('On-time Rate', '72.1%', AppColors.primary)),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(child: _buildMiniStat('Excused Rate', '4.2%', AppColors.info)),
-      ],
-    );
-  }
-
-  Widget _buildMiniStat(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
-          const SizedBox(height: 4),
-          Text(value, style: AppTextStyles.headlineSmall.copyWith(fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttendanceLog() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Recent Events Attendance', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSpacing.md),
-            const Divider(),
-            const ListTile(title: Text('Tech Summit 2026'), subtitle: Text('Date: May 12, 2026'), trailing: Text('94% Present', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold))),
-            const Divider(),
-            const ListTile(title: Text('Web Dev Workshop'), subtitle: Text('Date: April 28, 2026'), trailing: Text('82% Present', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold))),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FinanceTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Financial Overview', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-              FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.add_card_rounded), label: const Text('Manage Fees')),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(child: _buildFinancialCard('Available Funds', '₱124,500.00', Icons.account_balance_wallet_rounded, AppColors.success)),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: _buildFinancialCard('Pending Collections', '₱12,400.00', Icons.pending_actions_rounded, AppColors.warning)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text('Recent Fees', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.md),
-          _buildFeesList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFinancialCard(String title, String amount, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color.withOpacity(0.8), color]),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(height: AppSpacing.md),
-          Text(title, style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withOpacity(0.8))),
-          Text(amount, style: AppTextStyles.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeesList() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 3,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: const Text('Membership Fee 2026'),
-            subtitle: const Text('Due: June 30, 2026'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text('₱100.00', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('92% Collected', style: AppTextStyles.labelSmall.copyWith(color: AppColors.success)),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 class _MembersTab extends ConsumerWidget {
   final String orgId;
@@ -276,17 +121,7 @@ class _MembersTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Organization Members', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-              FilledButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.person_add_rounded, size: 18),
-                label: const Text('Add Member'),
-              ),
-            ],
-          ),
+          Text('Organization Members', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
           membersAsync.when(
             data: (members) => _buildMembersTable(context, members),
@@ -852,10 +687,6 @@ class _OverviewTab extends StatelessWidget {
                       org.description ?? 'No description provided for this organization.',
                       style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
                     ),
-                    const SizedBox(height: AppSpacing.xl),
-                    _buildSectionTitle('Mission & Vision'),
-                    const SizedBox(height: AppSpacing.md),
-                    _buildMissionVisionCard(),
                   ],
                 ),
               ),
@@ -878,29 +709,6 @@ class _OverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _buildMissionVisionCard() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Mission', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: 4),
-          Text('To empower students through technology and community-driven innovation.', style: AppTextStyles.bodySmall),
-          const SizedBox(height: AppSpacing.md),
-          Text('Vision', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: 4),
-          Text('A globally recognized society of tech-driven leaders and innovators.', style: AppTextStyles.bodySmall),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInfoCard() {
     return Card(
       elevation: 0,
@@ -919,7 +727,6 @@ class _OverviewTab extends StatelessWidget {
             _buildInfoRow('Category', org.type.toUpperCase()),
             _buildInfoRow('Campus', 'Mati Main Campus'),
             _buildInfoRow('Faculty', org.facultyProgram ?? 'N/A'),
-            _buildInfoRow('Created', 'Sept 12, 2022'),
             _buildInfoRow('Status', 'Active'),
           ],
         ),
@@ -961,7 +768,7 @@ class _PlaceholderTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.construction_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
+          Icon(Icons.construction_rounded, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
           const SizedBox(height: AppSpacing.md),
           Text('$name module is under development', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
         ],
@@ -970,59 +777,369 @@ class _PlaceholderTab extends StatelessWidget {
   }
 }
 
-class _AuditLogsTab extends ConsumerWidget {
+class _FeesTab extends ConsumerWidget {
   final OrganizationModel org;
-  const _AuditLogsTab({required this.org});
+  const _FeesTab({required this.org});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final logsAsync = FutureProvider((ref) async {
-      final client = SupabaseConfig.client;
-      final response = await client
-          .from('governance_audit_logs')
-          .select('''
-            *,
-            performed_by:users!governance_audit_logs_performed_by_user_id_fkey (*),
-            target_user:users!governance_audit_logs_target_user_id_fkey (*)
-          ''')
-          .eq('organization_id', org.id)
-          .order('created_at', ascending: false);
-      return response as List;
-    });
+    final feesAsync = ref.watch(orgFeesProvider(org));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Governance Audit Logs', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.md),
-          const Text('Tracking all leadership changes and governance actions.', style: TextStyle(color: AppColors.textGrey)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Organization Fees', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: AppSpacing.lg),
-          ref.watch(logsAsync).when(
-            data: (logs) {
-              if (logs.isEmpty) return const Center(child: Text('No audit logs found.'));
-              
+          feesAsync.when(
+            data: (fees) {
+              if (fees.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.payments_outlined, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text('No fees found for this organization.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: fees.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final fee = fees[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.payments_rounded, color: AppColors.success, size: 20),
+                      ),
+                      title: Text(fee.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                        'Due: ${fee.dueDate.year}-${fee.dueDate.month.toString().padLeft(2, '0')}-${fee.dueDate.day.toString().padLeft(2, '0')} • ${fee.isMandatory ? "Mandatory" : "Optional"}',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                      trailing: Text(
+                        '₱${fee.amount.toStringAsFixed(2)}',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => const Center(child: FlickrLoader()),
+            error: (err, _) => Center(child: Text('Error loading fees: $err')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventsTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _EventsTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(orgEventsProvider(org));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Organization Events', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.lg),
+          eventsAsync.when(
+            data: (events) {
+              if (events.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.event_busy_rounded, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text('No events found for this organization.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: events.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    final now = DateTime.now();
+                    final todayStart = DateTime(now.year, now.month, now.day);
+                    
+                    final isUpcoming = event.eventDate.isAfter(todayStart);
+                    final isToday = event.eventDate.year == todayStart.year &&
+                                    event.eventDate.month == todayStart.month &&
+                                    event.eventDate.day == todayStart.day;
+                                    
+                    Color statusColor = AppColors.textGrey;
+                    String statusText = 'PAST';
+                    if (isUpcoming) {
+                      statusColor = AppColors.success;
+                      statusText = 'UPCOMING';
+                    } else if (isToday) {
+                      statusColor = AppColors.primary;
+                      statusText = 'TODAY';
+                    }
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.event_available_rounded, color: statusColor, size: 20),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(event.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            'Date: ${event.eventDate.year}-${event.eventDate.month.toString().padLeft(2, '0')}-${event.eventDate.day.toString().padLeft(2, '0')} • Time: ${event.timeInStart} - ${event.timeOutEnd}',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                          if (event.location.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text('Location: ${event.location}', style: AppTextStyles.bodySmall),
+                          ],
+                          if (event.shortDescription != null && event.shortDescription!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              event.shortDescription!,
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                      trailing: event.isMandatory
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'MANDATORY',
+                                style: TextStyle(
+                                  color: AppColors.error,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => const Center(child: FlickrLoader()),
+            error: (err, _) => Center(child: Text('Error loading events: $err')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnnouncementsTab extends ConsumerWidget {
+  final OrganizationModel org;
+  const _AnnouncementsTab({required this.org});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final announcementsAsync = ref.watch(orgAnnouncementsProvider(org));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Organization Announcements', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppSpacing.lg),
+          announcementsAsync.when(
+            data: (announcements) {
+              if (announcements.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.campaign_outlined, size: 48, color: AppColors.textGrey.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text('No announcements found for this organization.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: logs.length,
-                separatorBuilder: (context, index) => const Divider(),
+                itemCount: announcements.length,
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
                 itemBuilder: (context, index) {
-                  final log = logs[index];
-                  final performedBy = log['performed_by']?['first_name'] ?? 'System';
-                  final target = log['target_user']?['first_name'] ?? 'Unknown';
-                  
-                  return ListTile(
-                    leading: const Icon(Icons.history_edu_rounded, color: AppColors.primary),
-                    title: Text('Officer Assigned: $target'),
-                    subtitle: Text('Performed by: $performedBy • ${DateTime.parse(log['created_at']).toLocal()}'),
+                  final announcement = announcements[index];
+                  final isUrgent = announcement.type.toLowerCase() == 'urgent';
+
+                  return Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: isUrgent ? AppColors.error : AppColors.border,
+                        width: isUrgent ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: (isUrgent ? AppColors.error : AppColors.primary).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  announcement.type.toUpperCase(),
+                                  style: TextStyle(
+                                    color: isUrgent ? AppColors.error : AppColors.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'By ${announcement.authorName ?? "System"}',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textGrey,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            announcement.title,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isUrgent ? AppColors.error : AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            announcement.content,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              height: 1.5,
+                              color: AppColors.textDark.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
               );
             },
             loading: () => const Center(child: FlickrLoader()),
-            error: (err, _) => Text('Error: $err'),
+            error: (err, _) => Center(child: Text('Error loading announcements: $err')),
           ),
         ],
       ),

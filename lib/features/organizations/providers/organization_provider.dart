@@ -8,6 +8,12 @@ import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
 import 'workspace_provider.dart';
 import '../../../core/utils/role_mapper.dart';
+import '../../events/models/event_model.dart';
+import '../../events/providers/event_provider.dart';
+import '../../finance/models/fee_model.dart';
+import '../../finance/providers/finance_provider.dart';
+import '../../announcements/models/announcement_model.dart';
+import '../../announcements/providers/announcement_provider.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>((ref) {
   return OrganizationRepository(SupabaseConfig.client);
@@ -76,4 +82,37 @@ final availableRolesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) 
       .select()
       .order('hierarchy_level', ascending: false);
   return List<Map<String, dynamic>>.from(response as List);
+});
+
+final orgEventsProvider = FutureProvider.family<List<EventModel>, OrganizationModel>((ref, org) async {
+  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
+  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
+  
+  final scopeType = isInstitutional ? 'Institutional' : (isFaculty ? 'Faculty' : 'Program');
+  final scopeId = isInstitutional ? org.campusId : (isFaculty ? org.facultyId : org.programId);
+  if (scopeId == null) return [];
+  
+  return ref.watch(eventRepositoryProvider).getEventsByScope(scopeType, scopeId);
+});
+
+final orgFeesProvider = FutureProvider.family<List<FeeModel>, OrganizationModel>((ref, org) async {
+  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
+  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
+  
+  final scopeType = isInstitutional ? 'Institutional' : (isFaculty ? 'Faculty' : 'Program');
+  final scopeId = isInstitutional ? org.campusId : (isFaculty ? org.facultyId : org.programId);
+  if (scopeId == null) return [];
+  
+  return ref.watch(financeRepositoryProvider).getFeesByScope(scopeType, scopeId);
+});
+
+final orgAnnouncementsProvider = FutureProvider.family<List<AnnouncementModel>, OrganizationModel>((ref, org) async {
+  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
+  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
+  
+  final scopeType = isInstitutional ? 'Institutional' : (isFaculty ? 'Faculty' : 'Program');
+  final scopeId = isInstitutional ? org.campusId : (isFaculty ? org.facultyId : org.programId);
+  if (scopeId == null) return [];
+  
+  return ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId);
 });
