@@ -82,6 +82,42 @@ class AccountDeletionController extends StateNotifier<AsyncValue<void>> {
       return false;
     }
   }
+
+  Future<bool> bulkApproveAndDelete(List<String> userIds) async {
+    state = const AsyncLoading();
+    bool allSuccess = true;
+    for (final userId in userIds) {
+      try {
+        await SupabaseConfig.client.rpc(
+          'delete_user_entirely',
+          params: {'p_user_id': userId},
+        );
+      } catch (e) {
+        allSuccess = false;
+      }
+    }
+    _ref.invalidate(accountDeletionRequestsProvider);
+    _ref.invalidate(allUsersProvider);
+    state = const AsyncData(null);
+    return allSuccess;
+  }
+
+  Future<bool> bulkReject(List<String> requestIds) async {
+    state = const AsyncLoading();
+    try {
+      await SupabaseConfig.client
+          .from('account_deletion_requests')
+          .delete()
+          .inFilter('id', requestIds);
+      
+      _ref.invalidate(accountDeletionRequestsProvider);
+      state = const AsyncData(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
 }
 
 final accountDeletionControllerProvider =
