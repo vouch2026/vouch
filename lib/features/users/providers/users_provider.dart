@@ -5,6 +5,12 @@ import '../../../core/utils/role_mapper.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
+final userSearchQueryProvider = StateProvider<String>((ref) => '');
+final userFiltersProvider = StateProvider<Map<String, dynamic>>((ref) => {});
+final selectedUserIdsProvider = StateProvider<Set<String>>((ref) => {});
+final userCurrentPageProvider = StateProvider<int>((ref) => 0);
+final userRowsPerPageProvider = StateProvider<int>((ref) => 10);
+
 final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
   final client = SupabaseConfig.client;
   

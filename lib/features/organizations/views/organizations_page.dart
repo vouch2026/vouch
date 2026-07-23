@@ -48,6 +48,13 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
   bool _isAcademicHierarchyView = false;
   Set<String> _selectedOrgIds = {};
   bool _isSelectionMode = false;
+  int _currentPage = 0;
+  int _rowsPerPage = 10;
+  String _prevStatus = 'All';
+  String _prevType = 'All';
+  String _prevCampus = 'All';
+  String _prevFaculty = 'All';
+  String _prevProgram = 'All';
 
   @override
   void initState() {
@@ -63,7 +70,9 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
   }
 
   void _applyFilters() {
-    setState(() {});
+    setState(() {
+      _currentPage = 0;
+    });
   }
 
   Future<void> _downloadExcelReport(List<OrganizationModel> orgs) async {
@@ -703,6 +712,19 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_prevStatus != _selectedStatus ||
+        _prevType != _selectedType ||
+        _prevCampus != _selectedCampus ||
+        _prevFaculty != _selectedFaculty ||
+        _prevProgram != _selectedProgram) {
+      _prevStatus = _selectedStatus;
+      _prevType = _selectedType;
+      _prevCampus = _selectedCampus;
+      _prevFaculty = _selectedFaculty;
+      _prevProgram = _selectedProgram;
+      _currentPage = 0;
+    }
+
     final userProfile = ref.watch(userProfileProvider).value;
     final activeRole = ref.watch(workspaceProvider).activeRole;
     final isSuperAdmin = userProfile?.role == 'super_admin';
@@ -775,6 +797,13 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
 
       return matchesSearch && matchesType && matchesStatus && matchesCampus && matchesFaculty && matchesProgram;
     }).toList();
+
+    final totalItems = filteredOrgs.length;
+    final maxPages = (totalItems / _rowsPerPage).ceil();
+    final safePage = _currentPage >= maxPages ? (maxPages > 0 ? maxPages - 1 : 0) : _currentPage;
+    final startIndex = safePage * _rowsPerPage;
+    final endIndex = (startIndex + _rowsPerPage) > totalItems ? totalItems : (startIndex + _rowsPerPage);
+    final paginatedOrgs = totalItems == 0 ? <OrganizationModel>[] : filteredOrgs.sublist(startIndex, endIndex);
 
     final campusesAsync = ref.watch(campusesProvider);
     final facultiesAsync = ref.watch(facultiesProvider);
@@ -1073,32 +1102,39 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
                                 ),
                               );
                             }
-                            return OrganizationTable(
-                              organizations: filteredOrgs,
-                              faculties: faculties,
-                              programs: programs,
-                              isSelectionMode: _isSelectionMode,
-                              selectedOrgIds: _selectedOrgIds,
-                              onSelectAll: (selected) {
-                                setState(() {
-                                  if (selected == true) {
-                                    _selectedOrgIds.addAll(filteredOrgs.map((o) => o.id));
-                                  } else {
-                                    for (final org in filteredOrgs) {
-                                      _selectedOrgIds.remove(org.id);
-                                    }
-                                  }
-                                });
-                              },
-                              onSelectChanged: (orgId, selected) {
-                                setState(() {
-                                  if (selected == true) {
-                                    _selectedOrgIds.add(orgId);
-                                  } else {
-                                    _selectedOrgIds.remove(orgId);
-                                  }
-                                });
-                              },
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                OrganizationTable(
+                                  organizations: paginatedOrgs,
+                                  faculties: faculties,
+                                  programs: programs,
+                                  isSelectionMode: _isSelectionMode,
+                                  selectedOrgIds: _selectedOrgIds,
+                                  onSelectAll: (selected) {
+                                    setState(() {
+                                      if (selected == true) {
+                                        _selectedOrgIds.addAll(paginatedOrgs.map((o) => o.id));
+                                      } else {
+                                        for (final org in paginatedOrgs) {
+                                          _selectedOrgIds.remove(org.id);
+                                        }
+                                      }
+                                    });
+                                  },
+                                  onSelectChanged: (orgId, selected) {
+                                    setState(() {
+                                      if (selected == true) {
+                                        _selectedOrgIds.add(orgId);
+                                      } else {
+                                        _selectedOrgIds.remove(orgId);
+                                      }
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+                              ],
                             );
                           },
                           loading: () => const Center(child: FlickrLoader()),
@@ -1218,6 +1254,231 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPaginationFooter(int totalItems, int currentPage, int rowsPerPage) {
+    final totalPages = (totalItems / rowsPerPage).ceil();
+    final startItem = totalItems == 0 ? 0 : (currentPage * rowsPerPage) + 1;
+    final endItem = (currentPage * rowsPerPage) + rowsPerPage > totalItems
+        ? totalItems
+        : (currentPage * rowsPerPage) + rowsPerPage;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+
+        final dropdownWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isNarrow ? 'Rows:' : 'Rows per page:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: rowsPerPage,
+                  icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black54),
+                  elevation: 4,
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  items: [5, 10, 20, 50].map((val) {
+                    return DropdownMenuItem<int>(
+                      value: val,
+                      child: Text(
+                        '$val',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _rowsPerPage = val;
+                        _currentPage = 0;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+
+        final infoTextWidget = Text(
+          'Showing $startItem-$endItem of $totalItems',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        );
+
+        final navigationWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.first_page_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = 0;
+                      });
+                    }
+                  : null,
+              tooltip: 'First Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.chevron_left_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Previous Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${currentPage + 1} / ${totalPages > 0 ? totalPages : 1}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage + 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Next Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.last_page_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = totalPages - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Last Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        );
+
+        if (isNarrow) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    dropdownWidget,
+                    infoTextWidget,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                navigationWidget,
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.01),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              dropdownWidget,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  infoTextWidget,
+                  const SizedBox(width: 24),
+                  navigationWidget,
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
