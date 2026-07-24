@@ -68,6 +68,20 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      final name = pickedFile.name.toLowerCase();
+      if (!name.endsWith('.jpg') && 
+          !name.endsWith('.jpeg') && 
+          !name.endsWith('.png') && 
+          !name.endsWith('.gif') && 
+          !name.endsWith('.webp') && 
+          !name.endsWith('.bmp')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid file format. Please upload an image (JPG, PNG, WEBP, etc.)')),
+          );
+        }
+        return;
+      }
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _announcementImage = pickedFile;
