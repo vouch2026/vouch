@@ -206,6 +206,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         final normalizedRole = roleName != null ? RoleMapper.mapDbRoleToAppFormat(roleName) : 'member';
         final isMemberOrStudent = normalizedRole == 'student' || normalizedRole == 'member';
 
+        // Protect workspace gallery route - only accessible by PIO role
+        if (location == RoutePaths.workspaceGallery && normalizedRole != 'pio' && !isSuperAdmin) {
+          return RoutePaths.workspaceDashboard;
+        }
+
         // Redirect member/student role from officer workspace excuse requests page to student's myExcuseRequests page
         if (location == RoutePaths.workspaceExcuseRequests && isMemberOrStudent) {
           return RoutePaths.myExcuseRequests;
