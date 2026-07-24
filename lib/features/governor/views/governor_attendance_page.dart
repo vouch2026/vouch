@@ -387,6 +387,7 @@ class _GovernorAttendancePageState extends ConsumerState<GovernorAttendancePage>
                                                       builder: (_) => AttendanceHistoryPage(
                                                         eventId: event.id!,
                                                         eventName: event.name,
+                                                        event: event,
                                                       ),
                                                     ),
                                                   );

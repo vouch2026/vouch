@@ -25,6 +25,7 @@ import '../../../core/utils/role_mapper.dart';
 
 import '../../attendance/widgets/event_scanner_screen.dart';
 import '../../attendance/views/attendance_report_page.dart';
+import '../../attendance/views/attendance_history_page.dart';
 import 'event_highlights_gallery_page.dart';
 import '../../governor/views/governor_create_event_page.dart';
 
@@ -160,6 +161,9 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     final eventAsync = ref.watch(eventProvider(widget.event.id!));
     final event = eventAsync.value ?? widget.event;
 
+    final userAsync = ref.watch(userProfileProvider);
+    final currentUserId = userAsync.value?.id;
+
     final highlightsAsync = ref.watch(eventHighlightsProvider(event.id!));
     final isMobile = ResponsiveLayout.isMobile(context);
     
@@ -214,9 +218,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
 
     final isFullOfficer = isOfficer && normalizedRole != 'representative';
 
-    final canScan = creatorOrgId != null
-        ? (creatorMembership?.permissions.contains(AppPermissions.scanEventAttendance) ?? false)
-        : ((activeRole?.hasPermission(AppPermissions.scanEventAttendance) ?? false) && isSelectedOrgCreator);
+    final canScan = isOfficer;
 
     final canEdit = (creatorOrgId != null
         ? (creatorMembership?.permissions.contains(AppPermissions.editEvent) ?? false)
@@ -345,6 +347,9 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                         ],
                         if (isAllowedOfficer && event.isPastTimeout) ...[
                           _buildOfficerPastEventActions(context, event, isMemberOfCreatorOrg: isMemberOfCreatorOrg),
+                        ],
+                        if (canScan && event.isPastTimeout) ...[
+                          _buildMyScansAction(context, event, currentUserId),
                         ],
                       ],
                     ),
@@ -929,6 +934,59 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
               ],
             );
           },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMyScansAction(BuildContext context, EventModel event, String? currentUserId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.xxl),
+        Text(
+          'My Scans',
+          style: AppTextStyles.titleLarge.copyWith(
+            fontWeight: FontWeight.bold, 
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'View students you scanned for this event.',
+          style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AttendanceHistoryPage(
+                  eventId: event.id!,
+                  eventName: event.name,
+                  scannedByUserId: currentUserId,
+                  event: event,
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.history_rounded),
+            label: Text(
+              'View My Scans',
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
         ),
       ],
     );

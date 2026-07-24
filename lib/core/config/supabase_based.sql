@@ -198,6 +198,7 @@ name VARCHAR(255) NOT NULL,
 location VARCHAR(255) NOT NULL,
 description TEXT,
 logo_url VARCHAR(2048),
+banner_url VARCHAR(2048),
 status VARCHAR(20) DEFAULT 'active',
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -233,6 +234,7 @@ name VARCHAR(255) NOT NULL,
 code VARCHAR(50) NOT NULL UNIQUE,
 dean_id UUID REFERENCES users(id) ON DELETE SET NULL,
 logo_url VARCHAR(2048),
+banner_url VARCHAR(2048),
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -246,6 +248,7 @@ name VARCHAR(255) NOT NULL,
 code VARCHAR(50) NOT NULL UNIQUE,
 program_head_id UUID REFERENCES users(id) ON DELETE SET NULL,
 logo_url VARCHAR(2048),
+banner_url VARCHAR(2048),
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -256,6 +259,7 @@ CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW
 ALTER TABLE users ADD COLUMN campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN faculty_id UUID REFERENCES faculties(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN program_id UUID REFERENCES programs(id) ON DELETE SET NULL;
+ALTER TABLE campuses ADD COLUMN osa_head_id UUID REFERENCES users(id) ON DELETE SET NULL;
 
 -- ==========================================
 -- 4. GOVERNANCE & ORGANIZATIONS
@@ -801,7 +805,25 @@ USING (
   )
 );
 CREATE POLICY "Officers can scan attendance" ON student_attendance FOR INSERT TO authenticated
-WITH CHECK (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('scan_event_attendance', e.scope_type, e.scope_id)));
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM events e 
+    WHERE e.id = event_id 
+    AND public.has_scope_permission('scan_event_attendance', e.scope_type, e.scope_id)
+  )
+  AND scanned_by_user_id = public.get_my_id()
+);
+CREATE POLICY "Officers can scan attendance update" ON student_attendance FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM events e 
+    WHERE e.id = event_id 
+    AND public.has_scope_permission('scan_event_attendance', e.scope_type, e.scope_id)
+  )
+)
+WITH CHECK (
+  scanned_by_user_id = public.get_my_id()
+);
 CREATE POLICY "Officers can override attendance" ON student_attendance FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('override_attendance', e.scope_type, e.scope_id)));
 
@@ -1655,6 +1677,19 @@ WHERE r.name = 'Representative' AND p.action IN (
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- MAP SCAN ATTENDANCE TO ALL OFFICER ROLES
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name IN (
+  'Governor', 'Vice Governor', 'President', 'Vice President', 
+  'Secretary', 'Assistant Secretary', 'Representative', 
+  'Treasurer', 'Assistant Treasurer', 'Auditor', 'PIO', 
+  'Business Manager', 'Senator', 'Adviser', 'Comselec Chair', 
+  'COMSELEC Commissioner', 'Faculty Dean', 'Program Head', 'Super Admin'
+) 
+AND p.action = 'scan_event_attendance'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 -- 8. SUPER ADMIN SEED
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -2003,7 +2038,7 @@ BEGIN
         f.code,
         'faculty'::VARCHAR AS type,
         f.logo_url,
-        NULL::VARCHAR AS banner_url,
+        f.banner_url,
         'active'::VARCHAR AS status,
         f.campus_id,
         f.id AS faculty_id,
@@ -2019,7 +2054,7 @@ BEGIN
         p.code,
         'program'::VARCHAR AS type,
         p.logo_url,
-        NULL::VARCHAR AS banner_url,
+        p.banner_url,
         'active'::VARCHAR AS status,
         f.campus_id,
         p.faculty_id,
@@ -2209,7 +2244,7 @@ BEGIN
             f.code,
             'faculty'::VARCHAR AS type,
             f.logo_url,
-            NULL::VARCHAR AS banner_url,
+            f.banner_url,
             'active'::VARCHAR AS status,
             f.campus_id,
             f.id AS faculty_id,
@@ -2228,7 +2263,7 @@ BEGIN
             p.code,
             'program'::VARCHAR AS type,
             p.logo_url,
-            NULL::VARCHAR AS banner_url,
+            p.banner_url,
             'active'::VARCHAR AS status,
             f.campus_id,
             p.faculty_id,

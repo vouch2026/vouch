@@ -88,11 +88,17 @@ class AttendanceRepository {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getRecentScansForEvent(String eventId) async {
-    final response = await _client
+  Future<List<Map<String, dynamic>>> getRecentScansForEvent(String eventId, {String? scannedByUserId}) async {
+    var query = _client
         .from('student_attendance')
-        .select('*, student:users!student_attendance_student_id_fkey(*, program:programs!users_program_id_fkey(*))')
-        .eq('event_id', eventId)
+        .select('*, student:users!student_attendance_student_id_fkey(*, program:programs!users_program_id_fkey(*, faculty:faculties(*))))')
+        .eq('event_id', eventId);
+        
+    if (scannedByUserId != null) {
+      query = query.eq('scanned_by_user_id', scannedByUserId);
+    }
+    
+    final response = await query
         .order('updated_at', ascending: false)
         .limit(20);
     

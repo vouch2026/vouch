@@ -9,15 +9,26 @@ import '../models/qr_scan_ui_model.dart';
 import '../widgets/qr_recent_scan_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/file_saver_helper.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../events/models/event_model.dart';
+import '../../events/providers/event_provider.dart';
+import 'dart:typed_data';
+import 'package:excel/excel.dart' as excel_lib;
 
 class AttendanceHistoryPage extends ConsumerStatefulWidget {
   final String eventId;
   final String eventName;
+  final String? scannedByUserId;
+  final EventModel? event;
 
   const AttendanceHistoryPage({
     super.key,
     required this.eventId,
     required this.eventName,
+    this.scannedByUserId,
+    this.event,
   });
 
   @override
@@ -28,6 +39,8 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
   List<QrScanUIModel> _allScans = [];
   List<QrScanUIModel> _filteredScans = [];
+  List<Map<String, dynamic>> _rawScansData = [];
+  EventModel? _event;
   bool _isLoading = true;
   String _selectedMode = 'All';
   String _selectedProgram = 'All';
@@ -64,7 +77,17 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
     setState(() => _isLoading = true);
     try {
       final repository = ref.read(attendanceRepositoryProvider);
-      final rawScans = await repository.getRecentScansForEvent(widget.eventId);
+      final rawScans = await repository.getRecentScansForEvent(
+        widget.eventId,
+        scannedByUserId: widget.scannedByUserId,
+      );
+      _rawScansData = rawScans;
+      
+      EventModel? event = widget.event;
+      if (event == null) {
+        event = await ref.read(eventProvider(widget.eventId).future);
+      }
+      _event = event;
       
       final List<Map<String, dynamic>> extractedScans = [];
       for (final data in rawScans) {
@@ -215,7 +238,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Scan History',
+              widget.scannedByUserId != null ? 'My Scanned Students' : 'Scan History',
               style: GoogleFonts.poppins(
                 fontSize: isMobile ? 15 : (isTablet ? 16 : 18),
                 fontWeight: FontWeight.w700,
@@ -235,31 +258,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
             ),
           ],
         ),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: isMobile ? 12.0 : 16.0),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.12),
-                  ),
-                ),
-                child: Text(
-                  '${_filteredScans.length} Total',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+        actions: const [],
       ),
     );
   }
@@ -267,6 +266,8 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
 
     return Theme(
       data: Theme.of(context).copyWith(textTheme: textTheme),
@@ -337,6 +338,8 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                   // Filters Section
                   _buildFilterSection(),
 
+                  const SizedBox(height: 16),
+                  _buildTableControls(context, isMobile),
                   const SizedBox(height: 12),
 
                   // Scan List
@@ -348,12 +351,23 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                           ? const Center(child: FlickrLoader())
                           : _filteredScans.isEmpty
                               ? _buildEmptyState()
-                              : ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 24),
-                                  itemCount: _filteredScans.length,
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  itemBuilder: (context, index) {
-                                    return QrRecentScanCard(scan: _filteredScans[index]);
+                              : LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    if (constraints.maxWidth < 800) {
+                                      return ListView.builder(
+                                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 24),
+                                        itemCount: _filteredScans.length,
+                                        physics: const AlwaysScrollableScrollPhysics(),
+                                        itemBuilder: (context, index) {
+                                          return QrRecentScanCard(scan: _filteredScans[index]);
+                                        },
+                                      );
+                                    }
+                                    return SingleChildScrollView(
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.only(bottom: 24),
+                                      child: _buildScanTable(context, _filteredScans),
+                                    );
                                   },
                                 ),
                     ),
@@ -575,6 +589,307 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildScanTable(BuildContext context, List<QrScanUIModel> data) {
+    final theme = Theme.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceVariant.withValues(alpha: 0.3)),
+            columns: const [
+              DataColumn(label: Text('Student ID')),
+              DataColumn(label: Text('Full Name')),
+              DataColumn(label: Text('Program')),
+              DataColumn(label: Text('Time')),
+              DataColumn(label: Text('Type')),
+              DataColumn(label: Text('Status')),
+            ],
+            rows: data.map((scan) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(scan.studentId, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                  ),
+                  DataCell(
+                    Text(scan.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                  ),
+                  DataCell(
+                    Text(scan.program, style: AppTextStyles.bodySmall),
+                  ),
+                  DataCell(
+                    Text(scan.time, style: AppTextStyles.bodySmall),
+                  ),
+                  DataCell(
+                    _TypeBadge(type: scan.type),
+                  ),
+                  DataCell(
+                    _StatusBadge(status: scan.status),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadExcelReport() async {
+    try {
+      EventModel? event = _event;
+      if (event == null) {
+        event = await ref.read(eventProvider(widget.eventId).future);
+      }
+      if (event == null) throw Exception("Event details not found");
+
+      final currentUser = ref.read(userProfileProvider).value;
+      final scannerName = currentUser?.fullName ?? 'Unknown';
+      final scannerId = currentUser?.schoolId ?? '-';
+      final eventStatus = event.isPastTimeout ? 'Completed' : 'Active';
+
+      final excel = excel_lib.Excel.createExcel();
+      final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+      final sheet = excel[defaultSheet];
+
+      // Headers (Metadata)
+      sheet.appendRow([
+        excel_lib.TextCellValue('Name of Event'),
+        excel_lib.TextCellValue(event.name),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Location'),
+        excel_lib.TextCellValue(event.location),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Time in'),
+        excel_lib.TextCellValue('${_formatTimeString(event.timeInStart)} - ${_formatTimeString(event.timeInEnd)}'),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Time out'),
+        excel_lib.TextCellValue('${_formatTimeString(event.timeOutStart)} - ${_formatTimeString(event.timeOutEnd)}'),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Scanned By'),
+        excel_lib.TextCellValue('$scannerName : $scannerId'),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Status'),
+        excel_lib.TextCellValue(eventStatus),
+      ]);
+      sheet.appendRow([]); // space row
+
+      // Table Column Headers
+      sheet.appendRow([
+        excel_lib.TextCellValue('Id no.'),
+        excel_lib.TextCellValue('Name'),
+        excel_lib.TextCellValue('Faculty'),
+        excel_lib.TextCellValue('program'),
+        excel_lib.TextCellValue('Time in'),
+        excel_lib.TextCellValue('Time out'),
+      ]);
+
+      // Data Rows
+      for (final data in _rawScansData) {
+        final student = data['student'] as Map<String, dynamic>?;
+        final firstName = student?['first_name'] ?? 'Unknown';
+        final lastName = student?['last_name'] ?? 'Student';
+        final studentId = student?['student_id_number'] ?? '-';
+        
+        final programData = student?['program'] as Map<String, dynamic>?;
+        final programName = programData?['name'] ?? 'N/A';
+        final facultyData = programData?['faculty'] as Map<String, dynamic>?;
+        final facultyName = facultyData?['name'] ?? 'N/A';
+        
+        final timeInRaw = data['actual_time_in'];
+        final timeOutRaw = data['actual_time_out'];
+
+        final formattedTimeIn = timeInRaw != null
+            ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
+            : '-';
+        final formattedTimeOut = timeOutRaw != null
+            ? DateFormat('h:mm a').format(DateTime.parse(timeOutRaw).toLocal())
+            : '-';
+
+        sheet.appendRow([
+          excel_lib.TextCellValue(studentId),
+          excel_lib.TextCellValue('$firstName $lastName'),
+          excel_lib.TextCellValue(facultyName),
+          excel_lib.TextCellValue(programName),
+          excel_lib.TextCellValue(formattedTimeIn),
+          excel_lib.TextCellValue(formattedTimeOut),
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception("Failed to encode excel");
+
+      final String fileName = "${event.name.replaceAll(RegExp(r'[^\w\s\-]'), '_')}_My_Scans_Report.xlsx";
+      
+      final isSuccess = await FileSaverUtil.saveFile(Uint8List.fromList(bytes), fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isSuccess ? 'Scan report downloaded successfully!' : 'Failed to download report.'),
+            backgroundColor: isSuccess ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatTimeString(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final dt = DateTime(2026, 1, 1, hour, minute);
+      return DateFormat('h:mm a').format(dt);
+    } catch (_) {
+      return timeStr;
+    }
+  }
+
+  Widget _buildTableControls(BuildContext context, bool isMobile) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Total Count Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Text(
+              '${_filteredScans.length} Total',
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          
+          // Download Excel Button
+          if (_allScans.isNotEmpty)
+            FilledButton.icon(
+              onPressed: _downloadExcelReport,
+              icon: const Icon(LucideIcons.download, size: 16),
+              label: Text(
+                isMobile ? 'Export' : 'Download Excel',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.primary,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (status.toLowerCase()) {
+      case 'success':
+        color = Colors.green;
+        break;
+      case 'pending':
+        color = Colors.orange;
+        break;
+      case 'error':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _TypeBadge extends StatelessWidget {
+  final String type;
+  const _TypeBadge({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (type) {
+      case 'Time In':
+        color = Colors.blue;
+        break;
+      case 'Time Out':
+        color = Colors.purple;
+        break;
+      default:
+        color = Colors.indigo;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        type.toUpperCase(),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }
