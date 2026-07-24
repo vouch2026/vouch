@@ -36,6 +36,8 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
   bool _isExcelView = true;
   String _selectedStatus = 'All'; // All, Paid, Unpaid
   String _selectedProgram = 'All';
+  int _currentPage = 0;
+  int _rowsPerPage = 10;
 
   static const Color primaryColor = Color(0xFF003DA5);
 
@@ -210,6 +212,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
   void _applyFilters() {
     final query = _searchController.text.toLowerCase();
     setState(() {
+      _currentPage = 0;
       _filteredRows = _allRows.where((row) {
         final matchesQuery = row.name.toLowerCase().contains(query) ||
             row.studentId.toLowerCase().contains(query) ||
@@ -500,14 +503,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                   // Table or Card List
                   _isExcelView
                       ? _buildExcelPreviewTable()
-                      : (_filteredRows.isEmpty
-                          ? _buildEmptyState()
-                          : Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                              child: Column(
-                                children: _filteredRows.map((row) => _buildStudentCard(row)).toList(),
-                              ),
-                            )),
+                      : _buildStudentCardList(),
                 ],
               ),
             ),
@@ -800,14 +796,20 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
             icon: LucideIcons.list,
             label: 'Card List',
             isSelected: !_isExcelView,
-            onTap: () => setState(() => _isExcelView = false),
+            onTap: () => setState(() {
+              _isExcelView = false;
+              _currentPage = 0;
+            }),
           ),
           const SizedBox(width: 4),
           _buildToggleOption(
             icon: LucideIcons.sheet,
             label: 'Excel Preview',
             isSelected: _isExcelView,
-            onTap: () => setState(() => _isExcelView = true),
+            onTap: () => setState(() {
+              _isExcelView = true;
+              _currentPage = 0;
+            }),
           ),
         ],
       ),
@@ -1100,30 +1102,41 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
       return _buildEmptyState();
     }
 
+    final totalItems = _filteredRows.length;
+    final totalPages = (totalItems / _rowsPerPage).ceil();
+    final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+
+    final startIndex = safePage * _rowsPerPage;
+    final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
+    final paginatedRows = _filteredRows.sublist(startIndex, endIndex);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18.0),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: DataTable(
+            clipBehavior: Clip.antiAlias,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: DataTable(
                   headingRowColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.04)),
                   dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
                     if (states.contains(WidgetState.hovered)) {
@@ -1242,7 +1255,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                       ),
                     ),
                   ],
-                  rows: _filteredRows.map((row) {
+                  rows: paginatedRows.map((row) {
                     Color statusChipColor;
                     Color statusTextColor;
                     switch (row.status) {
@@ -1298,6 +1311,260 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
           },
         ),
       ),
+      const SizedBox(height: 16),
+      _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+    ],
+  ),
+);
+  }
+
+  Widget _buildStudentCardList() {
+    if (_filteredRows.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    final totalItems = _filteredRows.length;
+    final totalPages = (totalItems / _rowsPerPage).ceil();
+    final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+
+    final startIndex = safePage * _rowsPerPage;
+    final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
+    final paginatedRows = _filteredRows.sublist(startIndex, endIndex);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Column(
+        children: [
+          ...paginatedRows.map((row) => _buildStudentCard(row)).toList(),
+          const SizedBox(height: 16),
+          _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationFooter(int totalItems, int currentPage, int rowsPerPage) {
+    final totalPages = (totalItems / rowsPerPage).ceil();
+    final startItem = totalItems == 0 ? 0 : (currentPage * rowsPerPage) + 1;
+    final endItem = (currentPage * rowsPerPage) + rowsPerPage > totalItems
+        ? totalItems
+        : (currentPage * rowsPerPage) + rowsPerPage;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+
+        final dropdownWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isNarrow ? 'Rows:' : 'Rows per page:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: rowsPerPage,
+                  icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black54),
+                  elevation: 4,
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  items: [5, 10, 20, 50].map((val) {
+                    return DropdownMenuItem<int>(
+                      value: val,
+                      child: Text(
+                        '$val',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _rowsPerPage = val;
+                        _currentPage = 0;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+
+        final infoTextWidget = Text(
+          'Showing $startItem-$endItem of $totalItems',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        );
+
+        final navigationWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.first_page_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = 0;
+                      });
+                    }
+                  : null,
+              tooltip: 'First Page',
+              color: primaryColor,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.chevron_left_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Previous Page',
+              color: primaryColor,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${currentPage + 1} / ${totalPages > 0 ? totalPages : 1}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage + 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Next Page',
+              color: primaryColor,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.last_page_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = totalPages - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Last Page',
+              color: primaryColor,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        );
+
+        if (isNarrow) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    dropdownWidget,
+                    infoTextWidget,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                navigationWidget,
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.01),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              dropdownWidget,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  infoTextWidget,
+                  const SizedBox(width: 24),
+                  navigationWidget,
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -56,10 +56,12 @@ class StorageService {
     required String code,
     required XFile file,
     required String type,
+    bool isBanner = false,
   }) async {
     final bytes = await file.readAsBytes();
     final extension = p.extension(file.name);
-    final fileName = '${type}_logo_${code.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final assetType = isBanner ? 'banner' : 'logo';
+    final fileName = '${type}_${assetType}_${code.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'academic/$fileName';
     final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
 

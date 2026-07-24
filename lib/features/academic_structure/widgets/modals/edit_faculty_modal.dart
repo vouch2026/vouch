@@ -28,6 +28,7 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
   String? _selectedDean;
   bool _isLoading = false;
   XFile? _logoImage;
+  XFile? _bannerImage;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -49,8 +50,45 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      final name = image.name.toLowerCase();
+      if (!name.endsWith('.jpg') && 
+          !name.endsWith('.jpeg') && 
+          !name.endsWith('.png') && 
+          !name.endsWith('.gif') && 
+          !name.endsWith('.webp') && 
+          !name.endsWith('.bmp')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid file format. Please upload an image (JPG, PNG, WEBP, etc.)')),
+          );
+        }
+        return;
+      }
       setState(() {
         _logoImage = image;
+      });
+    }
+  }
+
+  Future<void> _pickBanner() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final name = image.name.toLowerCase();
+      if (!name.endsWith('.jpg') && 
+          !name.endsWith('.jpeg') && 
+          !name.endsWith('.png') && 
+          !name.endsWith('.gif') && 
+          !name.endsWith('.webp') && 
+          !name.endsWith('.bmp')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid file format. Please upload an image (JPG, PNG, WEBP, etc.)')),
+          );
+        }
+        return;
+      }
+      setState(() {
+        _bannerImage = image;
       });
     }
   }
@@ -69,12 +107,23 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
         );
       }
 
+      String? bannerUrl = widget.faculty.bannerUrl;
+      if (_bannerImage != null) {
+        bannerUrl = await ref.read(storageServiceProvider).uploadAcademicAsset(
+          code: _codeController.text.trim(),
+          file: _bannerImage!,
+          type: 'faculty',
+          isBanner: true,
+        );
+      }
+
       final updatedFaculty = widget.faculty.copyWith(
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         campusId: _selectedCampus!,
         deanId: _selectedDean,
         logoUrl: logoUrl,
+        bannerUrl: bannerUrl,
       );
 
       await ref.read(facultiesProvider.notifier).updateFaculty(updatedFaculty);
@@ -237,6 +286,42 @@ class _EditFacultyModalState extends ConsumerState<EditFacultyModal> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         side: BorderSide(color: _logoImage != null ? Colors.green : Theme.of(context).colorScheme.outlineVariant),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Faculty Banner',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  if (_bannerImage == null && widget.faculty.bannerUrl != null && widget.faculty.bannerUrl!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        widget.faculty.bannerUrl!,
+                        width: 80,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_rounded, size: 48),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _pickBanner,
+                      icon: Icon(_bannerImage != null ? Icons.check_circle_rounded : Icons.image_outlined, 
+                        color: _bannerImage != null ? Colors.green : null),
+                      label: Text(_bannerImage != null ? 'Banner Selected' : 'Change Banner',
+                        style: TextStyle(color: _bannerImage != null ? Colors.green : null)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                        side: BorderSide(color: _bannerImage != null ? Colors.green : Theme.of(context).colorScheme.outlineVariant),
                       ),
                     ),
                   ),
