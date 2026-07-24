@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 class StorageService {
   final SupabaseClient _client;
@@ -185,6 +186,20 @@ class StorageService {
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
+  }
+
+  Future<void> deleteFiles({
+    required String bucket,
+    required List<String> paths,
+  }) async {
+    await _client.storage.from(bucket).remove(paths);
+  }
+
+  Future<Uint8List> downloadFile({
+    required String bucket,
+    required String path,
+  }) async {
+    return await _client.storage.from(bucket).download(path);
   }
 }
 

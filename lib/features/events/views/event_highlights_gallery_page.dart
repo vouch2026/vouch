@@ -11,6 +11,10 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../users/providers/users_provider.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../providers/event_provider.dart';
+import '../../../core/utils/file_saver_helper.dart';
 
 final eventAllHighlightsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, eventId) async {
   final storageService = ref.read(storageServiceProvider);
@@ -60,7 +64,7 @@ final eventAllHighlightsProvider = FutureProvider.family<List<Map<String, dynami
   }
 });
 
-class EventHighlightsGalleryPage extends ConsumerWidget {
+class EventHighlightsGalleryPage extends ConsumerStatefulWidget {
   final String eventId;
   final String eventName;
 
@@ -71,8 +75,106 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final highlightsAsync = ref.watch(eventAllHighlightsProvider(eventId));
+  ConsumerState<EventHighlightsGalleryPage> createState() => _EventHighlightsGalleryPageState();
+}
+
+class _EventHighlightsGalleryPageState extends ConsumerState<EventHighlightsGalleryPage> {
+  bool _isSelectionMode = false;
+  final Set<String> _selectedFileNames = {};
+  bool _isActionInProgress = false;
+
+  Future<void> _deleteSelected(List<Map<String, dynamic>> highlights) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Selected Highlights'),
+        content: Text('Are you sure you want to delete ${_selectedFileNames.length} selected highlight(s)? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete', style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isActionInProgress = true);
+
+    try {
+      final storageService = ref.read(storageServiceProvider);
+      final bucket = dotenv.get('SUPABASE_HIGHLIGHTS_BUCKET', fallback: 'highlight-pictures');
+      final folder = 'highlights/${widget.eventId}';
+      
+      final pathsToDelete = _selectedFileNames.map((fileName) => '$folder/$fileName').toList();
+      await storageService.deleteFiles(bucket: bucket, paths: pathsToDelete);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Successfully deleted ${_selectedFileNames.length} highlight(s).')),
+        );
+        ref.invalidate(eventAllHighlightsProvider(widget.eventId));
+        ref.invalidate(eventHighlightsProvider(widget.eventId));
+        setState(() {
+          _selectedFileNames.clear();
+          _isSelectionMode = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete highlights: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionInProgress = false);
+    }
+  }
+
+  Future<void> _downloadSelected(List<Map<String, dynamic>> highlights) async {
+    setState(() => _isActionInProgress = true);
+    int successCount = 0;
+    try {
+      final storageService = ref.read(storageServiceProvider);
+      final bucket = dotenv.get('SUPABASE_HIGHLIGHTS_BUCKET', fallback: 'highlight-pictures');
+      final folder = 'highlights/${widget.eventId}';
+
+      for (final fileName in _selectedFileNames) {
+        final path = '$folder/$fileName';
+        final bytes = await storageService.downloadFile(bucket: bucket, path: path);
+        final isSuccess = await FileSaverUtil.saveFile(bytes, fileName);
+        if (isSuccess) successCount++;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Successfully downloaded $successCount highlight(s).')),
+        );
+        setState(() {
+          _selectedFileNames.clear();
+          _isSelectionMode = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to download highlights: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionInProgress = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final highlightsAsync = ref.watch(eventAllHighlightsProvider(widget.eventId));
     final usersAsync = ref.watch(allUsersProvider);
     final isMobile = ResponsiveLayout.isMobile(context);
 
@@ -120,7 +222,7 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
                     }
                   },
                   child: Text(
-                    eventName,
+                    widget.eventName,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w500,
@@ -145,17 +247,50 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             
-            Text(
-              'Highlights Gallery',
-              style: AppTextStyles.headlineMedium.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Moments shared by members for $eventName',
-              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+            highlightsAsync.when(
+              data: (highlights) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Highlights Gallery',
+                            style: AppTextStyles.headlineMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Moments shared by members for ${widget.eventName}',
+                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (highlights.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _isSelectionMode = !_isSelectionMode;
+                            _selectedFileNames.clear();
+                          });
+                        },
+                        icon: Icon(_isSelectionMode ? Icons.close : Icons.playlist_add_check_rounded),
+                        label: Text(_isSelectionMode ? 'Cancel' : 'Select'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
             const SizedBox(height: AppSpacing.xl),
 
@@ -201,49 +336,136 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
 
                 return usersAsync.when(
                   data: (users) {
-                    return LayoutBuilder(
-                      builder: (context, constraints) {
-                        int crossAxisCount = 2;
-                        if (constraints.maxWidth > 1200) {
-                          crossAxisCount = 5;
-                        } else if (constraints.maxWidth > 900) {
-                          crossAxisCount = 4;
-                        } else if (constraints.maxWidth > 600) {
-                          crossAxisCount = 3;
-                        }
-
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: AppSpacing.lg,
-                            mainAxisSpacing: AppSpacing.lg,
-                            childAspectRatio: 0.82,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_isSelectionMode) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  '${_selectedFileNames.length} selected',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      if (_selectedFileNames.length == highlights.length) {
+                                        _selectedFileNames.clear();
+                                      } else {
+                                        _selectedFileNames.addAll(highlights.map((h) => h['name'] as String));
+                                      }
+                                    });
+                                  },
+                                  child: Text(
+                                    _selectedFileNames.length == highlights.length ? 'Deselect All' : 'Select All',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                ElevatedButton.icon(
+                                  onPressed: _selectedFileNames.isEmpty || _isActionInProgress
+                                      ? null
+                                      : () => _downloadSelected(highlights),
+                                  icon: _isActionInProgress
+                                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                      : const Icon(Icons.download_rounded, size: 16),
+                                  label: const Text('Download'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                ElevatedButton.icon(
+                                  onPressed: _selectedFileNames.isEmpty || _isActionInProgress
+                                      ? null
+                                      : () => _deleteSelected(highlights),
+                                  icon: _isActionInProgress
+                                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                      : const Icon(Icons.delete_outline_rounded, size: 16),
+                                  label: const Text('Delete'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.error,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          itemCount: highlights.length,
-                          itemBuilder: (context, index) {
-                            final highlight = highlights[index];
-                            final userId = highlight['userId'] as String?;
-                            final uploader = users.firstWhere(
-                              (u) => u.id == userId,
-                              orElse: () => UserModel(
-                                authId: '',
-                                email: '',
-                                schoolId: '',
-                                firstName: 'Unknown',
-                                lastName: 'Member',
-                              ),
-                            );
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            int crossAxisCount = 2;
+                            if (constraints.maxWidth > 1200) {
+                              crossAxisCount = 5;
+                            } else if (constraints.maxWidth > 900) {
+                              crossAxisCount = 4;
+                            } else if (constraints.maxWidth > 600) {
+                              crossAxisCount = 3;
+                            }
 
-                            return _HighlightCard(
-                              highlight: highlight,
-                              uploader: uploader,
-                              onTap: () => _openGalleryOverlay(context, highlights, users, index),
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: AppSpacing.lg,
+                                mainAxisSpacing: AppSpacing.lg,
+                                childAspectRatio: 0.82,
+                              ),
+                              itemCount: highlights.length,
+                              itemBuilder: (context, index) {
+                                final highlight = highlights[index];
+                                final userId = highlight['userId'] as String?;
+                                final uploader = users.firstWhere(
+                                  (u) => u.id == userId,
+                                  orElse: () => UserModel(
+                                    authId: '',
+                                    email: '',
+                                    schoolId: '',
+                                    firstName: 'Unknown',
+                                    lastName: 'Member',
+                                  ),
+                                );
+
+                                final isSelected = _selectedFileNames.contains(highlight['name']);
+
+                                return _HighlightCard(
+                                  highlight: highlight,
+                                  uploader: uploader,
+                                  isSelected: isSelected,
+                                  isSelectionMode: _isSelectionMode,
+                                  onTap: () {
+                                    if (_isSelectionMode) {
+                                      setState(() {
+                                        if (isSelected) {
+                                          _selectedFileNames.remove(highlight['name'] as String);
+                                        } else {
+                                          _selectedFileNames.add(highlight['name'] as String);
+                                        }
+                                      });
+                                    } else {
+                                      _openGalleryOverlay(context, highlights, users, index);
+                                    }
+                                  },
+                                );
+                              },
                             );
                           },
-                        );
-                      },
+                        ),
+                      ],
                     );
                   },
                   loading: () => const Center(child: FlickrLoader()),
@@ -271,6 +493,7 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
         barrierDismissible: true,
         pageBuilder: (context, _, __) {
           return _FullScreenGalleryOverlay(
+            eventId: widget.eventId,
             highlights: highlights,
             users: users,
             initialIndex: initialIndex,
@@ -284,11 +507,15 @@ class EventHighlightsGalleryPage extends ConsumerWidget {
 class _HighlightCard extends StatefulWidget {
   final Map<String, dynamic> highlight;
   final UserModel uploader;
+  final bool isSelected;
+  final bool isSelectionMode;
   final VoidCallback onTap;
 
   const _HighlightCard({
     required this.highlight,
     required this.uploader,
+    required this.isSelected,
+    required this.isSelectionMode,
     required this.onTap,
   });
 
@@ -315,10 +542,12 @@ class _HighlightCardState extends State<_HighlightCard> {
           color: AppColors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: _isHovered 
-                ? AppColors.primary.withValues(alpha: 0.3) 
-                : AppColors.primary.withValues(alpha: 0.1),
-            width: _isHovered ? 1.5 : 1,
+            color: widget.isSelected
+                ? AppColors.primary
+                : (_isHovered 
+                    ? AppColors.primary.withValues(alpha: 0.3) 
+                    : AppColors.primary.withValues(alpha: 0.1)),
+            width: widget.isSelected || _isHovered ? 1.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -374,6 +603,26 @@ class _HighlightCardState extends State<_HighlightCard> {
                           ),
                         ),
                       ),
+                    if (widget.isSelectionMode)
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: widget.isSelected 
+                                ? AppColors.primary 
+                                : Colors.black.withOpacity(0.4),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            widget.isSelected ? Icons.check : null,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -412,24 +661,27 @@ class _HighlightCardState extends State<_HighlightCard> {
   }
 }
 
-class _FullScreenGalleryOverlay extends StatefulWidget {
+class _FullScreenGalleryOverlay extends ConsumerStatefulWidget {
+  final String eventId;
   final List<Map<String, dynamic>> highlights;
   final List<UserModel> users;
   final int initialIndex;
 
   const _FullScreenGalleryOverlay({
+    required this.eventId,
     required this.highlights,
     required this.users,
     required this.initialIndex,
   });
 
   @override
-  State<_FullScreenGalleryOverlay> createState() => _FullScreenGalleryOverlayState();
+  ConsumerState<_FullScreenGalleryOverlay> createState() => _FullScreenGalleryOverlayState();
 }
 
-class _FullScreenGalleryOverlayState extends State<_FullScreenGalleryOverlay> {
+class _FullScreenGalleryOverlayState extends ConsumerState<_FullScreenGalleryOverlay> {
   late PageController _pageController;
   late int _currentIndex;
+  bool _isActionInProgress = false;
 
   @override
   void initState() {
@@ -442,6 +694,85 @@ class _FullScreenGalleryOverlayState extends State<_FullScreenGalleryOverlay> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _downloadImage(Map<String, dynamic> highlight) async {
+    setState(() => _isActionInProgress = true);
+    try {
+      final storageService = ref.read(storageServiceProvider);
+      final bucket = dotenv.get('SUPABASE_HIGHLIGHTS_BUCKET', fallback: 'highlight-pictures');
+      final fileName = highlight['name'] as String;
+      final folder = 'highlights/${widget.eventId}';
+      final path = '$folder/$fileName';
+
+      final bytes = await storageService.downloadFile(bucket: bucket, path: path);
+      final isSuccess = await FileSaverUtil.saveFile(bytes, fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isSuccess ? 'Image downloaded successfully.' : 'Failed to save image.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to download image: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionInProgress = false);
+    }
+  }
+
+  Future<void> _deleteImage(Map<String, dynamic> highlight) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Highlight'),
+        content: const Text('Are you sure you want to delete this highlight? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete', style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isActionInProgress = true);
+    try {
+      final storageService = ref.read(storageServiceProvider);
+      final bucket = dotenv.get('SUPABASE_HIGHLIGHTS_BUCKET', fallback: 'highlight-pictures');
+      final fileName = highlight['name'] as String;
+      final folder = 'highlights/${widget.eventId}';
+      final path = '$folder/$fileName';
+
+      await storageService.deleteFiles(bucket: bucket, paths: [path]);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Highlight deleted successfully.')),
+        );
+        ref.invalidate(eventAllHighlightsProvider(widget.eventId));
+        ref.invalidate(eventHighlightsProvider(widget.eventId));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete highlight: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionInProgress = false);
+    }
   }
 
   @override
@@ -460,6 +791,14 @@ class _FullScreenGalleryOverlayState extends State<_FullScreenGalleryOverlay> {
       ),
     );
     final timestamp = highlight['timestamp'] as DateTime?;
+
+    final currentUser = ref.watch(userProfileProvider).value;
+    final workspace = ref.watch(workspaceProvider);
+    final activeRole = workspace.activeRole;
+    final canDelete = currentUser != null && (
+      highlight['userId'] == currentUser.id ||
+      (activeRole != null && activeRole.roleName != 'Member')
+    );
 
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.9),
@@ -627,6 +966,32 @@ class _FullScreenGalleryOverlayState extends State<_FullScreenGalleryOverlay> {
                         ],
                       ),
                     ),
+                    const SizedBox(width: AppSpacing.md),
+                    IconButton(
+                      icon: _isActionInProgress
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download_rounded, color: Colors.white),
+                      tooltip: 'Download',
+                      onPressed: _isActionInProgress ? null : () => _downloadImage(highlight),
+                    ),
+                    if (canDelete) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      IconButton(
+                        icon: _isActionInProgress
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                        tooltip: 'Delete',
+                        onPressed: _isActionInProgress ? null : () => _deleteImage(highlight),
+                      ),
+                    ],
                   ],
                 ),
               ),
