@@ -12,6 +12,9 @@ import '../../../organizations/providers/workspace_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../routes/route_paths.dart';
 import 'package:intl/intl.dart';
+import 'package:excel/excel.dart' as excel_lib;
+import '../../../../core/utils/file_saver_helper.dart';
+import 'dart:typed_data';
 
 class GovernorActivityCardsPage extends ConsumerStatefulWidget {
   const GovernorActivityCardsPage({super.key});
@@ -98,13 +101,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                   UserManagementHeader(
                     title: 'Activity Cards',
                     subtitle: 'Manage student clearances, signatures, and compliance',
-                    actions: [
-                      HeaderActionButton(
-                        icon: Icons.file_download_rounded,
-                        label: 'Export Compliance',
-                        onPressed: () {},
-                      ),
-                    ],
+                    actions: const [],
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Container(
@@ -247,7 +244,7 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                     endIndex > totalItems ? totalItems : endIndex,
                   );
 
-                  return _buildClearedClearanceList(context, paginatedCards, totalItems, totalPages);
+                  return _buildClearedClearanceList(context, paginatedCards, filteredClearedCards, totalItems, totalPages);
                 },
                 loading: () => const Center(child: FlickrLoader()),
                 error: (err, stack) => Center(child: Text('Error: $err')),
@@ -331,17 +328,23 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
     );
   }
 
-  Widget _buildClearedClearanceList(BuildContext context, List<ActivityCard> cards, int totalItems, int totalPages) {
+  Widget _buildClearedClearanceList(
+    BuildContext context, 
+    List<ActivityCard> cards, 
+    List<ActivityCard> allFilteredCards, 
+    int totalItems, 
+    int totalPages,
+  ) {
     return Column(
       children: [
-        _buildClearedFilters(),
+        _buildClearedFilters(allFilteredCards),
         const SizedBox(height: AppSpacing.lg),
         Expanded(child: _buildClearedStudentsTable(cards, totalItems, totalPages)),
       ],
     );
   }
 
-  Widget _buildClearedFilters() {
+  Widget _buildClearedFilters(List<ActivityCard> allFilteredCards) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -459,6 +462,18 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
               dateButton,
               const SizedBox(height: AppSpacing.md),
               timeButton,
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton.icon(
+                onPressed: allFilteredCards.isEmpty ? null : () => _downloadClearedExcel(allFilteredCards),
+                icon: const Icon(Icons.file_download_rounded, color: Colors.white),
+                label: const Text('Download Excel Report'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ],
           );
         }
@@ -475,6 +490,18 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                   Expanded(child: dateButton),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(child: timeButton),
+                  const SizedBox(width: AppSpacing.md),
+                  ElevatedButton.icon(
+                    onPressed: allFilteredCards.isEmpty ? null : () => _downloadClearedExcel(allFilteredCards),
+                    icon: const Icon(Icons.file_download_rounded, color: Colors.white),
+                    label: const Text('Export'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -497,10 +524,91 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
               constraints: const BoxConstraints(minWidth: 190),
               child: timeButton,
             ),
+            const SizedBox(width: AppSpacing.md),
+            ElevatedButton.icon(
+              onPressed: allFilteredCards.isEmpty ? null : () => _downloadClearedExcel(allFilteredCards),
+              icon: const Icon(Icons.file_download_rounded, color: Colors.white),
+              label: const Text('Export Excel'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _downloadClearedExcel(List<ActivityCard> allFilteredCards) async {
+    try {
+      final workspace = ref.read(workspaceProvider);
+      final orgName = workspace.selectedOrganization?.name ?? 'Unknown Organization';
+      final dateStr = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+
+      final excel = excel_lib.Excel.createExcel();
+      final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+      final sheet = excel[defaultSheet];
+
+      sheet.appendRow([
+        excel_lib.TextCellValue('Cleared Students'),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Organization Name: $orgName'),
+      ]);
+      sheet.appendRow([
+        excel_lib.TextCellValue('Date: $dateStr'),
+      ]);
+      sheet.appendRow([]);
+
+      sheet.appendRow([
+        excel_lib.TextCellValue('Id no.'),
+        excel_lib.TextCellValue('Name'),
+        excel_lib.TextCellValue('Faculty'),
+        excel_lib.TextCellValue('Program'),
+        excel_lib.TextCellValue('Year Level'),
+        excel_lib.TextCellValue('Status'),
+      ]);
+
+      for (final card in allFilteredCards) {
+        final idNo = card.studentIdNumber ?? 'N/A';
+        final name = card.studentName ?? 'Unknown Student';
+        final faculty = card.studentFaculty ?? 'N/A';
+        final program = card.studentProgram ?? 'N/A';
+        final yearLevel = card.studentYear ?? 'N/A';
+        final status = card.status == ActivityCardStatus.cleared ? 'Cleared' : card.status.name;
+
+        sheet.appendRow([
+          excel_lib.TextCellValue(idNo),
+          excel_lib.TextCellValue(name),
+          excel_lib.TextCellValue(faculty),
+          excel_lib.TextCellValue(program),
+          excel_lib.TextCellValue(yearLevel),
+          excel_lib.TextCellValue(status),
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception("Failed to encode excel");
+
+      final String cleanOrgName = orgName.replaceAll(RegExp(r'[^\w\s\-]'), '_');
+      final String fileName = "${cleanOrgName}_Cleared_Students_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx";
+
+      final isSuccess = await FileSaverUtil.saveFile(Uint8List.fromList(bytes), fileName);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isSuccess ? 'Excel report downloaded successfully.' : 'Failed to save excel report.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export excel: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _selectClearedDateRange() async {
