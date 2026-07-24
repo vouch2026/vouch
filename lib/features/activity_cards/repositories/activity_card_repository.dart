@@ -479,7 +479,8 @@ class ActivityCardRepository {
               last_name,
               student_id_number,
               program:programs!users_program_id_fkey (code),
-              faculty:faculties!users_faculty_id_fkey (code)
+              faculty:faculties!users_faculty_id_fkey (code),
+              year
             )
           ''')
           .eq('organization_id', organizationId)
@@ -495,6 +496,7 @@ class ActivityCardRepository {
             'student_name': '${student['first_name']} ${student['last_name']}',
             'program_name': student['program']?['code'] ?? 'N/A',
             'faculty_name': student['faculty']?['code'] ?? 'N/A',
+            'year': student['year']?.toString() ?? 'N/A',
             'is_officer': ((m['roles']?['hierarchy_level'] ?? 5) as num) > 5,
           });
         }
@@ -512,7 +514,8 @@ class ActivityCardRepository {
             faculty_id,
             program_id,
             program:programs!users_program_id_fkey (code, faculty_id),
-            faculty:faculties!users_faculty_id_fkey (code)
+            faculty:faculties!users_faculty_id_fkey (code),
+            year
           ''')
           .eq('account_status', 'active');
 
@@ -529,6 +532,7 @@ class ActivityCardRepository {
             'student_name': '${u['first_name']} ${u['last_name']}',
             'program_name': u['program']?['code'] ?? 'N/A',
             'faculty_name': u['faculty']?['code'] ?? 'N/A',
+            'year': u['year']?.toString() ?? 'N/A',
             'is_officer': false,
           });
         }
@@ -609,6 +613,7 @@ class ActivityCardRepository {
       final studentId = member['student_id'] as String;
       final studentName = member['student_name'] as String;
       final programName = member['program_name'] as String;
+      final studentYear = member['year'] as String? ?? 'N/A';
       final isOfficer = member['is_officer'] as bool;
 
       final studentAttendance = allAttendance.where((a) => a['student_id'] == studentId).toList();
@@ -730,6 +735,7 @@ class ActivityCardRepository {
         studentName: studentName,
         studentFaculty: member['faculty_name'] as String?,
         studentProgram: programName,
+        studentYear: studentYear,
         organizationId: organizationId,
         organizationName: orgName ?? 'N/A',
         organizationLogo: orgLogo,

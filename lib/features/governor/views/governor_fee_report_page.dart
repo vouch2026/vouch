@@ -36,6 +36,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
   bool _isExcelView = true;
   String _selectedStatus = 'All'; // All, Paid, Unpaid
   String _selectedProgram = 'All';
+  String _selectedYearLevel = 'All';
   int _currentPage = 0;
   int _rowsPerPage = 10;
 
@@ -49,6 +50,16 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
         .toList()
       ..sort();
     return ['All', ...programs];
+  }
+
+  List<String> get _availableYearLevels {
+    final years = _allRows
+        .map((row) => row.yearLevel.trim())
+        .where((y) => y.isNotEmpty && y != '-')
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...years];
   }
 
   @override
@@ -113,7 +124,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
         ''')
         .eq('status', 'active')
         .eq('user.account_status', 'active')
-        .eq('role.name', 'Member')
+        .inFilter('role.name', ['Member', 'Representative'])
         .eq('organization.type', orgType)
         .eq('organization.$orgField', scopeId),
         
@@ -220,8 +231,9 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
         
         final matchesStatus = _selectedStatus == 'All' || row.status == _selectedStatus;
         final matchesProgram = _selectedProgram == 'All' || row.program == _selectedProgram;
+        final matchesYear = _selectedYearLevel == 'All' || row.yearLevel == _selectedYearLevel;
 
-        return matchesQuery && matchesStatus && matchesProgram;
+        return matchesQuery && matchesStatus && matchesProgram && matchesYear;
       }).toList();
     });
   }
@@ -963,6 +975,54 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
               trailingIcon: LucideIcons.chevronDown,
             ),
           ),
+          const SizedBox(width: 8),
+
+          // Filter by Year Level
+          PopupMenuButton<String>(
+            onSelected: (val) {
+              setState(() {
+                _selectedYearLevel = val;
+                _applyFilters();
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: primaryColor.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              return _availableYearLevels.map((String year) {
+                final isItemSelected = _selectedYearLevel == year;
+                return PopupMenuItem<String>(
+                  value: year,
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          year == 'All' ? 'All Years' : 'Year $year',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? primaryColor : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle2, size: 16, color: primaryColor),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _selectedYearLevel == 'All' ? 'Year' : 'Year $_selectedYearLevel',
+              isSelected: _selectedYearLevel != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
+          ),
         ],
       ),
     );
@@ -1043,7 +1103,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All'
+                _searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All' && _selectedYearLevel == 'All'
                     ? LucideIcons.receipt
                     : LucideIcons.search,
                 size: 60,
@@ -1052,7 +1112,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
             ),
             const SizedBox(height: 20),
             Text(
-              _searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All'
+              _searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All' && _selectedYearLevel == 'All'
                   ? 'No collection logs found'
                   : 'No matching records found',
               style: GoogleFonts.poppins(
@@ -1070,7 +1130,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (!(_searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All'))
+            if (!(_searchController.text.isEmpty && _selectedStatus == 'All' && _selectedProgram == 'All' && _selectedYearLevel == 'All'))
               Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: TextButton(
@@ -1079,6 +1139,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
                       _searchController.clear();
                       _selectedStatus = 'All';
                       _selectedProgram = 'All';
+                      _selectedYearLevel = 'All';
                       _applyFilters();
                     });
                   },
