@@ -2,6 +2,7 @@ import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -31,12 +32,23 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
   final TextEditingController _searchController = TextEditingController();
   String _selectedFeeFilter = 'All Fees';
   String _selectedPaymentMethodFilter = 'All Methods';
+  int _currentPage = 0;
+  int _rowsPerPage = 12;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _searchController.addListener(() => setState(() {}));
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          _currentPage = 0;
+        });
+      }
+    });
+    _searchController.addListener(() => setState(() {
+      _currentPage = 0;
+    }));
   }
 
   @override
@@ -440,10 +452,10 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.receipt_long_outlined, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                child: Icon(Icons.receipt_long_outlined, size: 64, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
@@ -462,6 +474,14 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
       );
     }
 
+    final totalItems = filtered.length;
+    final totalPages = (totalItems / _rowsPerPage).ceil();
+    final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+
+    final startIndex = safePage * _rowsPerPage;
+    final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
+    final paginated = filtered.sublist(startIndex, endIndex);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount = 1;
@@ -473,21 +493,29 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           crossAxisCount = 2;
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.lg,
-            mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: 300,
-          ),
-          itemCount: filtered.length,
-          itemBuilder: (context, index) => GovernorSubmissionCard(
-            submission: filtered[index],
-            onApprove: () => _updateStatus(filtered[index].id!, 'Paid'),
-            onReject: () => _showRejectDialog(filtered[index].id!),
-            onViewReceipt: () => _showReceiptPreview(context, filtered[index]),
-          ),
+        return Column(
+          children: [
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: AppSpacing.lg,
+                  mainAxisSpacing: AppSpacing.lg,
+                  mainAxisExtent: 300,
+                ),
+                itemCount: paginated.length,
+                itemBuilder: (context, index) => GovernorSubmissionCard(
+                  submission: paginated[index],
+                  onApprove: () => _updateStatus(paginated[index].id!, 'Paid'),
+                  onReject: () => _showRejectDialog(paginated[index].id!),
+                  onViewReceipt: () => _showReceiptPreview(context, paginated[index]),
+                ),
+              ),
+            ),
+            _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+            const SizedBox(height: AppSpacing.md),
+          ],
         );
       },
     );
@@ -610,6 +638,231 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           Text('Unable to load receipt image', style: AppTextStyles.bodyMedium),
         ],
       ),
+    );
+  }
+
+  Widget _buildPaginationFooter(int totalItems, int currentPage, int rowsPerPage) {
+    final totalPages = (totalItems / rowsPerPage).ceil();
+    final startItem = totalItems == 0 ? 0 : (currentPage * rowsPerPage) + 1;
+    final endItem = (currentPage * rowsPerPage) + rowsPerPage > totalItems
+        ? totalItems
+        : (currentPage * rowsPerPage) + rowsPerPage;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+
+        final dropdownWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isNarrow ? 'Rows:' : 'Rows per page:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: rowsPerPage,
+                  icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black54),
+                  elevation: 4,
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  items: [4, 8, 12, 24, 48].map((val) {
+                    return DropdownMenuItem<int>(
+                      value: val,
+                      child: Text(
+                        '$val',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _rowsPerPage = val;
+                        _currentPage = 0;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+
+        final infoTextWidget = Text(
+          'Showing $startItem-$endItem of $totalItems',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        );
+
+        final navigationWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.first_page_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = 0;
+                      });
+                    }
+                  : null,
+              tooltip: 'First Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.chevron_left_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Previous Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${currentPage + 1} / ${totalPages > 0 ? totalPages : 1}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage + 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Next Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.last_page_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = totalPages - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Last Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        );
+
+        if (isNarrow) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    dropdownWidget,
+                    infoTextWidget,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                navigationWidget,
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.01),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              dropdownWidget,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  infoTextWidget,
+                  const SizedBox(width: 24),
+                  navigationWidget,
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

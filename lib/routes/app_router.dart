@@ -55,6 +55,7 @@ import '../features/governor/views/governor_collections_page.dart';
 import '../features/governor/views/governor_fee_report_page.dart';
 import '../features/finance/models/fee_model.dart';
 import '../features/governor/views/governor_settings_page.dart';
+import '../features/governor/views/governor_gallery_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_cards_page.dart';
 import '../features/governor/views/activity_cards/governor_activity_card_review_page.dart';
 import '../features/excuse_requests/views/workspace_excuse_requests_page.dart';
@@ -204,6 +205,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         final roleName = workspace.activeRole?.roleName;
         final normalizedRole = roleName != null ? RoleMapper.mapDbRoleToAppFormat(roleName) : 'member';
         final isMemberOrStudent = normalizedRole == 'student' || normalizedRole == 'member';
+
+        // Protect workspace gallery route - only accessible by PIO role
+        if (location == RoutePaths.workspaceGallery && normalizedRole != 'pio' && !isSuperAdmin) {
+          return RoutePaths.workspaceDashboard;
+        }
 
         // Redirect member/student role from officer workspace excuse requests page to student's myExcuseRequests page
         if (location == RoutePaths.workspaceExcuseRequests && isMemberOrStudent) {
@@ -655,7 +661,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.workspaceGallery,
         name: RouteNames.workspaceGallery,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Gallery'),
+        builder: (context, state) => const GovernorGalleryPage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceEngagementReports,

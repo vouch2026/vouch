@@ -15,6 +15,7 @@ _FacultyModel _$FacultyModelFromJson(Map<String, dynamic> json) =>
       deanId: json['dean_id'] as String?,
       deanName: json['deanName'] as String?,
       logoUrl: json['logo_url'] as String?,
+      bannerUrl: json['banner_url'] as String?,
       status: json['status'] as String? ?? 'active',
       createdAt: json['created_at'] == null
           ? null
@@ -33,6 +34,7 @@ Map<String, dynamic> _$FacultyModelToJson(_FacultyModel instance) =>
       'dean_id': instance.deanId,
       'deanName': instance.deanName,
       'logo_url': instance.logoUrl,
+      'banner_url': instance.bannerUrl,
       'status': instance.status,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),

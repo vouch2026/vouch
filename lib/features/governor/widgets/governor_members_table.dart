@@ -12,11 +12,21 @@ import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 
-class GovernorMembersTable extends ConsumerWidget {
+import 'package:google_fonts/google_fonts.dart';
+
+class GovernorMembersTable extends ConsumerStatefulWidget {
   const GovernorMembersTable({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GovernorMembersTable> createState() => _GovernorMembersTableState();
+}
+
+class _GovernorMembersTableState extends ConsumerState<GovernorMembersTable> {
+  int _currentPage = 0;
+  int _rowsPerPage = 10;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final workspace = ref.watch(workspaceProvider);
     final selectedOrg = workspace.selectedOrganization;
@@ -46,11 +56,19 @@ class GovernorMembersTable extends ConsumerWidget {
           return _buildEmptyState(theme);
         }
 
+        final totalItems = filteredMembers.length;
+        final totalPages = (totalItems / _rowsPerPage).ceil();
+        final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+
+        final startIndex = safePage * _rowsPerPage;
+        final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
+        final paginatedMembers = filteredMembers.sublist(startIndex, endIndex);
+
         return Card(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,7 +90,7 @@ class GovernorMembersTable extends ConsumerWidget {
                           const DataColumn(label: Text('Role')),
                           if (canManageMembers) const DataColumn(label: Text('Actions')),
                         ],
-                        rows: filteredMembers.map((member) {
+                        rows: paginatedMembers.map((member) {
                           return DataRow(
                             cells: [
                               DataCell(
@@ -123,25 +141,7 @@ class GovernorMembersTable extends ConsumerWidget {
                   );
                 },
               ),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Showing ${filteredMembers.length} members',
-                      style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
-                    ),
-                    Row(
-                      children: [
-                        TextButton(onPressed: () {}, child: const Text('Previous')),
-                        const SizedBox(width: AppSpacing.sm),
-                        TextButton(onPressed: () {}, child: const Text('Next')),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
             ],
           ),
         );
@@ -168,6 +168,231 @@ class GovernorMembersTable extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPaginationFooter(int totalItems, int currentPage, int rowsPerPage) {
+    final totalPages = (totalItems / rowsPerPage).ceil();
+    final startItem = totalItems == 0 ? 0 : (currentPage * rowsPerPage) + 1;
+    final endItem = (currentPage * rowsPerPage) + rowsPerPage > totalItems
+        ? totalItems
+        : (currentPage * rowsPerPage) + rowsPerPage;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+
+        final dropdownWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isNarrow ? 'Rows:' : 'Rows per page:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: rowsPerPage,
+                  icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black54),
+                  elevation: 4,
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  items: [5, 10, 20, 50].map((val) {
+                    return DropdownMenuItem<int>(
+                      value: val,
+                      child: Text(
+                        '$val',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _rowsPerPage = val;
+                        _currentPage = 0;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+
+        final infoTextWidget = Text(
+          'Showing $startItem-$endItem of $totalItems',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        );
+
+        final navigationWidget = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.first_page_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = 0;
+                      });
+                    }
+                  : null,
+              tooltip: 'First Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.chevron_left_rounded, size: 18),
+              onPressed: currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Previous Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${currentPage + 1} / ${totalPages > 0 ? totalPages : 1}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = currentPage + 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Next Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.last_page_rounded, size: 18),
+              onPressed: currentPage < totalPages - 1
+                  ? () {
+                      setState(() {
+                        _currentPage = totalPages - 1;
+                      });
+                    }
+                  : null,
+              tooltip: 'Last Page',
+              color: AppColors.primary,
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        );
+
+        if (isNarrow) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    dropdownWidget,
+                    infoTextWidget,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                navigationWidget,
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.01),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              dropdownWidget,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  infoTextWidget,
+                  const SizedBox(width: 24),
+                  navigationWidget,
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

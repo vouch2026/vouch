@@ -645,6 +645,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
                                 builder: (context) => AttendanceHistoryPage(
                                   eventId: widget.event.id!,
                                   eventName: widget.event.name,
+                                  event: widget.event,
                                 ),
                               ),
                             );

@@ -136,6 +136,22 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      final name = pickedFile.name.toLowerCase();
+      final allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      final isImage = allowedExtensions.any((ext) => name.endsWith(ext));
+
+      if (!isImage) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid file format. Please select a valid image file (JPG, JPEG, PNG, GIF, WEBP, BMP).'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _eventImage = pickedFile;
@@ -387,6 +403,59 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteEvent() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: Text('Are you sure you want to delete "${widget.eventToEdit?.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ref.read(eventRepositoryProvider).deleteEvent(widget.eventToEdit!.id!);
+      
+      if (mounted) {
+        ref.invalidate(workspaceEventsProvider);
+        ref.invalidate(workspaceSanctionsProvider);
+        ref.invalidate(workspaceMandatoryEventsCountProvider);
+        
+        // Go back
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/workspace/events');
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting event: $e')),
+        );
+      }
     }
   }
 
@@ -746,6 +815,36 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       ),
       
       const SizedBox(height: AppSpacing.xxl),
+      if (widget.eventToEdit != null) ...[
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: OutlinedButton(
+            onPressed: _isLoading ? null : _deleteEvent,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red[700],
+              side: BorderSide(color: Colors.red[300]!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: _isLoading 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: FlickrLoader(),
+                  )
+                : Text(
+                    'Delete Event',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[700],
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+      ],
       SizedBox(
         width: double.infinity,
         height: 52,
