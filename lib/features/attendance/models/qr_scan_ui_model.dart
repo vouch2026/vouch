@@ -2,6 +2,7 @@ class QrScanUIModel {
   final String name;
   final String studentId;
   final String program;
+  final String? yearLevel;
   final String time;
   final String status; // 'success' | 'pending' | 'error'
   final String type; // 'Time In' | 'Time Out'
@@ -12,6 +13,7 @@ class QrScanUIModel {
     required this.name,
     required this.studentId,
     required this.program,
+    this.yearLevel,
     required this.time,
     required this.status,
     required this.type,
@@ -32,6 +34,7 @@ class QrScanUIModel {
     String? name,
     String? studentId,
     String? program,
+    String? yearLevel,
     String? time,
     String? status,
     String? type,
@@ -42,6 +45,7 @@ class QrScanUIModel {
       name: name ?? this.name,
       studentId: studentId ?? this.studentId,
       program: program ?? this.program,
+      yearLevel: yearLevel ?? this.yearLevel,
       time: time ?? this.time,
       status: status ?? this.status,
       type: type ?? this.type,
@@ -55,6 +59,7 @@ class QrScanUIModel {
       'name': name,
       'studentId': studentId,
       'program': program,
+      'yearLevel': yearLevel,
       'time': time,
       'status': status,
       'type': type,
@@ -68,6 +73,7 @@ class QrScanUIModel {
       name: json['name'] as String,
       studentId: json['studentId'] as String,
       program: json['program'] as String,
+      yearLevel: json['yearLevel'] as String?,
       time: json['time'] as String,
       status: json['status'] as String,
       type: json['type'] as String,

@@ -140,7 +140,7 @@ class AttendanceRepository {
         .eq('event_id', eventId)
         .eq('student.account_status', 'active')
         .eq('student.organization_members.status', 'active')
-        .eq('student.organization_members.role.name', 'Member')
+        .inFilter('student.organization_members.role.name', ['Member', 'Representative'])
         .eq('student.organization_members.organizations.type', orgType)
         .eq('student.organization_members.organizations.$orgField', scopeId)
         .order('updated_at', ascending: false);

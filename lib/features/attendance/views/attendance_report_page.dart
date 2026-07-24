@@ -42,6 +42,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
   bool _isLoading = true;
   String _selectedMode = 'All';
   String _selectedProgram = 'All';
+  String _selectedYearLevel = 'All';
   int _currentPage = 0;
   int _rowsPerPage = 10;
 
@@ -55,6 +56,16 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         .toList()
       ..sort();
     return ['All', ...programs];
+  }
+
+  List<String> get _availableYearLevels {
+    final years = _allExcelRows
+        .map((row) => row.yearLevel.trim())
+        .where((y) => y.isNotEmpty && y != '-')
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...years];
   }
 
   @override
@@ -141,11 +152,13 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         final timeInRaw = data['actual_time_in'];
         final timeOutRaw = data['actual_time_out'];
 
+        final yearLevel = student?['year']?.toString();
         if (timeInRaw != null) {
           extractedScans.add({
             'name': '$firstName $lastName',
             'studentId': studentId,
             'program': program,
+            'yearLevel': yearLevel,
             'dateTime': DateTime.parse(timeInRaw).toLocal(),
             'type': 'Time In',
           });
@@ -155,6 +168,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             'name': '$firstName $lastName',
             'studentId': studentId,
             'program': program,
+            'yearLevel': yearLevel,
             'dateTime': DateTime.parse(timeOutRaw).toLocal(),
             'type': 'Time Out',
           });
@@ -169,6 +183,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
           name: scanData['name'] as String,
           studentId: scanData['studentId'] as String,
           program: scanData['program'] as String,
+          yearLevel: scanData['yearLevel'] as String?,
           time: DateFormat('h:mm a').format(scanData['dateTime'] as DateTime),
           status: 'success',
           type: scanData['type'] as String,
@@ -241,10 +256,10 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             scan.program.toLowerCase().contains(query);
         
         final matchesMode = _selectedMode == 'All' || scan.type == _selectedMode;
-        
         final matchesProgram = _selectedProgram == 'All' || scan.program == _selectedProgram;
+        final matchesYear = _selectedYearLevel == 'All' || scan.yearLevel == _selectedYearLevel;
 
-        return matchesQuery && matchesMode && matchesProgram;
+        return matchesQuery && matchesMode && matchesProgram && matchesYear;
       }).toList();
 
       _filteredExcelRows = _allExcelRows.where((row) {
@@ -254,8 +269,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             row.faculty.toLowerCase().contains(query);
         
         final matchesProgram = _selectedProgram == 'All' || row.program == _selectedProgram;
+        final matchesYear = _selectedYearLevel == 'All' || row.yearLevel == _selectedYearLevel;
 
-        return matchesQuery && matchesProgram;
+        return matchesQuery && matchesProgram && matchesYear;
       }).toList();
     });
   }
@@ -877,6 +893,54 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
               trailingIcon: LucideIcons.chevronDown,
             ),
           ),
+          const SizedBox(width: 8),
+          
+          // Year Level Dropdown Filter
+          PopupMenuButton<String>(
+            onSelected: (String year) {
+              setState(() {
+                _selectedYearLevel = year;
+                _applyFilters();
+              });
+            },
+            offset: const Offset(0, 45),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: primaryColor.withValues(alpha: 0.05)),
+            ),
+            itemBuilder: (BuildContext context) {
+              return _availableYearLevels.map((String year) {
+                final isItemSelected = _selectedYearLevel == year;
+                return PopupMenuItem<String>(
+                  value: year,
+                  height: 42,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          year == 'All' ? 'All Years' : 'Year $year',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isItemSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isItemSelected ? primaryColor : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isItemSelected)
+                        const Icon(LucideIcons.checkCircle, size: 16, color: primaryColor),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            child: _buildFilterChip(
+              label: _selectedYearLevel == 'All' ? 'Year' : 'Year $_selectedYearLevel',
+              isSelected: _selectedYearLevel != 'All',
+              trailingIcon: LucideIcons.chevronDown,
+            ),
+          ),
         ],
       ),
     );
@@ -957,7 +1021,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All'
+                _searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All' && _selectedYearLevel == 'All'
                     ? LucideIcons.clipboard
                     : LucideIcons.search,
                 size: 60,
@@ -966,7 +1030,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
             ),
             const SizedBox(height: 20),
             Text(
-              _searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All'
+              _searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All' && _selectedYearLevel == 'All'
                   ? 'No scans recorded yet'
                   : 'No matching records found',
               style: GoogleFonts.poppins(
@@ -984,7 +1048,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (!(_searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All'))
+            if (!(_searchController.text.isEmpty && _selectedMode == 'All' && _selectedProgram == 'All' && _selectedYearLevel == 'All'))
               Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: TextButton(
@@ -993,6 +1057,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                       _searchController.clear();
                       _selectedMode = 'All';
                       _selectedProgram = 'All';
+                      _selectedYearLevel = 'All';
                       _applyFilters();
                     });
                   },
