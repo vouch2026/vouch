@@ -113,7 +113,7 @@ class _GovernorFeeReportPageState extends ConsumerState<GovernorFeeReportPage> {
         ''')
         .eq('status', 'active')
         .eq('user.account_status', 'active')
-        .eq('role.name', 'Member')
+        .inFilter('role.name', ['Member', 'Representative'])
         .eq('organization.type', orgType)
         .eq('organization.$orgField', scopeId),
         

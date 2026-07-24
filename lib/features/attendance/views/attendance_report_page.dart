@@ -121,7 +121,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         ''')
         .eq('status', 'active')
         .eq('user.account_status', 'active')
-        .eq('role.name', 'Member')
+        .inFilter('role.name', ['Member', 'Representative'])
         .eq('organizations.type', orgType)
         .eq('organizations.$orgField', scopeId),
       ]);
