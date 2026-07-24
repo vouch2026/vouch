@@ -123,10 +123,24 @@ class ManageAccountPage extends ConsumerWidget {
     }
   }
 
-  Future<void> _pickAndUploadImage(WidgetRef ref) async {
+  Future<void> _pickAndUploadImage(BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      final name = image.name.toLowerCase();
+      final allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      final isImage = allowedExtensions.any((ext) => name.endsWith(ext));
+
+      if (!isImage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid file format. Please select a valid image file (JPG, JPEG, PNG, GIF, WEBP, BMP).'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       await ref.read(profileControllerProvider.notifier).updateAvatar(image);
     }
   }
@@ -149,7 +163,7 @@ class ManageAccountPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildProfileHeader(ref, profile),
+                    _buildProfileHeader(context, ref, profile),
                     const SizedBox(height: AppSpacing.xl),
                     _buildSectionTitle('Personal Information'),
                     const SizedBox(height: AppSpacing.md),
@@ -304,7 +318,7 @@ class ManageAccountPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileHeader(WidgetRef ref, dynamic profile) {
+  Widget _buildProfileHeader(BuildContext context, WidgetRef ref, dynamic profile) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -342,7 +356,7 @@ class ManageAccountPage extends ConsumerWidget {
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: () => _pickAndUploadImage(ref),
+                  onTap: () => _pickAndUploadImage(context, ref),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: const BoxDecoration(

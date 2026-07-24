@@ -52,6 +52,22 @@ class _StudentProofOfPaymentPageState extends ConsumerState<StudentProofOfPaymen
 
       if (pickedFile == null) return;
 
+      final name = pickedFile.name.toLowerCase();
+      final allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      final isImage = allowedExtensions.any((ext) => name.endsWith(ext));
+
+      if (!isImage) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid file format. Please select a valid image file (JPG, JPEG, PNG, GIF, WEBP, BMP).'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final Uint8List bytes = await pickedFile.readAsBytes();
       final int fileSize = bytes.length;
 

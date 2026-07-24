@@ -136,6 +136,22 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      final name = pickedFile.name.toLowerCase();
+      final allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      final isImage = allowedExtensions.any((ext) => name.endsWith(ext));
+
+      if (!isImage) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid file format. Please select a valid image file (JPG, JPEG, PNG, GIF, WEBP, BMP).'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _eventImage = pickedFile;

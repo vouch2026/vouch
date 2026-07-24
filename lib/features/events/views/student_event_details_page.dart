@@ -63,7 +63,21 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       );
 
       if (images.isNotEmpty) {
+        final allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
         for (var image in images) {
+          final name = image.name.toLowerCase();
+          final isImage = allowedExtensions.any((ext) => name.endsWith(ext));
+
+          if (!isImage) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('File ${image.name} is not a valid image. Only JPG, JPEG, PNG, GIF, WEBP, BMP are allowed.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            continue;
+          }
+
           if (_selectedImages.length < remainingSlots) {
             final bytes = await image.readAsBytes();
             final fileSize = bytes.length;

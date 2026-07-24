@@ -60,6 +60,22 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
         imageQuality: 85,
       );
       if (pickedFile != null) {
+        final name = pickedFile.name.toLowerCase();
+        final allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+        final isImage = allowedExtensions.any((ext) => name.endsWith(ext));
+
+        if (!isImage) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invalid file format. Please select a valid image file (JPG, JPEG, PNG, GIF, WEBP, BMP).'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
         final bytes = await pickedFile.readAsBytes();
         setState(() {
           _selectedFile = pickedFile;
