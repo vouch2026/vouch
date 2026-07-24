@@ -152,43 +152,61 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
             final orgAsync = ref.watch(organizationProvider(activityCard.organizationId));
             final org = orgAsync.value;
             
-            if (orgAsync.hasValue && org != null && !org.isClearanceActive) {
+            if (orgAsync.isLoading) {
               isLocked = true;
-              lockReason = 'Clearance requesting is currently closed/inactive for ${org.name}.';
-            } else if (orgAsync.hasValue && org != null && org.restrictClearanceRequest) {
-              final allEventsComplied = activityCard.events.every((e) => 
-                e.attendanceStatus == AttendanceStatus.completed || 
-                e.attendanceStatus == AttendanceStatus.excused || 
-                e.attendanceStatus == AttendanceStatus.sanctionCleared
-              );
-              final allFeesPaid = activityCard.fees.every((f) => f.isPaid);
-              final allSanctionsFulfilled = activityCard.sanctions.every((s) => s.isFulfilled);
-
-              if (!allEventsComplied || !allFeesPaid || !allSanctionsFulfilled) {
+              lockReason = 'Loading settings...';
+            } else {
+              if (org == null) {
                 isLocked = true;
-                final List<String> reasons = [];
-                if (!allEventsComplied) reasons.add('mandatory events');
-                if (!allFeesPaid) reasons.add('mandatory fees');
-                if (!allSanctionsFulfilled) reasons.add('sanctions');
-                lockReason = 'You must clear all ${reasons.join(', ')} before requesting clearance.';
+                lockReason = 'Organization settings not found.';
+              } else if (!org.isClearanceActive) {
+                isLocked = true;
+                lockReason = 'Clearance requesting is currently closed/inactive for ${org.name}.';
+              } else if (org.restrictClearanceRequest) {
+                final allEventsComplied = activityCard.events.every((e) => 
+                  e.attendanceStatus == AttendanceStatus.completed || 
+                  e.attendanceStatus == AttendanceStatus.excused || 
+                  e.attendanceStatus == AttendanceStatus.sanctionCleared
+                );
+                final allFeesPaid = activityCard.fees.every((f) => f.isPaid);
+                final allSanctionsFulfilled = activityCard.sanctions.every((s) => s.isFulfilled);
+
+                if (!allEventsComplied || !allFeesPaid || !allSanctionsFulfilled) {
+                  isLocked = true;
+                  final List<String> reasons = [];
+                  if (!allEventsComplied) reasons.add('mandatory events');
+                  if (!allFeesPaid) reasons.add('mandatory fees');
+                  if (!allSanctionsFulfilled) reasons.add('sanctions');
+                  lockReason = 'You must clear all ${reasons.join(', ')} before requesting clearance.';
+                }
               }
             }
             
-            if (!isLocked && allCardsAsync.hasValue) {
-              final allCards = allCardsAsync.value!;
-              if (activityCard.organizationType == 'faculty-based') {
-                final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
-                // Officers are exempt from needing a clearance card for their own level
-                if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
+            if (!isLocked) {
+              if (allCardsAsync.isLoading) {
+                isLocked = true;
+                lockReason = 'Loading clearance hierarchy...';
+              } else {
+                final allCards = allCardsAsync.value;
+                if (allCards == null) {
                   isLocked = true;
-                  lockReason = 'You must clear your Program Activity Card (e.g. ${programCard.organizationName}) first.';
-                }
-              } else if (activityCard.organizationType == 'campus-based') {
-                final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
-                // Officers are exempt from needing a clearance card for their own level
-                if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
-                  isLocked = true;
-                  lockReason = 'You must clear your Faculty Activity Card (e.g. ${facultyCard.organizationName}) first.';
+                  lockReason = 'Could not load clearance cards.';
+                } else {
+                  if (activityCard.organizationType == 'faculty-based') {
+                    final programCard = allCards.where((c) => c.organizationType == 'program-based').firstOrNull;
+                    // Officers are exempt from needing a clearance card for their own level
+                    if (programCard != null && programCard.status != ActivityCardStatus.cleared && !programCard.isOfficer) {
+                      isLocked = true;
+                      lockReason = 'You must clear your Program Activity Card (e.g. ${programCard.organizationName}) first.';
+                    }
+                  } else if (activityCard.organizationType == 'campus-based') {
+                    final facultyCard = allCards.where((c) => c.organizationType == 'faculty-based').firstOrNull;
+                    // Officers are exempt from needing a clearance card for their own level
+                    if (facultyCard != null && facultyCard.status != ActivityCardStatus.cleared && !facultyCard.isOfficer) {
+                      isLocked = true;
+                      lockReason = 'You must clear your Faculty Activity Card (e.g. ${facultyCard.organizationName}) first.';
+                    }
+                  }
                 }
               }
             }
