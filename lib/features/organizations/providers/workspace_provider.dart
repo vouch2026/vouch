@@ -129,6 +129,9 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
         );
       }
 
+      final box = Hive.box('workspaces');
+      await box.put('role_${org.id}', role.toJson());
+
       state = state.copyWith(
         activeMembership: null,
         activeRole: role,
@@ -137,7 +140,28 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       );
     } catch (e, stack) {
       debugPrint('Error in selectOrganization: $e\n$stack');
-      state = state.copyWith(isLoading: false, isInitialized: true);
+      
+      final box = Hive.box('workspaces');
+      final cachedRoleData = box.get('role_${org.id}');
+      AppRole? role;
+      if (cachedRoleData != null) {
+        final jsonMap = Map<String, dynamic>.from(cachedRoleData as Map);
+        role = AppRole.fromJson(jsonMap);
+      } else {
+        role = AppRole(
+          roleName: 'Member',
+          hierarchyLevel: 5,
+          scopeType: org.type,
+          permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
+        );
+      }
+
+      state = state.copyWith(
+        activeMembership: null,
+        activeRole: role,
+        isLoading: false,
+        isInitialized: true,
+      );
     }
   }
 

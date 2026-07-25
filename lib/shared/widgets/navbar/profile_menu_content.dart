@@ -2,6 +2,7 @@ import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 import '../../../../features/auth/controllers/auth_controller.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -271,8 +272,8 @@ class ProfileMenuContent extends ConsumerWidget {
             child: CircleAvatar(
               radius: 34,
               backgroundColor: Colors.grey.shade100,
-              backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                  ? NetworkImage(avatarUrl)
+              backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty && OfflineImageCache.get(avatarUrl) != null
+                  ? OfflineImageCache.get(avatarUrl)
                   : const AssetImage('assets/images/my_profile.png') as ImageProvider,
             ),
           ),

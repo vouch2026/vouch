@@ -23,6 +23,7 @@ import 'qr_scanner_card.dart';
 import 'qr_section_header.dart';
 import 'qr_count_chip.dart';
 import '../views/attendance_history_page.dart';
+import 'package:vouch_v2/core/providers/connectivity_provider.dart';
 
 class EventScannerScreen extends ConsumerStatefulWidget {
   final EventModel event;
@@ -398,6 +399,12 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<bool>>(connectivityProvider, (previous, next) {
+      if (next.value == true && previous?.value != true) {
+        _syncPendingScans();
+      }
+    });
+
     final textTheme = GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme);
 
     return Theme(

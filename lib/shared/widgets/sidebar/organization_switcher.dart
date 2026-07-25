@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
 import '../../../../features/organizations/providers/organization_provider.dart';
 import '../../../../features/organizations/models/organization_model.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class OrganizationSwitcher extends ConsumerStatefulWidget {
   const OrganizationSwitcher({super.key});
@@ -416,8 +417,8 @@ class _OrgAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: isGlobal ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
-        image: logoUrl != null
-            ? DecorationImage(image: NetworkImage(logoUrl!), fit: BoxFit.cover)
+        image: logoUrl != null && OfflineImageCache.get(logoUrl) != null
+            ? DecorationImage(image: OfflineImageCache.get(logoUrl)!, fit: BoxFit.cover)
             : null,
       ),
       child: logoUrl == null

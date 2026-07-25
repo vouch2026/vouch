@@ -5,6 +5,7 @@ import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import 'profile_menu_content.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class ProfileDropdown extends ConsumerWidget {
   const ProfileDropdown({super.key});
@@ -146,8 +147,8 @@ class ProfileDropdown extends ConsumerWidget {
                 child: CircleAvatar(
                   radius: 14,
                   backgroundColor: Colors.grey.shade100,
-                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                      ? NetworkImage(avatarUrl)
+                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty && OfflineImageCache.get(avatarUrl) != null
+                      ? OfflineImageCache.get(avatarUrl)
                       : const AssetImage('assets/images/my_profile.png') as ImageProvider,
                 ),
               ),

@@ -17,6 +17,7 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class MyQrCodePage extends ConsumerStatefulWidget {
   const MyQrCodePage({super.key});
@@ -234,13 +235,13 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                             ),
                                           ],
                                         ),
-                                        child: CircleAvatar(
-                                          radius: 30,
-                                          backgroundColor: Colors.grey.shade100,
-                                          backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
-                                              ? NetworkImage(profile.avatarUrl!)
-                                              : const AssetImage('assets/images/my_profile.png') as ImageProvider,
-                                        ),
+                                          child: CircleAvatar(
+                                            radius: 30,
+                                            backgroundColor: Colors.grey.shade100,
+                                            backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && OfflineImageCache.get(profile.avatarUrl) != null
+                                                ? OfflineImageCache.get(profile.avatarUrl!)
+                                                : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+                                          ),
                                       ),
                                       const SizedBox(width: AppSpacing.md),
                                       Expanded(
