@@ -255,6 +255,33 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
        return;
     }
 
+    // Local validation checks
+    final hasTimeIn = _recentScans.any((s) => 
+      s.studentId == payload.studentId && s.type == 'Time In'
+    );
+    final hasTimeOut = _recentScans.any((s) => 
+      s.studentId == payload.studentId && s.type == 'Time Out'
+    );
+
+    if (isTimeIn) {
+      if (hasTimeIn) {
+        _showError('Student already timed in for this event!');
+        _resumeScanning();
+        return;
+      }
+    } else {
+      if (hasTimeOut) {
+        _showError('Student already timed out for this event!');
+        _resumeScanning();
+        return;
+      }
+      if (!hasTimeIn) {
+        _showError('Student must time-in first before timing out!');
+        _resumeScanning();
+        return;
+      }
+    }
+
     final newScan = QrScanUIModel(
       name: payload.fullName,
       studentId: payload.studentId,
@@ -274,13 +301,21 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
     }
 
+    // Play feedback and resume scanner immediately (Zero pause)
+    _showSuccess(newScan);
+
+    // Save/Upload in background
+    _recordAttendanceInBackground(newScan, payload, isTimeIn, officer.id!);
+  }
+
+  Future<void> _recordAttendanceInBackground(QrScanUIModel newScan, QrPayload payload, bool isTimeIn, String officerId) async {
     try {
       final repository = ref.read(attendanceRepositoryProvider);
       
       await repository.recordAttendance(
         eventId: widget.event.id!,
         studentId: payload.databaseId ?? payload.studentId,
-        scannedByUserId: officer.id!,
+        scannedByUserId: officerId,
         isTimeIn: isTimeIn,
       );
 
@@ -294,8 +329,6 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         
         final box = Hive.box('attendance_scans');
         await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
-        
-        _showSuccess(newScan.copyWith(status: 'success'));
       }
     } catch (e) {
       String msg = e.toString();
@@ -305,11 +338,9 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         msg = msg.replaceFirst('Exception', 'Error');
       }
 
-      final isNetworkError = msg.contains('SocketException') || msg.contains('Failed host lookup') || msg.contains('connection') || msg.contains('network');
+      final isNetworkError = msg.contains('SocketException') || msg.contains('Failed host lookup') || msg.contains('connection') || msg.contains('network') || msg.contains('ClientException');
       
-      if (isNetworkError) {
-        _showWarning('Saved Offline: Scan recorded locally. Will sync when connection is restored.');
-      } else {
+      if (!isNetworkError) {
         if (mounted) {
           setState(() {
             _recentScans.removeWhere((s) => s.studentId == newScan.studentId && s.type == newScan.type && s.isPending);
@@ -318,9 +349,9 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
           await box.put('scans_${widget.event.id}', _recentScans.map((s) => s.toJson()).toList());
         }
         _showError(msg);
+      } else {
+        debugPrint('Recorded offline: $msg');
       }
-      
-      _resumeScanning();
     }
   }
 

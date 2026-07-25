@@ -75,7 +75,23 @@ final userMembershipsProvider = FutureProvider.family<List<UserOrganizationMembe
 final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembershipModel?, String>((ref, orgId) async {
   final userProfile = ref.watch(userProfileProvider).value;
   if (userProfile == null || userProfile.id == null) return null;
-  return ref.watch(organizationRepositoryProvider).getUserMembershipInOrg(userProfile.id!, orgId);
+  
+  final box = Hive.box('workspaces');
+  final cacheKey = 'membership_${userProfile.id}_$orgId';
+  try {
+    final membership = await ref.watch(organizationRepositoryProvider).getUserMembershipInOrg(userProfile.id!, orgId);
+    if (membership != null) {
+      await box.put(cacheKey, membership.toJson());
+    }
+    return membership;
+  } catch (e) {
+    final cached = box.get(cacheKey);
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return OrganizationMembershipModel.fromJson(jsonMap);
+    }
+    return null;
+  }
 });
 
 final organizationProvider = FutureProvider.family<OrganizationModel?, String>((ref, id) async {
