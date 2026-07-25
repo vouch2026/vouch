@@ -1,5 +1,6 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,6 +41,7 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
   double _zoomLevel = 0.0;
   List<QrScanUIModel> _recentScans = [];
   bool _isLoadingScans = true;
+  Timer? _autoCloseTimer;
 
   static const Color primaryColor = AppColors.primary;
   static const Color accentColor = AppColors.accent;
@@ -54,10 +56,21 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
       detectionTimeoutMs: 300,
     );
     _loadRecentScans();
+    
+    // Auto close scanner when scanning duration ends (works offline & online)
+    _autoCloseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (widget.event.currentAttendanceMode == AttendanceMode.closed) {
+        timer.cancel();
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _autoCloseTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
