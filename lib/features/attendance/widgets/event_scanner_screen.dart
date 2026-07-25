@@ -288,11 +288,6 @@ class _EventScannerScreenState extends ConsumerState<EventScannerScreen> {
         _resumeScanning();
         return;
       }
-      if (!hasTimeIn) {
-        _showError('Student must time-in first before timing out!');
-        _resumeScanning();
-        return;
-      }
     }
 
     final newScan = QrScanUIModel(
