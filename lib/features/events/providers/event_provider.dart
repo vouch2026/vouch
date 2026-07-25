@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/event_model.dart';
 import '../repositories/event_repository.dart';
 import '../../../core/config/supabase_config.dart';
@@ -30,7 +31,29 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
 
   if (scopeId == null) return [];
   
-  return ref.watch(eventRepositoryProvider).getEventsByScope(scopeType, scopeId);
+  final box = Hive.box('events');
+  final cacheKey = 'workspace_events_${org.id}';
+  try {
+    final events = await ref.watch(eventRepositoryProvider).getEventsByScope(scopeType, scopeId);
+    final eventsJson = events.map((e) => e.toJson()).toList();
+    await box.put(cacheKey, eventsJson);
+    for (final e in events) {
+      if (e.id != null) {
+        await box.put('event_${e.id}', e.toJson());
+      }
+    }
+    return events;
+  } catch (e) {
+    final cached = box.get(cacheKey);
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return EventModel.fromJson(jsonMap);
+      }).toList();
+    }
+    rethrow;
+  }
 });
 
 final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
@@ -38,7 +61,22 @@ final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
 });
 
 final eventProvider = FutureProvider.family<EventModel?, String>((ref, id) async {
-  return ref.watch(eventRepositoryProvider).getEventById(id);
+  final box = Hive.box('events');
+  final cacheKey = 'event_$id';
+  try {
+    final event = await ref.watch(eventRepositoryProvider).getEventById(id);
+    if (event != null) {
+      await box.put(cacheKey, event.toJson());
+    }
+    return event;
+  } catch (e) {
+    final cached = box.get(cacheKey);
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return EventModel.fromJson(jsonMap);
+    }
+    rethrow;
+  }
 });
 
 final eventHighlightsProvider = FutureProvider.family<int, String>((ref, eventId) async {

@@ -13,6 +13,8 @@ import '../../academic_structure/providers/term_provider.dart';
 import '../providers/excuse_provider.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/user_management_header.dart';
+import 'package:vouch_v2/core/providers/connectivity_provider.dart';
+import 'package:vouch_v2/core/widgets/states/offline_state_view.dart';
 
 class ExcuseRequestFormPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -380,6 +382,31 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = ref.watch(connectivityProvider).value ?? true;
+
+    if (!isOnline) {
+      return DashboardLayout(
+        title: 'Submit Excuse Request',
+        onBack: () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        },
+        child: OfflineStateView(
+          title: 'Excuse Form Offline',
+          message: 'Submitting excuse requests and uploading documents requires internet access. Please reconnect and try again.',
+          onRetry: () {
+            ref.invalidate(connectivityProvider);
+          },
+          onGoBack: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+        ),
+      );
+    }
+
     return DashboardLayout(
       title: 'Submit Excuse Request',
       onBack: () {

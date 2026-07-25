@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/time_formatter.dart';
 import '../../events/models/event_model.dart';
 import '../../events/views/student_event_details_page.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class GovernorEventCard extends StatefulWidget {
   final EventModel event;
@@ -209,8 +210,12 @@ class _GovernorEventCardState extends State<GovernorEventCard> {
       );
     }
     
-    return Image.network(
-      imagePath,
+    final imageProvider = OfflineImageCache.get(imagePath);
+    if (imageProvider == null) {
+      return const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 40));
+    }
+    return Image(
+      image: imageProvider,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => const Center(
         child: Column(

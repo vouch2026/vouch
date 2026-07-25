@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import '../providers/account_deletion_provider.dart';
 import '../widgets/delete_account_request_modal.dart';
 import '../../../routes/route_paths.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class ManageAccountPage extends ConsumerWidget {
   const ManageAccountPage({super.key});
@@ -347,8 +348,8 @@ class ManageAccountPage extends ConsumerWidget {
                 child: CircleAvatar(
                   radius: 46,
                   backgroundColor: AppColors.background,
-                  backgroundImage: profile.avatarUrl != null && profile.avatarUrl.isNotEmpty
-                      ? NetworkImage(profile.avatarUrl)
+                  backgroundImage: profile.avatarUrl != null && profile.avatarUrl.isNotEmpty && OfflineImageCache.get(profile.avatarUrl) != null
+                      ? OfflineImageCache.get(profile.avatarUrl)
                       : const AssetImage('assets/images/my_profile.png') as ImageProvider,
                 ),
               ),

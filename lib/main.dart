@@ -5,16 +5,23 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_router.dart';
 import 'core/config/supabase_config.dart';
+import 'core/utils/offline_image_cache.dart';
+import 'package:vouch_v2/features/attendance/providers/attendance_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await SupabaseConfig.initialize();
   await Hive.initFlutter();
+  await OfflineImageCache.init();
   await Hive.openBox('settings');
   await Hive.openBox('tasks');
   await Hive.openBox('schedules');
   await Hive.openBox('attendance_scans');
+  await Hive.openBox('profile');
+  await Hive.openBox('workspaces');
+  await Hive.openBox('events');
+  await Hive.openBox('my_scans');
   
   runApp(
     const ProviderScope(
@@ -28,6 +35,7 @@ class VouchApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(globalSyncProvider);
     final router = ref.watch(routerProvider);
 
     return ScreenUtilInit(

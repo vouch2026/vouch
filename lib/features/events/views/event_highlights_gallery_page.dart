@@ -15,6 +15,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../providers/event_provider.dart';
 import '../../../core/utils/file_saver_helper.dart';
+import 'package:vouch_v2/core/providers/connectivity_provider.dart';
+import 'package:vouch_v2/core/widgets/states/offline_state_view.dart';
 
 final eventAllHighlightsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, eventId) async {
   final storageService = ref.read(storageServiceProvider);
@@ -174,6 +176,31 @@ class _EventHighlightsGalleryPageState extends ConsumerState<EventHighlightsGall
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = ref.watch(connectivityProvider).value ?? true;
+
+    if (!isOnline) {
+      return DashboardLayout(
+        title: 'Highlights Gallery',
+        onBack: () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        },
+        child: OfflineStateView(
+          title: 'Gallery Offline',
+          message: 'Viewing and downloading event highlights requires internet access. Please reconnect and try again.',
+          onRetry: () {
+            ref.invalidate(connectivityProvider);
+          },
+          onGoBack: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+        ),
+      );
+    }
+
     final highlightsAsync = ref.watch(eventAllHighlightsProvider(widget.eventId));
     final usersAsync = ref.watch(allUsersProvider);
     final isMobile = ResponsiveLayout.isMobile(context);

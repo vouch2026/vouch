@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../providers/attendance_provider.dart';
 import '../models/qr_scan_ui_model.dart';
 import '../widgets/qr_recent_scan_card.dart';
@@ -74,7 +75,28 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
 
   Future<void> _loadScans() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    
+    final box = Hive.box('attendance_scans');
+    final cachedData = box.get('scans_${widget.eventId}');
+    if (cachedData != null) {
+      try {
+        final cachedList = (cachedData as List).map((item) {
+          return QrScanUIModel.fromJson(Map<String, dynamic>.from(item as Map));
+        }).toList();
+        if (mounted) {
+          setState(() {
+            _allScans = cachedList;
+            _isLoading = false;
+            _applyFilters();
+          });
+        }
+      } catch (e) {
+        debugPrint('Error decoding cached scans in history: $e');
+      }
+    } else {
+      setState(() => _isLoading = true);
+    }
+
     try {
       final repository = ref.read(attendanceRepositoryProvider);
       final rawScans = await repository.getRecentScansForEvent(
@@ -123,7 +145,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
       // Sort extractedScans by dateTime descending (newest first)
       extractedScans.sort((a, b) => (b['dateTime'] as DateTime).compareTo(a['dateTime'] as DateTime));
 
-      final scans = extractedScans.map((scanData) {
+      final remoteScans = extractedScans.map((scanData) {
         return QrScanUIModel(
           name: scanData['name'] as String,
           studentId: scanData['studentId'] as String,
@@ -134,19 +156,34 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         );
       }).toList();
 
+      final pendingScans = _allScans.where((s) => s.isPending).toList();
+      
+      final List<QrScanUIModel> merged = [...pendingScans];
+      for (final remote in remoteScans) {
+        final isDuplicated = merged.any((p) => p.studentId == remote.studentId && p.type == remote.type);
+        if (!isDuplicated) {
+          merged.add(remote);
+        }
+      }
+
       if (mounted) {
         setState(() {
-          _allScans = scans;
+          _allScans = merged;
           _isLoading = false;
           _applyFilters();
         });
+        
+        await box.put('scans_${widget.eventId}', _allScans.map((s) => s.toJson()).toList());
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load scans: $e')),
-        );
+        final isNetworkError = e.toString().contains('SocketException') || e.toString().contains('Failed host lookup') || e.toString().contains('network') || e.toString().contains('ClientException');
+        if (!isNetworkError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load scans: $e')),
+          );
+        }
       }
     }
   }

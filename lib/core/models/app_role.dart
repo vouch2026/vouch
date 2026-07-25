@@ -20,6 +20,15 @@ class AppRole {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'role_name': roleName,
+      'hierarchy_level': hierarchyLevel,
+      'scope_type': scopeType,
+      'permissions': permissions,
+    };
+  }
+
   bool hasPermission(String permission) {
     return permissions.contains(permission);
   }

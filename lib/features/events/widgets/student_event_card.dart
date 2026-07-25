@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/time_formatter.dart';
+import '../../../core/utils/offline_image_cache.dart';
 import '../../events/models/event_model.dart';
 import '../views/student_event_details_page.dart';
 
@@ -191,8 +192,12 @@ class _StudentEventCardState extends State<StudentEventCard> {
       return const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 40));
     }
     
-    return Image.network(
-      imagePath,
+    final imageProvider = OfflineImageCache.get(imagePath);
+    if (imageProvider == null) {
+      return const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 40));
+    }
+    return Image(
+      image: imageProvider,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => const Center(
         child: Column(

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../repositories/organization_repository.dart';
 import '../models/organization_model.dart';
 import '../models/organization_membership_model.dart';
@@ -46,7 +47,25 @@ final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) asyn
 final userOrganizationsProvider = FutureProvider<List<OrganizationModel>>((ref) async {
   final userProfile = ref.watch(userProfileProvider).value;
   if (userProfile == null || userProfile.id == null) return [];
-  return ref.watch(organizationRepositoryProvider).getUserOrganizations(userProfile.id!);
+  
+  final box = Hive.box('workspaces');
+  final cacheKey = 'user_orgs_${userProfile.id}';
+  try {
+    final orgs = await ref.watch(organizationRepositoryProvider).getUserOrganizations(userProfile.id!);
+    final orgsJson = orgs.map((org) => org.toJson()).toList();
+    await box.put(cacheKey, orgsJson);
+    return orgs;
+  } catch (e) {
+    final cached = box.get(cacheKey);
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return OrganizationModel.fromJson(jsonMap);
+      }).toList();
+    }
+    rethrow;
+  }
 });
 
 final userMembershipsProvider = FutureProvider.family<List<UserOrganizationMembershipInfo>, String>((ref, userId) async {
@@ -56,7 +75,23 @@ final userMembershipsProvider = FutureProvider.family<List<UserOrganizationMembe
 final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembershipModel?, String>((ref, orgId) async {
   final userProfile = ref.watch(userProfileProvider).value;
   if (userProfile == null || userProfile.id == null) return null;
-  return ref.watch(organizationRepositoryProvider).getUserMembershipInOrg(userProfile.id!, orgId);
+  
+  final box = Hive.box('workspaces');
+  final cacheKey = 'membership_${userProfile.id}_$orgId';
+  try {
+    final membership = await ref.watch(organizationRepositoryProvider).getUserMembershipInOrg(userProfile.id!, orgId);
+    if (membership != null) {
+      await box.put(cacheKey, membership.toJson());
+    }
+    return membership;
+  } catch (e) {
+    final cached = box.get(cacheKey);
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return OrganizationMembershipModel.fromJson(jsonMap);
+    }
+    return null;
+  }
 });
 
 final organizationProvider = FutureProvider.family<OrganizationModel?, String>((ref, id) async {

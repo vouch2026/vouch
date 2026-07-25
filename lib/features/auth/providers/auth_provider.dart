@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../models/user_model.dart';
@@ -20,7 +21,22 @@ final currentUserProvider = Provider.autoDispose<User?>((ref) {
 final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
-  return ref.watch(authRepositoryProvider).getUserProfile(user.id);
+  
+  final box = Hive.box('profile');
+  try {
+    final profile = await ref.watch(authRepositoryProvider).getUserProfile(user.id);
+    if (profile != null) {
+      await box.put(user.id, profile.toJson());
+    }
+    return profile;
+  } catch (e) {
+    final cached = box.get(user.id);
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return UserModel.fromJson(jsonMap);
+    }
+    rethrow;
+  }
 });
 
 final userProfileByIdProvider = FutureProvider.family.autoDispose<UserModel?, String>((ref, id) async {

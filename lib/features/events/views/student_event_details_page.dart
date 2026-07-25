@@ -28,6 +28,8 @@ import '../../attendance/views/attendance_report_page.dart';
 import '../../attendance/views/attendance_history_page.dart';
 import 'event_highlights_gallery_page.dart';
 import '../../governor/views/governor_create_event_page.dart';
+import 'package:vouch_v2/core/providers/connectivity_provider.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -212,11 +214,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
 
     final isOfficer = creatorOrgId != null
-        ? (creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member')
+        ? ((creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member') ||
+           (selectedOrg?.id == creatorOrgId && activeRole != null && activeRole.roleName != 'Member'))
         : (activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator);
 
     final officerRoleName = creatorOrgId != null
-        ? creatorMembership?.roleName
+        ? (creatorMembership?.roleName ?? (selectedOrg?.id == creatorOrgId ? activeRole?.roleName : null))
         : (isSelectedOrgCreator ? activeRole?.roleName : null);
 
     final normalizedRole = officerRoleName != null
@@ -408,7 +411,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: event.imageUrl != null
-            ? Image.network(event.imageUrl!, fit: BoxFit.cover)
+            ? Image(image: OfflineImageCache.get(event.imageUrl!)!, fit: BoxFit.cover)
             : Container(
                 color: AppColors.primary.withValues(alpha: 0.05),
                 child: Column(
@@ -688,6 +691,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
   }
 
   Widget _buildHighlightsSection(int existingCount) {
+    final isOnline = ref.watch(connectivityProvider).value ?? true;
     final remainingSlots = 2 - existingCount;
     final isLimitReached = remainingSlots <= 0;
 
@@ -701,7 +705,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
               'Event Highlights',
               style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
             ),
-            if (!isLimitReached && _selectedImages.length < remainingSlots)
+            if (isOnline && !isLimitReached && _selectedImages.length < remainingSlots)
               TextButton.icon(
                 onPressed: _isUploading ? null : () => _pickImages(remainingSlots),
                 icon: const Icon(Icons.add_a_photo_rounded, size: 16),
@@ -717,47 +721,81 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
         Text(
           isLimitReached
               ? 'You have reached the maximum of 2 photos for this event.'
-              : 'Share your favorite moments (Remaining slots: $remainingSlots)',
-          style: AppTextStyles.bodySmall.copyWith(color: isLimitReached ? Colors.orange : Colors.grey[600]),
+              : (isOnline
+                  ? 'Share your favorite moments (Remaining slots: $remainingSlots)'
+                  : 'Highlights upload is unavailable offline.'),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: isLimitReached ? Colors.orange : (isOnline ? Colors.grey[600] : Colors.orange),
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        if (_selectedImages.isNotEmpty)
-          SizedBox(
-            height: 150,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _selectedImages.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.md),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(_selectedImagesBytes[_selectedImages[index].path]!, width: 150, height: 150, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () => _removeImage(index),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, color: Colors.white, size: 16),
+        if (!isOnline && !isLimitReached)
+          Container(
+            width: double.infinity,
+            height: 160,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.05)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off_rounded, color: AppColors.textGrey, size: 36),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Upload Offline Mode',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textGrey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Connecting to the internet is required to upload highlights.',
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          if (_selectedImages.isNotEmpty)
+            SizedBox(
+              height: 150,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _selectedImages.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.md),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(_selectedImagesBytes[_selectedImages[index].path]!, width: 150, height: 150, fit: BoxFit.cover),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                              child: const Icon(Icons.close, color: Colors.white, size: 16),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        if (_selectedImages.isEmpty && !isLimitReached)
-          GestureDetector(
-            onTap: () => _pickImages(remainingSlots),
-            child: Container(
+          if (_selectedImages.isEmpty && !isLimitReached)
+            GestureDetector(
+              onTap: () => _pickImages(remainingSlots),
+              child: Container(
               width: double.infinity,
               height: 160,
               decoration: BoxDecoration(
@@ -791,9 +829,10 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                     style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
                   ),
                 ],
-              ),
             ),
           ),
+        ),
+      ],
         if (isLimitReached)
           Container(
             width: double.infinity,
