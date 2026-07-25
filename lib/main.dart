@@ -11,8 +11,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await SupabaseConfig.initialize();
-  await OfflineImageCache.init();
   await Hive.initFlutter();
+  await OfflineImageCache.init();
   await Hive.openBox('settings');
   await Hive.openBox('tasks');
   await Hive.openBox('schedules');

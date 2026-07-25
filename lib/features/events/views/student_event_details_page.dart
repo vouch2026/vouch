@@ -29,6 +29,7 @@ import '../../attendance/views/attendance_history_page.dart';
 import 'event_highlights_gallery_page.dart';
 import '../../governor/views/governor_create_event_page.dart';
 import 'package:vouch_v2/core/providers/connectivity_provider.dart';
+import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
 class StudentEventDetailsPage extends ConsumerStatefulWidget {
   final EventModel event;
@@ -213,11 +214,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     );
 
     final isOfficer = creatorOrgId != null
-        ? (creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member')
+        ? ((creatorMembership != null && creatorMembership.roleName != null && creatorMembership.roleName != 'Member') ||
+           (selectedOrg?.id == creatorOrgId && activeRole != null && activeRole.roleName != 'Member'))
         : (activeRole != null && activeRole.roleName != 'Member' && isSelectedOrgCreator);
 
     final officerRoleName = creatorOrgId != null
-        ? creatorMembership?.roleName
+        ? (creatorMembership?.roleName ?? (selectedOrg?.id == creatorOrgId ? activeRole?.roleName : null))
         : (isSelectedOrgCreator ? activeRole?.roleName : null);
 
     final normalizedRole = officerRoleName != null
@@ -409,7 +411,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: event.imageUrl != null
-            ? Image.network(event.imageUrl!, fit: BoxFit.cover)
+            ? Image(image: OfflineImageCache.get(event.imageUrl!)!, fit: BoxFit.cover)
             : Container(
                 color: AppColors.primary.withValues(alpha: 0.05),
                 child: Column(
