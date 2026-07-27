@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import 'package:excel/excel.dart' as excel_lib;
 import '../../../../core/utils/file_saver_helper.dart';
 import 'dart:typed_data';
+import '../../../../core/widgets/states/offline_state_view.dart';
 
 class GovernorActivityCardsPage extends ConsumerStatefulWidget {
   const GovernorActivityCardsPage({super.key});
@@ -179,7 +180,14 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                   return _buildClearanceList(context, filteredCards, orgType);
                 },
                 loading: () => const Center(child: FlickrLoader()),
-                error: (err, stack) => Center(child: Text('Error: $err')),
+                error: (err, stack) {
+                  if (OfflineStateView.isOfflineError(err)) {
+                    return OfflineStateView(
+                      onRetry: () => ref.invalidate(organizationActivityCardsProvider),
+                    );
+                  }
+                  return Center(child: Text('Error: $err'));
+                },
               ),
               cardsAsync.when(
                 data: (cards) {
@@ -247,7 +255,14 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
                   return _buildClearedClearanceList(context, paginatedCards, filteredClearedCards, totalItems, totalPages);
                 },
                 loading: () => const Center(child: FlickrLoader()),
-                error: (err, stack) => Center(child: Text('Error: $err')),
+                error: (err, stack) {
+                  if (OfflineStateView.isOfflineError(err)) {
+                    return OfflineStateView(
+                      onRetry: () => ref.invalidate(organizationActivityCardsProvider),
+                    );
+                  }
+                  return Center(child: Text('Error: $err'));
+                },
               ),
             ],
           ),

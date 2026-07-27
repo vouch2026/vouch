@@ -13,6 +13,7 @@ import '../models/task_model.dart';
 import '../providers/task_provider.dart';
 
 import '../../../shared/layouts/responsive_layout.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class TasksPage extends ConsumerStatefulWidget {
   const TasksPage({super.key});
@@ -244,21 +245,28 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             );
           },
           loading: () => const Center(child: FlickrLoader()),
-          error: (err, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-                const SizedBox(height: AppSpacing.md),
-                Text('Error loading tasks: $err', style: AppTextStyles.bodyLarge),
-                const SizedBox(height: AppSpacing.lg),
-                ElevatedButton(
-                  onPressed: _handleRefresh,
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+          error: (err, stack) {
+            if (OfflineStateView.isOfflineError(err)) {
+              return OfflineStateView(
+                onRetry: _handleRefresh,
+              );
+            }
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+                  const SizedBox(height: AppSpacing.md),
+                  Text('Error loading tasks: $err', style: AppTextStyles.bodyLarge),
+                  const SizedBox(height: AppSpacing.lg),
+                  ElevatedButton(
+                    onPressed: _handleRefresh,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

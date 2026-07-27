@@ -9,6 +9,7 @@ import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -74,7 +75,16 @@ class DashboardPage extends ConsumerWidget {
         );
       },
       loading: () => const Scaffold(body: Center(child: FlickrLoader())),
-      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return Scaffold(
+            body: OfflineStateView(
+              onRetry: () => ref.invalidate(userProfileProvider),
+            ),
+          );
+        }
+        return Scaffold(body: Center(child: Text('Error: $err')));
+      },
     );
   }
 

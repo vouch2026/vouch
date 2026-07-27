@@ -14,6 +14,7 @@ import '../../finance/providers/finance_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import 'governor_create_fee_page.dart';
 import 'governor_fee_report_page.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class GovernorCreatedFeesPage extends ConsumerStatefulWidget {
   final String title;
@@ -421,7 +422,14 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                 );
               },
               loading: () => const Center(child: FlickrLoader()),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              error: (err, _) {
+                if (OfflineStateView.isOfflineError(err)) {
+                  return OfflineStateView(
+                    onRetry: () => ref.invalidate(workspaceFeesProvider),
+                  );
+                }
+                return Center(child: Text('Error: $err'));
+              },
             ),
           ],
         ),

@@ -12,6 +12,7 @@ import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_announcement_card.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class GovernorAnnouncementsPage extends ConsumerStatefulWidget {
   const GovernorAnnouncementsPage({super.key});
@@ -189,7 +190,14 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
           );
         },
         loading: () => const Center(child: FlickrLoader()),
-        error: (err, _) => Center(child: Text('Error: $err')),
+        error: (err, _) {
+          if (OfflineStateView.isOfflineError(err)) {
+            return OfflineStateView(
+              onRetry: () => ref.invalidate(workspaceAnnouncementsProvider),
+            );
+          }
+          return Center(child: Text('Error: $err'));
+        },
       ),
     );
   }

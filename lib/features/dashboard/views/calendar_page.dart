@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/providers/connectivity_provider.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../events/models/event_model.dart';
@@ -197,21 +198,28 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           );
         },
         loading: () => const Center(child: FlickrLoader()),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-              const SizedBox(height: AppSpacing.md),
-              Text('Error loading calendar events: $err', style: AppTextStyles.bodyLarge),
-              const SizedBox(height: AppSpacing.lg),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(allEventsProvider),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+        error: (err, stack) {
+          if (OfflineStateView.isOfflineError(err)) {
+            return OfflineStateView(
+              onRetry: () => ref.invalidate(allEventsProvider),
+            );
+          }
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+                const SizedBox(height: AppSpacing.md),
+                Text('Error loading calendar events: $err', style: AppTextStyles.bodyLarge),
+                const SizedBox(height: AppSpacing.lg),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(allEventsProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -13,6 +13,7 @@ import '../../academic_structure/providers/term_provider.dart';
 import '../models/schedule_model.dart';
 import '../providers/schedule_provider.dart';
 import '../../../shared/layouts/responsive_layout.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
@@ -240,6 +241,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
   }
 
   Widget _buildErrorState(String message) {
+    if (OfflineStateView.isOfflineError(message)) {
+      return OfflineStateView(
+        onRetry: _handleRefresh,
+      );
+    }
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

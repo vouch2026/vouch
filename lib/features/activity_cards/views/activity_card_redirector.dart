@@ -7,6 +7,7 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../providers/activity_card_provider.dart';
 import 'activity_card_details_page.dart';
 import '../../../routes/route_paths.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class ActivityCardRedirector extends ConsumerWidget {
   const ActivityCardRedirector({super.key});
@@ -64,23 +65,33 @@ class ActivityCardRedirector extends ConsumerWidget {
         title: 'Activity Card',
         child: Center(child: FlickrLoader()),
       ),
-      error: (err, _) => DashboardLayout(
-        title: 'Activity Card',
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error loading activity cards: $err'),
-              TextButton(
-                onPressed: () => ref.refresh(studentActivityCardsProvider),
-                child: const Text('Retry'),
-              ),
-            ],
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return DashboardLayout(
+            title: 'Activity Card',
+            child: OfflineStateView(
+              onRetry: () => ref.refresh(studentActivityCardsProvider),
+            ),
+          );
+        }
+        return DashboardLayout(
+          title: 'Activity Card',
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error loading activity cards: $err'),
+                TextButton(
+                  onPressed: () => ref.refresh(studentActivityCardsProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

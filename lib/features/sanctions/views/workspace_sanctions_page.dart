@@ -18,6 +18,7 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../users/widgets/user_management_header.dart';
 import 'package:vouch_v2/shared/widgets/loading_overlay.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
@@ -463,7 +464,14 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error loading rules: $err')),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return OfflineStateView(
+            onRetry: () => ref.invalidate(sanctionRulesProvider),
+          );
+        }
+        return Center(child: Text('Error loading rules: $err'));
+      },
     );
 
     final sanctionsWidget = sanctionsAsync.when(
@@ -642,7 +650,14 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error loading sanctions: $err')),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return OfflineStateView(
+            onRetry: () => ref.invalidate(workspaceSanctionsProvider),
+          );
+        }
+        return Center(child: Text('Error loading sanctions: $err'));
+      },
     );
 
     return DashboardLayout(

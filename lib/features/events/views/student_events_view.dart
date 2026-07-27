@@ -1,6 +1,7 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -144,7 +145,14 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error: $err')),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return OfflineStateView(
+            onRetry: () => ref.invalidate(workspaceEventsProvider),
+          );
+        }
+        return Center(child: Text('Error: $err'));
+      },
     );
   }
 

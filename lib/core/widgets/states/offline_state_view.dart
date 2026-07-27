@@ -10,6 +10,17 @@ class OfflineStateView extends StatelessWidget {
   final VoidCallback? onGoBack;
   final bool showActionButton;
 
+  static bool isOfflineError(dynamic error) {
+    if (error == null) return false;
+    final errorStr = error.toString().toLowerCase();
+    return errorStr.contains('socketexception') ||
+        errorStr.contains('failed host lookup') ||
+        errorStr.contains('clientexception') ||
+        errorStr.contains('network') ||
+        errorStr.contains('connection') ||
+        errorStr.contains('no address associated with hostname');
+  }
+
   const OfflineStateView({
     super.key,
     this.title = "You're Offline",

@@ -26,7 +26,7 @@ final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) asyn
   final activeRole = ref.watch(workspaceProvider).activeRole;
   if (activeRole == null) return allOrgs;
 
-  final userProfile = ref.watch(userProfileProvider).value;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
   if (userProfile == null) return allOrgs;
 
   final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
@@ -45,7 +45,7 @@ final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) asyn
 });
 
 final userOrganizationsProvider = FutureProvider<List<OrganizationModel>>((ref) async {
-  final userProfile = ref.watch(userProfileProvider).value;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
   if (userProfile == null || userProfile.id == null) return [];
   
   final box = Hive.box('workspaces');
@@ -73,7 +73,7 @@ final userMembershipsProvider = FutureProvider.family<List<UserOrganizationMembe
 });
 
 final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembershipModel?, String>((ref, orgId) async {
-  final userProfile = ref.watch(userProfileProvider).value;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
   if (userProfile == null || userProfile.id == null) return null;
   
   final box = Hive.box('workspaces');
