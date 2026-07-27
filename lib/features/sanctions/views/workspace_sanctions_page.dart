@@ -407,6 +407,22 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
     final rulesAsync = ref.watch(sanctionRulesProvider);
     final maxSanctionScoreAsync = ref.watch(workspaceMandatoryEventsCountProvider);
 
+    final offlineError = [sanctionsAsync.error, rulesAsync.error, maxSanctionScoreAsync.error]
+        .firstWhere((e) => OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: 'Sanctions',
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(workspaceSanctionsProvider);
+            ref.invalidate(sanctionRulesProvider);
+            ref.invalidate(workspaceMandatoryEventsCountProvider);
+          },
+        ),
+      );
+    }
+
     int maxSanctionScore = maxSanctionScoreAsync.value ?? 0;
     int totalRules = rulesAsync.value?.length ?? 0;
     int activeSanctions = sanctionsAsync.value?.where((s) => s.status != 'Item Received').length ?? 0;
