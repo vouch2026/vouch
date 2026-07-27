@@ -7,6 +7,7 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/storage_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 final eventRepositoryProvider = Provider<EventRepository>((ref) {
   return EventRepository(SupabaseConfig.client);
@@ -33,8 +34,26 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
   
   final box = Hive.box('events');
   final cacheKey = 'workspace_events_${org.id}';
+  final cached = box.get(cacheKey);
+
+  // Fast path: if connectivity provider knows we are offline, load cached instantly
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return EventModel.fromJson(jsonMap);
+      }).toList();
+    }
+    return [];
+  }
+
   try {
-    final events = await ref.watch(eventRepositoryProvider).getEventsByScope(scopeType, scopeId);
+    final events = await ref
+        .watch(eventRepositoryProvider)
+        .getEventsByScope(scopeType, scopeId)
+        .timeout(const Duration(seconds: 2));
     final eventsJson = events.map((e) => e.toJson()).toList();
     await box.put(cacheKey, eventsJson);
     for (final e in events) {
@@ -44,7 +63,6 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
     }
     return events;
   } catch (e) {
-    final cached = box.get(cacheKey);
     if (cached != null) {
       final cachedList = List<dynamic>.from(cached as List);
       return cachedList.map((json) {
