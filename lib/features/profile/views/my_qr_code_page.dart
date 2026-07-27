@@ -440,6 +440,8 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
     IconData? fallbackIcon,
     double size = 48.0,
   }) {
+    final cachedImageProvider = OfflineImageCache.get(logoUrl);
+
     return Container(
       width: size,
       height: size,
@@ -456,9 +458,9 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
         ],
       ),
       child: ClipOval(
-        child: logoUrl != null && logoUrl.isNotEmpty
-            ? Image.network(
-                logoUrl,
+        child: cachedImageProvider != null
+            ? Image(
+                image: cachedImageProvider,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(
                   fallbackIcon ?? LucideIcons.image,
