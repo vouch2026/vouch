@@ -7,6 +7,8 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/widgets/details/organization_settings_panel.dart';
 
+import '../../../core/widgets/states/offline_state_view.dart';
+
 class GovernorSettingsPage extends ConsumerWidget {
   const GovernorSettingsPage({super.key});
 
@@ -51,7 +53,14 @@ class GovernorSettingsPage extends ConsumerWidget {
                       return OrganizationSettingsPanel(org: org);
                     },
                     loading: () => const Center(child: FlickrLoader()),
-                    error: (error, stack) => Center(child: Text('Error: $error')),
+                    error: (error, stack) {
+                      if (OfflineStateView.isOfflineError(error)) {
+                        return OfflineStateView(
+                          onRetry: () => ref.invalidate(organizationProvider(selectedOrg.id)),
+                        );
+                      }
+                      return Center(child: Text('Error: $error'));
+                    },
                   ),
     );
   }
