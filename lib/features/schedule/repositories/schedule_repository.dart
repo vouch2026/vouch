@@ -16,11 +16,10 @@ class ScheduleRepository {
     if (kIsWeb) return true;
     try {
       final host = Uri.parse(_client.rest.url).host;
-      final result = await InternetAddress.lookup(host).timeout(const Duration(seconds: 3));
+      final result = await InternetAddress.lookup(host).timeout(const Duration(milliseconds: 800));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (_) {
-      // Fallback: let actual Supabase requests run and fail gracefully via try-catch
-      return true;
+      return false;
     }
   }
 
@@ -144,7 +143,8 @@ class ScheduleRepository {
             .from('subject_schedules')
             .select()
             .eq('user_id', userId)
-            .eq('academic_term_id', academicTermId);
+            .eq('academic_term_id', academicTermId)
+            .timeout(const Duration(seconds: 3));
         return (response as List).map((json) {
           final map = Map<String, dynamic>.from(json);
           if (map['days'] != null) {
@@ -157,14 +157,23 @@ class ScheduleRepository {
         return [];
       }
     } else {
-      // Mobile: Offline first
-      await syncSchedules(academicTermId); // Try to sync first if online
+      // Mobile: Offline first, load instantly from Hive and sync in the background
+      _triggerBackgroundSync(academicTermId);
       
       return _box.values
           .map((v) => ScheduleModel.fromJson(Map<String, dynamic>.from(v as Map)))
           .where((s) => s.academicTermId == academicTermId && s.syncStatus != 'to_delete')
           .toList();
     }
+  }
+
+  void _triggerBackgroundSync(String academicTermId) {
+    Future.microtask(() async {
+      final online = await _isOnline();
+      if (online) {
+        await syncSchedules(academicTermId);
+      }
+    });
   }
 
   // Create schedule

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/providers/connectivity_provider.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../events/models/event_model.dart';
@@ -19,9 +20,14 @@ import '../../../core/utils/time_formatter.dart';
 final scopeNamesProvider = FutureProvider<Map<String, String>>((ref) async {
   final Map<String, String> map = {};
   
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    return map;
+  }
+  
   // Load organizations
   try {
-    final orgs = await ref.read(organizationsProvider.future);
+    final orgs = await ref.read(organizationsProvider.future).timeout(const Duration(seconds: 1));
     for (final org in orgs) {
       map[org.id] = org.code;
       
@@ -38,7 +44,7 @@ final scopeNamesProvider = FutureProvider<Map<String, String>>((ref) async {
 
   // Load campuses as fallback
   try {
-    final campuses = await ref.read(campusesProvider.future);
+    final campuses = await ref.read(campusesProvider.future).timeout(const Duration(seconds: 1));
     for (final campus in campuses) {
       if (!map.containsKey(campus.id)) {
         map[campus.id] = campus.name;
@@ -48,7 +54,7 @@ final scopeNamesProvider = FutureProvider<Map<String, String>>((ref) async {
 
   // Load faculties as fallback
   try {
-    final faculties = await ref.read(facultiesProvider.future);
+    final faculties = await ref.read(facultiesProvider.future).timeout(const Duration(seconds: 1));
     for (final faculty in faculties) {
       if (!map.containsKey(faculty.id)) {
         map[faculty.id] = faculty.name;
@@ -58,7 +64,7 @@ final scopeNamesProvider = FutureProvider<Map<String, String>>((ref) async {
 
   // Load programs as fallback
   try {
-    final programs = await ref.read(programsProvider.future);
+    final programs = await ref.read(programsProvider.future).timeout(const Duration(seconds: 1));
     for (final program in programs) {
       if (!map.containsKey(program.id)) {
         map[program.id] = program.name;

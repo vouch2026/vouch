@@ -75,7 +75,41 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
 });
 
 final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
-  return ref.watch(eventRepositoryProvider).getAllEvents();
+  final box = Hive.box('events');
+  const cacheKey = 'all_events';
+  final cached = box.get(cacheKey);
+
+  // Fast path: if connectivity provider knows we are offline, load cached instantly
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return EventModel.fromJson(jsonMap);
+      }).toList();
+    }
+    return [];
+  }
+
+  try {
+    final events = await ref
+        .watch(eventRepositoryProvider)
+        .getAllEvents()
+        .timeout(const Duration(seconds: 2));
+    final eventsJson = events.map((e) => e.toJson()).toList();
+    await box.put(cacheKey, eventsJson);
+    return events;
+  } catch (e) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return EventModel.fromJson(jsonMap);
+      }).toList();
+    }
+    rethrow;
+  }
 });
 
 final eventProvider = FutureProvider.family<EventModel?, String>((ref, id) async {
