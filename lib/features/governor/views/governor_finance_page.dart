@@ -17,8 +17,9 @@ import '../widgets/governor_receiver_card.dart';
 import '../widgets/governor_submission_card.dart';
 import 'governor_add_receiver_page.dart';
 import 'governor_create_fee_page.dart';
-import '../../finance/views/student_proof_of_payment_page.dart';
 import '../../finance/models/payment_receiver_model.dart';
+import '../../finance/views/student_proof_of_payment_page.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class GovernorFinancePage extends ConsumerStatefulWidget {
   const GovernorFinancePage({super.key});
@@ -75,6 +76,25 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
     final receiversAsync = ref.watch(paymentReceiversProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final feesAsync = ref.watch(workspaceFeesProvider);
+
+    final offlineError = [
+      receiversAsync.error,
+      submissionsAsync.error,
+      feesAsync.error,
+    ].firstWhere((e) => e != null && OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: 'Organization Finance',
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(paymentReceiversProvider);
+            ref.invalidate(workspaceStudentPaymentsProvider);
+            ref.invalidate(workspaceFeesProvider);
+          },
+        ),
+      );
+    }
 
     return DashboardLayout(
       title: 'Organization Finance',
@@ -884,6 +904,24 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
     final feesAsync = ref.watch(workspaceFeesProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final userProfile = ref.watch(userProfileProvider).value;
+
+    final offlineError = [
+      feesAsync.error,
+      submissionsAsync.error,
+    ].firstWhere((e) => e != null && OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: 'My Fees & Payments',
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(workspaceFeesProvider);
+            ref.invalidate(workspaceStudentPaymentsProvider);
+            ref.invalidate(paymentReceiversProvider);
+          },
+        ),
+      );
+    }
 
     return DashboardLayout(
       title: 'My Fees & Payments',
