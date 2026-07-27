@@ -16,7 +16,39 @@ final userEventAttendanceProvider = FutureProvider.family<AttendanceModel?, Stri
   final user = ref.watch(userProfileProvider).value;
   if (user == null || user.id == null) return null;
   
-  return ref.watch(attendanceRepositoryProvider).getUserAttendanceForEvent(eventId, user.id!);
+  final box = Hive.box('my_scans');
+  final cacheKey = 'event_attendance_${user.id}_$eventId';
+  final cached = box.get(cacheKey);
+
+  // Fast path: if connectivity provider knows we are offline, load cached instantly
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return AttendanceModel.fromJson(jsonMap);
+    }
+    return null;
+  }
+
+  try {
+    final attendance = await ref
+        .watch(attendanceRepositoryProvider)
+        .getUserAttendanceForEvent(eventId, user.id!)
+        .timeout(const Duration(seconds: 2));
+    
+    if (attendance != null) {
+      await box.put(cacheKey, attendance.toJson());
+    } else {
+      await box.delete(cacheKey);
+    }
+    return attendance;
+  } catch (e) {
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return AttendanceModel.fromJson(jsonMap);
+    }
+    return null;
+  }
 });
 
 final userAttendanceHistoryProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, studentId) async {
