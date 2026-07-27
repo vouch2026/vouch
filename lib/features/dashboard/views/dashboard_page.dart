@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
+import '../../../core/config/supabase_config.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -76,15 +79,138 @@ class DashboardPage extends ConsumerWidget {
       },
       loading: () => const Scaffold(body: Center(child: FlickrLoader())),
       error: (err, _) {
+        // If offline, try to serve the dashboard from Hive cache
         if (OfflineStateView.isOfflineError(err)) {
-          return Scaffold(
-            body: OfflineStateView(
-              onRetry: () => ref.invalidate(userProfileProvider),
-            ),
-          );
+          return _buildOfflineFallback(context, ref, activeTermAsync.valueOrNull);
         }
         return Scaffold(body: Center(child: Text('Error: $err')));
       },
+    );
+  }
+
+  /// Renders the full dashboard UI from Hive cache when offline.
+  Widget _buildOfflineFallback(BuildContext context, WidgetRef ref, dynamic activeTerm) {
+    // Try to load cached user profile
+    UserModel? cachedProfile;
+    try {
+      final authId = SupabaseConfig.client.auth.currentUser?.id;
+      if (authId != null) {
+        final box = Hive.box('profile');
+        final cached = box.get(authId);
+        if (cached != null) {
+          final jsonMap = Map<String, dynamic>.from(cached as Map);
+          cachedProfile = UserModel.fromJson(jsonMap);
+        }
+      }
+    } catch (_) {}
+
+    // Try to load cached active term if not already resolved
+    dynamic resolvedTerm = activeTerm;
+    if (resolvedTerm == null) {
+      try {
+        final settingsBox = Hive.box('settings');
+        final cachedTerm = settingsBox.get('active_academic_term');
+        if (cachedTerm != null) {
+          // We pass the raw map; the UI uses activeTerm?.academicYear etc.
+          resolvedTerm = cachedTerm;
+        }
+      } catch (_) {}
+    }
+
+    if (cachedProfile == null) {
+      // No profile cache at all – show offline widget
+      return Scaffold(
+        body: OfflineStateView(
+          onRetry: () => ref.invalidate(userProfileProvider),
+        ),
+      );
+    }
+
+    final isSuperAdmin = cachedProfile.role == 'super_admin';
+
+    return DashboardLayout(
+      key: ValueKey(isSuperAdmin ? 'admin' : 'global'),
+      title: 'Home',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double parentWidth = constraints.maxWidth;
+          final double paddingValue = parentWidth >= 1024 ? AppSpacing.xl : AppSpacing.lg;
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.all(paddingValue),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Offline indicator banner
+                  _buildOfflineBanner(),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Welcome Banner
+                  _buildWelcomeBanner(context, cachedProfile, parentWidth, resolvedTerm),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Section Header
+                  Text(
+                    'Personal Hub',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(
+                    height: 2,
+                    width: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Shortcut Hub Grid
+                  _buildShortcutGrid(context, parentWidth),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 16),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'You\'re offline. Showing cached content.',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.orange.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
