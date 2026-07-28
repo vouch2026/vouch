@@ -10,6 +10,8 @@ import '../../models/organization_model.dart';
 import '../../providers/workspace_provider.dart';
 import '../../controllers/organization_controller.dart';
 import '../../../../core/widgets/loaders/flickr_loader.dart';
+import '../../../../core/utils/offline_image_cache.dart';
+import '../../../../core/providers/connectivity_provider.dart';
 
 class OrganizationSettingsPanel extends ConsumerWidget {
   final OrganizationModel org;
@@ -416,7 +418,8 @@ class OrganizationSettingsPanel extends ConsumerWidget {
     final isSecretaryOrTreasurer = activeRole?.roleName == 'Secretary' ||
         activeRole?.roleName == 'Treasurer';
 
-    final canEdit = isGovernor;
+    final isOffline = ref.watch(connectivityProvider).value == false;
+    final canEdit = isGovernor && !isOffline;
     final now = DateTime.now();
     final hasClearanceStarted = activeOrg.clearancePeriodStart != null && now.isAfter(activeOrg.clearancePeriodStart!);
     final orgState = ref.watch(organizationControllerProvider);
@@ -631,8 +634,8 @@ class OrganizationSettingsPanel extends ConsumerWidget {
               width: double.infinity,
               color: AppColors.primary,
               child: org.bannerUrl != null && org.bannerUrl!.isNotEmpty
-                  ? Image.network(
-                      org.bannerUrl!,
+                  ? Image(
+                      image: OfflineImageCache.get(org.bannerUrl)!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => const Opacity(
                         opacity: 0.1,
@@ -687,7 +690,7 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                         radius: 50,
                         backgroundColor: AppColors.primary,
                         backgroundImage: org.logoUrl != null && org.logoUrl!.isNotEmpty
-                            ? NetworkImage(org.logoUrl!)
+                            ? OfflineImageCache.get(org.logoUrl)
                             : null,
                         child: org.logoUrl == null || org.logoUrl!.isEmpty
                             ? const Icon(LucideIcons.building, color: Colors.white, size: 40)

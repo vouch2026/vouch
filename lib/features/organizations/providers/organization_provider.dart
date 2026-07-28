@@ -96,8 +96,34 @@ final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembership
 });
 
 final organizationProvider = FutureProvider.family<OrganizationModel?, String>((ref, id) async {
-  return ref.watch(organizationRepositoryProvider).getOrganizationById(id);
+  final box = Hive.box('workspaces');
+  final cacheKey = 'organization_$id';
+  final cached = box.get(cacheKey);
+
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return OrganizationModel.fromJson(jsonMap);
+    }
+    return null;
+  }
+
+  try {
+    final org = await ref.watch(organizationRepositoryProvider).getOrganizationById(id);
+    if (org != null) {
+      await box.put(cacheKey, org.toJson());
+    }
+    return org;
+  } catch (e) {
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return OrganizationModel.fromJson(jsonMap);
+    }
+    rethrow;
+  }
 });
+
 
 final organizationMembersProvider = FutureProvider.family<List<UserModel>, String>((ref, orgId) async {
   final box = Hive.box('dashboard');

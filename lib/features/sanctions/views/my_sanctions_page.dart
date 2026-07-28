@@ -20,7 +20,12 @@ class MySanctionsPage extends ConsumerWidget {
     return DashboardLayout(
       title: 'My Sanctions',
       child: RefreshIndicator(
-        onRefresh: () => ref.refresh(mySanctionsProvider.future),
+        onRefresh: () async {
+          try {
+            await ref.refresh(mySanctionsProvider.future);
+            await ref.refresh(sanctionRulesProvider.future);
+          } catch (_) {}
+        },
         child: sanctionsAsync.when(
           data: (sanctions) {
             if (sanctions.isEmpty) {
