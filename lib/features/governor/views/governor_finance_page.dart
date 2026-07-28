@@ -112,7 +112,15 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
               child: const Icon(Icons.add_rounded, size: 28),
             )
           : null,
-      child: NestedScrollView(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          try {
+            await ref.refresh(paymentReceiversProvider.future);
+            await ref.refresh(workspaceStudentPaymentsProvider.future);
+            await ref.refresh(workspaceFeesProvider.future);
+          } catch (_) {}
+        },
+        child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(
             child: Column(
@@ -342,7 +350,8 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
-    );
+    ),
+  );
 }
 
   Widget _buildSearchField() {

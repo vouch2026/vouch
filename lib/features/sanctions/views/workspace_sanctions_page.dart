@@ -680,10 +680,19 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
       title: 'Sanctions',
       child: LoadingOverlay(
         isLoading: _isSyncing,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(padding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            try {
+              await ref.refresh(workspaceSanctionsProvider.future);
+              await ref.refresh(sanctionRulesProvider.future);
+              await ref.refresh(workspaceMandatoryEventsCountProvider.future);
+            } catch (_) {}
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(padding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -812,8 +821,9 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _StatusBadge extends StatelessWidget {

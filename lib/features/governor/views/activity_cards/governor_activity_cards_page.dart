@@ -77,9 +77,15 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
 
     return DashboardLayout(
       title: 'Organization Activity Cards',
-      child: Padding(
-        padding: padding,
-        child: NestedScrollView(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          try {
+            await ref.refresh(organizationActivityCardsProvider.future);
+          } catch (_) {}
+        },
+        child: Padding(
+          padding: padding,
+          child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             SliverToBoxAdapter(
               child: Column(
@@ -268,8 +274,9 @@ class _GovernorActivityCardsPageState extends ConsumerState<GovernorActivityCard
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildClearanceList(BuildContext context, List<ActivityCard> cards, String? orgType) {
     return Column(

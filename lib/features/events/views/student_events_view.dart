@@ -68,12 +68,18 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
           return b.timeOutEnd.compareTo(a.timeOutEnd);
         });
         
-        return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
-            vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
-          ),
-          child: NestedScrollView(
+        return RefreshIndicator(
+          onRefresh: () async {
+            try {
+              await ref.refresh(workspaceEventsProvider.future);
+            } catch (_) {}
+          },
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+              vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+            ),
+            child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
               SliverToBoxAdapter(
                 child: Column(
@@ -142,7 +148,8 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
               ],
             ),
           ),
-        );
+        ),
+      );
       },
       loading: () => const Center(child: FlickrLoader()),
       error: (err, _) {

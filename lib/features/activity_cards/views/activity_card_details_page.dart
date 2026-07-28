@@ -310,8 +310,15 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                 return Stack(
                   children: [
                     Positioned.fill(child: _buildBackgroundDecorations()),
-                    SingleChildScrollView(
-                      child: Column(
+                    RefreshIndicator(
+                      onRefresh: () async {
+                        try {
+                          await ref.refresh(studentActivityCardsProvider.future);
+                        } catch (_) {}
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (isLocked) ...[
@@ -528,7 +535,8 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                         ],
                       ),
                     ),
-                  ],
+                  ),
+                ],
                 );
               },
               loading: () => const Center(child: FlickrLoader()),

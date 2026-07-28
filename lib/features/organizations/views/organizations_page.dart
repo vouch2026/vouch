@@ -817,8 +817,18 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
 
     return DashboardLayout(
       title: 'Organizations',
-      child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(vertical: isMobile ? 16.0 : 24.0),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          try {
+            await ref.refresh(organizationsProvider.future);
+            await ref.refresh(campusesProvider.future);
+            await ref.refresh(facultiesProvider.future);
+            await ref.refresh(programsProvider.future);
+          } catch (_) {}
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1254,8 +1264,9 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPaginationFooter(int totalItems, int currentPage, int rowsPerPage) {
     final totalPages = (totalItems / rowsPerPage).ceil();

@@ -96,8 +96,15 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
               child: const Icon(Icons.add_rounded, size: 28),
             )
           : null,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(padding),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          try {
+            await ref.refresh(workspaceFeesProvider.future);
+          } catch (_) {}
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -446,8 +453,9 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatCard({
     required String title,
