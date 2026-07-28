@@ -112,15 +112,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
               child: const Icon(Icons.add_rounded, size: 28),
             )
           : null,
-      child: RefreshIndicator(
-        onRefresh: () async {
-          try {
-            await ref.refresh(paymentReceiversProvider.future);
-            await ref.refresh(workspaceStudentPaymentsProvider.future);
-            await ref.refresh(workspaceFeesProvider.future);
-          } catch (_) {}
-        },
-        child: NestedScrollView(
+      child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(
             child: Column(
@@ -350,9 +342,8 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSearchField() {
     return TextField(
@@ -486,9 +477,11 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
       return matchesStatus && matchesQuery && matchesFee && matchesPaymentMethod;
     }).toList();
 
+    Widget content;
     if (filtered.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
+      content = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -515,52 +508,64 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           ),
         ),
       );
-    }
+    } else {
+      final totalItems = filtered.length;
+      final totalPages = (totalItems / _rowsPerPage).ceil();
+      final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
 
-    final totalItems = filtered.length;
-    final totalPages = (totalItems / _rowsPerPage).ceil();
-    final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+      final startIndex = safePage * _rowsPerPage;
+      final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
+      final paginated = filtered.sublist(startIndex, endIndex);
 
-    final startIndex = safePage * _rowsPerPage;
-    final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
-    final paginated = filtered.sublist(startIndex, endIndex);
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 1;
+          if (constraints.maxWidth > 1400) {
+            crossAxisCount = 4;
+          } else if (constraints.maxWidth > 1000) {
+            crossAxisCount = 3;
+          } else if (constraints.maxWidth > 700) {
+            crossAxisCount = 2;
+          }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = 1;
-        if (constraints.maxWidth > 1400) {
-          crossAxisCount = 4;
-        } else if (constraints.maxWidth > 1000) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth > 700) {
-          crossAxisCount = 2;
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: AppSpacing.lg,
-                  mainAxisSpacing: AppSpacing.lg,
-                  mainAxisExtent: 300,
-                ),
-                itemCount: paginated.length,
-                itemBuilder: (context, index) => GovernorSubmissionCard(
-                  submission: paginated[index],
-                  onApprove: () => _updateStatus(paginated[index].id!, 'Paid'),
-                  onReject: () => _showRejectDialog(paginated[index].id!),
-                  onViewReceipt: () => _showReceiptPreview(context, paginated[index]),
+          return Column(
+            children: [
+              Expanded(
+                child: GridView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: AppSpacing.lg,
+                    mainAxisSpacing: AppSpacing.lg,
+                    mainAxisExtent: 300,
+                  ),
+                  itemCount: paginated.length,
+                  itemBuilder: (context, index) => GovernorSubmissionCard(
+                    submission: paginated[index],
+                    onApprove: () => _updateStatus(paginated[index].id!, 'Paid'),
+                    onReject: () => _showRejectDialog(paginated[index].id!),
+                    onViewReceipt: () => _showReceiptPreview(context, paginated[index]),
+                  ),
                 ),
               ),
-            ),
-            _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
-            const SizedBox(height: AppSpacing.md),
-          ],
-        );
+              _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          );
+        },
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        try {
+          await ref.refresh(paymentReceiversProvider.future);
+          await ref.refresh(workspaceStudentPaymentsProvider.future);
+          await ref.refresh(workspaceFeesProvider.future);
+        } catch (_) {}
       },
+      child: content,
     );
   }
 
