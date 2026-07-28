@@ -105,19 +105,13 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
             return b.timeOutEnd.compareTo(a.timeOutEnd);
           });
           
-          return RefreshIndicator(
-            onRefresh: () async {
-              try {
-                await ref.refresh(workspaceEventsProvider.future);
-              } catch (_) {}
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
-                vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
-              ),
-              child: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
+              vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+            ),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
                   SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,9 +183,8 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                   ],
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
         loading: () => const Center(child: FlickrLoader()),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
@@ -199,52 +192,62 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
   }
 
   Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder, {required double mainAxisExtent}) {
+    Widget content;
     if (events.isEmpty) {
-      return SingleChildScrollView(
+      content = const SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 64),
+            padding: EdgeInsets.symmetric(vertical: 64),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.calendar_today_outlined, size: 48, color: Colors.grey[400]),
-                const SizedBox(height: AppSpacing.md),
+                Icon(Icons.calendar_today_outlined, size: 48, color: Colors.grey),
+                SizedBox(height: AppSpacing.md),
                 Text(
                   'No events found',
-                  style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
           ),
         ),
       );
-    }
-    
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate dynamic cross axis count matching student_events_view.dart
-        int crossAxisCount = 1;
-        if (constraints.maxWidth > 1200) {
-          crossAxisCount = 4;
-        } else if (constraints.maxWidth > 900) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth > 600) {
-          crossAxisCount = 2;
-        }
+    } else {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 1;
+          if (constraints.maxWidth > 1200) {
+            crossAxisCount = 4;
+          } else if (constraints.maxWidth > 900) {
+            crossAxisCount = 3;
+          } else if (constraints.maxWidth > 600) {
+            crossAxisCount = 2;
+          }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.lg,
-            mainAxisSpacing: AppSpacing.lg,
-            // Dynamic aspect ratio based on width to keep card heights reasonable
-            mainAxisExtent: mainAxisExtent, 
-          ),
-          itemCount: events.length,
-          itemBuilder: (context, index) => builder(events[index]),
-        );
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: AppSpacing.lg,
+              mainAxisSpacing: AppSpacing.lg,
+              mainAxisExtent: mainAxisExtent, 
+            ),
+            itemCount: events.length,
+            itemBuilder: (context, index) => builder(events[index]),
+          );
+        },
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        try {
+          await ref.refresh(workspaceEventsProvider.future);
+        } catch (_) {}
       },
+      child: content,
     );
   }
 }
