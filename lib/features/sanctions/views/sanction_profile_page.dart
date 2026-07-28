@@ -101,8 +101,10 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    runSpacing: 4,
                     children: [
                       Text(
                         value,
@@ -111,10 +113,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                           color: color,
                         ),
                       ),
-                      if (suffix != null) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        suffix,
-                      ],
+                      if (suffix != null) suffix,
                     ],
                   ),
                 ],
@@ -213,7 +212,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
       final Color badgeColor;
 
       if (isRulesNotSet) {
-        statusLabel = 'RULES NOT SET';
+        statusLabel = 'NOT SET';
         badgeColor = AppColors.textGrey;
       } else {
         statusLabel = isComplied ? 'CLEARED' : 'PENDING';
@@ -221,7 +220,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
       }
 
       statusBadge = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
         decoration: BoxDecoration(
           color: badgeColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
@@ -232,7 +231,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
           style: AppTextStyles.labelSmall.copyWith(
             color: badgeColor,
             fontWeight: FontWeight.bold,
-            fontSize: 9,
+            fontSize: 8,
             letterSpacing: 0.5,
           ),
         ),

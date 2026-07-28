@@ -162,6 +162,7 @@ class _MyExcuseRequestsPageState extends ConsumerState<MyExcuseRequestsPage> {
                                 requests.isEmpty 
                                   ? 'You have not submitted any excuse requests yet' 
                                   : 'No excuse requests match your filters',
+                                textAlign: TextAlign.center,
                                 style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
                               ),
                               if (requests.isNotEmpty)
