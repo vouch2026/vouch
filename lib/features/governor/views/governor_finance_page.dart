@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../shared/layouts/responsive_layout.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../finance/models/fee_model.dart';
@@ -71,6 +72,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
 
     final allowedRoles = {'Treasurer', 'President', 'Vice President', 'Governor', 'Vice Governor'};
     final canCreateFee = activeRole != null && allowedRoles.contains(activeRole.roleName);
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     final theme = Theme.of(context);
     final receiversAsync = ref.watch(paymentReceiversProvider);
@@ -98,6 +100,18 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
 
     return DashboardLayout(
       title: 'Organization Finance',
+      floatingActionButton: (canCreateFee && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateFeePage())),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(
@@ -126,7 +140,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                     title: 'Finance & Collections',
                     subtitle: 'Manage fees, verify student payments, and track organization funds',
                     actions: [
-                      if (canCreateFee)
+                      if (canCreateFee && !isMobile)
                         HeaderActionButton(
                           icon: Icons.add_card_rounded,
                           label: 'Create Fee',

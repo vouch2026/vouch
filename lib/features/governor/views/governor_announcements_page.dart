@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../shared/layouts/responsive_layout.dart';
 import '../../../routes/route_paths.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../announcements/models/announcement_model.dart';
@@ -46,9 +47,22 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
     final org = workspace.selectedOrganization;
     final activeRole = workspace.activeRole?.roleName;
     final canPost = activeRole != 'Student' && activeRole != 'Member';
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     return DashboardLayout(
       title: 'Organization Announcements',
+      floatingActionButton: (canPost && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => context.push(RoutePaths.workspaceCreateAnnouncement),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: announcementsAsync.when(
         data: (announcements) {
           final query = _searchController.text.toLowerCase();
@@ -61,7 +75,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 768;
+              final isMobileGrid = constraints.maxWidth < 768;
               int crossAxisCount = 1;
               if (constraints.maxWidth > 1200) {
                 crossAxisCount = 4;
@@ -76,8 +90,8 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
-                    vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                    horizontal: isMobileGrid ? AppSpacing.lg : AppSpacing.xl,
+                    vertical: isMobileGrid ? AppSpacing.lg : AppSpacing.xl,
                   ),
                   children: [
                     Row(
@@ -98,7 +112,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                       title: 'Announcements',
                       subtitle: 'Broadcast important updates and news to your members',
                       actions: [
-                        if (canPost)
+                        if (canPost && !isMobile)
                           HeaderActionButton(
                             icon: Icons.add_comment_rounded,
                             label: 'Post Announcement',

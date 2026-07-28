@@ -84,6 +84,18 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
               }
             }
           : null,
+      floatingActionButton: (canCreateFee && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => _navigateToCreate(context),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: SingleChildScrollView(
         padding: EdgeInsets.all(padding),
         child: Column(
@@ -140,7 +152,7 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
               title: widget.title,
               subtitle: widget.subtitle,
               actions: [
-                if (canCreateFee)
+                if (canCreateFee && !isMobile)
                   HeaderActionButton(
                     icon: Icons.add_rounded,
                     label: 'Create Fee',

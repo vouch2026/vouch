@@ -64,6 +64,18 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
 
     return DashboardLayout(
       title: 'Organization Events',
+      floatingActionButton: (canCreateEvent && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => context.push(RoutePaths.workspaceCreateEvent),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: eventsAsync.when(
         data: (events) {
           final now = DateTime.now();
@@ -122,7 +134,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                         title: 'Events',
                         subtitle: 'Manage organization events, attendance, and feedback',
                         actions: [
-                          if (canCreateEvent)
+                          if (canCreateEvent && !isMobile)
                             HeaderActionButton(
                               icon: Icons.add_rounded,
                               label: 'Create Event',
