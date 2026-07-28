@@ -18,6 +18,7 @@ import '../providers/clearance_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../../core/utils/role_mapper.dart';
+import '../../../../core/widgets/states/offline_state_view.dart';
 
 class ActivityCardDetailsPage extends ConsumerStatefulWidget {
   final String id;
@@ -309,8 +310,15 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                 return Stack(
                   children: [
                     Positioned.fill(child: _buildBackgroundDecorations()),
-                    SingleChildScrollView(
-                      child: Column(
+                    RefreshIndicator(
+                      onRefresh: () async {
+                        try {
+                          await ref.refresh(studentActivityCardsProvider.future);
+                        } catch (_) {}
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (isLocked) ...[
@@ -527,15 +535,30 @@ class _ActivityCardDetailsPageState extends ConsumerState<ActivityCardDetailsPag
                         ],
                       ),
                     ),
-                  ],
+                  ),
+                ],
                 );
               },
               loading: () => const Center(child: FlickrLoader()),
-              error: (err, _) => Center(child: Text('Error loading student info: $err')),
+              error: (err, _) {
+                if (OfflineStateView.isOfflineError(err)) {
+                  return OfflineStateView(
+                    onRetry: () => ref.invalidate(userProfileByIdProvider(activityCard.studentId)),
+                  );
+                }
+                return Center(child: Text('Error loading student info: $err'));
+              },
             );
           },
           loading: () => const Center(child: FlickrLoader()),
-          error: (err, _) => Center(child: Text('Error: $err')),
+          error: (err, _) {
+            if (OfflineStateView.isOfflineError(err)) {
+              return OfflineStateView(
+                onRetry: () => ref.invalidate(activityCardDetailsProvider(widget.id)),
+              );
+            }
+            return Center(child: Text('Error: $err'));
+          },
         ),
       ),
     );

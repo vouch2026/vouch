@@ -14,6 +14,7 @@ import '../providers/excuse_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../../../core/widgets/states/offline_state_view.dart';
 
 class WorkspaceExcuseRequestsPage extends ConsumerStatefulWidget {
   const WorkspaceExcuseRequestsPage({super.key});
@@ -191,7 +192,14 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
           );
         },
         loading: () => const Center(child: FlickrLoader()),
-        error: (err, _) => Center(child: Text('Error loading requests: $err', style: const TextStyle(color: Colors.red))),
+        error: (err, _) {
+          if (OfflineStateView.isOfflineError(err)) {
+            return OfflineStateView(
+              onRetry: () => ref.invalidate(workspaceExcuseRequestsProvider),
+            );
+          }
+          return Center(child: Text('Error loading requests: $err', style: const TextStyle(color: Colors.red)));
+        },
       ),
     );
   }

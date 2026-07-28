@@ -18,6 +18,7 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../users/widgets/user_management_header.dart';
 import 'package:vouch_v2/shared/widgets/loading_overlay.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
@@ -406,6 +407,22 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
     final rulesAsync = ref.watch(sanctionRulesProvider);
     final maxSanctionScoreAsync = ref.watch(workspaceMandatoryEventsCountProvider);
 
+    final offlineError = [sanctionsAsync.error, rulesAsync.error, maxSanctionScoreAsync.error]
+        .firstWhere((e) => OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: 'Sanctions',
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(workspaceSanctionsProvider);
+            ref.invalidate(sanctionRulesProvider);
+            ref.invalidate(workspaceMandatoryEventsCountProvider);
+          },
+        ),
+      );
+    }
+
     int maxSanctionScore = maxSanctionScoreAsync.value ?? 0;
     int totalRules = rulesAsync.value?.length ?? 0;
     int activeSanctions = sanctionsAsync.value?.where((s) => s.status != 'Item Received').length ?? 0;
@@ -463,7 +480,14 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error loading rules: $err')),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return OfflineStateView(
+            onRetry: () => ref.invalidate(sanctionRulesProvider),
+          );
+        }
+        return Center(child: Text('Error loading rules: $err'));
+      },
     );
 
     final sanctionsWidget = sanctionsAsync.when(
@@ -642,17 +666,33 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error loading sanctions: $err')),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return OfflineStateView(
+            onRetry: () => ref.invalidate(workspaceSanctionsProvider),
+          );
+        }
+        return Center(child: Text('Error loading sanctions: $err'));
+      },
     );
 
     return DashboardLayout(
       title: 'Sanctions',
       child: LoadingOverlay(
         isLoading: _isSyncing,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(padding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            try {
+              await ref.refresh(workspaceSanctionsProvider.future);
+              await ref.refresh(sanctionRulesProvider.future);
+              await ref.refresh(workspaceMandatoryEventsCountProvider.future);
+            } catch (_) {}
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(padding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -781,8 +821,9 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _StatusBadge extends StatelessWidget {

@@ -11,6 +11,7 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/sanction_provider.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class SanctionProfilePage extends ConsumerStatefulWidget {
   final String studentId;
@@ -100,8 +101,10 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    runSpacing: 4,
                     children: [
                       Text(
                         value,
@@ -110,10 +113,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                           color: color,
                         ),
                       ),
-                      if (suffix != null) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        suffix,
-                      ],
+                      if (suffix != null) suffix,
                     ],
                   ),
                 ],
@@ -132,7 +132,32 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     final attendanceAsync = ref.watch(studentSanctionsAttendanceProvider(widget.studentId));
     final recordAsync = ref.watch(studentSanctionRecordProvider(widget.studentId));
     final rulesAsync = ref.watch(sanctionRulesProvider);
-    final currentUser = ref.watch(userProfileProvider).value;
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final currentUser = userProfileAsync.value;
+
+    final offlineError = [
+      profileAsync.error,
+      attendanceAsync.error,
+      recordAsync.error,
+      rulesAsync.error,
+      userProfileAsync.error,
+    ].firstWhere((e) => OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: widget.isPersonalView ? 'My Sanctions' : 'Student Sanction Profile',
+        onBack: widget.isPersonalView ? null : () => context.pop(),
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(userProfileByIdProvider(widget.studentId));
+            ref.invalidate(studentSanctionsAttendanceProvider(widget.studentId));
+            ref.invalidate(studentSanctionRecordProvider(widget.studentId));
+            ref.invalidate(sanctionRulesProvider);
+            ref.invalidate(userProfileProvider);
+          },
+        ),
+      );
+    }
 
     final activeRole = ref.watch(workspaceProvider).activeRole;
     final canManageSanctions = activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false;
@@ -187,7 +212,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
       final Color badgeColor;
 
       if (isRulesNotSet) {
-        statusLabel = 'RULES NOT SET';
+        statusLabel = 'NOT SET';
         badgeColor = AppColors.textGrey;
       } else {
         statusLabel = isComplied ? 'CLEARED' : 'PENDING';
@@ -195,7 +220,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
       }
 
       statusBadge = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
         decoration: BoxDecoration(
           color: badgeColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
@@ -206,7 +231,7 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
           style: AppTextStyles.labelSmall.copyWith(
             color: badgeColor,
             fontWeight: FontWeight.bold,
-            fontSize: 9,
+            fontSize: 8,
             letterSpacing: 0.5,
           ),
         ),

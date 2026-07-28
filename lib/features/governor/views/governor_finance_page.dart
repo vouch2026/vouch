@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../shared/layouts/responsive_layout.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../finance/models/fee_model.dart';
@@ -17,8 +18,9 @@ import '../widgets/governor_receiver_card.dart';
 import '../widgets/governor_submission_card.dart';
 import 'governor_add_receiver_page.dart';
 import 'governor_create_fee_page.dart';
-import '../../finance/views/student_proof_of_payment_page.dart';
 import '../../finance/models/payment_receiver_model.dart';
+import '../../finance/views/student_proof_of_payment_page.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class GovernorFinancePage extends ConsumerStatefulWidget {
   const GovernorFinancePage({super.key});
@@ -70,14 +72,46 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
 
     final allowedRoles = {'Treasurer', 'President', 'Vice President', 'Governor', 'Vice Governor'};
     final canCreateFee = activeRole != null && allowedRoles.contains(activeRole.roleName);
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     final theme = Theme.of(context);
     final receiversAsync = ref.watch(paymentReceiversProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final feesAsync = ref.watch(workspaceFeesProvider);
 
+    final offlineError = [
+      receiversAsync.error,
+      submissionsAsync.error,
+      feesAsync.error,
+    ].firstWhere((e) => e != null && OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: 'Organization Finance',
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(paymentReceiversProvider);
+            ref.invalidate(workspaceStudentPaymentsProvider);
+            ref.invalidate(workspaceFeesProvider);
+          },
+        ),
+      );
+    }
+
     return DashboardLayout(
       title: 'Organization Finance',
+      floatingActionButton: (canCreateFee && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GovernorCreateFeePage())),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(
@@ -106,7 +140,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
                     title: 'Finance & Collections',
                     subtitle: 'Manage fees, verify student payments, and track organization funds',
                     actions: [
-                      if (canCreateFee)
+                      if (canCreateFee && !isMobile)
                         HeaderActionButton(
                           icon: Icons.add_card_rounded,
                           label: 'Create Fee',
@@ -309,7 +343,7 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
         ),
       ),
     );
-}
+  }
 
   Widget _buildSearchField() {
     return TextField(
@@ -443,9 +477,11 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
       return matchesStatus && matchesQuery && matchesFee && matchesPaymentMethod;
     }).toList();
 
+    Widget content;
     if (filtered.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
+      content = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -472,52 +508,64 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
           ),
         ),
       );
-    }
+    } else {
+      final totalItems = filtered.length;
+      final totalPages = (totalItems / _rowsPerPage).ceil();
+      final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
 
-    final totalItems = filtered.length;
-    final totalPages = (totalItems / _rowsPerPage).ceil();
-    final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+      final startIndex = safePage * _rowsPerPage;
+      final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
+      final paginated = filtered.sublist(startIndex, endIndex);
 
-    final startIndex = safePage * _rowsPerPage;
-    final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
-    final paginated = filtered.sublist(startIndex, endIndex);
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 1;
+          if (constraints.maxWidth > 1400) {
+            crossAxisCount = 4;
+          } else if (constraints.maxWidth > 1000) {
+            crossAxisCount = 3;
+          } else if (constraints.maxWidth > 700) {
+            crossAxisCount = 2;
+          }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = 1;
-        if (constraints.maxWidth > 1400) {
-          crossAxisCount = 4;
-        } else if (constraints.maxWidth > 1000) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth > 700) {
-          crossAxisCount = 2;
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: AppSpacing.lg,
-                  mainAxisSpacing: AppSpacing.lg,
-                  mainAxisExtent: 300,
-                ),
-                itemCount: paginated.length,
-                itemBuilder: (context, index) => GovernorSubmissionCard(
-                  submission: paginated[index],
-                  onApprove: () => _updateStatus(paginated[index].id!, 'Paid'),
-                  onReject: () => _showRejectDialog(paginated[index].id!),
-                  onViewReceipt: () => _showReceiptPreview(context, paginated[index]),
+          return Column(
+            children: [
+              Expanded(
+                child: GridView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: AppSpacing.lg,
+                    mainAxisSpacing: AppSpacing.lg,
+                    mainAxisExtent: 300,
+                  ),
+                  itemCount: paginated.length,
+                  itemBuilder: (context, index) => GovernorSubmissionCard(
+                    submission: paginated[index],
+                    onApprove: () => _updateStatus(paginated[index].id!, 'Paid'),
+                    onReject: () => _showRejectDialog(paginated[index].id!),
+                    onViewReceipt: () => _showReceiptPreview(context, paginated[index]),
+                  ),
                 ),
               ),
-            ),
-            _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
-            const SizedBox(height: AppSpacing.md),
-          ],
-        );
+              _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          );
+        },
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        try {
+          await ref.refresh(paymentReceiversProvider.future);
+          await ref.refresh(workspaceStudentPaymentsProvider.future);
+          await ref.refresh(workspaceFeesProvider.future);
+        } catch (_) {}
       },
+      child: content,
     );
   }
 
@@ -884,6 +932,24 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
     final feesAsync = ref.watch(workspaceFeesProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final userProfile = ref.watch(userProfileProvider).value;
+
+    final offlineError = [
+      feesAsync.error,
+      submissionsAsync.error,
+    ].firstWhere((e) => e != null && OfflineStateView.isOfflineError(e), orElse: () => null);
+
+    if (offlineError != null) {
+      return DashboardLayout(
+        title: 'My Fees & Payments',
+        child: OfflineStateView(
+          onRetry: () {
+            ref.invalidate(workspaceFeesProvider);
+            ref.invalidate(workspaceStudentPaymentsProvider);
+            ref.invalidate(paymentReceiversProvider);
+          },
+        ),
+      );
+    }
 
     return DashboardLayout(
       title: 'My Fees & Payments',

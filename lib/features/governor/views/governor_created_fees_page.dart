@@ -14,6 +14,7 @@ import '../../finance/providers/finance_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import 'governor_create_fee_page.dart';
 import 'governor_fee_report_page.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class GovernorCreatedFeesPage extends ConsumerStatefulWidget {
   final String title;
@@ -83,8 +84,27 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
               }
             }
           : null,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(padding),
+      floatingActionButton: (canCreateFee && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => _navigateToCreate(context),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          try {
+            await ref.refresh(workspaceFeesProvider.future);
+          } catch (_) {}
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -139,7 +159,7 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
               title: widget.title,
               subtitle: widget.subtitle,
               actions: [
-                if (canCreateFee)
+                if (canCreateFee && !isMobile)
                   HeaderActionButton(
                     icon: Icons.add_rounded,
                     label: 'Create Fee',
@@ -421,13 +441,21 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                 );
               },
               loading: () => const Center(child: FlickrLoader()),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              error: (err, _) {
+                if (OfflineStateView.isOfflineError(err)) {
+                  return OfflineStateView(
+                    onRetry: () => ref.invalidate(workspaceFeesProvider),
+                  );
+                }
+                return Center(child: Text('Error: $err'));
+              },
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatCard({
     required String title,

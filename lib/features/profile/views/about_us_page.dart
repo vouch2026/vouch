@@ -185,7 +185,7 @@ class AboutUsPage extends StatelessWidget {
           Container(
             width: isDesktop ? 120 : 100,
             height: isDesktop ? 120 : 100,
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: AppColors.white,
               shape: BoxShape.circle,
@@ -421,22 +421,24 @@ class AboutUsPage extends StatelessWidget {
             Container(
               width: 64,
               height: 64,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.accent, width: 2),
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accent.withValues(alpha: 0.2), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
+                borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
                   'assets/logos/vouch-softtech-services-logo.png',
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return const Icon(
                       LucideIcons.building,
@@ -487,12 +489,12 @@ class AboutUsPage extends StatelessWidget {
   Widget _buildPartnershipGrid({required bool isMobile}) {
     final List<Widget> children = [
       _buildPartnershipCard(
-        name: "Mentor's Society",
-        logoPath: 'assets/logos/mentorsLogo.jpg',
+        name: "Faculty of Criminal Justice Education Student Organization",
+        logoPath: 'assets/logos/fcje-so.jpg',
       ),
       if (isMobile) const SizedBox(height: AppSpacing.md),
       _buildPartnershipCard(
-        name: '',
+        name: 'Org Name Here',
         logoPath: '',
       ),
     ];

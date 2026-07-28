@@ -9,6 +9,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../../core/utils/offline_image_cache.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 class GovernorAnnouncementCard extends ConsumerStatefulWidget {
   final AnnouncementModel announcement;
@@ -65,7 +67,8 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
     final theme = Theme.of(context);
     final workspace = ref.watch(workspaceProvider);
     final activeRole = workspace.activeRole?.roleName;
-    final canManage = activeRole != 'Student' && activeRole != 'Member';
+    final isOffline = ref.watch(connectivityProvider).value == false;
+    final canManage = activeRole != 'Student' && activeRole != 'Member' && !isOffline;
     
     return Card(
       elevation: 0,
@@ -83,10 +86,14 @@ class _GovernorAnnouncementCardState extends ConsumerState<GovernorAnnouncementC
           if (widget.announcement.imageUrl != null)
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: Image.network(
-                widget.announcement.imageUrl!,
+              child: Image(
+                image: OfflineImageCache.get(widget.announcement.imageUrl)!,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Opacity(
+                  opacity: 0.1,
+                  child: Icon(Icons.image, size: 48),
+                ),
               ),
             ),
           Padding(

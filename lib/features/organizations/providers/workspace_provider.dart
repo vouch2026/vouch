@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -8,6 +9,7 @@ import '../repositories/organization_repository.dart';
 import 'organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/models/app_role.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 part 'workspace_provider.freezed.dart';
 
@@ -60,17 +62,53 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
     final orgId = box.get('selected_organization_id');
     
     if (orgId != null) {
-      try {
-        final org = await _repository.getOrganizationById(orgId);
-        if (org != null) {
-          await selectOrganization(org, persist: false);
+      OrganizationModel? org;
+      
+      // Try to find the organization in the cached user organizations first if offline
+      final connectivity = _ref.read(connectivityProvider).value;
+      if (connectivity == false) {
+        org = _loadCachedOrganization(orgId);
+      }
+      
+      if (org == null) {
+        try {
+          org = await _repository.getOrganizationById(orgId).timeout(const Duration(seconds: 2));
+        } catch (e) {
+          debugPrint('Error fetching persisted organization: $e. Falling back to cache...');
+          org = _loadCachedOrganization(orgId);
         }
-      } catch (e) {
-        debugPrint('Error loading persisted workspace: $e');
+      }
+
+      if (org != null) {
+        await selectOrganization(org, persist: false);
       }
     }
     
     state = state.copyWith(isInitialized: true);
+  }
+
+  OrganizationModel? _loadCachedOrganization(String orgId) {
+    try {
+      final auth = _ref.read(authStateProvider).value;
+      final userId = auth?.session?.user.id;
+      if (userId == null) return null;
+
+      final box = Hive.box('workspaces');
+      final cached = box.get('user_orgs_$userId');
+      if (cached != null) {
+        final cachedList = List<dynamic>.from(cached as List);
+        for (final item in cachedList) {
+          final jsonMap = Map<String, dynamic>.from(item as Map);
+          final org = OrganizationModel.fromJson(jsonMap);
+          if (org.id == orgId) {
+            return org;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error reading cached organization: $e');
+    }
+    return null;
   }
 
   void _clearPersistedWorkspace() {
@@ -99,38 +137,50 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
 
       // Check if the user is authorized to select this workspace
       final isSuperAdmin = profile.role == 'super_admin';
-      if (!isSuperAdmin) {
-        final userOrgs = await _repository.getUserOrganizations(profile.id!);
-        final isMember = userOrgs.any((o) => o.id == org.id);
-        if (!isMember) {
-          state = const WorkspaceState(isInitialized: true);
-          _clearPersistedWorkspace();
-          debugPrint('Unauthorized workspace selection attempt: ${org.name}');
-          return;
+      AppRole? role;
+
+      final connectivity = _ref.read(connectivityProvider).value;
+      if (connectivity == false) {
+        // Fast path for offline: Load role from cache immediately!
+        role = _loadCachedRole(org.id, org.type);
+      } else {
+        try {
+          if (!isSuperAdmin) {
+            final userOrgs = await _repository.getUserOrganizations(profile.id!).timeout(const Duration(seconds: 2));
+            final isMember = userOrgs.any((o) => o.id == org.id);
+            if (!isMember) {
+              state = const WorkspaceState(isInitialized: true);
+              _clearPersistedWorkspace();
+              debugPrint('Unauthorized workspace selection attempt: ${org.name}');
+              return;
+            }
+          }
+
+          final roleData = await _repository.getWorkspaceRoleAndPermissions(org.id, org.type).timeout(const Duration(seconds: 2));
+
+          if (roleData != null) {
+            role = AppRole(
+              roleName: roleData['role_name'] as String,
+              hierarchyLevel: roleData['hierarchy_level'] as int,
+              scopeType: org.type,
+              permissions: List<String>.from(roleData['permissions'] as List),
+            );
+          } else {
+            role = AppRole(
+              roleName: 'Member',
+              hierarchyLevel: 5,
+              scopeType: org.type,
+              permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
+            );
+          }
+          
+          final box = Hive.box('workspaces');
+          await box.put('role_${org.id}', role.toJson());
+        } catch (e) {
+          debugPrint('Error in selectOrganization network calls: $e. Falling back to cache...');
+          role = _loadCachedRole(org.id, org.type);
         }
       }
-
-      final roleData = await _repository.getWorkspaceRoleAndPermissions(org.id, org.type);
-
-      AppRole? role;
-      if (roleData != null) {
-        role = AppRole(
-          roleName: roleData['role_name'] as String,
-          hierarchyLevel: roleData['hierarchy_level'] as int,
-          scopeType: org.type,
-          permissions: List<String>.from(roleData['permissions'] as List),
-        );
-      } else {
-        role = AppRole(
-          roleName: 'Member',
-          hierarchyLevel: 5,
-          scopeType: org.type,
-          permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
-        );
-      }
-
-      final box = Hive.box('workspaces');
-      await box.put('role_${org.id}', role.toJson());
 
       state = state.copyWith(
         activeMembership: null,
@@ -140,22 +190,7 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       );
     } catch (e, stack) {
       debugPrint('Error in selectOrganization: $e\n$stack');
-      
-      final box = Hive.box('workspaces');
-      final cachedRoleData = box.get('role_${org.id}');
-      AppRole? role;
-      if (cachedRoleData != null) {
-        final jsonMap = Map<String, dynamic>.from(cachedRoleData as Map);
-        role = AppRole.fromJson(jsonMap);
-      } else {
-        role = AppRole(
-          roleName: 'Member',
-          hierarchyLevel: 5,
-          scopeType: org.type,
-          permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
-        );
-      }
-
+      final role = _loadCachedRole(org.id, org.type);
       state = state.copyWith(
         activeMembership: null,
         activeRole: role,
@@ -163,6 +198,21 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
         isInitialized: true,
       );
     }
+  }
+
+  AppRole _loadCachedRole(String orgId, String orgType) {
+    final box = Hive.box('workspaces');
+    final cachedRoleData = box.get('role_$orgId');
+    if (cachedRoleData != null) {
+      final jsonMap = Map<String, dynamic>.from(cachedRoleData as Map);
+      return AppRole.fromJson(jsonMap);
+    }
+    return AppRole(
+      roleName: 'Member',
+      hierarchyLevel: 5,
+      scopeType: orgType,
+      permissions: const ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
+    );
   }
 
   void updateSelectedOrganization(OrganizationModel org) {

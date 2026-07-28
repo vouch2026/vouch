@@ -7,6 +7,8 @@ import 'sanction_profile_page.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 
+import '../../../core/widgets/states/offline_state_view.dart';
+
 class SanctionRedirector extends ConsumerWidget {
   const SanctionRedirector({super.key});
 
@@ -39,9 +41,18 @@ class SanctionRedirector extends ConsumerWidget {
         loading: () => const Scaffold(
           body: Center(child: FlickrLoader()),
         ),
-        error: (err, _) => Scaffold(
-          body: Center(child: Text('Error: $err')),
-        ),
+        error: (err, _) {
+          if (OfflineStateView.isOfflineError(err)) {
+            return Scaffold(
+              body: OfflineStateView(
+                onRetry: () => ref.invalidate(userProfileProvider),
+              ),
+            );
+          }
+          return Scaffold(
+            body: Center(child: Text('Error: $err')),
+          );
+        },
       );
     }
   }

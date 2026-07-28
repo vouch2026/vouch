@@ -1,6 +1,7 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -144,50 +145,74 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
         );
       },
       loading: () => const Center(child: FlickrLoader()),
-      error: (err, _) => Center(child: Text('Error: $err')),
+      error: (err, _) {
+        if (OfflineStateView.isOfflineError(err)) {
+          return OfflineStateView(
+            onRetry: () => ref.invalidate(workspaceEventsProvider),
+          );
+        }
+        return Center(child: Text('Error: $err'));
+      },
     );
   }
 
   Widget _buildTabView(List<EventModel> events, Widget Function(EventModel) builder, {required double mainAxisExtent}) {
+    Widget content;
     if (events.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.calendar_today_outlined, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'No events found',
-              style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+      content = const SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 64),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 48, color: Colors.grey),
+                SizedBox(height: AppSpacing.md),
+                Text(
+                  'No events found',
+                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
-    }
-    
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = 1;
-        if (constraints.maxWidth > 1200) {
-          crossAxisCount = 4;
-        } else if (constraints.maxWidth > 900) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth > 600) {
-          crossAxisCount = 2;
-        }
+    } else {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 1;
+          if (constraints.maxWidth > 1200) {
+            crossAxisCount = 4;
+          } else if (constraints.maxWidth > 900) {
+            crossAxisCount = 3;
+          } else if (constraints.maxWidth > 600) {
+            crossAxisCount = 2;
+          }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.lg,
-            mainAxisSpacing: AppSpacing.lg,
-            mainAxisExtent: mainAxisExtent, 
-          ),
-          itemCount: events.length,
-          itemBuilder: (context, index) => builder(events[index]),
-        );
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: AppSpacing.lg,
+              mainAxisSpacing: AppSpacing.lg,
+              mainAxisExtent: mainAxisExtent, 
+            ),
+            itemCount: events.length,
+            itemBuilder: (context, index) => builder(events[index]),
+          );
+        },
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        try {
+          await ref.refresh(workspaceEventsProvider.future);
+        } catch (_) {}
       },
+      child: content,
     );
   }
 }

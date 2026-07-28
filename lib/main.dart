@@ -22,6 +22,7 @@ void main() async {
   await Hive.openBox('workspaces');
   await Hive.openBox('events');
   await Hive.openBox('my_scans');
+  await Hive.openBox('dashboard');
   
   runApp(
     const ProviderScope(

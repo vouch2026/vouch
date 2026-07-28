@@ -297,7 +297,7 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
                             ),
                             child: _isLoading 
                               ? const SizedBox(height: 20, width: 20, child: FlickrLoader())
-                              : Text(isEdit ? 'Update Post' : 'Post Announcement'),
+                              : Text(isEdit ? 'Update Post' : 'Post'),
                           ),
                         ),
                       ],

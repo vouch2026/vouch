@@ -15,7 +15,7 @@ final connectivityProvider = StreamProvider<bool>((ref) {
     try {
       final client = SupabaseConfig.client;
       final host = Uri.parse(client.rest.url).host;
-      final result = await InternetAddress.lookup(host).timeout(const Duration(seconds: 2));
+      final result = await InternetAddress.lookup(host).timeout(const Duration(seconds: 1));
       final isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       if (!controller.isClosed) {
         controller.add(isOnline);

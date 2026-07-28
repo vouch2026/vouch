@@ -67,22 +67,24 @@ class _GovernorGalleryPageState extends ConsumerState<GovernorGalleryPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Event Gallery Albums',
-                                style: AppTextStyles.displaySmall.copyWith(
-                                  color: AppColors.textDark,
-                                  fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Event Gallery Albums',
+                                  style: AppTextStyles.displaySmall.copyWith(
+                                    color: AppColors.textDark,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Browse past events and manage official highlight galleries',
-                                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Browse past events and manage official highlight galleries',
+                                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -157,20 +159,11 @@ class _GovernorGalleryPageState extends ConsumerState<GovernorGalleryPage> {
         const SizedBox(width: AppSpacing.lg),
         Expanded(
           child: _buildStatCard(
-            title: 'Featured Events',
+            title: 'Events',
             value: '${pastEvents.where((e) => e.imageUrl != null && e.imageUrl!.isNotEmpty).length}',
             icon: Icons.star_rounded,
             gradientColors: [AppColors.accent, AppColors.accentLight],
             isDarkText: true,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Role Access',
-            value: 'PIO Moderator',
-            icon: Icons.admin_panel_settings_rounded,
-            gradientColors: [const Color(0xFF10B981), const Color(0xFF047857)],
           ),
         ),
       ],

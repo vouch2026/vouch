@@ -382,7 +382,18 @@ class _ExcuseRequestFormPageState extends ConsumerState<ExcuseRequestFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isOnline = ref.watch(connectivityProvider).value ?? true;
+    final connectivityAsync = ref.watch(connectivityProvider);
+
+    if (connectivityAsync.isLoading && !connectivityAsync.hasValue) {
+      return const DashboardLayout(
+        title: 'Submit Excuse Request',
+        child: Center(
+          child: FlickrLoader(),
+        ),
+      );
+    }
+
+    final isOnline = connectivityAsync.value ?? true;
 
     if (!isOnline) {
       return DashboardLayout(

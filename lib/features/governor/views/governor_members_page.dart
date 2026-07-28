@@ -4,6 +4,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../users/widgets/advanced_user_filter_panel.dart';
 import '../../users/widgets/user_management_header.dart';
+import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_members_kpi.dart';
 import '../widgets/governor_members_table.dart';
@@ -27,10 +28,20 @@ class GovernorMembersPage extends ConsumerWidget {
           final isMobile = constraints.maxWidth < 600;
           final verticalGap = isMobile ? AppSpacing.lg : AppSpacing.xl;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          return RefreshIndicator(
+            onRefresh: () async {
+              final selectedOrg = ref.read(workspaceProvider).selectedOrganization;
+              if (selectedOrg != null) {
+                try {
+                  await ref.refresh(organizationMembersProvider(selectedOrg.id).future);
+                } catch (_) {}
+              }
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 UserManagementHeader(
                   title: 'Members',
@@ -93,7 +104,8 @@ class GovernorMembersPage extends ConsumerWidget {
             const GovernorMembersTable(),
           ],
         ),
-      );
+      ),
+    );
     },
   ),
 );

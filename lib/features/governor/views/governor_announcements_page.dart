@@ -6,12 +6,17 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
+import '../../../shared/layouts/responsive_layout.dart';
 import '../../../routes/route_paths.dart';
 import '../../users/widgets/user_management_header.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_announcement_card.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 class GovernorAnnouncementsPage extends ConsumerStatefulWidget {
   const GovernorAnnouncementsPage({super.key});
@@ -44,10 +49,24 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
     final workspace = ref.watch(workspaceProvider);
     final org = workspace.selectedOrganization;
     final activeRole = workspace.activeRole?.roleName;
-    final canPost = activeRole != 'Student' && activeRole != 'Member';
+    final isOffline = ref.watch(connectivityProvider).value == false;
+    final canPost = activeRole != 'Student' && activeRole != 'Member' && !isOffline;
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     return DashboardLayout(
       title: 'Organization Announcements',
+      floatingActionButton: (canPost && isMobile)
+          ? FloatingActionButton(
+              onPressed: () => context.push(RoutePaths.workspaceCreateAnnouncement),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(Icons.add_rounded, size: 28),
+            )
+          : null,
       child: announcementsAsync.when(
         data: (announcements) {
           final query = _searchController.text.toLowerCase();
@@ -60,7 +79,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 768;
+              final isMobileGrid = constraints.maxWidth < 768;
               int crossAxisCount = 1;
               if (constraints.maxWidth > 1200) {
                 crossAxisCount = 4;
@@ -75,10 +94,14 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl,
-                    vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+                    horizontal: isMobileGrid ? AppSpacing.lg : AppSpacing.xl,
+                    vertical: isMobileGrid ? AppSpacing.lg : AppSpacing.xl,
                   ),
                   children: [
+                    if (isOffline) ...[
+                      _buildOfflineBanner(),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     Row(
                       children: [
                         Icon(Icons.campaign_outlined, size: 14, color: Colors.grey[500]),
@@ -97,7 +120,7 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                       title: 'Announcements',
                       subtitle: 'Broadcast important updates and news to your members',
                       actions: [
-                        if (canPost)
+                        if (canPost && !isMobile)
                           HeaderActionButton(
                             icon: Icons.add_comment_rounded,
                             label: 'Post Announcement',
@@ -189,7 +212,14 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
           );
         },
         loading: () => const Center(child: FlickrLoader()),
-        error: (err, _) => Center(child: Text('Error: $err')),
+        error: (err, _) {
+          if (OfflineStateView.isOfflineError(err)) {
+            return OfflineStateView(
+              onRetry: () => ref.invalidate(workspaceAnnouncementsProvider),
+            );
+          }
+          return Center(child: Text('Error: $err'));
+        },
       ),
     );
   }
@@ -296,5 +326,36 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
         }
       }
     }
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 16),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'You\'re offline. Showing cached announcements.',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.orange.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

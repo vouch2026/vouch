@@ -14,6 +14,7 @@ import '../../../academic_structure/providers/term_provider.dart';
 import './assign_officer_dialog.dart';
 import './assign_adviser_dialog.dart';
 import './organization_settings_panel.dart';
+import '../../../../core/widgets/states/offline_state_view.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -126,7 +127,14 @@ class _MembersTab extends ConsumerWidget {
           membersAsync.when(
             data: (members) => _buildMembersTable(context, members),
             loading: () => const Center(child: FlickrLoader()),
-            error: (err, _) => Center(child: Text('Error loading members: $err')),
+            error: (err, _) {
+              if (OfflineStateView.isOfflineError(err)) {
+                return OfflineStateView(
+                  onRetry: () => ref.invalidate(organizationMembersProvider(orgId)),
+                );
+              }
+              return Center(child: Text('Error loading members: $err'));
+            },
           ),
         ],
       ),
@@ -311,7 +319,14 @@ class _OfficersTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: FlickrLoader()),
-            error: (err, _) => Center(child: Text('Error loading officers: $err')),
+            error: (err, _) {
+              if (OfflineStateView.isOfflineError(err)) {
+                return OfflineStateView(
+                  onRetry: () => ref.invalidate(organizationOfficersProvider(org.id)),
+                );
+              }
+              return Center(child: Text('Error loading officers: $err'));
+            },
           ),
         ],
       ),
@@ -862,7 +877,14 @@ class _FeesTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: FlickrLoader()),
-            error: (err, _) => Center(child: Text('Error loading fees: $err')),
+            error: (err, _) {
+              if (OfflineStateView.isOfflineError(err)) {
+                return OfflineStateView(
+                  onRetry: () => ref.invalidate(orgFeesProvider(org)),
+                );
+              }
+              return Center(child: Text('Error loading fees: $err'));
+            },
           ),
         ],
       ),
@@ -1018,7 +1040,14 @@ class _EventsTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: FlickrLoader()),
-            error: (err, _) => Center(child: Text('Error loading events: $err')),
+            error: (err, _) {
+              if (OfflineStateView.isOfflineError(err)) {
+                return OfflineStateView(
+                  onRetry: () => ref.invalidate(orgEventsProvider(org)),
+                );
+              }
+              return Center(child: Text('Error loading events: $err'));
+            },
           ),
         ],
       ),
@@ -1139,7 +1168,14 @@ class _AnnouncementsTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: FlickrLoader()),
-            error: (err, _) => Center(child: Text('Error loading announcements: $err')),
+            error: (err, _) {
+              if (OfflineStateView.isOfflineError(err)) {
+                return OfflineStateView(
+                  onRetry: () => ref.invalidate(orgAnnouncementsProvider(org)),
+                );
+              }
+              return Center(child: Text('Error loading announcements: $err'));
+            },
           ),
         ],
       ),

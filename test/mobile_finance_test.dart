@@ -390,6 +390,104 @@ void main() {
     // DatePicker dialog should be visible and not crash
     expect(find.byType(DatePickerDialog), findsOneWidget);
   });
+
+  testWidgets('Test _StudentFinanceView on mobile size with submissions (regression test)', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 1500);
+    tester.view.devicePixelRatio = 1.0;
+    
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final now = DateTime.now();
+
+    final mockFees = [
+      FeeModel(
+        id: 'fee-1',
+        name: 'Membership Fee',
+        amount: 100.0,
+        scopeType: 'college',
+        scopeId: 'college-1',
+        isMandatory: true,
+        dueDate: now.add(const Duration(days: 2)),
+        academicTermId: 'term-1',
+      ),
+    ];
+    
+    final mockSubmissions = <StudentPaymentModel>[
+      StudentPaymentModel(
+        id: 'sub-1',
+        studentId: 'user-1',
+        studentName: 'John Doe',
+        studentIdNumber: '2023-0001',
+        feeId: 'fee-1',
+        feeName: 'Membership Fee',
+        referenceNumber: 'REF12345',
+        amountPaid: 100.0,
+        status: 'Pending',
+        paidAt: now,
+        paymentReceiverId: 'rec-1',
+      ),
+    ];
+
+    final mockUser = UserModel(
+      id: 'user-1',
+      authId: 'auth-1',
+      email: 'student@test.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: 'student',
+      schoolId: '2023-0001',
+      createdAt: now,
+    );
+
+    final mockWorkspaceState = WorkspaceState(
+      selectedOrganization: const OrganizationModel(
+        id: 'org-1',
+        name: 'Test Org',
+        code: 'TO',
+      ),
+      activeRole: AppRole(
+        roleName: 'Student',
+        hierarchyLevel: 1,
+        scopeType: 'college',
+        permissions: [],
+      ),
+      isInitialized: true,
+    );
+
+    final mockReceivers = [
+      const PaymentReceiverModel(
+        id: 'rec-1',
+        bankType: 'GCash',
+        accountName: 'Test GCash',
+        accountNumber: '09123456789',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          workspaceFeesProvider.overrideWith((ref) => mockFees),
+          workspaceStudentPaymentsProvider.overrideWith((ref) => mockSubmissions),
+          userProfileProvider.overrideWith((ref) => mockUser),
+          paymentReceiversProvider.overrideWith((ref) => mockReceivers),
+          workspaceProvider.overrideWith((ref) => WorkspaceNotifierMock(mockWorkspaceState)),
+        ],
+        child: const MaterialApp(
+          home: GovernorFinancePage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify it renders the payment history and submission card successfully without layout crashes
+    expect(find.text('MY PAYMENT HISTORY'), findsOneWidget);
+    expect(find.text('Membership Fee'), findsWidgets);
+    expect(find.text('GCASH'), findsWidgets);
+  });
 }
 
 class WorkspaceNotifierMock extends StateNotifier<WorkspaceState> implements WorkspaceNotifier {

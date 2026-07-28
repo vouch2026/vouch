@@ -1,10 +1,12 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/offline_image_cache.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../auth/models/user_model.dart';
@@ -13,6 +15,7 @@ import '../../events/providers/event_provider.dart';
 import '../../events/views/student_event_details_page.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../../core/utils/time_formatter.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 class GovernorDashboardView extends ConsumerWidget {
   const GovernorDashboardView({super.key});
@@ -22,6 +25,7 @@ class GovernorDashboardView extends ConsumerWidget {
     final workspace = ref.watch(workspaceProvider);
     final org = workspace.selectedOrganization;
     final activeRole = workspace.activeRole;
+    final isOffline = ref.watch(connectivityProvider).value == false;
 
     if (org == null) {
       return const Center(
@@ -43,6 +47,9 @@ class GovernorDashboardView extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Offline indicator
+              if (isOffline) ..._buildOfflineNotice(context),
+
               _buildOrgHeader(context, org, activeRole?.roleName ?? 'Member'),
               const SizedBox(height: AppSpacing.xl),
               
@@ -110,6 +117,66 @@ class GovernorDashboardView extends ConsumerWidget {
     );
   }
 
+  List<Widget> _buildOfflineNotice(BuildContext context) {
+    return [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.orange.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 16),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'You\'re offline. Showing cached content.',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: AppSpacing.md),
+    ];
+  }
+
+  /// Builds the org banner using OfflineImageCache so it is cached for offline use.
+  Widget _buildBanner(String? bannerUrl) {
+    final fallback = Container(
+      height: 120,
+      width: double.infinity,
+      color: AppColors.primary,
+      child: const Opacity(
+        opacity: 0.1,
+        child: Icon(Icons.hub_rounded, size: 100, color: Colors.white),
+      ),
+    );
+
+    if (bannerUrl == null || bannerUrl.trim().isEmpty) return fallback;
+
+    final imageProvider = OfflineImageCache.get(bannerUrl);
+    if (imageProvider == null) return fallback;
+
+    return Image(
+      image: imageProvider,
+      height: 120,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
+
   Widget _buildOrgHeader(BuildContext context, dynamic org, String roleName) {
     return Container(
       width: double.infinity,
@@ -126,27 +193,10 @@ class GovernorDashboardView extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          // Banner Placeholder
+          // Banner
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: Container(
-              height: 120,
-              width: double.infinity,
-              color: AppColors.primary,
-              child: org.bannerUrl != null 
-                ? Image.network(
-                    org.bannerUrl!, 
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Opacity(
-                      opacity: 0.1,
-                      child: Icon(Icons.hub_rounded, size: 100, color: Colors.white),
-                    ),
-                  )
-                : const Opacity(
-                    opacity: 0.1,
-                    child: Icon(Icons.hub_rounded, size: 100, color: Colors.white),
-                  ),
-            ),
+            child: _buildBanner(org.bannerUrl),
           ),
           
           Padding(
@@ -172,7 +222,7 @@ class GovernorDashboardView extends ConsumerWidget {
                       child: CircleAvatar(
                         radius: 50,
                         backgroundColor: AppColors.primary,
-                        backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
+                        backgroundImage: OfflineImageCache.get(org.logoUrl),
                         child: org.logoUrl == null ? const Icon(Icons.business, color: Colors.white, size: 40) : null,
                       ),
                     ),

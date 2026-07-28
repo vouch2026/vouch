@@ -14,6 +14,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../widgets/details/org_details_header.dart';
 import '../widgets/details/org_details_analytics_cards.dart';
 import '../widgets/details/org_details_tabs_view.dart';
+import '../../../core/widgets/states/offline_state_view.dart';
 
 class OrganizationDetailsPage extends ConsumerWidget {
   final String id;
@@ -148,7 +149,14 @@ class OrganizationDetailsPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: FlickrLoader()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) {
+          if (OfflineStateView.isOfflineError(error)) {
+            return OfflineStateView(
+              onRetry: () => ref.invalidate(organizationProvider(id)),
+            );
+          }
+          return Center(child: Text('Error: $error'));
+        },
       ),
     );
   }

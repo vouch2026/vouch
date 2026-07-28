@@ -10,6 +10,7 @@ import '../../users/widgets/user_management_header.dart';
 import '../models/excuse_request_model.dart';
 import '../providers/excuse_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../../core/widgets/states/offline_state_view.dart';
 
 class MyExcuseRequestsPage extends ConsumerStatefulWidget {
   const MyExcuseRequestsPage({super.key});
@@ -161,6 +162,7 @@ class _MyExcuseRequestsPageState extends ConsumerState<MyExcuseRequestsPage> {
                                 requests.isEmpty 
                                   ? 'You have not submitted any excuse requests yet' 
                                   : 'No excuse requests match your filters',
+                                textAlign: TextAlign.center,
                                 style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
                               ),
                               if (requests.isNotEmpty)
@@ -186,7 +188,14 @@ class _MyExcuseRequestsPageState extends ConsumerState<MyExcuseRequestsPage> {
           );
         },
         loading: () => const Center(child: FlickrLoader()),
-        error: (err, _) => Center(child: Text('Error loading excuses: $err', style: const TextStyle(color: Colors.red))),
+        error: (err, _) {
+          if (OfflineStateView.isOfflineError(err)) {
+            return OfflineStateView(
+              onRetry: () => ref.invalidate(studentExcusesProvider(user.id!)),
+            );
+          }
+          return Center(child: Text('Error loading excuses: $err', style: const TextStyle(color: Colors.red)));
+        },
       ),
     );
   }

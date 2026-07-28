@@ -15,6 +15,7 @@ import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>((ref) {
   return OrganizationRepository(SupabaseConfig.client);
@@ -26,7 +27,7 @@ final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) asyn
   final activeRole = ref.watch(workspaceProvider).activeRole;
   if (activeRole == null) return allOrgs;
 
-  final userProfile = ref.watch(userProfileProvider).value;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
   if (userProfile == null) return allOrgs;
 
   final roleKey = RoleMapper.mapDbRoleToAppFormat(activeRole.roleName);
@@ -45,7 +46,7 @@ final organizationsProvider = FutureProvider<List<OrganizationModel>>((ref) asyn
 });
 
 final userOrganizationsProvider = FutureProvider<List<OrganizationModel>>((ref) async {
-  final userProfile = ref.watch(userProfileProvider).value;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
   if (userProfile == null || userProfile.id == null) return [];
   
   final box = Hive.box('workspaces');
@@ -73,7 +74,7 @@ final userMembershipsProvider = FutureProvider.family<List<UserOrganizationMembe
 });
 
 final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembershipModel?, String>((ref, orgId) async {
-  final userProfile = ref.watch(userProfileProvider).value;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
   if (userProfile == null || userProfile.id == null) return null;
   
   final box = Hive.box('workspaces');
@@ -95,15 +96,107 @@ final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembership
 });
 
 final organizationProvider = FutureProvider.family<OrganizationModel?, String>((ref, id) async {
-  return ref.watch(organizationRepositoryProvider).getOrganizationById(id);
+  final box = Hive.box('workspaces');
+  final cacheKey = 'organization_$id';
+  final cached = box.get(cacheKey);
+
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return OrganizationModel.fromJson(jsonMap);
+    }
+    return null;
+  }
+
+  try {
+    final org = await ref.watch(organizationRepositoryProvider).getOrganizationById(id);
+    if (org != null) {
+      await box.put(cacheKey, org.toJson());
+    }
+    return org;
+  } catch (e) {
+    if (cached != null) {
+      final jsonMap = Map<String, dynamic>.from(cached as Map);
+      return OrganizationModel.fromJson(jsonMap);
+    }
+    rethrow;
+  }
 });
 
+
 final organizationMembersProvider = FutureProvider.family<List<UserModel>, String>((ref, orgId) async {
-  return ref.watch(organizationRepositoryProvider).getOrganizationMembers(orgId);
+  final box = Hive.box('dashboard');
+  final cacheKey = 'org_members_$orgId';
+  final cached = box.get(cacheKey);
+
+  // Fast path: if connectivity provider knows we are offline, load cached instantly
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return UserModel.fromJson(jsonMap);
+      }).toList();
+    }
+    return [];
+  }
+
+  try {
+    final members = await ref
+        .watch(organizationRepositoryProvider)
+        .getOrganizationMembers(orgId);
+    final membersJson = members.map((m) => m.toJson()).toList();
+    await box.put(cacheKey, membersJson);
+    return members;
+  } catch (e) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return UserModel.fromJson(jsonMap);
+      }).toList();
+    }
+    rethrow;
+  }
 });
 
 final organizationOfficersProvider = FutureProvider.family<List<OrganizationMembershipModel>, String>((ref, orgId) async {
-  return ref.watch(organizationRepositoryProvider).getOrganizationOfficers(orgId);
+  final box = Hive.box('dashboard');
+  final cacheKey = 'org_officers_$orgId';
+  final cached = box.get(cacheKey);
+
+  // Fast path: if connectivity provider knows we are offline, load cached instantly
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return OrganizationMembershipModel.fromJson(jsonMap);
+      }).toList();
+    }
+    return [];
+  }
+
+  try {
+    final officers = await ref
+        .watch(organizationRepositoryProvider)
+        .getOrganizationOfficers(orgId);
+    final officersJson = officers.map((o) => o.toJson()).toList();
+    await box.put(cacheKey, officersJson);
+    return officers;
+  } catch (e) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return OrganizationMembershipModel.fromJson(jsonMap);
+      }).toList();
+    }
+    rethrow;
+  }
 });
 
 final organizationSettingsHistoryProvider = FutureProvider.family<List<OrganizationSettingsHistoryModel>, String>((ref, orgId) async {

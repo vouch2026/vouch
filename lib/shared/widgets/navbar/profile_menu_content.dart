@@ -118,10 +118,11 @@ class ProfileMenuContent extends ConsumerWidget {
           // Mobile size: use LayoutBuilder + Spacer to align Sign Out button to the absolute bottom
           return LayoutBuilder(
             builder: (context, constraints) {
-              final safeAreaPadding = MediaQuery.paddingOf(context).vertical;
+              final viewPadding = MediaQuery.viewPaddingOf(context);
+              final safeAreaPadding = viewPadding.top + viewPadding.bottom;
               return ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: size.height - safeAreaPadding - 16,
+                  minHeight: size.height - safeAreaPadding - 40,
                 ),
                 child: IntrinsicHeight(
                   child: Column(

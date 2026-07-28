@@ -16,11 +16,10 @@ class TaskRepository {
     if (kIsWeb) return true;
     try {
       final host = Uri.parse(_client.rest.url).host;
-      final result = await InternetAddress.lookup(host).timeout(const Duration(seconds: 3));
+      final result = await InternetAddress.lookup(host).timeout(const Duration(milliseconds: 800));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (_) {
-      // Fallback: let actual Supabase requests run and fail gracefully via try-catch
-      return true;
+      return false;
     }
   }
 
@@ -141,15 +140,16 @@ class TaskRepository {
             .from('tasks')
             .select()
             .eq('user_id', userId)
-            .order('created_at', ascending: false);
+            .order('created_at', ascending: false)
+            .timeout(const Duration(seconds: 3));
         return (response as List).map((json) => TaskModel.fromJson(Map<String, dynamic>.from(json))).toList();
       } catch (e) {
         debugPrint('Web getTasks failed: $e');
         return [];
       }
     } else {
-      // Mobile: Offline first
-      await syncTasks(); // Try to sync first if online
+      // Mobile: Offline first, load instantly from Hive and sync in the background
+      _triggerBackgroundSync();
       
       return _box.values
           .map((v) => TaskModel.fromJson(Map<String, dynamic>.from(v as Map)))
@@ -165,6 +165,15 @@ class TaskRepository {
             return bTime.compareTo(aTime);
           });
     }
+  }
+
+  void _triggerBackgroundSync() {
+    Future.microtask(() async {
+      final online = await _isOnline();
+      if (online) {
+        await syncTasks();
+      }
+    });
   }
 
   // Create task
