@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/announcement_model.dart';
 import '../repositories/announcement_repository.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
   return AnnouncementRepository(SupabaseConfig.client);
@@ -26,6 +28,37 @@ final workspaceAnnouncementsProvider = FutureProvider<List<AnnouncementModel>>((
       : (isFaculty ? org.facultyId : org.programId);
 
   if (scopeId == null) return [];
-  
-  return ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId);
+
+  final box = Hive.box('dashboard');
+  final cacheKey = 'announcements_$scopeId';
+  final cached = box.get(cacheKey);
+
+  final connectivity = ref.read(connectivityProvider).value;
+  if (connectivity == false) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return AnnouncementModel.fromJson(jsonMap);
+      }).toList();
+    }
+    return [];
+  }
+
+  try {
+    final announcements = await ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId);
+    final jsonList = announcements.map((a) => a.toJson()).toList();
+    await box.put(cacheKey, jsonList);
+    return announcements;
+  } catch (e) {
+    if (cached != null) {
+      final cachedList = List<dynamic>.from(cached as List);
+      return cachedList.map((json) {
+        final jsonMap = Map<String, dynamic>.from(json as Map);
+        return AnnouncementModel.fromJson(jsonMap);
+      }).toList();
+    }
+    rethrow;
+  }
 });
+

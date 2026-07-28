@@ -14,6 +14,9 @@ import '../../announcements/providers/announcement_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_announcement_card.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/providers/connectivity_provider.dart';
 
 class GovernorAnnouncementsPage extends ConsumerStatefulWidget {
   const GovernorAnnouncementsPage({super.key});
@@ -46,7 +49,8 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
     final workspace = ref.watch(workspaceProvider);
     final org = workspace.selectedOrganization;
     final activeRole = workspace.activeRole?.roleName;
-    final canPost = activeRole != 'Student' && activeRole != 'Member';
+    final isOffline = ref.watch(connectivityProvider).value == false;
+    final canPost = activeRole != 'Student' && activeRole != 'Member' && !isOffline;
     final isMobile = ResponsiveLayout.isMobile(context);
 
     return DashboardLayout(
@@ -94,6 +98,10 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
                     vertical: isMobileGrid ? AppSpacing.lg : AppSpacing.xl,
                   ),
                   children: [
+                    if (isOffline) ...[
+                      _buildOfflineBanner(),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     Row(
                       children: [
                         Icon(Icons.campaign_outlined, size: 14, color: Colors.grey[500]),
@@ -318,5 +326,36 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
         }
       }
     }
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 16),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'You\'re offline. Showing cached announcements.',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.orange.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
