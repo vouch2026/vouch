@@ -1054,6 +1054,33 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     
     if (isOfficer) return const SizedBox.shrink();
 
+    final isOnline = ref.watch(connectivityProvider).value ?? true;
+    if (!isOnline) {
+      return SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: FilledButton.icon(
+          onPressed: null,
+          icon: const Icon(Icons.wifi_off_rounded),
+          label: Text(
+            'Excuse requests are unavailable offline',
+            style: AppTextStyles.labelLarge.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.grey.shade400,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+      );
+    }
+
     final attendanceAsync = ref.watch(userEventAttendanceProvider(event.id!));
     
     return attendanceAsync.when(
