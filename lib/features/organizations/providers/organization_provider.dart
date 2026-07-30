@@ -82,7 +82,10 @@ final userMembershipInOrgProvider = FutureProvider.family<OrganizationMembership
   try {
     final membership = await ref.watch(organizationRepositoryProvider).getUserMembershipInOrg(userProfile.id!, orgId);
     if (membership != null) {
-      await box.put(cacheKey, membership.toJson());
+      final json = membership.toJson();
+      if (membership.user != null) json['user'] = membership.user!.toJson();
+      if (membership.term != null) json['term'] = membership.term!.toJson();
+      await box.put(cacheKey, json);
     }
     return membership;
   } catch (e) {
@@ -184,7 +187,12 @@ final organizationOfficersProvider = FutureProvider.family<List<OrganizationMemb
     final officers = await ref
         .watch(organizationRepositoryProvider)
         .getOrganizationOfficers(orgId);
-    final officersJson = officers.map((o) => o.toJson()).toList();
+    final officersJson = officers.map((o) {
+      final json = o.toJson();
+      if (o.user != null) json['user'] = o.user!.toJson();
+      if (o.term != null) json['term'] = o.term!.toJson();
+      return json;
+    }).toList();
     await box.put(cacheKey, officersJson);
     return officers;
   } catch (e) {
