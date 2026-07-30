@@ -20,6 +20,7 @@ final currentUserProvider = Provider.autoDispose<User?>((ref) {
 });
 
 final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
+  ref.keepAlive();
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
   
@@ -55,5 +56,6 @@ final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
 });
 
 final userProfileByIdProvider = FutureProvider.family.autoDispose<UserModel?, String>((ref, id) async {
+  ref.keepAlive();
   return ref.watch(authRepositoryProvider).getUserProfileById(id);
 });

@@ -20,13 +20,6 @@ final workspaceSanctionsProvider = FutureProvider<List<SanctionModel>>((ref) asy
   if (org == null || term == null) return [];
 
   final repository = ref.watch(sanctionRepositoryProvider);
-  
-  try {
-    await repository.generateSanctionsForTerm(term.id, org.id, org.type);
-  } catch (e) {
-    debugPrint('Error auto-syncing sanctions: $e');
-  }
-
   return repository.getWorkspaceSanctions(org.id, term.id);
 });
 
@@ -42,14 +35,6 @@ final mySanctionsProvider = FutureProvider<List<SanctionModel>>((ref) async {
   }
 
   final repository = ref.watch(sanctionRepositoryProvider);
-
-  if (org != null) {
-    try {
-      await repository.generateSanctionsForTerm(term.id, org.id, org.type);
-    } catch (e) {
-      debugPrint('Error auto-syncing sanctions in mySanctionsProvider: $e');
-    }
-  }
 
   debugPrint('mySanctionsProvider: Fetching all sanctions for student ${userProfile.id}, term ${term.id}');
   // Fetching all sanctions for the student in the current term, regardless of workspace
@@ -120,12 +105,6 @@ final studentSanctionRecordProvider = FutureProvider.family<SanctionModel?, Stri
   if (org == null || term == null) return null;
 
   final repository = ref.watch(sanctionRepositoryProvider);
-
-  try {
-    await repository.generateSanctionsForTerm(term.id, org.id, org.type);
-  } catch (e) {
-    debugPrint('Error auto-syncing sanctions in studentSanctionRecordProvider: $e');
-  }
 
   return repository.getStudentSanctionRecord(
     studentId: studentId,

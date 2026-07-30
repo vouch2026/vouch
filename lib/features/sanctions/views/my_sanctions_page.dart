@@ -6,6 +6,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../providers/sanction_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
 
@@ -21,6 +23,16 @@ class MySanctionsPage extends ConsumerWidget {
       title: 'My Sanctions',
       child: RefreshIndicator(
         onRefresh: () async {
+          final workspace = ref.read(workspaceProvider);
+          final term = ref.read(activeTermProvider).value;
+          final org = workspace.selectedOrganization;
+          if (org != null && term != null) {
+            try {
+              await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, org.id, org.type);
+            } catch (e) {
+              debugPrint('Error running manual sanction sync: $e');
+            }
+          }
           try {
             await ref.refresh(mySanctionsProvider.future);
             await ref.refresh(sanctionRulesProvider.future);
