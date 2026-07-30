@@ -22,6 +22,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _hasShownActivationPendingDialog = false;
 
   @override
   void dispose() {
@@ -32,6 +33,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Check for showActivationPending query parameter from registration verification redirect
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = GoRouterState.of(context);
+      final showActivationPending = state.uri.queryParameters['showActivationPending'] == 'true';
+      if (showActivationPending && !_hasShownActivationPendingDialog) {
+        _hasShownActivationPendingDialog = true;
+        _showPendingActivationDialog(context);
+      }
+    });
+
     ref.listen<AsyncValue<void>>(
       authControllerProvider,
       (previous, next) {
