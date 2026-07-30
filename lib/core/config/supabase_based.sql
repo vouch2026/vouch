@@ -2000,10 +2000,22 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_user_id UUID;
+    v_member_role_id UUID;
+    v_voter_role_id UUID;
 BEGIN
-    -- Lazy cleanup of expired roles
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
+
+    -- Lazy cleanup of expired organization roles
     UPDATE public.organization_members
-    SET role_id = NULL,
+    SET role_id = v_member_role_id,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
+    -- Lazy cleanup of expired comselec roles
+    UPDATE public.comselec_members
+    SET role_id = v_voter_role_id,
         expired_at = NULL,
         status = 'active'
     WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
@@ -2097,10 +2109,22 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_user_id UUID;
+    v_member_role_id UUID;
+    v_voter_role_id UUID;
 BEGIN
-    -- Lazy cleanup of expired roles
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
+
+    -- Lazy cleanup of expired organization roles
     UPDATE public.organization_members
-    SET role_id = NULL,
+    SET role_id = v_member_role_id,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
+    -- Lazy cleanup of expired comselec roles
+    UPDATE public.comselec_members
+    SET role_id = v_voter_role_id,
         expired_at = NULL,
         status = 'active'
     WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
@@ -2439,11 +2463,16 @@ CREATE OR REPLACE FUNCTION public.demote_organization_officer(
 ) RETURNS VOID AS $$
 DECLARE
     v_actual_user_id UUID;
+    v_member_role_id UUID;
+    v_voter_role_id UUID;
 BEGIN
     SELECT id INTO v_actual_user_id 
     FROM public.users 
     WHERE id = p_user_id OR auth_id = p_user_id
     LIMIT 1;
+
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
 
     IF p_workspace_type = 'comselec' THEN
         IF LOWER(p_role_name) = 'adviser' THEN
@@ -2451,7 +2480,7 @@ BEGIN
             WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
         ELSE
             UPDATE public.comselec_members
-            SET role_id = NULL,
+            SET role_id = v_voter_role_id,
                 expired_at = NULL,
                 status = 'active'
             WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
@@ -2466,7 +2495,7 @@ BEGIN
             WHERE id = p_org_id;
         ELSE
             UPDATE public.organization_members
-            SET role_id = NULL,
+            SET role_id = v_member_role_id,
                 expired_at = NULL,
                 status = 'active'
             WHERE organization_id = p_org_id AND user_id = v_actual_user_id;

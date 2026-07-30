@@ -78,6 +78,7 @@ class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen(authStateProvider, (_, __) => notifyListeners());
     _ref.listen(workspaceProvider, (_, __) => notifyListeners());
+    _ref.listen(userProfileProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -123,6 +124,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
+      // Get user profile
+      final userProfileAsync = ref.read(userProfileProvider);
+      
+      // If user profile is still loading, wait before redirecting
+      if (userProfileAsync.isLoading) {
+        return null;
+      }
+
+      final userProfile = userProfileAsync.value;
+      if (userProfile != null && userProfile.status != 'active') {
+        return RoutePaths.login;
+      }
+
       if (loggingIn) {
         if (state.matchedLocation == RoutePaths.forgotPassword) {
           return null;
@@ -130,9 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.dashboard;
       }
 
-      // Get user profile and workspace state
-      final userProfileAsync = ref.read(userProfileProvider);
-      final userProfile = userProfileAsync.value;
+      // Get workspace state
       final workspace = ref.read(workspaceProvider);
 
       final isSuperAdmin = userProfile?.role == 'super_admin';
