@@ -43,20 +43,24 @@ class StorageService {
     required XFile file,
     required bool isLogo,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: isLogo ? ImageTransactionType.logo : ImageTransactionType.banner,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = '${isLogo ? 'logo' : 'banner'}_${code}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'organizations/$fileName';
     final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
 
-    final contentType = extension.toLowerCase() == '.png'
-        ? 'image/png'
-        : (extension.toLowerCase() == '.gif' ? 'image/gif' : 'image/jpeg');
-
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: FileOptions(upsert: true, contentType: contentType),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -68,21 +72,25 @@ class StorageService {
     required String type,
     bool isBanner = false,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: isBanner ? ImageTransactionType.banner : ImageTransactionType.logo,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final assetType = isBanner ? 'banner' : 'logo';
     final fileName = '${type}_${assetType}_${code.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'academic/$fileName';
     final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
 
-    final contentType = extension.toLowerCase() == '.png'
-        ? 'image/png'
-        : (extension.toLowerCase() == '.gif' ? 'image/gif' : 'image/jpeg');
-
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: FileOptions(upsert: true, contentType: contentType),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);

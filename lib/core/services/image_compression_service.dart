@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
-enum ImageTransactionType { receipt, profile, announcement, highlight, excuse, event }
+enum ImageTransactionType { receipt, profile, announcement, highlight, excuse, event, logo, banner }
 
 class ImageCompressionService {
   static Future<Uint8List?> compressImage({
@@ -15,6 +15,7 @@ class ImageCompressionService {
 
     switch (type) {
       case ImageTransactionType.profile:
+      case ImageTransactionType.logo:
         minWidth = 512;
         minHeight = 512;
         quality = 80;
@@ -30,6 +31,11 @@ class ImageCompressionService {
       case ImageTransactionType.event:
         minWidth = 1080;
         minHeight = 1080;
+        quality = 75;
+        break;
+      case ImageTransactionType.banner:
+        minWidth = 1200;
+        minHeight = 600;
         quality = 75;
         break;
     }
