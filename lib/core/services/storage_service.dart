@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
+import 'image_compression_service.dart';
 
 class StorageService {
   final SupabaseClient _client;
@@ -14,8 +15,13 @@ class StorageService {
     required XFile file,
     required bool isFront,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.profile,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = '${isFront ? 'front' : 'back'}_${identifier}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'verification_ids/$fileName';
     final bucket = dotenv.get('SUPABASE_ID_BUCKET', fallback: 'ids');
@@ -23,7 +29,10 @@ class StorageService {
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -83,8 +92,13 @@ class StorageService {
     required XFile file,
     required String title,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.announcement,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = 'announcement_${title.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'announcements/$fileName';
     final bucket = dotenv.get('SUPABASE_ANNOUNCEMENTS_BUCKET', fallback: 'announcement-pictures');
@@ -92,7 +106,10 @@ class StorageService {
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -102,8 +119,13 @@ class StorageService {
     required XFile file,
     required String eventName,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.event,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = 'event_${eventName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'events/$fileName';
     final bucket = dotenv.get('SUPABASE_EVENT_BUCKET', fallback: dotenv.get('SUPABASE_EVENTS_BUCKET', fallback: 'event-pictures'));
@@ -111,7 +133,10 @@ class StorageService {
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -122,8 +147,13 @@ class StorageService {
     required String studentId,
     required String feeId,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.receipt,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = 'receipt_${studentId}_${feeId}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'receipts/$fileName';
     final bucket = dotenv.get('SUPABASE_RECEIPTS_BUCKET', fallback: 'receipt-pictures');
@@ -131,7 +161,10 @@ class StorageService {
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -142,8 +175,13 @@ class StorageService {
     required String eventId,
     required String userId,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.highlight,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = 'highlight_${eventId}_${userId}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'highlights/$eventId/$fileName';
     final bucket = dotenv.get('SUPABASE_HIGHLIGHTS_BUCKET', fallback: 'highlight-pictures');
@@ -151,7 +189,10 @@ class StorageService {
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -173,8 +214,13 @@ class StorageService {
     required String studentId,
     required String eventId,
   }) async {
-    final bytes = await file.readAsBytes();
-    final extension = p.extension(file.name);
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.excuse,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
     final fileName = 'excuse_${studentId}_${eventId}_${DateTime.now().millisecondsSinceEpoch}$extension';
     final path = 'excuses/$fileName';
     final bucket = dotenv.get('SUPABASE_EXCUSE_BUCKET', fallback: 'excuse-pictures');
@@ -182,7 +228,10 @@ class StorageService {
     await _client.storage.from(bucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: true),
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
         );
 
     return _client.storage.from(bucket).getPublicUrl(path);
@@ -202,4 +251,3 @@ class StorageService {
     return await _client.storage.from(bucket).download(path);
   }
 }
-

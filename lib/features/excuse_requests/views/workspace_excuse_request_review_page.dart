@@ -15,6 +15,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
+import '../../../../core/widgets/images/app_network_image.dart';
+
 class WorkspaceExcuseRequestReviewPage extends ConsumerStatefulWidget {
   final String id;
 
@@ -386,30 +388,9 @@ class _WorkspaceExcuseRequestReviewPageState
             clipBehavior: Clip.antiAlias,
             child: InteractiveViewer(
               maxScale: 4.0,
-              child: Image.network(
-                request.supportingDocumentUrl,
+              child: AppNetworkImage(
+                imageUrl: request.supportingDocumentUrl,
                 fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return const Center(child: FlickrLoader());
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.broken_image_outlined,
-                            size: 48, color: Colors.red),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Failed to load image proof',
-                          style: AppTextStyles.bodyMedium
-                              .copyWith(color: AppColors.textGrey),
-                        ),
-                      ],
-                    ),
-                  );
-                },
               ),
             ),
           ),

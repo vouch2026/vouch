@@ -11,6 +11,7 @@ import '../models/excuse_request_model.dart';
 import '../providers/excuse_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../../core/widgets/states/offline_state_view.dart';
+import '../../../../core/widgets/images/app_network_image.dart';
 
 class MyExcuseRequestsPage extends ConsumerStatefulWidget {
   const MyExcuseRequestsPage({super.key});
@@ -505,25 +506,9 @@ class _ExcuseDetailsDialog extends StatelessWidget {
                   color: Colors.grey.shade100,
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Image.network(
-                  request.supportingDocumentUrl,
+                child: AppNetworkImage(
+                  imageUrl: request.supportingDocumentUrl,
                   fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return const Center(child: FlickrLoader());
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.broken_image_outlined, size: 40, color: Colors.red),
-                          const SizedBox(height: 8),
-                          Text('Failed to load image proof', style: AppTextStyles.bodySmall),
-                        ],
-                      ),
-                    );
-                  },
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
