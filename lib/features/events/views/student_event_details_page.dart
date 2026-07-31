@@ -164,8 +164,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       MaterialPageRoute(
         builder: (_) => GovernorCreateEventPage(eventToEdit: currentEvent),
       ),
-    ).then((updated) {
-      if (updated == true) {
+    ).then((result) {
+      if (result == 'deleted') {
+        if (context.mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      } else if (result == true) {
         ref.invalidate(eventProvider(widget.event.id!));
         ref.invalidate(workspaceEventsProvider);
       }

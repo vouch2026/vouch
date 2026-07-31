@@ -440,7 +440,7 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         
         // Go back
         if (context.canPop()) {
-          context.pop();
+          context.pop('deleted');
         } else {
           context.go('/workspace/events');
         }
