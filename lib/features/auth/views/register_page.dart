@@ -390,7 +390,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/logos/vouch.png',
+          'assets/logos/vouch.webp',
           width: size,
           height: size,
         ),

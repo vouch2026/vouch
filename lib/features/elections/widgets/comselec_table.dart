@@ -85,7 +85,7 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
                                 child: Image.asset(
-                                  'assets/logos/vouch.png',
+                                  'assets/logos/vouch.webp',
                                   width: 32,
                                   height: 32,
                                   fit: BoxFit.cover,
@@ -201,7 +201,7 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: Image.asset(
-                      'assets/logos/vouch.png',
+                      'assets/logos/vouch.webp',
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,

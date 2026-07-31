@@ -422,7 +422,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset('assets/logos/vouch.png', width: size, height: size),
+        Image.asset('assets/logos/vouch.webp', width: size, height: size),
         const SizedBox(width: AppSpacing.sm),
         RichText(
           text: TextSpan(

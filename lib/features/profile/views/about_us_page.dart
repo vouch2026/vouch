@@ -201,7 +201,7 @@ class AboutUsPage extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: Image.asset('assets/logos/vouch.png', fit: BoxFit.contain),
+            child: Image.asset('assets/logos/vouch.webp', fit: BoxFit.contain),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -437,7 +437,7 @@ class AboutUsPage extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
-                  'assets/logos/vouch-softtech-services-logo.png',
+                  'assets/logos/vouch-softtech-services-logo.webp',
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return const Icon(
@@ -490,7 +490,7 @@ class AboutUsPage extends StatelessWidget {
     final List<Widget> children = [
       _buildPartnershipCard(
         name: "Faculty of Criminal Justice Education Student Organization",
-        logoPath: 'assets/logos/fcje-so.jpg',
+        logoPath: 'assets/logos/fcje-so.webp',
       ),
       if (isMobile) const SizedBox(height: AppSpacing.md),
       _buildPartnershipCard(

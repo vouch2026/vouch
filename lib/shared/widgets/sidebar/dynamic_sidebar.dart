@@ -247,7 +247,7 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'assets/logos/vouch.png',
+                      'assets/logos/vouch.webp',
                       width: 28,
                       height: 28,
                     ),
@@ -321,7 +321,7 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
           Row(
             children: [
               Image.asset(
-                'assets/logos/vouch.png',
+                'assets/logos/vouch.webp',
                 width: 32,
                 height: 32,
               ),

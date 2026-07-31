@@ -201,7 +201,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/logos/vouch.png',
+          'assets/logos/vouch.webp',
           width: size,
           height: size,
         ),
