@@ -191,6 +191,21 @@ class AuthRepository {
     }
   }
 
+  /// Checks if a school ID is already registered in the users table.
+  Future<bool> isSchoolIdRegistered(String schoolId) async {
+    try {
+      final response = await _client
+          .from('users')
+          .select('student_id_number')
+          .eq('student_id_number', schoolId.trim())
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      debugPrint('Error checking school ID registration: $e');
+      return false;
+    }
+  }
+
   /// Sends a password reset OTP/link to the user's email.
   Future<void> sendPasswordResetEmail(String email) async {
     await _client.auth.resetPasswordForEmail(email.trim().toLowerCase());

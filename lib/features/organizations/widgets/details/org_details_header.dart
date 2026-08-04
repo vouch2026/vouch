@@ -81,7 +81,7 @@ class OrgDetailsHeader extends ConsumerWidget {
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(50),
                           child: Image.asset(
-                            'assets/logos/vouch.png',
+                            'assets/logos/vouch.webp',
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,

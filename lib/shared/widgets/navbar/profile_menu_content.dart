@@ -275,7 +275,7 @@ class ProfileMenuContent extends ConsumerWidget {
               backgroundColor: Colors.grey.shade100,
               backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty && OfflineImageCache.get(avatarUrl) != null
                   ? OfflineImageCache.get(avatarUrl)
-                  : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+                  : const AssetImage('assets/images/my_profile.webp') as ImageProvider,
             ),
           ),
           const SizedBox(width: AppSpacing.lg),

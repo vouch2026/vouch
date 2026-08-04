@@ -240,7 +240,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                             backgroundColor: Colors.grey.shade100,
                                             backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && OfflineImageCache.get(profile.avatarUrl) != null
                                                 ? OfflineImageCache.get(profile.avatarUrl!)
-                                                : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+                                                : const AssetImage('assets/images/my_profile.webp') as ImageProvider,
                                           ),
                                       ),
                                       const SizedBox(width: AppSpacing.md),
@@ -295,7 +295,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                         dataModuleShape: QrDataModuleShape.square,
                                         color: AppColors.primary,
                                       ),
-                                      embeddedImage: const AssetImage('assets/logos/vouch.png'),
+                                      embeddedImage: const AssetImage('assets/logos/vouch.webp'),
                                       embeddedImageStyle: const QrEmbeddedImageStyle(
                                         size: Size(40, 40),
                                       ),
@@ -356,7 +356,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Image.asset(
-                                        'assets/logos/vouch.png',
+                                        'assets/logos/vouch.webp',
                                         height: 20,
                                       ),
                                       const SizedBox(width: 6),

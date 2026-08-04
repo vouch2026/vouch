@@ -49,7 +49,7 @@ class OfflineStateView extends StatelessWidget {
               ),
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Image.asset(
-                'assets/images/mascot-sleep.png',
+                'assets/images/mascot-sleep.webp',
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
                   // Fallback icon if image asset is not loaded

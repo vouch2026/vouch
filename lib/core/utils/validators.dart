@@ -28,4 +28,15 @@ class Validators {
     }
     return null;
   }
+
+  static String? schoolId(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'ID Number is required';
+    }
+    final schoolIdRegex = RegExp(r'^\d{4}-\d{4}$');
+    if (!schoolIdRegex.hasMatch(value)) {
+      return 'Enter a valid ID Number (XXXX-XXXX)';
+    }
+    return null;
+  }
 }

@@ -2,9 +2,11 @@ import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
+import '../../../core/providers/connectivity_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../widgets/student_past_event_card.dart';
@@ -38,6 +40,8 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
     final eventsAsync = ref.watch(workspaceEventsProvider);
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 768;
+
+    final isOffline = ref.watch(connectivityProvider).value == false;
 
     return eventsAsync.when(
       data: (events) {
@@ -79,6 +83,37 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (isOffline) ...[
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.orange.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 16),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                "You're offline. Showing cached content.",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.orange.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     Row(
                       children: [
                         Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),

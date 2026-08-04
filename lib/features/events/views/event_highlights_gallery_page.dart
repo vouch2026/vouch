@@ -17,6 +17,7 @@ import '../providers/event_provider.dart';
 import '../../../core/utils/file_saver_helper.dart';
 import 'package:vouch_v2/core/providers/connectivity_provider.dart';
 import 'package:vouch_v2/core/widgets/states/offline_state_view.dart';
+import '../../../core/widgets/images/app_network_image.dart';
 
 final eventAllHighlightsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, eventId) async {
   final storageService = ref.read(storageServiceProvider);
@@ -598,16 +599,9 @@ class _HighlightCardState extends State<_HighlightCard> {
                       width: double.infinity,
                       height: double.infinity,
                       color: theme.colorScheme.surfaceVariant,
-                      child: Image.network(
-                        widget.highlight['url'] as String,
+                      child: AppNetworkImage(
+                        imageUrl: widget.highlight['url'] as String,
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return const Center(child: FlickrLoader());
-                        },
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.broken_image_outlined, color: Colors.grey),
-                        ),
                       ),
                     ),
                     if (timestamp != null)
@@ -848,14 +842,10 @@ class _FullScreenGalleryOverlayState extends ConsumerState<_FullScreenGalleryOve
                     minScale: 1.0,
                     maxScale: 3.0,
                     child: Center(
-                      child: Image.network(
-                        widget.highlights[index]['url'] as String,
+                      child: AppNetworkImage(
+                        imageUrl: widget.highlights[index]['url'] as String,
                         fit: BoxFit.contain,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return const Center(child: FlickrLoader());
-                        },
-                        errorBuilder: (_, __, ___) => const Center(
+                        errorWidget: const Center(
                           child: Icon(Icons.broken_image_outlined, color: Colors.white, size: 64),
                         ),
                       ),

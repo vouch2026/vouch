@@ -1717,6 +1717,18 @@ AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = u.id AND u
 
 UPDATE auth.users SET email_change = '' WHERE email_change IS NULL;
 
+-- Automatically sync any existing auth users to public.users to prevent profile loss when resetting schemas
+INSERT INTO public.users (auth_id, student_id_number, first_name, last_name, email, account_status)
+SELECT 
+  id as auth_id,
+  COALESCE(raw_user_meta_data->>'school_id', 'PENDING-' || substr(id::text, 1, 8)) as student_id_number,
+  COALESCE(raw_user_meta_data->>'first_name', 'User') as first_name,
+  COALESCE(raw_user_meta_data->>'last_name', '') as last_name,
+  email,
+  'active' as account_status
+FROM auth.users
+ON CONFLICT (auth_id) DO NOTHING;
+
 -- ==========================================
 -- 9. EXCUSE REQUESTS
 -- ==========================================
@@ -1996,24 +2008,18 @@ RETURNS TABLE (
     program_id UUID
 )
 LANGUAGE plpgsql
+STABLE
 SECURITY DEFINER
 AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
-    -- Lazy cleanup of expired roles
-    UPDATE public.organization_members
-    SET role_id = NULL,
-        expired_at = NULL,
-        status = 'active'
-    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
-
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
         RETURN;
     END IF;
 
-    -- 1. Student Organizations where the user is a member/officer
+    -- 1. Student Organizations where the user is an active member/officer
     RETURN QUERY
     SELECT DISTINCT
         o.id,
@@ -2028,7 +2034,9 @@ BEGIN
         o.program_id
     FROM public.organizations o
     JOIN public.organization_members om ON o.id = om.organization_id
-    WHERE om.user_id = v_user_id AND om.status = 'active';
+    WHERE om.user_id = v_user_id 
+      AND om.status = 'active'
+      AND (om.expired_at IS NULL OR om.expired_at > CURRENT_TIMESTAMP);
 
     -- 2. Faculty workspaces where the user is Dean
     RETURN QUERY
@@ -2063,7 +2071,7 @@ BEGIN
     JOIN public.faculties f ON p.faculty_id = f.id
     WHERE p.program_head_id = v_user_id;
 
-    -- 4. COMSELEC workspaces where the user is an active member (chair, commissioner, or voter)
+    -- 4. COMSELEC workspaces where the user is an active member
     RETURN QUERY
     SELECT DISTINCT
         c.id,
@@ -2078,7 +2086,9 @@ BEGIN
         NULL::UUID AS program_id
     FROM public.comselecs c
     JOIN public.comselec_members cm ON c.id = cm.comselec_id
-    WHERE cm.user_id = v_user_id AND cm.status = 'active';
+    WHERE cm.user_id = v_user_id 
+      AND cm.status = 'active'
+      AND (cm.expired_at IS NULL OR cm.expired_at > CURRENT_TIMESTAMP);
 END;
 $$;
 
@@ -2097,10 +2107,22 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_user_id UUID;
+    v_member_role_id UUID;
+    v_voter_role_id UUID;
 BEGIN
-    -- Lazy cleanup of expired roles
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
+
+    -- Lazy cleanup of expired organization roles
     UPDATE public.organization_members
-    SET role_id = NULL,
+    SET role_id = v_member_role_id,
+        expired_at = NULL,
+        status = 'active'
+    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
+
+    -- Lazy cleanup of expired comselec roles
+    UPDATE public.comselec_members
+    SET role_id = v_voter_role_id,
         expired_at = NULL,
         status = 'active'
     WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
@@ -2439,11 +2461,16 @@ CREATE OR REPLACE FUNCTION public.demote_organization_officer(
 ) RETURNS VOID AS $$
 DECLARE
     v_actual_user_id UUID;
+    v_member_role_id UUID;
+    v_voter_role_id UUID;
 BEGIN
     SELECT id INTO v_actual_user_id 
     FROM public.users 
     WHERE id = p_user_id OR auth_id = p_user_id
     LIMIT 1;
+
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
 
     IF p_workspace_type = 'comselec' THEN
         IF LOWER(p_role_name) = 'adviser' THEN
@@ -2451,7 +2478,7 @@ BEGIN
             WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
         ELSE
             UPDATE public.comselec_members
-            SET role_id = NULL,
+            SET role_id = v_voter_role_id,
                 expired_at = NULL,
                 status = 'active'
             WHERE comselec_id = p_org_id AND user_id = v_actual_user_id;
@@ -2466,7 +2493,7 @@ BEGIN
             WHERE id = p_org_id;
         ELSE
             UPDATE public.organization_members
-            SET role_id = NULL,
+            SET role_id = v_member_role_id,
                 expired_at = NULL,
                 status = 'active'
             WHERE organization_id = p_org_id AND user_id = v_actual_user_id;
@@ -2513,3 +2540,40 @@ CREATE POLICY "Super admins can manage all deletion requests"
 ON public.account_deletion_requests 
 FOR ALL TO authenticated 
 USING (public.is_super_admin());
+
+
+-- ==============================================================================
+-- 16. PERFORMANCE OPTIMIZATION INDEXES
+-- ==============================================================================
+
+-- Excuse Requests Indexes
+CREATE INDEX IF NOT EXISTS idx_excuse_requests_student_id ON public.excuse_requests(student_id);
+CREATE INDEX IF NOT EXISTS idx_excuse_requests_event_id ON public.excuse_requests(event_id);
+CREATE INDEX IF NOT EXISTS idx_excuse_requests_status ON public.excuse_requests(status);
+CREATE INDEX IF NOT EXISTS idx_excuse_requests_scope ON public.excuse_requests(scope_type, scope_id);
+
+-- Events & Announcements (Scope Lookups)
+CREATE INDEX IF NOT EXISTS idx_events_scope ON public.events(scope_type, scope_id);
+CREATE INDEX IF NOT EXISTS idx_events_term ON public.events(academic_term_id);
+CREATE INDEX IF NOT EXISTS idx_announcements_scope ON public.announcements(scope_type, scope_id);
+CREATE INDEX IF NOT EXISTS idx_announcements_term ON public.announcements(academic_term_id);
+
+-- Fees & Payments (Treasurer Dashboard Lookups)
+CREATE INDEX IF NOT EXISTS idx_fees_scope ON public.fees(scope_type, scope_id);
+CREATE INDEX IF NOT EXISTS idx_student_payments_status ON public.student_payments(status);
+
+-- Attendance (Composite Index for Fast QR Scanning Checks)
+CREATE INDEX IF NOT EXISTS idx_student_attendance_event_student ON public.student_attendance(event_id, student_id);
+
+-- Sanctions (Admin Lookups)
+CREATE INDEX IF NOT EXISTS idx_student_sanction_status ON public.student_sanction_records(status);
+CREATE INDEX IF NOT EXISTS idx_student_sanction_scope ON public.student_sanction_records(scope_type, scope_id);
+
+-- Memberships (Reverse Lookups by User ID)
+CREATE INDEX IF NOT EXISTS idx_org_members_user_id ON public.organization_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_comselec_members_user_id ON public.comselec_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
+
+-- Clearance Requests (Filter by Org & Status for Officers)
+CREATE INDEX IF NOT EXISTS idx_clearance_requests_org_id ON public.activity_card_clearance_requests(organization_id);
+CREATE INDEX IF NOT EXISTS idx_clearance_requests_status ON public.activity_card_clearance_requests(status);

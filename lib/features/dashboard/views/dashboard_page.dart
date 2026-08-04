@@ -302,7 +302,7 @@ class DashboardPage extends ConsumerWidget {
                             ],
                           ),
                           child: Image.asset(
-                            'assets/images/mascot.png',
+                            'assets/images/mascot.webp',
                             height: isMedium ? 130 : 170,
                             fit: BoxFit.contain,
                           ),
@@ -327,7 +327,7 @@ class DashboardPage extends ConsumerWidget {
                     ],
                   ),
                   child: Image.asset(
-                    'assets/images/mascot.png',
+                    'assets/images/mascot.webp',
                     height: 75,
                     fit: BoxFit.contain,
                   ),
@@ -350,7 +350,7 @@ class DashboardPage extends ConsumerWidget {
           child: Row(
             children: [
               Image.asset(
-                'assets/logos/vouch.png',
+                'assets/logos/vouch.webp',
                 width: isCompact ? 32 : 38,
                 height: isCompact ? 32 : 38,
               ),

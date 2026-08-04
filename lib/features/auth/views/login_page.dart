@@ -22,6 +22,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _hasShownActivationPendingDialog = false;
 
   @override
   void dispose() {
@@ -32,6 +33,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Check for showActivationPending query parameter from registration verification redirect
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = GoRouterState.of(context);
+      final showActivationPending = state.uri.queryParameters['showActivationPending'] == 'true';
+      if (showActivationPending && !_hasShownActivationPendingDialog) {
+        _hasShownActivationPendingDialog = true;
+        _showPendingActivationDialog(context);
+      }
+    });
+
     ref.listen<AsyncValue<void>>(
       authControllerProvider,
       (previous, next) {
@@ -43,6 +55,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 RouteNames.emailVerification,
                 queryParameters: {'email': _emailController.text},
               );
+            } else if (errorMessage.toLowerCase().contains('pending activation')) {
+              _showPendingActivationDialog(context);
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(errorMessage)),
@@ -187,7 +201,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/logos/vouch.png',
+          'assets/logos/vouch.webp',
           width: size,
           height: size,
         ),
@@ -425,6 +439,106 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         suffixIcon: suffixIcon,
       ),
       style: AppTextStyles.bodyMedium,
+    );
+  }
+
+  void _showPendingActivationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        icon: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.warning.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.lock_clock_outlined,
+            color: AppColors.warning,
+            size: 40,
+          ),
+        ),
+        title: Text(
+          'Activation Pending',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.headlineLarge.copyWith(
+            color: AppColors.textDark,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Your account has been registered successfully but needs to be activated before you can log in.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textGrey,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Please contact a Super Administrator to activate your account.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 24),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Got it, thanks!',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

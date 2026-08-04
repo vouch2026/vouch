@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cached_network_image/cached_network_image.dart';
 
 class OfflineImageCache {
   static Future<void> init() async {
@@ -20,7 +21,7 @@ class OfflineImageCache {
     }
 
     if (kIsWeb) {
-      return NetworkImage(url);
+      return CachedNetworkImageProvider(url);
     }
 
     if (url.startsWith('/') || url.startsWith('file:')) {
@@ -43,7 +44,7 @@ class OfflineImageCache {
       debugPrint('Error loading cached image from Hive: $e');
     }
 
-    return NetworkImage(url);
+    return CachedNetworkImageProvider(url);
   }
 
   static Future<void> _downloadImage(String url) async {

@@ -253,7 +253,7 @@ class _GovernorCreatedFeesPageState extends ConsumerState<GovernorCreatedFeesPag
                               color: AppColors.primary,
                             ),
                             _buildStatCard(
-                              title: 'Active Requirements',
+                              title: 'Active Fees',
                               value: activeCount.toString(),
                               icon: Icons.pending_actions_rounded,
                               color: Colors.green,

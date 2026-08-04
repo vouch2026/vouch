@@ -11,6 +11,7 @@ import '../../../core/permissions/app_permissions.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/sanction_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
 
 class SanctionProfilePage extends ConsumerStatefulWidget {
@@ -241,56 +242,84 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
     return DashboardLayout(
       title: widget.isPersonalView ? 'My Sanctions' : 'Student Sanction Profile',
       onBack: widget.isPersonalView ? null : () => context.pop(),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          final workspace = ref.read(workspaceProvider);
+          final term = ref.read(activeTermProvider).value;
+          final org = workspace.selectedOrganization;
+          if (org != null && term != null) {
+            try {
+              await ref.read(sanctionRepositoryProvider).generateSanctionsForTerm(term.id, org.id, org.type);
+            } catch (e) {
+              debugPrint('Error running manual sanction sync: $e');
+            }
+          }
+
+          ref.invalidate(userProfileByIdProvider(widget.studentId));
+          ref.invalidate(studentSanctionsAttendanceProvider(widget.studentId));
+          ref.invalidate(studentSanctionRecordProvider(widget.studentId));
+          ref.invalidate(sanctionRulesProvider);
+          ref.invalidate(userProfileProvider);
+
+          try {
+            await Future.wait([
+              ref.read(studentSanctionsAttendanceProvider(widget.studentId).future),
+              ref.read(studentSanctionRecordProvider(widget.studentId).future),
+              ref.read(sanctionRulesProvider.future),
+              ref.read(userProfileByIdProvider(widget.studentId).future),
+              ref.read(userProfileProvider.future),
+            ]);
+          } catch (_) {}
+        },
         child: profileAsync.when(
           data: (profile) {
-            if (profile == null) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: widget.isPersonalView ? null : () => context.pop(),
-                        child: Text(
-                          'Sanctions',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: widget.isPersonalView ? AppColors.primary : Colors.grey[600],
-                            fontWeight: widget.isPersonalView ? FontWeight.bold : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      if (!widget.isPersonalView) ...[
-                        const SizedBox(width: 8),
-                        Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Student Sanction Profile',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: profile == null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: widget.isPersonalView ? null : () => context.pop(),
+                              child: Text(
+                                'Sanctions',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: widget.isPersonalView ? AppColors.primary : Colors.grey[600],
+                                  fontWeight: widget.isPersonalView ? FontWeight.bold : FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (!widget.isPersonalView) ...[
+                              const SizedBox(width: 8),
+                              Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Student Sanction Profile',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        const SizedBox(height: AppSpacing.md),
+                        const Center(child: Text('Student profile not found.')),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  const Center(child: Text('Student profile not found.')),
-                ],
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                   children: [
                     Icon(Icons.gavel_rounded, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 8),
@@ -740,12 +769,13 @@ class _SanctionProfilePageState extends ConsumerState<SanctionProfilePage> {
                   error: (err, _) => Center(child: Text('Error loading sanction details: $err')),
                 ),
               ],
-            );
-          },
-          loading: () => const Center(child: FlickrLoader()),
-          error: (err, _) => Center(child: Text('Error loading profile: $err')),
-        ),
+            ),
+          );
+        },
+        loading: () => const Center(child: FlickrLoader()),
+        error: (err, _) => Center(child: Text('Error loading profile: $err')),
       ),
-    );
-  }
+    ),
+  );
+}
 }

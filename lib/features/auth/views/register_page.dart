@@ -57,12 +57,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _isEmailRegistered = false;
   String? _emailValidationError;
 
+  // ID No. Validation State
+  Timer? _schoolIdDebounceTimer;
+  bool _isCheckingSchoolId = false;
+  bool _isSchoolIdRegistered = false;
+  String? _schoolIdValidationError;
+
   @override
   void initState() {
     super.initState();
     _firstNameController.addListener(_onFieldChanged);
     _lastNameController.addListener(_onFieldChanged);
-    _schoolIdController.addListener(_onFieldChanged);
+    _schoolIdController.addListener(_onSchoolIdChanged);
     _emailController.addListener(_onEmailChanged);
     _passwordController.addListener(_onFieldChanged);
     _confirmPasswordController.addListener(_onFieldChanged);
@@ -70,6 +76,73 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   void _onFieldChanged() {
     setState(() {});
+  }
+
+  void _onSchoolIdChanged() {
+    _onFieldChanged();
+    _schoolIdDebounceTimer?.cancel();
+    
+    // Instantly clear the registration error status when typing starts again
+    if (_isSchoolIdRegistered || _schoolIdValidationError != null) {
+      setState(() {
+        _isSchoolIdRegistered = false;
+        _schoolIdValidationError = null;
+      });
+    }
+
+    _schoolIdDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      if (_schoolIdController.text.trim().isNotEmpty) {
+        _checkSchoolIdAvailability(_schoolIdController.text);
+      }
+    });
+  }
+
+  Future<void> _checkSchoolIdAvailability(String schoolId) async {
+    final trimmedId = schoolId.trim();
+    if (trimmedId.isEmpty) {
+      setState(() {
+        _isSchoolIdRegistered = false;
+        _schoolIdValidationError = null;
+      });
+      return;
+    }
+
+    // Step 1: Perform client-side format validation first
+    final formatError = Validators.schoolId(trimmedId);
+    if (formatError != null) {
+      setState(() {
+        _isSchoolIdRegistered = false;
+        _schoolIdValidationError = formatError;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingSchoolId = true;
+      _schoolIdValidationError = null;
+    });
+
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      final exists = await repository.isSchoolIdRegistered(trimmedId);
+      
+      if (mounted) {
+        setState(() {
+          _isSchoolIdRegistered = exists;
+          _isCheckingSchoolId = false;
+          if (exists) {
+            _schoolIdValidationError = 'This ID Number is already registered';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCheckingSchoolId = false;
+          _schoolIdValidationError = 'Error verifying ID Number. Please try again.';
+        });
+      }
+    }
   }
 
   void _onEmailChanged() {
@@ -143,11 +216,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   void dispose() {
     _firstNameController.removeListener(_onFieldChanged);
     _lastNameController.removeListener(_onFieldChanged);
-    _schoolIdController.removeListener(_onFieldChanged);
+    _schoolIdController.removeListener(_onSchoolIdChanged);
     _emailController.removeListener(_onEmailChanged);
     _passwordController.removeListener(_onFieldChanged);
     _confirmPasswordController.removeListener(_onFieldChanged);
     _emailDebounceTimer?.cancel();
+    _schoolIdDebounceTimer?.cancel();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _schoolIdController.dispose();
@@ -171,7 +245,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         _agreeToTerms &&
         !_isCheckingEmail &&
         !_isEmailRegistered &&
-        _emailValidationError == null;
+        _emailValidationError == null &&
+        !_isCheckingSchoolId &&
+        !_isSchoolIdRegistered &&
+        _schoolIdValidationError == null;
   }
 
   @override
@@ -313,7 +390,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/logos/vouch.png',
+          'assets/logos/vouch.webp',
           width: size,
           height: size,
         ),
@@ -505,6 +582,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 FilteringTextInputFormatter.digitsOnly,
                 _SchoolIdFormatter(),
               ],
+              errorText: _schoolIdValidationError,
+              suffixIcon: _isCheckingSchoolId
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    )
+                  : (_schoolIdController.text.isNotEmpty && Validators.schoolId(_schoolIdController.text) == null)
+                      ? _isSchoolIdRegistered
+                          ? const Icon(Icons.error_outline, color: AppColors.error)
+                          : const Icon(Icons.check_circle_outline, color: AppColors.success)
+                      : null,
+              validator: (val) {
+                final formatError = Validators.schoolId(val);
+                if (formatError != null) return formatError;
+
+                if (_schoolIdValidationError != null) {
+                  return _schoolIdValidationError;
+                }
+                return null;
+              },
             ),
 
             const SizedBox(height: AppSpacing.md),

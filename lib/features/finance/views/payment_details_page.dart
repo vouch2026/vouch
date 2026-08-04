@@ -13,6 +13,7 @@ import '../models/student_payment_model.dart';
 import '../providers/finance_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../../core/widgets/images/app_network_image.dart';
 
 class PaymentDetailsPage extends ConsumerStatefulWidget {
   final StudentPaymentModel payment;
@@ -140,21 +141,9 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
             Flexible(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  imageUrl,
+                child: AppNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const Center(child: FlickrLoader());
-                  },
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    width: double.infinity,
-                    color: Colors.white,
-                    child: const Center(
-                      child: Icon(Icons.broken_image_outlined, color: Colors.red, size: 48),
-                    ),
-                  ),
                 ),
               ),
             ),
@@ -514,19 +503,9 @@ class _PaymentDetailsPageState extends ConsumerState<PaymentDetailsPage> {
                   ? Stack(
                       children: [
                         Positioned.fill(
-                          child: Image.network(
-                            payment.proofPhotoUrl!,
+                          child: AppNetworkImage(
+                            imageUrl: payment.proofPhotoUrl!,
                             fit: BoxFit.cover,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return const Center(child: FlickrLoader());
-                            },
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.grey[100],
-                              child: const Center(
-                                child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 48),
-                              ),
-                            ),
                           ),
                         ),
                         Positioned(

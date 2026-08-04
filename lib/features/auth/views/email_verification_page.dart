@@ -66,9 +66,14 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       (previous, next) {
         next.whenOrNull(
           error: (error, stackTrace) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(error.toString())),
-            );
+            final errorMessage = error.toString();
+            if (errorMessage.toLowerCase().contains('pending activation')) {
+              context.go('${RoutePaths.login}?showActivationPending=true');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(errorMessage)),
+              );
+            }
           },
         );
       },
@@ -261,7 +266,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset('assets/logos/vouch.png', width: size, height: size),
+        Image.asset('assets/logos/vouch.webp', width: size, height: size),
         const SizedBox(width: AppSpacing.sm),
         RichText(
           text: TextSpan(

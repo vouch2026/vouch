@@ -350,7 +350,7 @@ class ManageAccountPage extends ConsumerWidget {
                   backgroundColor: AppColors.background,
                   backgroundImage: profile.avatarUrl != null && profile.avatarUrl.isNotEmpty && OfflineImageCache.get(profile.avatarUrl) != null
                       ? OfflineImageCache.get(profile.avatarUrl)
-                      : const AssetImage('assets/images/my_profile.png') as ImageProvider,
+                      : const AssetImage('assets/images/my_profile.webp') as ImageProvider,
                 ),
               ),
               Positioned(

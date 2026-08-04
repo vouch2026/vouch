@@ -110,7 +110,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.asset(
-        'assets/logos/vouch.png',
+        'assets/logos/vouch.webp',
         fit: BoxFit.fill,
       ),
     );

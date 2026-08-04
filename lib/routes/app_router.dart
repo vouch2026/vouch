@@ -68,6 +68,7 @@ import '../features/sanctions/views/workspace_edit_sanction_rule_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 import '../core/utils/role_mapper.dart';
+import '../shared/layouts/shell_layout.dart';
 
 /// A notifier that notifies the [GoRouter] when the authentication state 
 /// or workspace state changes.
@@ -77,6 +78,7 @@ class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen(authStateProvider, (_, __) => notifyListeners());
     _ref.listen(workspaceProvider, (_, __) => notifyListeners());
+    _ref.listen(userProfileProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -122,6 +124,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
+      // Get user profile
+      final userProfileAsync = ref.read(userProfileProvider);
+      
+      // If user profile is still loading, wait before redirecting
+      if (userProfileAsync.isLoading) {
+        return null;
+      }
+
+      final userProfile = userProfileAsync.value;
+      if (userProfile != null && userProfile.status != 'active') {
+        return RoutePaths.login;
+      }
+
       if (loggingIn) {
         if (state.matchedLocation == RoutePaths.forgotPassword) {
           return null;
@@ -129,9 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.dashboard;
       }
 
-      // Get user profile and workspace state
-      final userProfileAsync = ref.read(userProfileProvider);
-      final userProfile = userProfileAsync.value;
+      // Get workspace state
       final workspace = ref.read(workspaceProvider);
 
       final isSuperAdmin = userProfile?.role == 'super_admin';
@@ -275,463 +288,468 @@ final routerProvider = Provider<GoRouter>((ref) {
           return EmailVerificationPage(email: email);
         },
       ),
-      GoRoute(
-        path: RoutePaths.dashboard,
-        name: RouteNames.dashboard,
-        builder: (context, state) => const DashboardPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.calendar,
-        name: RouteNames.calendar,
-        builder: (context, state) => const CalendarPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.events,
-        name: RouteNames.events,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'My Events'),
-      ),
-      GoRoute(
-        path: RoutePaths.fees,
-        name: RouteNames.fees,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'My Fees'),
-      ),
-      GoRoute(
-        path: RoutePaths.notifications,
-        name: RouteNames.notifications,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
-      ),
-      GoRoute(
-        path: RoutePaths.activityCards,
-        name: RouteNames.activityCards,
-        builder: (context, state) => const ActivityCardRedirector(),
-      ),
-      GoRoute(
-        path: RoutePaths.activityCardDetails,
-        name: RouteNames.activityCardDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return ActivityCardDetailsPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.profile,
-        name: RouteNames.profile,
-        builder: (context, state) => const ManageAccountPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.myQrCode,
-        name: RouteNames.myQrCode,
-        builder: (context, state) => const MyQrCodePage(),
-      ),
-      GoRoute(
-        path: RoutePaths.aboutUs,
-        name: RouteNames.aboutUs,
-        builder: (context, state) => const AboutUsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.help,
-        name: RouteNames.help,
-        builder: (context, state) => const HelpSupportPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.settings,
-        name: RouteNames.settings,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Settings'),
-      ),
-      GoRoute(
-        path: RoutePaths.academicStructure,
-        name: RouteNames.academicStructure,
-        builder: (context, state) => const AcademicStructurePage(),
-      ),
-      GoRoute(
-        path: RoutePaths.organizations,
-        name: RouteNames.organizations,
-        builder: (context, state) => const OrganizationsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecsManager,
-        name: RouteNames.comselecsManager,
-        builder: (context, state) => const ComselecsManagerPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.organizationDetails,
-        name: RouteNames.organizationDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return OrganizationDetailsPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.campuses,
-        name: RouteNames.campuses,
-        builder: (context, state) => const CampusesPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.campusDetails,
-        name: RouteNames.campusDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return CampusDetailsPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.faculties,
-        name: RouteNames.faculties,
-        builder: (context, state) => const FacultiesPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.facultyDetails,
-        name: RouteNames.facultyDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return FacultyDetailsPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.programs,
-        name: RouteNames.programs,
-        builder: (context, state) => const ProgramsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.programDetails,
-        name: RouteNames.programDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return ProgramDetailsPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.users,
-        name: RouteNames.users,
-        builder: (context, state) => const UsersPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.accountDeletionRequests,
-        name: RouteNames.accountDeletionRequests,
-        builder: (context, state) => const AccountDeletionRequestsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.officers,
-        name: RouteNames.officers,
-        builder: (context, state) => const OfficersPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.userDetails,
-        name: RouteNames.userDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return UserProfilePage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.comselecDashboard,
-        name: RouteNames.comselecDashboard,
-        builder: (context, state) => const ComselecDashboardPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecElections,
-        name: RouteNames.comselecElections,
-        builder: (context, state) => const ElectionsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecCandidates,
-        name: RouteNames.comselecCandidates,
-        builder: (context, state) => const CandidatesPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecVoters,
-        name: RouteNames.comselecVoters,
-        builder: (context, state) => const VotersPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecResults,
-        name: RouteNames.comselecResults,
-        builder: (context, state) => const ElectionResultsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecAnalytics,
-        name: RouteNames.comselecAnalytics,
-        builder: (context, state) => const ElectionAnalyticsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.comselecOfficials,
-        name: RouteNames.comselecOfficials,
-        builder: (context, state) => const ComselecOfficialsPage(),
-      ),
+      ShellRoute(
+        builder: (context, state, child) => ShellLayout(child: child),
+        routes: [
+          GoRoute(
+            path: RoutePaths.dashboard,
+            name: RouteNames.dashboard,
+            builder: (context, state) => const DashboardPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.calendar,
+            name: RouteNames.calendar,
+            builder: (context, state) => const CalendarPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.events,
+            name: RouteNames.events,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'My Events'),
+          ),
+          GoRoute(
+            path: RoutePaths.fees,
+            name: RouteNames.fees,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'My Fees'),
+          ),
+          GoRoute(
+            path: RoutePaths.notifications,
+            name: RouteNames.notifications,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
+          ),
+          GoRoute(
+            path: RoutePaths.activityCards,
+            name: RouteNames.activityCards,
+            builder: (context, state) => const ActivityCardRedirector(),
+          ),
+          GoRoute(
+            path: RoutePaths.activityCardDetails,
+            name: RouteNames.activityCardDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return ActivityCardDetailsPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.profile,
+            name: RouteNames.profile,
+            builder: (context, state) => const ManageAccountPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.myQrCode,
+            name: RouteNames.myQrCode,
+            builder: (context, state) => const MyQrCodePage(),
+          ),
+          GoRoute(
+            path: RoutePaths.aboutUs,
+            name: RouteNames.aboutUs,
+            builder: (context, state) => const AboutUsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.help,
+            name: RouteNames.help,
+            builder: (context, state) => const HelpSupportPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.settings,
+            name: RouteNames.settings,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Settings'),
+          ),
+          GoRoute(
+            path: RoutePaths.academicStructure,
+            name: RouteNames.academicStructure,
+            builder: (context, state) => const AcademicStructurePage(),
+          ),
+          GoRoute(
+            path: RoutePaths.organizations,
+            name: RouteNames.organizations,
+            builder: (context, state) => const OrganizationsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecsManager,
+            name: RouteNames.comselecsManager,
+            builder: (context, state) => const ComselecsManagerPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.organizationDetails,
+            name: RouteNames.organizationDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return OrganizationDetailsPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.campuses,
+            name: RouteNames.campuses,
+            builder: (context, state) => const CampusesPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.campusDetails,
+            name: RouteNames.campusDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return CampusDetailsPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.faculties,
+            name: RouteNames.faculties,
+            builder: (context, state) => const FacultiesPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.facultyDetails,
+            name: RouteNames.facultyDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return FacultyDetailsPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.programs,
+            name: RouteNames.programs,
+            builder: (context, state) => const ProgramsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.programDetails,
+            name: RouteNames.programDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return ProgramDetailsPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.users,
+            name: RouteNames.users,
+            builder: (context, state) => const UsersPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.accountDeletionRequests,
+            name: RouteNames.accountDeletionRequests,
+            builder: (context, state) => const AccountDeletionRequestsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.officers,
+            name: RouteNames.officers,
+            builder: (context, state) => const OfficersPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.userDetails,
+            name: RouteNames.userDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return UserProfilePage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.comselecDashboard,
+            name: RouteNames.comselecDashboard,
+            builder: (context, state) => const ComselecDashboardPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecElections,
+            name: RouteNames.comselecElections,
+            builder: (context, state) => const ElectionsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecCandidates,
+            name: RouteNames.comselecCandidates,
+            builder: (context, state) => const CandidatesPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecVoters,
+            name: RouteNames.comselecVoters,
+            builder: (context, state) => const VotersPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecResults,
+            name: RouteNames.comselecResults,
+            builder: (context, state) => const ElectionResultsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecAnalytics,
+            name: RouteNames.comselecAnalytics,
+            builder: (context, state) => const ElectionAnalyticsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecOfficials,
+            name: RouteNames.comselecOfficials,
+            builder: (context, state) => const ComselecOfficialsPage(),
+          ),
 
-      // Workspace Routes
-      GoRoute(
-        path: RoutePaths.workspaceDashboard,
-        name: RouteNames.workspaceDashboard,
-        builder: (context, state) => const WorkspaceDashboardPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceMembers,
-        name: RouteNames.workspaceMembers,
-        builder: (context, state) => const GovernorMembersPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceOfficers,
-        name: RouteNames.workspaceOfficers,
-        builder: (context, state) => const GovernorOfficersPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceEvents,
-        name: RouteNames.workspaceEvents,
-        builder: (context, state) => const GovernorEventsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCreateEvent,
-        name: 'workspaceCreateEvent',
-        builder: (context, state) => const GovernorCreateEventPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAttendance,
-        name: RouteNames.workspaceAttendance,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Attendance'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAnnouncements,
-        name: RouteNames.workspaceAnnouncements,
-        builder: (context, state) => const GovernorAnnouncementsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCreateAnnouncement,
-        name: RouteNames.workspaceCreateAnnouncement,
-        builder: (context, state) {
-          final announcement = state.extra as AnnouncementModel?;
-          return GovernorCreateAnnouncementPage(initialData: announcement);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceDocuments,
-        name: RouteNames.workspaceDocuments,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Documents'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceFees,
-        name: RouteNames.workspaceFees,
-        builder: (context, state) => const GovernorFinancePage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCollections,
-        name: RouteNames.workspaceCollections,
-        builder: (context, state) => const GovernorCollectionsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCollectionsReport,
-        name: RouteNames.workspaceCollectionsReport,
-        builder: (context, state) {
-          final fee = state.extra as FeeModel;
-          return GovernorFeeReportPage(fee: fee);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceFinanceReports,
-        name: RouteNames.workspaceFinanceReports,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Financial Reports'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceElections,
-        name: RouteNames.workspaceElections,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Elections'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCompliance,
-        name: RouteNames.workspaceCompliance,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Compliance'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceSanctions,
-        name: RouteNames.workspaceSanctions,
-        builder: (context, state) => const SanctionRedirector(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceSanctionProfile,
-        name: RouteNames.workspaceSanctionProfile,
-        builder: (context, state) {
-          final studentId = state.pathParameters['studentId']!;
-          return SanctionProfilePage(studentId: studentId);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCreateSanctionRule,
-        name: RouteNames.workspaceCreateSanctionRule,
-        builder: (context, state) => const WorkspaceCreateSanctionRulePage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceEditSanctionRule,
-        name: RouteNames.workspaceEditSanctionRule,
-        builder: (context, state) {
-          final rule = state.extra as Map<String, dynamic>;
-          return WorkspaceEditSanctionRulePage(rule: rule);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceParticipation,
-        name: RouteNames.workspaceParticipation,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Participation Analytics'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAttendanceAnalytics,
-        name: RouteNames.workspaceAttendanceAnalytics,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Attendance Analytics'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceFinancialAnalytics,
-        name: RouteNames.workspaceFinancialAnalytics,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Analytics'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceActivityCards,
-        name: RouteNames.workspaceActivityCards,
-        builder: (context, state) => const GovernorActivityCardsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceActivityCardDetails,
-        name: RouteNames.workspaceActivityCardDetails,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return GovernorActivityCardReviewPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceSettings,
-        name: RouteNames.workspaceSettings,
-        builder: (context, state) => const GovernorSettingsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.tasks,
-        name: RouteNames.tasks,
-        builder: (context, state) => const TasksPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.schedule,
-        name: RouteNames.schedule,
-        builder: (context, state) => const SchedulePage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceExcuseRequests,
-        name: RouteNames.workspaceExcuseRequests,
-        builder: (context, state) => const WorkspaceExcuseRequestsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceExcuseRequestReview,
-        name: RouteNames.workspaceExcuseRequestReview,
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return WorkspaceExcuseRequestReviewPage(id: id);
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.myExcuseRequests,
-        name: RouteNames.myExcuseRequests,
-        builder: (context, state) => const MyExcuseRequestsPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceOfficerAppointments,
-        name: RouteNames.workspaceOfficerAppointments,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Officer Appointments'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCollectionsAudit,
-        name: RouteNames.workspaceCollectionsAudit,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Collections Audit'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAuditLogs,
-        name: RouteNames.workspaceAuditLogs,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Audit Logs'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAuditReports,
-        name: RouteNames.workspaceAuditReports,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Audit Reports'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAuditAnalytics,
-        name: RouteNames.workspaceAuditAnalytics,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Audit Analytics'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspacePublications,
-        name: RouteNames.workspacePublications,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Publications'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceGallery,
-        name: RouteNames.workspaceGallery,
-        builder: (context, state) => const GovernorGalleryPage(),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceEngagementReports,
-        name: RouteNames.workspaceEngagementReports,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Engagement Reports'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceMeetingMinutes,
-        name: RouteNames.workspaceMeetingMinutes,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Meeting Minutes'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceAttendanceReports,
-        name: RouteNames.workspaceAttendanceReports,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Attendance Reports'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceProposals,
-        name: RouteNames.workspaceProposals,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Proposals'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceVoting,
-        name: RouteNames.workspaceVoting,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Voting'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceResolutions,
-        name: RouteNames.workspaceResolutions,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Resolutions'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceGovernanceReports,
-        name: RouteNames.workspaceGovernanceReports,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Governance Reports'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceCollectionAnalytics,
-        name: RouteNames.workspaceCollectionAnalytics,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Collection Analytics'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceReports,
-        name: RouteNames.workspaceReports,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Reports'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceProjects,
-        name: RouteNames.workspaceProjects,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Projects'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceSales,
-        name: RouteNames.workspaceSales,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Sales'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceInventory,
-        name: RouteNames.workspaceInventory,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Inventory'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceSponsors,
-        name: RouteNames.workspaceSponsors,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Sponsors & Partners'),
-      ),
-      GoRoute(
-        path: RoutePaths.workspaceFinancialRequests,
-        name: RouteNames.workspaceFinancialRequests,
-        builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Requests'),
+          // Workspace Routes
+          GoRoute(
+            path: RoutePaths.workspaceDashboard,
+            name: RouteNames.workspaceDashboard,
+            builder: (context, state) => const WorkspaceDashboardPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceMembers,
+            name: RouteNames.workspaceMembers,
+            builder: (context, state) => const GovernorMembersPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceOfficers,
+            name: RouteNames.workspaceOfficers,
+            builder: (context, state) => const GovernorOfficersPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceEvents,
+            name: RouteNames.workspaceEvents,
+            builder: (context, state) => const GovernorEventsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCreateEvent,
+            name: 'workspaceCreateEvent',
+            builder: (context, state) => const GovernorCreateEventPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAttendance,
+            name: RouteNames.workspaceAttendance,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Attendance'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAnnouncements,
+            name: RouteNames.workspaceAnnouncements,
+            builder: (context, state) => const GovernorAnnouncementsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCreateAnnouncement,
+            name: RouteNames.workspaceCreateAnnouncement,
+            builder: (context, state) {
+              final announcement = state.extra as AnnouncementModel?;
+              return GovernorCreateAnnouncementPage(initialData: announcement);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceDocuments,
+            name: RouteNames.workspaceDocuments,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Documents'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceFees,
+            name: RouteNames.workspaceFees,
+            builder: (context, state) => const GovernorFinancePage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCollections,
+            name: RouteNames.workspaceCollections,
+            builder: (context, state) => const GovernorCollectionsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCollectionsReport,
+            name: RouteNames.workspaceCollectionsReport,
+            builder: (context, state) {
+              final fee = state.extra as FeeModel;
+              return GovernorFeeReportPage(fee: fee);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceFinanceReports,
+            name: RouteNames.workspaceFinanceReports,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Financial Reports'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceElections,
+            name: RouteNames.workspaceElections,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Elections'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCompliance,
+            name: RouteNames.workspaceCompliance,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Organization Compliance'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceSanctions,
+            name: RouteNames.workspaceSanctions,
+            builder: (context, state) => const SanctionRedirector(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceSanctionProfile,
+            name: RouteNames.workspaceSanctionProfile,
+            builder: (context, state) {
+              final studentId = state.pathParameters['studentId']!;
+              return SanctionProfilePage(studentId: studentId);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCreateSanctionRule,
+            name: RouteNames.workspaceCreateSanctionRule,
+            builder: (context, state) => const WorkspaceCreateSanctionRulePage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceEditSanctionRule,
+            name: RouteNames.workspaceEditSanctionRule,
+            builder: (context, state) {
+              final rule = state.extra as Map<String, dynamic>;
+              return WorkspaceEditSanctionRulePage(rule: rule);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceParticipation,
+            name: RouteNames.workspaceParticipation,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Participation Analytics'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAttendanceAnalytics,
+            name: RouteNames.workspaceAttendanceAnalytics,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Attendance Analytics'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceFinancialAnalytics,
+            name: RouteNames.workspaceFinancialAnalytics,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Analytics'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceActivityCards,
+            name: RouteNames.workspaceActivityCards,
+            builder: (context, state) => const GovernorActivityCardsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceActivityCardDetails,
+            name: RouteNames.workspaceActivityCardDetails,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return GovernorActivityCardReviewPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceSettings,
+            name: RouteNames.workspaceSettings,
+            builder: (context, state) => const GovernorSettingsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.tasks,
+            name: RouteNames.tasks,
+            builder: (context, state) => const TasksPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.schedule,
+            name: RouteNames.schedule,
+            builder: (context, state) => const SchedulePage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceExcuseRequests,
+            name: RouteNames.workspaceExcuseRequests,
+            builder: (context, state) => const WorkspaceExcuseRequestsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceExcuseRequestReview,
+            name: RouteNames.workspaceExcuseRequestReview,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return WorkspaceExcuseRequestReviewPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.myExcuseRequests,
+            name: RouteNames.myExcuseRequests,
+            builder: (context, state) => const MyExcuseRequestsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceOfficerAppointments,
+            name: RouteNames.workspaceOfficerAppointments,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Officer Appointments'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCollectionsAudit,
+            name: RouteNames.workspaceCollectionsAudit,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Collections Audit'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAuditLogs,
+            name: RouteNames.workspaceAuditLogs,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Audit Logs'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAuditReports,
+            name: RouteNames.workspaceAuditReports,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Audit Reports'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAuditAnalytics,
+            name: RouteNames.workspaceAuditAnalytics,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Audit Analytics'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspacePublications,
+            name: RouteNames.workspacePublications,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Publications'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceGallery,
+            name: RouteNames.workspaceGallery,
+            builder: (context, state) => const GovernorGalleryPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceEngagementReports,
+            name: RouteNames.workspaceEngagementReports,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Engagement Reports'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceMeetingMinutes,
+            name: RouteNames.workspaceMeetingMinutes,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Meeting Minutes'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceAttendanceReports,
+            name: RouteNames.workspaceAttendanceReports,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Attendance Reports'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceProposals,
+            name: RouteNames.workspaceProposals,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Proposals'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceVoting,
+            name: RouteNames.workspaceVoting,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Voting'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceResolutions,
+            name: RouteNames.workspaceResolutions,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Resolutions'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceGovernanceReports,
+            name: RouteNames.workspaceGovernanceReports,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Governance Reports'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceCollectionAnalytics,
+            name: RouteNames.workspaceCollectionAnalytics,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Collection Analytics'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceReports,
+            name: RouteNames.workspaceReports,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Reports'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceProjects,
+            name: RouteNames.workspaceProjects,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Projects'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceSales,
+            name: RouteNames.workspaceSales,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Sales'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceInventory,
+            name: RouteNames.workspaceInventory,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Inventory'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceSponsors,
+            name: RouteNames.workspaceSponsors,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Sponsors & Partners'),
+          ),
+          GoRoute(
+            path: RoutePaths.workspaceFinancialRequests,
+            name: RouteNames.workspaceFinancialRequests,
+            builder: (context, state) => const GovernorModulePlaceholder(title: 'Financial Requests'),
+          ),
+        ],
       ),
     ],
   );

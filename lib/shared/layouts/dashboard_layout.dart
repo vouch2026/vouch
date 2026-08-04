@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../widgets/sidebar/dynamic_sidebar.dart';
 import '../widgets/navbar/profile_dropdown.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/organizations/providers/workspace_provider.dart';
@@ -47,219 +46,159 @@ class DashboardLayout extends ConsumerWidget {
     final double totalAppBarHeight = containerHeight + topMargin + bottomMargin;
     final double borderRadius = isMobile ? 12.0 : 16.0;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeInOut,
-                width: (isDesktop && isSidebarVisible) ? 250.0 : 0.0,
-                child: ClipRect(
-                  child: OverflowBox(
-                    minWidth: 250.0,
-                    maxWidth: 250.0,
-                    alignment: Alignment.topLeft,
-                    child: const SizedBox(
-                      width: 250.0,
-                      child: DynamicSidebar(),
-                    ),
-                  ),
-                ),
+    return SafeArea(
+      bottom: false,
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(totalAppBarHeight),
+          child: Container(
+            margin: EdgeInsets.only(
+              top: topMargin,
+              left: horizontalMargin,
+              right: horizontalMargin,
+              bottom: bottomMargin,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                width: 1.2,
               ),
-              Expanded(
-                child: SafeArea(
-                  bottom: false,
-                  child: Scaffold(
-                  appBar: PreferredSize(
-                    preferredSize: Size.fromHeight(totalAppBarHeight),
-                    child: Container(
-                      margin: EdgeInsets.only(
-                        top: topMargin,
-                        left: horizontalMargin,
-                        right: horizontalMargin,
-                        bottom: bottomMargin,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(borderRadius),
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 16.0,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(borderRadius),
-                        child: AppBar(
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          scrolledUnderElevation: 0,
-                          automaticallyImplyLeading: false,
-                          toolbarHeight: containerHeight,
-                          leadingWidth: onBack != null
-                              ? (isMobile ? 52.0 : 60.0)
-                              : ((!isSidebarVisible || !isDesktop)
-                                  ? (isMobile ? 52.0 : 60.0)
-                                  : 0.0),
-                          leading: onBack != null
-                              ? Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      icon: Container(
-                                        width: isMobile ? 34 : 38,
-                                        height: isMobile ? 34 : 38,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.accent.withValues(alpha: 0.15),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: AppColors.primary.withValues(alpha: 0.1),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.arrow_back_rounded,
-                                          color: AppColors.primary,
-                                          size: isMobile ? 18 : 20,
-                                        ),
-                                      ),
-                                      onPressed: onBack,
-                                    ),
-                                  ),
-                                )
-                              : ((!isSidebarVisible || !isDesktop)
-                                  ? Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
-                                        child: IconButton(
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          icon: Container(
-                                            width: isMobile ? 34 : 38,
-                                            height: isMobile ? 34 : 38,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.accent.withValues(alpha: 0.15),
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: AppColors.primary.withValues(alpha: 0.1),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Icon(
-                                              Icons.menu_rounded,
-                                              color: AppColors.primary,
-                                              size: isMobile ? 18 : 20,
-                                            ),
-                                          ),
-                                          onPressed: () => ref
-                                              .read(sidebarVisibleProvider.notifier)
-                                              .state = true,
-                                        ),
-                                      ),
-                                    )
-                                  : null),
-                          titleSpacing: (onBack != null || !isSidebarVisible || !isDesktop)
-                              ? (isMobile ? 4.0 : 8.0)
-                              : (isMobile ? 12.0 : 16.0),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(
-                                  fontSize: isMobile ? 15 : (isTablet ? 16 : 18),
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16.0,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(borderRadius),
+              child: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                automaticallyImplyLeading: false,
+                toolbarHeight: containerHeight,
+                leadingWidth: onBack != null
+                    ? (isMobile ? 52.0 : 60.0)
+                    : ((!isSidebarVisible || !isDesktop)
+                        ? (isMobile ? 52.0 : 60.0)
+                        : 0.0),
+                leading: onBack != null
+                    ? Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Container(
+                              width: isMobile ? 34 : 38,
+                              height: isMobile ? 34 : 38,
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  width: 1,
                                 ),
                               ),
-                              _buildSubtitleBadges(context, isSuperAdmin, workspace, selectedOrg, isMobile),
-                            ],
+                              child: Icon(
+                                Icons.arrow_back_rounded,
+                                color: AppColors.primary,
+                                size: isMobile ? 18 : 20,
+                              ),
+                            ),
+                            onPressed: onBack,
                           ),
-                          actions: [
-                            if (actions != null)
-                              ...actions!.map((action) {
-                                if (action is IconButton) {
-                                  return Padding(
-                                    padding: EdgeInsets.only(right: isMobile ? 4.0 : 8.0),
-                                    child: Container(
-                                      width: isMobile ? 34 : 38,
-                                      height: isMobile ? 34 : 38,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withValues(alpha: 0.05),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: AppColors.primary.withValues(alpha: 0.08),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: action,
-                                    ),
-                                  );
-                                }
-                                return Padding(
-                                  padding: EdgeInsets.only(right: isMobile ? 4.0 : 8.0),
-                                  child: action,
-                                );
-                              }),
-                            const ProfileDropdown(),
-                          ],
                         ),
+                      )
+                    : ((!isSidebarVisible || !isDesktop)
+                        ? Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(left: isMobile ? 6.0 : 10.0),
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                icon: Container(
+                                  width: isMobile ? 34 : 38,
+                                  height: isMobile ? 34 : 38,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.menu_rounded,
+                                    color: AppColors.primary,
+                                    size: isMobile ? 18 : 20,
+                                  ),
+                                ),
+                                onPressed: () => ref
+                                    .read(sidebarVisibleProvider.notifier)
+                                    .state = true,
+                              ),
+                            ),
+                          )
+                        : null),
+                titleSpacing: (onBack != null || !isSidebarVisible || !isDesktop)
+                    ? (isMobile ? 4.0 : 8.0)
+                    : (isMobile ? 12.0 : 16.0),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: isMobile ? 15 : (isTablet ? 16 : 18),
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
                       ),
                     ),
-                  ),
-                  body: child,
-                  floatingActionButton: floatingActionButton,
+                    _buildSubtitleBadges(context, isSuperAdmin, workspace, selectedOrg, isMobile),
+                  ],
                 ),
-              ),
-            ),
-            ],
-          ),
-          
-          // Mobile/Tablet Sidebar Overlay
-          if (!isDesktop)
-            IgnorePointer(
-              ignoring: !isSidebarVisible,
-              child: Stack(
-                children: [
-                  // Scrim
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOut,
-                    opacity: isSidebarVisible ? 1.0 : 0.0,
-                    child: GestureDetector(
-                      onTap: () => ref.read(sidebarVisibleProvider.notifier).state = false,
-                      child: Container(
-                        color: Colors.black.withValues(alpha: 0.3),
-                      ),
-                    ),
-                  ),
-                  // Sliding Sidebar
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeOutBack,
-                    left: isSidebarVisible ? 0.0 : -250.0,
-                    top: 0,
-                    bottom: 0,
-                    width: 250,
-                    child: const DynamicSidebar(),
-                  ),
+                actions: [
+                  if (actions != null)
+                    ...actions!.map((action) {
+                      if (action is IconButton) {
+                        return Padding(
+                          padding: EdgeInsets.only(right: isMobile ? 4.0 : 8.0),
+                          child: Container(
+                            width: isMobile ? 34 : 38,
+                            height: isMobile ? 34 : 38,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                width: 1,
+                              ),
+                            ),
+                            child: action,
+                          ),
+                        );
+                      }
+                      return Padding(
+                        padding: EdgeInsets.only(right: isMobile ? 4.0 : 8.0),
+                        child: action,
+                      );
+                    }),
+                  const ProfileDropdown(),
                 ],
               ),
             ),
-        ],
+          ),
+        ),
+        body: child,
+        floatingActionButton: floatingActionButton,
       ),
     );
   }

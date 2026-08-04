@@ -16,15 +16,16 @@ final authStateProvider = StreamProvider.autoDispose<AuthState>((ref) {
 
 final currentUserProvider = Provider.autoDispose<User?>((ref) {
   final authState = ref.watch(authStateProvider);
-  return authState.value?.session?.user;
+  return authState.value?.session?.user ?? SupabaseConfig.client.auth.currentUser;
 });
 
 final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return null;
+  ref.keepAlive();
+  final userId = ref.watch(currentUserProvider.select((user) => user?.id));
+  if (userId == null) return null;
   
   final box = Hive.box('profile');
-  final cached = box.get(user.id);
+  final cached = box.get(userId);
   
   // Fast path: if connectivity provider knows we are offline, load cached instantly
   final connectivity = ref.read(connectivityProvider).value;
@@ -39,10 +40,10 @@ final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
   try {
     final profile = await ref
         .watch(authRepositoryProvider)
-        .getUserProfile(user.id)
-        .timeout(const Duration(seconds: 2));
+        .getUserProfile(userId)
+        .timeout(const Duration(seconds: 5)); // Increased to 5s to avoid false-positives under load
     if (profile != null) {
-      await box.put(user.id, profile.toJson());
+      await box.put(userId, profile.toJson());
     }
     return profile;
   } catch (e) {
@@ -55,5 +56,6 @@ final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
 });
 
 final userProfileByIdProvider = FutureProvider.family.autoDispose<UserModel?, String>((ref, id) async {
+  ref.keepAlive();
   return ref.watch(authRepositoryProvider).getUserProfileById(id);
 });
