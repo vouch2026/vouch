@@ -37,6 +37,12 @@ flutter pub get
 echo "Running build_runner..."
 dart run build_runner build --delete-conflicting-outputs
 
-# 7. Build the web project
-echo "Building web project..."
-flutter build web --release --no-source-maps
+# 7. Build the web project with Wasm
+echo "Building web project with WebAssembly..."
+flutter build web --wasm --release --no-source-maps
+
+# 8. Create the Cloudflare _headers file for Cross-Origin Isolation
+echo "Generating Cloudflare _headers file..."
+echo "/*" > build/web/_headers
+echo "  Cross-Origin-Embedder-Policy: require-corp" >> build/web/_headers
+echo "  Cross-Origin-Opener-Policy: same-origin" >> build/web/_headers
