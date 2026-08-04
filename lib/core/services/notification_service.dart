@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -10,6 +12,22 @@ class NotificationService {
 
   static Future<void> init() async {
     tz.initializeTimeZones();
+
+    try {
+      final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
+    } catch (e) {
+      debugPrint('Error initializing local timezone: $e');
+    }
+
+    try {
+      await Permission.notification.request();
+      if (await Permission.scheduleExactAlarm.isDenied) {
+        await Permission.scheduleExactAlarm.request();
+      }
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+    }
 
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -26,6 +44,62 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(settings: initSettings);
+
+    // Explicitly create notification channel for Android
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImplementation != null) {
+        const AndroidNotificationChannel channel = AndroidNotificationChannel(
+          'schedule_channel',
+          'Schedule Reminders',
+          description: 'Reminders for school schedules and classes',
+          importance: Importance.max,
+        );
+        await androidImplementation.createNotificationChannel(channel);
+      }
+    } catch (e) {
+      debugPrint('Error creating Android notification channel: $e');
+    }
+  }
+
+  static Future<void> showInstantTestNotification() async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'schedule_channel',
+      'Schedule Reminders',
+      channelDescription: 'Reminders for school schedules and classes',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: 99999,
+        title: 'Vouch Test Reminder',
+        body: 'This is a test reminder verifying notification functionality.',
+        scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (e) {
+      debugPrint('Exact alarm failed, scheduling inexact test notification: $e');
+      await _notificationsPlugin.zonedSchedule(
+        id: 99999,
+        title: 'Vouch Test Reminder (Inexact)',
+        body: 'This is a test reminder verifying notification functionality.',
+        scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    }
   }
 
   static Future<void> scheduleWeeklyNotification({
@@ -68,15 +142,28 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _notificationsPlugin.zonedSchedule(
-      id: id,
-      title: title,
-      body: body,
-      scheduledDate: scheduledTZDate,
-      notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-    );
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledTZDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    } catch (e) {
+      debugPrint('Exact alarm scheduling failed, falling back to inexact alarm: $e');
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledTZDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    }
   }
 
   static Future<void> cancelNotification(int id) async {
@@ -126,9 +213,20 @@ class NotificationService {
       return TimeOfDay(hour: dt.hour, minute: dt.minute);
     } catch (_) {
       try {
-        final parts = timeStr.split(':');
-        final hour = int.parse(parts[0]);
-        final minute = int.parse(parts[1].split(' ')[0]);
+        final normalized = timeStr.toUpperCase().replaceAll('.', '');
+        final isPm = normalized.contains('PM');
+        final isAm = normalized.contains('AM');
+        
+        final cleanTime = normalized.replaceAll(RegExp(r'[^0-9:]'), '').trim();
+        final parts = cleanTime.split(':');
+        int hour = int.parse(parts[0]);
+        final int minute = int.parse(parts[1]);
+
+        if (isPm && hour < 12) {
+          hour += 12;
+        } else if (isAm && hour == 12) {
+          hour = 0;
+        }
         return TimeOfDay(hour: hour, minute: minute);
       } catch (_) {
         return null;

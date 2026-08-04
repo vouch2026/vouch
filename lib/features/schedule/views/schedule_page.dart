@@ -14,6 +14,7 @@ import '../models/schedule_model.dart';
 import '../providers/schedule_provider.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
+import '../../../core/services/notification_service.dart';
 
 class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
@@ -157,6 +158,24 @@ class _SchedulePageState extends ConsumerState<SchedulePage> with SingleTickerPr
                                 color: AppColors.textGrey,
                                 fontWeight: FontWeight.bold,
                               ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            IconButton(
+                              onPressed: () async {
+                                await NotificationService.showInstantTestNotification();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Test notification scheduled in 5 seconds! Feel free to lock your screen.'),
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.notifications_active, color: AppColors.primary),
+                              tooltip: 'Test Notification',
+                              constraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
                             ),
                             if (isDesktop) ...[
                               const SizedBox(width: AppSpacing.md),
