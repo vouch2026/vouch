@@ -56,7 +56,7 @@ dependencies:
 
   # Serialization
   freezed_annotation: ^3.1.0
-  json_annotation: ^4.9.0
+  json_annotation: ^4.12.0
 
   # Icons
   cupertino_icons: ^1.0.8
