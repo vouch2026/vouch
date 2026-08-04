@@ -21,6 +21,7 @@ abstract class ScheduleModel with _$ScheduleModel {
     
     // Local-only sync fields: 'synced', 'to_create', 'to_update', 'to_delete'
     @Default('synced') String syncStatus,
+    @JsonKey(name: 'reminder_minutes') @Default(0) int reminderMinutes,
   }) = _ScheduleModel;
 
   factory ScheduleModel.fromJson(Map<String, dynamic> json) => _$ScheduleModelFromJson(json);
