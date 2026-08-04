@@ -30,7 +30,7 @@ class NotificationService {
     }
 
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('logo_notif');
 
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -64,43 +64,7 @@ class NotificationService {
     }
   }
 
-  static Future<void> showInstantTestNotification() async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'schedule_channel',
-      'Schedule Reminders',
-      channelDescription: 'Reminders for school schedules and classes',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
-
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    try {
-      await _notificationsPlugin.zonedSchedule(
-        id: 99999,
-        title: 'Vouch Test Reminder',
-        body: 'This is a test reminder verifying notification functionality.',
-        scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
-        notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
-    } catch (e) {
-      debugPrint('Exact alarm failed, scheduling inexact test notification: $e');
-      await _notificationsPlugin.zonedSchedule(
-        id: 99999,
-        title: 'Vouch Test Reminder (Inexact)',
-        body: 'This is a test reminder verifying notification functionality.',
-        scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
-        notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      );
-    }
-  }
 
   static Future<void> scheduleWeeklyNotification({
     required int id,
