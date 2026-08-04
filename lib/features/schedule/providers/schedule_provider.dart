@@ -133,7 +133,7 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
       NotificationService.scheduleWeeklyNotification(
         id: notificationId,
         title: '${schedule.subjectCode}: ${schedule.subjectName}',
-        body: 'Class starts in ${schedule.reminderMinutes} minutes at ${schedule.room.isNotEmpty ? schedule.room : "your room"}.',
+        body: 'Class starts in ${schedule.reminderMinutes} minutes (${schedule.startTime} - ${schedule.endTime}) at ${schedule.room.isNotEmpty ? schedule.room : "your room"}.',
         dayOfWeek: day,
         timeStr: schedule.startTime,
         offsetMinutes: schedule.reminderMinutes,
