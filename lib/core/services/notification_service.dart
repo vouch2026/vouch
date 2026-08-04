@@ -97,6 +97,7 @@ class NotificationService {
       channelDescription: 'Reminders for school schedules and classes',
       importance: Importance.max,
       priority: Priority.high,
+      largeIcon: DrawableResourceAndroidBitmap('vouch_logo'),
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
