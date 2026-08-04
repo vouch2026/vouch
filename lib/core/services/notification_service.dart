@@ -5,10 +5,15 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:go_router/go_router.dart';
+import '../../routes/app_router.dart';
+import '../../routes/route_paths.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  
+  static String? pendingNotificationPath;
 
   static Future<void> init() async {
     tz.initializeTimeZones();
@@ -43,7 +48,22 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notificationsPlugin.initialize(settings: initSettings);
+    await _notificationsPlugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        try {
+          final context = rootNavigatorKey.currentContext;
+          if (context != null) {
+            context.go(RoutePaths.schedule);
+          } else {
+            pendingNotificationPath = RoutePaths.schedule;
+          }
+        } catch (e) {
+          debugPrint('Error navigating on notification tap: $e');
+          pendingNotificationPath = RoutePaths.schedule;
+        }
+      },
+    );
 
     // Explicitly create notification channel for Android
     try {

@@ -86,10 +86,13 @@ final routerNotifierProvider = Provider<RouterNotifier>((ref) {
   return RouterNotifier(ref);
 });
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
   
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: RoutePaths.splash,
     debugLogDiagnostics: true,
     refreshListenable: notifier,
