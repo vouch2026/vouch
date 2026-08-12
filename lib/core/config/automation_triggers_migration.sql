@@ -9,9 +9,10 @@ CREATE OR REPLACE FUNCTION public.on_announcement_created()
 RETURNS TRIGGER AS $$
 DECLARE
     scope_code_val VARCHAR(255);
+    scope_logo_val VARCHAR(2048);
 BEGIN
-    -- Resolve organization code of organization the creator belongs to, matching the target scope type
-    SELECT o.code INTO scope_code_val 
+    -- Resolve organization code & logo of organization the creator belongs to, matching the target scope type
+    SELECT o.code, o.logo_url INTO scope_code_val, scope_logo_val 
     FROM public.organizations o
     JOIN public.organization_members om ON o.id = om.organization_id
     WHERE om.user_id = NEW.created_by_user_id AND om.status = 'active'
@@ -50,7 +51,10 @@ BEGIN
         CASE WHEN NEW.scope_type::text = 'Program' THEN NEW.scope_id ELSE NULL END,
         'announcement',
         '/announcements',
-        jsonb_build_object('scope_code', COALESCE(scope_code_val, 'GLOBAL'))
+        jsonb_build_object(
+            'scope_code', COALESCE(scope_code_val, 'GLOBAL'),
+            'scope_logo', scope_logo_val
+        )
     );
     RETURN NEW;
 END;
@@ -68,13 +72,14 @@ CREATE OR REPLACE FUNCTION public.on_event_created()
 RETURNS TRIGGER AS $$
 DECLARE
     scope_code_val VARCHAR(255);
+    scope_logo_val VARCHAR(2048);
 BEGIN
     IF NEW.created_by_organization_id IS NOT NULL THEN
-        SELECT code INTO scope_code_val FROM public.organizations WHERE id = NEW.created_by_organization_id;
+        SELECT code, logo_url INTO scope_code_val, scope_logo_val FROM public.organizations WHERE id = NEW.created_by_organization_id;
     END IF;
 
     IF scope_code_val IS NULL THEN
-        SELECT o.code INTO scope_code_val 
+        SELECT o.code, o.logo_url INTO scope_code_val, scope_logo_val 
         FROM public.organizations o
         JOIN public.organization_members om ON o.id = om.organization_id
         WHERE om.user_id = NEW.created_by_user_id AND om.status = 'active'
@@ -114,7 +119,10 @@ BEGIN
         CASE WHEN NEW.scope_type::text = 'Program' THEN NEW.scope_id ELSE NULL END,
         'event',
         '/events',
-        jsonb_build_object('scope_code', COALESCE(scope_code_val, 'GLOBAL'))
+        jsonb_build_object(
+            'scope_code', COALESCE(scope_code_val, 'GLOBAL'),
+            'scope_logo', scope_logo_val
+        )
     );
     RETURN NEW;
 END;
@@ -132,8 +140,9 @@ CREATE OR REPLACE FUNCTION public.on_fee_created()
 RETURNS TRIGGER AS $$
 DECLARE
     scope_code_val VARCHAR(255);
+    scope_logo_val VARCHAR(2048);
 BEGIN
-    SELECT o.code INTO scope_code_val 
+    SELECT o.code, o.logo_url INTO scope_code_val, scope_logo_val 
     FROM public.organizations o
     JOIN public.organization_members om ON o.id = om.organization_id
     WHERE om.user_id = NEW.created_by_user_id AND om.status = 'active'
@@ -170,7 +179,10 @@ BEGIN
         CASE WHEN NEW.scope_type::text = 'Program' THEN NEW.scope_id ELSE NULL END,
         'finance',
         '/fees',
-        jsonb_build_object('scope_code', COALESCE(scope_code_val, 'GLOBAL'))
+        jsonb_build_object(
+            'scope_code', COALESCE(scope_code_val, 'GLOBAL'),
+            'scope_logo', scope_logo_val
+        )
     );
     RETURN NEW;
 END;

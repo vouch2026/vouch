@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -20,6 +21,7 @@ class NotificationTile extends StatelessWidget {
     final targetIcon = _getTargetIcon();
     final targetColor = _getTargetColor();
     final categoryLabel = _getCategoryLabel();
+    final String? logoUrl = notification.metadata['scope_logo'] as String?;
 
     return InkWell(
       onTap: onTap,
@@ -40,19 +42,23 @@ class NotificationTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Target Scope Icon Container
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: targetColor.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                targetIcon,
-                color: targetColor,
-                size: 20,
-              ),
-            ),
+            // Target Scope Icon or Org Logo Container
+            if (logoUrl != null && logoUrl.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: logoUrl,
+                imageBuilder: (context, imageProvider) => Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
+                  ),
+                ),
+                placeholder: (context, url) => _buildFallbackIconContainer(targetIcon, targetColor),
+                errorWidget: (context, url, error) => _buildFallbackIconContainer(targetIcon, targetColor),
+              )
+            else
+              _buildFallbackIconContainer(targetIcon, targetColor),
             const SizedBox(width: AppSpacing.md),
 
             // Content Area
@@ -207,5 +213,20 @@ class NotificationTile extends StatelessWidget {
     } else {
       return DateFormat('MMM d, y').format(dateTime);
     }
+  }
+  Widget _buildFallbackIconContainer(IconData icon, Color color) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        icon,
+        color: color,
+        size: 18,
+      ),
+    );
   }
 }

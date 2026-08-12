@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
@@ -309,6 +310,30 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> with Sing
             // Header Row
             Row(
               children: [
+                if (n.metadata['scope_logo'] != null && (n.metadata['scope_logo'] as String).isNotEmpty) ...[
+                  CachedNetworkImage(
+                    imageUrl: n.metadata['scope_logo'] as String,
+                    imageBuilder: (context, imageProvider) => Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
+                      ),
+                    ),
+                    placeholder: (context, url) => const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    errorWidget: (context, url, error) => const Icon(
+                      Icons.broken_image,
+                      size: 24,
+                      color: AppColors.textGrey,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
                   decoration: BoxDecoration(
@@ -454,6 +479,30 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> with Sing
               // Badges & Date Row
               Row(
                 children: [
+                  if (n.metadata['scope_logo'] != null && (n.metadata['scope_logo'] as String).isNotEmpty) ...[
+                    CachedNetworkImage(
+                      imageUrl: n.metadata['scope_logo'] as String,
+                      imageBuilder: (context, imageProvider) => Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
+                        ),
+                      ),
+                      placeholder: (context, url) => const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      ),
+                      errorWidget: (context, url, error) => const Icon(
+                        Icons.broken_image,
+                        size: 20,
+                        color: AppColors.textGrey,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                     decoration: BoxDecoration(
