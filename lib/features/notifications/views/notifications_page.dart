@@ -11,6 +11,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../organizations/providers/organization_provider.dart';
+import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/models/organization_model.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
@@ -22,6 +25,71 @@ class NotificationsPage extends ConsumerStatefulWidget {
 class _NotificationsPageState extends ConsumerState<NotificationsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   NotificationModel? _selectedNotification;
+
+  Future<void> _handleNotificationAction(NotificationModel n) async {
+    final scopeCode = n.metadata['scope_code'] as String?;
+    final actionRoute = n.actionRoute;
+
+    if (actionRoute == null || actionRoute.isEmpty) return;
+
+    // Mark as read immediately
+    if (!n.isRead) {
+      ref.read(notificationControllerProvider.notifier).markAsRead(n.id);
+    }
+
+    // Handle Workspace Switch if needed
+    if (scopeCode != null && scopeCode != 'GLOBAL') {
+      try {
+        final userOrgs = await ref.read(userOrganizationsProvider.future);
+        final OrganizationModel? matchingOrg = userOrgs.cast<OrganizationModel?>().firstWhere(
+          (org) => org?.code.toUpperCase() == scopeCode.toUpperCase(),
+          orElse: () => null,
+        );
+
+        if (matchingOrg != null) {
+          final currentOrg = ref.read(workspaceProvider).selectedOrganization;
+          if (currentOrg?.id != matchingOrg.id) {
+            BuildContext? dialogContext;
+            if (mounted) {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) {
+                  dialogContext = ctx;
+                  return const Center(
+                    child: FlickrLoader(),
+                  );
+                },
+              );
+            }
+            await ref.read(workspaceProvider.notifier).selectOrganization(matchingOrg);
+            if (dialogContext != null && dialogContext!.mounted) {
+              Navigator.pop(dialogContext!);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error switching workspace: $e');
+      }
+    }
+
+    // Map generic scope routes to workspace-scoped routes if necessary
+    String finalRoute = actionRoute;
+    if (finalRoute == '/announcements') {
+      finalRoute = '/workspace/announcements';
+    } else if (finalRoute == '/events') {
+      finalRoute = '/workspace/events';
+    } else if (finalRoute == '/fees') {
+      finalRoute = '/workspace/fees';
+    } else if (finalRoute == '/sanctions') {
+      finalRoute = '/workspace/sanctions';
+    }
+
+    // Navigate directly to target screen
+    if (mounted) {
+      context.go(finalRoute);
+    }
+  }
 
   @override
   void initState() {
@@ -419,7 +487,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> with Sing
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     ),
                   ),
-                  onPressed: () => context.go(n.actionRoute!),
+                  onPressed: () => _handleNotificationAction(n),
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: Text(
                     'View Related Action / Page',
@@ -593,7 +661,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> with Sing
                     ),
                     onPressed: () {
                       Navigator.pop(context);
-                      context.go(n.actionRoute!);
+                      _handleNotificationAction(n);
                     },
                     icon: const Icon(Icons.open_in_new, size: 18),
                     label: Text(
