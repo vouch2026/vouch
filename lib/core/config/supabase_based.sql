@@ -44,6 +44,7 @@ DROP FUNCTION IF EXISTS public.reset_academic_year_data() CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
 DROP TABLE IF EXISTS public.tasks CASCADE;
+DROP TABLE IF EXISTS public.user_settings CASCADE;
 DROP TABLE IF EXISTS public.subject_schedules CASCADE;
 DROP TABLE IF EXISTS excuse_requests CASCADE;
 DROP TABLE IF EXISTS governance_audit_logs CASCADE;
@@ -1864,6 +1865,31 @@ CREATE POLICY "Allow users to delete their own schedules"
 ON public.subject_schedules
 FOR DELETE 
 USING (auth.uid() = user_id);
+
+-- User Settings Table
+CREATE TABLE IF NOT EXISTS public.user_settings (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    schedule_reminder_lead_minutes INT NOT NULL DEFAULT 15,
+    task_reminder_lead_minutes INT NOT NULL DEFAULT 1440,
+    announcement_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    election_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    finance_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    theme_mode VARCHAR(20) NOT NULL DEFAULT 'system',
+    biometric_lock_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    wifi_only_sync BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security (RLS) for user_settings
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for RLS on user_settings
+CREATE POLICY "Allow users to manage their own settings" 
+ON public.user_settings
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- ==============================================================================
 -- WORKSPACE EXPANSION ADDITIONS (FACULTY & PROGRAM WORKSPACES)
