@@ -6,6 +6,8 @@ import '../repositories/schedule_repository.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../../core/services/notification_service.dart';
+import '../../settings/models/settings_model.dart';
+import '../../settings/providers/settings_provider.dart';
 
 final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
   final box = Hive.box('schedules');
@@ -19,9 +21,11 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
     final activeTerm = activeTermAsync.valueOrNull;
     if (activeTerm == null) return [];
     
+    final settings = ref.watch(settingsProvider);
+    
     final repository = ref.watch(scheduleRepositoryProvider);
     final schedules = await repository.getSchedules(activeTerm.id);
-    _syncAllNotifications(schedules);
+    _syncAllNotifications(schedules, settings);
     return schedules;
   }
 
@@ -53,7 +57,8 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
         reminderMinutes: reminderMinutes,
       );
       final created = await repository.createSchedule(schedule);
-      _scheduleNotifications(created);
+      final settings = ref.read(settingsProvider);
+      _scheduleNotifications(created, settings);
       return repository.getSchedules(activeTerm.id);
     });
   }
@@ -66,7 +71,8 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final updated = await repository.updateSchedule(schedule);
-      _scheduleNotifications(updated);
+      final settings = ref.read(settingsProvider);
+      _scheduleNotifications(updated, settings);
       return repository.getSchedules(activeTerm.id);
     });
   }
@@ -105,25 +111,29 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
     state = await AsyncValue.guard(() async {
       await repository.syncSchedules(activeTerm.id);
       final schedules = await repository.getSchedules(activeTerm.id);
-      _syncAllNotifications(schedules);
+      final settings = ref.read(settingsProvider);
+      _syncAllNotifications(schedules, settings);
       return schedules;
     });
   }
 
-  void _syncAllNotifications(List<ScheduleModel> schedules) {
+  void _syncAllNotifications(List<ScheduleModel> schedules, AppSettings settings) {
     for (final schedule in schedules) {
       _cancelNotifications(schedule);
-      if (schedule.reminderMinutes > 0) {
-        _scheduleNotifications(schedule);
+      if (settings.notificationsEnabled) {
+        _scheduleNotifications(schedule, settings);
       }
     }
   }
 
-  void _scheduleNotifications(ScheduleModel schedule) {
+  void _scheduleNotifications(ScheduleModel schedule, AppSettings settings) {
     if (schedule.id == null) return;
     
     _cancelNotifications(schedule);
-    if (schedule.reminderMinutes <= 0) return;
+    if (!settings.notificationsEnabled) return;
+
+    final leadMinutes = settings.scheduleReminderLeadMinutes;
+    if (leadMinutes <= 0) return;
 
     final baseId = schedule.id.hashCode;
     for (final day in schedule.days) {
@@ -133,10 +143,10 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
       NotificationService.scheduleWeeklyNotification(
         id: notificationId,
         title: '${schedule.subjectCode}: ${schedule.subjectName}',
-        body: 'Class starts in ${schedule.reminderMinutes} minutes (${schedule.startTime} - ${schedule.endTime}) at ${schedule.room.isNotEmpty ? schedule.room : "your room"}.',
+        body: 'Class starts in $leadMinutes minutes (${schedule.startTime} - ${schedule.endTime}) at ${schedule.room.isNotEmpty ? schedule.room : "your room"}.',
         dayOfWeek: day,
         timeStr: schedule.startTime,
-        offsetMinutes: schedule.reminderMinutes,
+        offsetMinutes: leadMinutes,
       );
     }
   }

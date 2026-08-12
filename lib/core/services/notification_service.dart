@@ -71,20 +71,74 @@ class NotificationService {
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       if (androidImplementation != null) {
-        const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        const AndroidNotificationChannel scheduleChannel = AndroidNotificationChannel(
           'schedule_channel',
           'Schedule Reminders',
           description: 'Reminders for school schedules and classes',
           importance: Importance.max,
         );
-        await androidImplementation.createNotificationChannel(channel);
+        const AndroidNotificationChannel tasksChannel = AndroidNotificationChannel(
+          'tasks_channel',
+          'Task Reminders',
+          description: 'Reminders for tasks and deadlines',
+          importance: Importance.max,
+        );
+        await androidImplementation.createNotificationChannel(scheduleChannel);
+        await androidImplementation.createNotificationChannel(tasksChannel);
       }
     } catch (e) {
       debugPrint('Error creating Android notification channel: $e');
     }
   }
 
+  static Future<void> scheduleOneShotNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    final tz.TZDateTime scheduledTZDate = tz.TZDateTime.from(scheduledDate, tz.local);
+    if (scheduledTZDate.isBefore(tz.TZDateTime.now(tz.local))) return;
 
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'tasks_channel',
+      'Task Reminders',
+      channelDescription: 'Reminders for tasks and deadlines',
+      importance: Importance.max,
+      priority: Priority.high,
+      largeIcon: DrawableResourceAndroidBitmap('vouch_logo'),
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledTZDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      );
+    } catch (e) {
+      debugPrint('Exact alarm scheduling failed, falling back to inexact alarm: $e');
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledTZDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      );
+    }
+  }
 
   static Future<void> scheduleWeeklyNotification({
     required int id,
@@ -107,7 +161,7 @@ class NotificationService {
     
     final scheduledHour = tempDate.hour;
     final scheduledMinute = tempDate.minute;
-
+ 
     final tz.TZDateTime scheduledTZDate =
         _nextInstanceOfDayOfWeekAndTime(targetWeekday, scheduledHour, scheduledMinute);
 
