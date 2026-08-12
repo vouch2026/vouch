@@ -69,6 +69,8 @@ import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 import '../core/utils/role_mapper.dart';
 import '../shared/layouts/shell_layout.dart';
+import '../features/notifications/views/notifications_page.dart';
+
 
 /// A notifier that notifies the [GoRouter] when the authentication state 
 /// or workspace state changes.
@@ -317,7 +319,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.notifications,
             name: RouteNames.notifications,
-            builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
+            builder: (context, state) => const NotificationsPage(),
           ),
           GoRoute(
             path: RoutePaths.activityCards,
