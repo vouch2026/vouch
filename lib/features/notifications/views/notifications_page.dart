@@ -316,7 +316,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> with Sing
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
                   ),
                   child: Text(
-                    n.notificationType.toUpperCase(),
+                    n.metadata['scope_code'] != null && (n.metadata['scope_code'] as String).isNotEmpty
+                        ? (n.metadata['scope_code'] as String).toUpperCase()
+                        : n.notificationType.toUpperCase(),
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -459,7 +461,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> with Sing
                       borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
                     ),
                     child: Text(
-                      n.notificationType.toUpperCase(),
+                      n.metadata['scope_code'] != null && (n.metadata['scope_code'] as String).isNotEmpty
+                          ? (n.metadata['scope_code'] as String).toUpperCase()
+                          : n.notificationType.toUpperCase(),
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,

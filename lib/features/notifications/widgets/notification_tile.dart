@@ -181,9 +181,15 @@ class NotificationTile extends StatelessWidget {
   }
 
   String _getCategoryLabel() {
-    final typeName = notification.notificationType;
-    final cat = notification.category;
-    return '${typeName.toUpperCase()} • ${cat.toUpperCase()}';
+    final cat = notification.category.toUpperCase();
+    final scopeCode = notification.metadata['scope_code'] as String?;
+    
+    if (scopeCode != null && scopeCode.isNotEmpty) {
+      return '$scopeCode • $cat';
+    }
+    
+    final typeName = notification.notificationType.toUpperCase();
+    return '$typeName • $cat';
   }
 
   String _formatTime(DateTime dateTime) {
