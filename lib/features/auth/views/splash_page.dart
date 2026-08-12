@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:local_auth_android/local_auth_android.dart';
+import 'package:local_auth_darwin/local_auth_darwin.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../routes/route_paths.dart';
 import '../../../core/config/supabase_config.dart';
@@ -99,9 +101,18 @@ class _SplashPageState extends ConsumerState<SplashPage>
       }
 
       final bool didAuthenticate = await _auth.authenticate(
-        localizedReason: 'Please authenticate to unlock Vouch',
+        localizedReason: 'Please Authenticate to Unlock Vouch',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
+        authMessages: const <AuthMessages>[
+          AndroidAuthMessages(
+            signInTitle: 'Unlock Vouch',
+            signInHint: '',
+          ),
+          IOSAuthMessages(
+            localizedFallbackTitle: '',
+          ),
+        ],
       );
 
       if (didAuthenticate) {
