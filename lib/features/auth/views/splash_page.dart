@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../routes/route_paths.dart';
+import '../../../core/config/supabase_config.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -18,6 +21,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
 
+  final LocalAuthentication _auth = LocalAuthentication();
+  bool _isLocked = false;
+
   @override
   void initState() {
     super.initState();
@@ -25,24 +31,20 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 
   void _initializeAnimations() {
-    // Scale animation controller - shrinks/grows the logo
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
-    // Opacity animation controller - fades out the splash content
     _opacityController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
-    // Scale animation - logo grows into view with elastic curve
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
     );
 
-    // Opacity animation - fade out after scale completes
     _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _opacityController,
@@ -50,14 +52,73 @@ class _SplashPageState extends ConsumerState<SplashPage>
       ),
     );
 
-    // Start animations and then navigate
     _scaleController.forward().then((_) {
-      _opacityController.forward().then((_) {
+      _checkBiometricsAndNavigate();
+    });
+  }
+
+  Future<void> _checkBiometricsAndNavigate() async {
+    final isLoggedIn = SupabaseConfig.client.auth.currentUser != null;
+    
+    if (isLoggedIn) {
+      final box = Hive.box('settings');
+      final rawData = box.get('app_settings_data');
+      bool biometricEnabled = false;
+      
+      if (rawData != null) {
+        try {
+          final Map<String, dynamic> jsonMap = Map<String, dynamic>.from(rawData as Map);
+          biometricEnabled = jsonMap['biometric_lock_enabled'] ?? false;
+        } catch (_) {}
+      }
+
+      if (biometricEnabled) {
+        await _authenticateAndNavigate();
+        return;
+      }
+    }
+
+    // Default flow: play fade out and go to dashboard
+    _opacityController.forward().then((_) {
+      if (mounted) {
+        context.go(RoutePaths.dashboard);
+      }
+    });
+  }
+
+  Future<void> _authenticateAndNavigate() async {
+    try {
+      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
+
+      if (!canAuthenticate) {
         if (mounted) {
           context.go(RoutePaths.dashboard);
         }
+        return;
+      }
+
+      final bool didAuthenticate = await _auth.authenticate(
+        localizedReason: 'Please authenticate to unlock Vouch',
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
+      );
+
+      if (didAuthenticate) {
+        if (mounted) {
+          context.go(RoutePaths.dashboard);
+        }
+      } else {
+        setState(() {
+          _isLocked = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Biometric authentication error: $e');
+      setState(() {
+        _isLocked = true;
       });
-    });
+    }
   }
 
   @override
@@ -71,24 +132,79 @@ class _SplashPageState extends ConsumerState<SplashPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      body: AnimatedBuilder(
-        animation: _opacityAnimation,
-        builder: (context, child) {
-          return Opacity(
-            opacity: _opacityAnimation.value,
-            child: Stack(
-              children: [
-                _buildBackgroundDecorations(),
-                Center(
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: _buildLogo(),
+      body: Stack(
+        children: [
+          _buildBackgroundDecorations(),
+          if (!_isLocked)
+            AnimatedBuilder(
+              animation: _opacityAnimation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _opacityAnimation.value,
+                  child: Center(
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: _buildLogo(),
+                    ),
                   ),
+                );
+              },
+            )
+          else
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLogo(),
+                    const SizedBox(height: 40),
+                    const Icon(
+                      Icons.lock_outline,
+                      color: AppColors.primary,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Vouch is Locked',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Authenticate to access your governance ecosystem',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textGrey,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: _authenticateAndNavigate,
+                      icon: const Icon(Icons.fingerprint, size: 22),
+                      label: const Text(
+                        'Unlock App',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          );
-        },
+        ],
       ),
     );
   }
