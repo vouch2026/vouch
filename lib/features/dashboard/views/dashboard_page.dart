@@ -13,12 +13,21 @@ import '../../academic_structure/providers/term_provider.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/services/notification_service.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pendingPath = NotificationService.pendingNotificationPath;
+      if (pendingPath != null) {
+        NotificationService.pendingNotificationPath = null;
+        context.go(pendingPath);
+      }
+    });
+
     final userProfileAsync = ref.watch(userProfileProvider);
     final activeTermAsync = ref.watch(activeTermProvider);
 

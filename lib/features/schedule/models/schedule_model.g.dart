@@ -25,6 +25,7 @@ _ScheduleModel _$ScheduleModelFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['updated_at'] as String),
       syncStatus: json['syncStatus'] as String? ?? 'synced',
+      reminderMinutes: (json['reminder_minutes'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$ScheduleModelToJson(_ScheduleModel instance) =>
@@ -42,4 +43,5 @@ Map<String, dynamic> _$ScheduleModelToJson(_ScheduleModel instance) =>
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
       'syncStatus': instance.syncStatus,
+      'reminder_minutes': instance.reminderMinutes,
     };

@@ -44,6 +44,7 @@ DROP FUNCTION IF EXISTS public.reset_academic_year_data() CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
 DROP TABLE IF EXISTS public.tasks CASCADE;
+DROP TABLE IF EXISTS public.user_settings CASCADE;
 DROP TABLE IF EXISTS public.subject_schedules CASCADE;
 DROP TABLE IF EXISTS excuse_requests CASCADE;
 DROP TABLE IF EXISTS governance_audit_logs CASCADE;
@@ -1865,6 +1866,31 @@ ON public.subject_schedules
 FOR DELETE 
 USING (auth.uid() = user_id);
 
+-- User Settings Table
+CREATE TABLE IF NOT EXISTS public.user_settings (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    schedule_reminder_lead_minutes INT NOT NULL DEFAULT 15,
+    task_reminder_lead_minutes INT NOT NULL DEFAULT 1440,
+    announcement_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    election_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    finance_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    theme_mode VARCHAR(20) NOT NULL DEFAULT 'system',
+    biometric_lock_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    wifi_only_sync BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security (RLS) for user_settings
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for RLS on user_settings
+CREATE POLICY "Allow users to manage their own settings" 
+ON public.user_settings
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
 -- ==============================================================================
 -- WORKSPACE EXPANSION ADDITIONS (FACULTY & PROGRAM WORKSPACES)
 -- ==============================================================================
@@ -2577,3 +2603,312 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
 -- Clearance Requests (Filter by Org & Status for Officers)
 CREATE INDEX IF NOT EXISTS idx_clearance_requests_org_id ON public.activity_card_clearance_requests(organization_id);
 CREATE INDEX IF NOT EXISTS idx_clearance_requests_status ON public.activity_card_clearance_requests(status);
+
+
+-- ==============================================================================
+-- 17. NOTIFICATIONS, READ RECEIPTS & AUTOMATION TRIGGERS
+-- ==============================================================================
+
+-- 17.1 Notifications Table
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    notification_type VARCHAR(50) NOT NULL CHECK (
+        notification_type IN ('personal', 'program', 'faculty', 'campus', 'global')
+    ),
+    
+    -- Target Identifiers (Conditional depending on type)
+    target_user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    target_program_id UUID REFERENCES public.programs(id) ON DELETE CASCADE,
+    target_faculty_id UUID REFERENCES public.faculties(id) ON DELETE CASCADE,
+    target_campus_id UUID REFERENCES public.campuses(id) ON DELETE CASCADE,
+    
+    -- Metadata & Routing
+    category VARCHAR(50) DEFAULT 'general' CHECK (
+        category IN ('announcement', 'event', 'sanction', 'election', 'finance', 'general')
+    ),
+    action_route VARCHAR(255), -- GoRouter path for deep linking e.g. '/events/123'
+    metadata JSONB DEFAULT '{}'::jsonb,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE OR REPLACE TRIGGER update_notifications_updated_at 
+BEFORE UPDATE ON public.notifications 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 17.2 Read Receipts Table
+CREATE TABLE IF NOT EXISTS public.user_notification_reads (
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    notification_id UUID NOT NULL REFERENCES public.notifications(id) ON DELETE CASCADE,
+    read_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (user_id, notification_id)
+);
+
+-- 17.3 Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_targets ON public.notifications (
+    target_user_id, 
+    target_program_id, 
+    target_faculty_id, 
+    target_campus_id
+);
+
+-- 17.4 Enable RLS
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_notification_reads ENABLE ROW LEVEL SECURITY;
+
+-- 17.5 Read policy for notifications based on matching target identifiers
+CREATE POLICY "Users can view relevant notifications" ON public.notifications
+    FOR SELECT TO authenticated
+    USING (
+        notification_type = 'global'
+        OR target_user_id = public.get_my_id()
+        OR target_program_id = (SELECT program_id FROM public.users WHERE id = public.get_my_id())
+        OR target_faculty_id = (SELECT faculty_id FROM public.users WHERE id = public.get_my_id())
+        OR target_campus_id = (SELECT campus_id FROM public.users WHERE id = public.get_my_id())
+    );
+
+-- Insert policy for notifications (Admins and Governors/PIOs)
+CREATE POLICY "Authorized roles can send notifications" ON public.notifications
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        public.is_super_admin()
+        OR EXISTS (
+            SELECT 1 FROM public.user_roles ur
+            JOIN public.roles r ON ur.role_id = r.id
+            WHERE ur.user_id = public.get_my_id() 
+            AND r.name IN ('governor', 'pio', 'secretary')
+        )
+    );
+
+-- Read/Write policies for read receipts
+CREATE POLICY "Users can view their own read receipts" ON public.user_notification_reads
+    FOR SELECT TO authenticated
+    USING (user_id = public.get_my_id());
+
+CREATE POLICY "Users can mark their own notifications as read" ON public.user_notification_reads
+    FOR INSERT TO authenticated
+    WITH CHECK (user_id = public.get_my_id());
+
+
+-- 17.6 Announcement Created Automation Trigger
+CREATE OR REPLACE FUNCTION public.on_announcement_created()
+RETURNS TRIGGER AS $$
+DECLARE
+    scope_code_val VARCHAR(255);
+    scope_logo_val VARCHAR(2048);
+BEGIN
+    -- Resolve organization code & logo of organization the creator belongs to, matching the target scope type
+    SELECT o.code, o.logo_url INTO scope_code_val, scope_logo_val 
+    FROM public.organizations o
+    JOIN public.organization_members om ON o.id = om.organization_id
+    WHERE om.user_id = NEW.created_by_user_id AND om.status = 'active'
+    ORDER BY 
+      CASE 
+        WHEN NEW.scope_type::text = 'Institutional' AND o.type = 'campus-based' THEN 1
+        WHEN NEW.scope_type::text = 'Faculty' AND o.type = 'faculty-based' THEN 1
+        WHEN NEW.scope_type::text = 'Program' AND o.type = 'program-based' THEN 1
+        ELSE 2
+      END
+    LIMIT 1;
+
+    INSERT INTO public.notifications (
+        sender_id,
+        title,
+        content,
+        notification_type,
+        target_campus_id,
+        target_faculty_id,
+        target_program_id,
+        category,
+        action_route,
+        metadata
+    ) VALUES (
+        NEW.created_by_user_id,
+        'New Announcement: ' || NEW.title,
+        substring(NEW.content from 1 for 150),
+        CASE 
+            WHEN NEW.scope_type::text = 'Institutional' THEN 'campus'::text
+            WHEN NEW.scope_type::text = 'Faculty' THEN 'faculty'::text
+            WHEN NEW.scope_type::text = 'Program' THEN 'program'::text
+            ELSE 'global'::text
+        END,
+        CASE WHEN NEW.scope_type::text = 'Institutional' THEN NEW.scope_id ELSE NULL END,
+        CASE WHEN NEW.scope_type::text = 'Faculty' THEN NEW.scope_id ELSE NULL END,
+        CASE WHEN NEW.scope_type::text = 'Program' THEN NEW.scope_id ELSE NULL END,
+        'announcement',
+        '/announcements',
+        jsonb_build_object(
+            'scope_code', COALESCE(scope_code_val, 'GLOBAL'),
+            'scope_logo', scope_logo_val
+        )
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_announcement_notification ON public.announcements;
+CREATE TRIGGER trigger_announcement_notification
+AFTER INSERT ON public.announcements
+FOR EACH ROW EXECUTE FUNCTION public.on_announcement_created();
+
+
+-- 17.7 Event Created Automation Trigger
+CREATE OR REPLACE FUNCTION public.on_event_created()
+RETURNS TRIGGER AS $$
+DECLARE
+    scope_code_val VARCHAR(255);
+    scope_logo_val VARCHAR(2048);
+BEGIN
+    IF NEW.created_by_organization_id IS NOT NULL THEN
+        SELECT code, logo_url INTO scope_code_val, scope_logo_val FROM public.organizations WHERE id = NEW.created_by_organization_id;
+    END IF;
+
+    IF scope_code_val IS NULL THEN
+        SELECT o.code, o.logo_url INTO scope_code_val, scope_logo_val 
+        FROM public.organizations o
+        JOIN public.organization_members om ON o.id = om.organization_id
+        WHERE om.user_id = NEW.created_by_user_id AND om.status = 'active'
+        ORDER BY 
+          CASE 
+            WHEN NEW.scope_type::text = 'Institutional' AND o.type = 'campus-based' THEN 1
+            WHEN NEW.scope_type::text = 'Faculty' AND o.type = 'faculty-based' THEN 1
+            WHEN NEW.scope_type::text = 'Program' AND o.type = 'program-based' THEN 1
+            ELSE 2
+          END
+        LIMIT 1;
+    END IF;
+
+    INSERT INTO public.notifications (
+        sender_id,
+        title,
+        content,
+        notification_type,
+        target_campus_id,
+        target_faculty_id,
+        target_program_id,
+        category,
+        action_route,
+        metadata
+    ) VALUES (
+        NEW.created_by_user_id,
+        'Upcoming Event: ' || NEW.name,
+        'Date: ' || NEW.event_date || ' | Location: ' || NEW.location || '. ' || COALESCE(NEW.short_description, ''),
+        CASE 
+            WHEN NEW.scope_type::text = 'Institutional' THEN 'campus'::text
+            WHEN NEW.scope_type::text = 'Faculty' THEN 'faculty'::text
+            WHEN NEW.scope_type::text = 'Program' THEN 'program'::text
+            ELSE 'global'::text
+        END,
+        CASE WHEN NEW.scope_type::text = 'Institutional' THEN NEW.scope_id ELSE NULL END,
+        CASE WHEN NEW.scope_type::text = 'Faculty' THEN NEW.scope_id ELSE NULL END,
+        CASE WHEN NEW.scope_type::text = 'Program' THEN NEW.scope_id ELSE NULL END,
+        'event',
+        '/events',
+        jsonb_build_object(
+            'scope_code', COALESCE(scope_code_val, 'GLOBAL'),
+            'scope_logo', scope_logo_val
+        )
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_event_notification ON public.events;
+CREATE TRIGGER trigger_event_notification
+AFTER INSERT ON public.events
+FOR EACH ROW EXECUTE FUNCTION public.on_event_created();
+
+
+-- 17.8 Fee Created Automation Trigger
+CREATE OR REPLACE FUNCTION public.on_fee_created()
+RETURNS TRIGGER AS $$
+DECLARE
+    scope_code_val VARCHAR(255);
+    scope_logo_val VARCHAR(2048);
+BEGIN
+    SELECT o.code, o.logo_url INTO scope_code_val, scope_logo_val 
+    FROM public.organizations o
+    JOIN public.organization_members om ON o.id = om.organization_id
+    WHERE om.user_id = NEW.created_by_user_id AND om.status = 'active'
+    ORDER BY 
+      CASE 
+        WHEN NEW.scope_type::text = 'Institutional' AND o.type = 'campus-based' THEN 1
+        WHEN NEW.scope_type::text = 'Faculty' AND o.type = 'faculty-based' THEN 1
+        WHEN NEW.scope_type::text = 'Program' AND o.type = 'program-based' THEN 1
+        ELSE 2
+      END
+    LIMIT 1;
+
+    INSERT INTO public.notifications (
+        title,
+        content,
+        notification_type,
+        target_campus_id,
+        target_faculty_id,
+        target_program_id,
+        category,
+        action_route,
+        metadata
+    ) VALUES (
+        'New Fee Posted: ' || NEW.name,
+        'Amount: ₱' || NEW.amount || '. Please check your fee center to process payments.',
+        CASE 
+            WHEN NEW.scope_type::text = 'Institutional' THEN 'campus'::text
+            WHEN NEW.scope_type::text = 'Faculty' THEN 'faculty'::text
+            WHEN NEW.scope_type::text = 'Program' THEN 'program'::text
+            ELSE 'global'::text
+        END,
+        CASE WHEN NEW.scope_type::text = 'Institutional' THEN NEW.scope_id ELSE NULL END,
+        CASE WHEN NEW.scope_type::text = 'Faculty' THEN NEW.scope_id ELSE NULL END,
+        CASE WHEN NEW.scope_type::text = 'Program' THEN NEW.scope_id ELSE NULL END,
+        'finance',
+        '/fees',
+        jsonb_build_object(
+            'scope_code', COALESCE(scope_code_val, 'GLOBAL'),
+            'scope_logo', scope_logo_val
+        )
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_fee_notification ON public.fees;
+CREATE TRIGGER trigger_fee_notification
+AFTER INSERT ON public.fees
+FOR EACH ROW EXECUTE FUNCTION public.on_fee_created();
+
+
+-- 17.9 Sanction Activated Automation Trigger
+CREATE OR REPLACE FUNCTION public.on_sanction_activated()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT' AND NEW.status = 'active') OR (TG_OP = 'UPDATE' AND NEW.status = 'active' AND (OLD.status IS NULL OR OLD.status != 'active')) THEN
+        INSERT INTO public.notifications (
+            title,
+            content,
+            notification_type,
+            target_user_id,
+            category,
+            action_route
+        ) VALUES (
+            'Sanction Period Started',
+            'You have an active sanction penalty. Please check your activity status details.',
+            'personal',
+            NEW.student_id,
+            'sanction',
+            '/'
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_sanction_active_notification ON public.student_sanction_records;
+CREATE TRIGGER trigger_sanction_active_notification
+AFTER INSERT OR UPDATE ON public.student_sanction_records
+FOR EACH ROW EXECUTE FUNCTION public.on_sanction_activated();
+

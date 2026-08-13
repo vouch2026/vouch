@@ -58,6 +58,7 @@ class ScheduleRepository {
           final scheduleJson = schedule.toJson();
           scheduleJson.remove('id');
           scheduleJson.remove('syncStatus');
+          scheduleJson.remove('reminder_minutes');
           scheduleJson['user_id'] = userId;
 
           final response = await _client.from('subject_schedules').insert(scheduleJson).select('id').single();
@@ -74,6 +75,7 @@ class ScheduleRepository {
           
           final scheduleJson = schedule.toJson();
           scheduleJson.remove('syncStatus');
+          scheduleJson.remove('reminder_minutes');
 
           await _client.from('subject_schedules').update(scheduleJson).eq('id', schedule.id!);
           
@@ -185,6 +187,7 @@ class ScheduleRepository {
       final scheduleJson = schedule.toJson();
       scheduleJson.remove('id');
       scheduleJson.remove('syncStatus');
+      scheduleJson.remove('reminder_minutes');
       scheduleJson['user_id'] = userId;
       scheduleJson['created_at'] = now.toIso8601String();
       scheduleJson['updated_at'] = now.toIso8601String();
@@ -215,6 +218,7 @@ class ScheduleRepository {
           final scheduleJson = localSchedule.toJson();
           scheduleJson.remove('id');
           scheduleJson.remove('syncStatus');
+          scheduleJson.remove('reminder_minutes');
           scheduleJson['user_id'] = userId;
 
           final response = await _client.from('subject_schedules').insert(scheduleJson).select('id').single();
@@ -245,6 +249,7 @@ class ScheduleRepository {
       
       final scheduleJson = updatedSchedule.toJson();
       scheduleJson.remove('syncStatus');
+      scheduleJson.remove('reminder_minutes');
 
       await _client.from('subject_schedules').update(scheduleJson).eq('id', updatedSchedule.id!);
       return updatedSchedule;
@@ -270,6 +275,7 @@ class ScheduleRepository {
         try {
           final scheduleJson = scheduleToSave.toJson();
           scheduleJson.remove('syncStatus');
+          scheduleJson.remove('reminder_minutes');
 
           await _client.from('subject_schedules').update(scheduleJson).eq('id', scheduleToSave.id!);
           

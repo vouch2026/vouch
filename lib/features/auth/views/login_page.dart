@@ -169,7 +169,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   _buildLogo(size: 110),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Simplify your campus organization management with Vouch.',
+                    'Simplify your student organization\'s management with Vouch.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.headlineMedium.copyWith(
                       color: Colors.black54,

@@ -63,12 +63,15 @@ import '../features/excuse_requests/views/my_excuse_requests_page.dart';
 import '../features/excuse_requests/views/workspace_excuse_request_review_page.dart';
 import '../features/sanctions/views/sanction_redirector.dart';
 import '../features/sanctions/views/sanction_profile_page.dart';
+import '../features/settings/views/settings_page.dart';
 import '../features/sanctions/views/workspace_create_sanction_rule_page.dart';
 import '../features/sanctions/views/workspace_edit_sanction_rule_page.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/organizations/providers/workspace_provider.dart';
 import '../core/utils/role_mapper.dart';
 import '../shared/layouts/shell_layout.dart';
+import '../features/notifications/views/notifications_page.dart';
+
 
 /// A notifier that notifies the [GoRouter] when the authentication state 
 /// or workspace state changes.
@@ -86,10 +89,13 @@ final routerNotifierProvider = Provider<RouterNotifier>((ref) {
   return RouterNotifier(ref);
 });
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
   
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: RoutePaths.splash,
     debugLogDiagnostics: true,
     refreshListenable: notifier,
@@ -314,7 +320,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.notifications,
             name: RouteNames.notifications,
-            builder: (context, state) => const GovernorModulePlaceholder(title: 'Notifications'),
+            builder: (context, state) => const NotificationsPage(),
           ),
           GoRoute(
             path: RoutePaths.activityCards,
@@ -352,7 +358,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.settings,
             name: RouteNames.settings,
-            builder: (context, state) => const GovernorModulePlaceholder(title: 'Settings'),
+            builder: (context, state) => const SettingsPage(),
           ),
           GoRoute(
             path: RoutePaths.academicStructure,
