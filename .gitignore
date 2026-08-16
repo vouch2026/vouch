@@ -45,3 +45,5 @@ app.*.map.json
 /android/app/release
 .env
 .vercel
+
+assets/vouch-push-notif-firebase-adminsdk-fbsvc-*.json

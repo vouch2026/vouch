@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "214610674575",
+    "project_id": "vouch-push-notif",
+    "storage_bucket": "vouch-push-notif.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214610674575:android:90795293d255e6e54301fa",
+        "android_client_info": {
+          "package_name": "com.example.vouch_v2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuHh7J1Kkjj94xkrAipYlN8YB6lcXbuY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
