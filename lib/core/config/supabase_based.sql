@@ -2648,19 +2648,33 @@ CREATE TABLE IF NOT EXISTS public.user_notification_reads (
     PRIMARY KEY (user_id, notification_id)
 );
 
--- 17.3 Performance Indexes
+-- 17.3 FCM Tokens Table
+CREATE TABLE IF NOT EXISTS public.user_fcm_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    fcm_token TEXT NOT NULL UNIQUE,
+    device_type VARCHAR(50), -- 'android', 'ios', 'web'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+-- 17.4 Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_targets ON public.notifications (
     target_user_id, 
     target_program_id, 
     target_faculty_id, 
     target_campus_id
 );
+CREATE INDEX IF NOT EXISTS idx_user_fcm_tokens_user_id ON public.user_fcm_tokens(user_id);
 
--- 17.4 Enable RLS
+
+-- 17.5 Enable RLS
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_notification_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_fcm_tokens ENABLE ROW LEVEL SECURITY;
 
--- 17.5 Read policy for notifications based on matching target identifiers
+-- 17.6 Read policy for notifications based on matching target identifiers
 CREATE POLICY "Users can view relevant notifications" ON public.notifications
     FOR SELECT TO authenticated
     USING (
@@ -2692,6 +2706,24 @@ CREATE POLICY "Users can view their own read receipts" ON public.user_notificati
 CREATE POLICY "Users can mark their own notifications as read" ON public.user_notification_reads
     FOR INSERT TO authenticated
     WITH CHECK (user_id = public.get_my_id());
+
+-- RLS policies for user_fcm_tokens
+CREATE POLICY "Users can view their own FCM tokens" ON public.user_fcm_tokens
+    FOR SELECT TO authenticated
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own FCM tokens" ON public.user_fcm_tokens
+    FOR INSERT TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own FCM tokens" ON public.user_fcm_tokens
+    FOR UPDATE TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own FCM tokens" ON public.user_fcm_tokens
+    FOR DELETE TO authenticated
+    USING (user_id = auth.uid());
 
 
 -- 17.6 Announcement Created Automation Trigger
