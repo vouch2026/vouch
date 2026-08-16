@@ -416,7 +416,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           ),
                           const SizedBox(width: AppSpacing.xs),
                           Text(
-                            DateFormat('MMM dd, yyyy').format(task.dueDate!),
+                            task.dueDate!.hour == 0 && task.dueDate!.minute == 0
+                                ? DateFormat('MMM dd, yyyy').format(task.dueDate!)
+                                : DateFormat('MMM dd, yyyy \'at\' h:mm a').format(task.dueDate!),
                             style: AppTextStyles.bodySmall.copyWith(
                               color: isOverdue ? AppColors.error : AppColors.textGrey,
                               fontWeight: isOverdue ? FontWeight.bold : null,
@@ -604,6 +606,7 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
   bool _isLoading = false;
 
   @override
@@ -612,6 +615,12 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
     _titleController = TextEditingController(text: widget.task?.title ?? '');
     _descController = TextEditingController(text: widget.task?.description ?? '');
     _selectedDate = widget.task?.dueDate;
+    if (widget.task?.dueDate != null) {
+      _selectedTime = TimeOfDay(
+        hour: widget.task!.dueDate!.hour,
+        minute: widget.task!.dueDate!.minute,
+      );
+    }
   }
 
   @override
@@ -635,25 +644,49 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
     }
   }
 
+  Future<void> _selectTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+      });
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
+      DateTime? finalDueDate;
+      if (_selectedDate != null) {
+        final time = _selectedTime ?? const TimeOfDay(hour: 0, minute: 0);
+        finalDueDate = DateTime(
+          _selectedDate!.year,
+          _selectedDate!.month,
+          _selectedDate!.day,
+          time.hour,
+          time.minute,
+        );
+      }
+
       if (widget.task == null) {
         // Create
         await ref.read(tasksProvider.notifier).addTask(
               _titleController.text.trim(),
               _descController.text.trim(),
-              _selectedDate,
+              finalDueDate,
             );
       } else {
         // Edit
         final updated = widget.task!.copyWith(
           title: _titleController.text.trim(),
           description: _descController.text.trim(),
-          dueDate: _selectedDate,
+          dueDate: finalDueDate,
         );
         await ref.read(tasksProvider.notifier).updateTask(updated);
       }
@@ -790,6 +823,55 @@ class _AddEditTaskModalState extends ConsumerState<_AddEditTaskModal> {
                   ),
                 ),
               ),
+              if (_selectedDate != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Due Time (Optional)',
+                  style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                InkWell(
+                  onTap: _selectTime,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _selectedTime == null
+                              ? 'Default (12:00 AM)'
+                              : _selectedTime!.format(context),
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: _selectedTime == null ? AppColors.textGrey : AppColors.textDark,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            if (_selectedTime != null)
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedTime = null;
+                                  });
+                                },
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                              ),
+                            const SizedBox(width: AppSpacing.xs),
+                            const Icon(Icons.access_time_rounded, color: AppColors.primary),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xl),
 
               // Submit Action
