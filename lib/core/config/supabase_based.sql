@@ -2749,17 +2749,17 @@ CREATE POLICY "Users can mark their own notifications as read" ON public.user_no
     WITH CHECK (user_id = public.get_my_id());
 
 -- RLS policies for user_fcm_tokens
-CREATE POLICY "Users can view their own FCM tokens" ON public.user_fcm_tokens
+CREATE POLICY "Users can view FCM tokens" ON public.user_fcm_tokens
     FOR SELECT TO authenticated
-    USING (user_id = auth.uid());
+    USING (true);
 
 CREATE POLICY "Users can insert their own FCM tokens" ON public.user_fcm_tokens
     FOR INSERT TO authenticated
     WITH CHECK (user_id = auth.uid());
 
-CREATE POLICY "Users can update their own FCM tokens" ON public.user_fcm_tokens
+CREATE POLICY "Users can update FCM tokens to their own" ON public.user_fcm_tokens
     FOR UPDATE TO authenticated
-    USING (user_id = auth.uid())
+    USING (true)
     WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can delete their own FCM tokens" ON public.user_fcm_tokens
