@@ -28,6 +28,7 @@ import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../routes/route_names.dart';
 import '../../../core/config/supabase_config.dart';
 import '../widgets/academic_hierarchy_filter.dart';
+import '../../settings/providers/system_settings_provider.dart';
 
 class UsersPage extends ConsumerStatefulWidget {
   const UsersPage({super.key});
@@ -2324,6 +2325,140 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                 error: (err, stack) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Text('Failed to load user analytics: $err'),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ref.watch(systemSettingsProvider).when(
+                data: (autoActivateEnabled) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: autoActivateEnabled
+                        ? AppColors.success.withValues(alpha: 0.08)
+                        : AppColors.primary.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: autoActivateEnabled
+                          ? AppColors.success.withValues(alpha: 0.2)
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        autoActivateEnabled ? LucideIcons.shieldAlert : LucideIcons.shieldCheck,
+                        color: autoActivateEnabled ? AppColors.success : AppColors.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              autoActivateEnabled ? 'Auto-Activation Mode: ON' : 'Manual Approval Mode: ON',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: autoActivateEnabled ? AppColors.success : AppColors.textDark,
+                              ),
+                            ),
+                            Text(
+                              autoActivateEnabled
+                                  ? 'New user registrations are automatically activated instantly. Ideal for Deployment Day.'
+                                  : 'Newly registered users require manual activation/approval from administrators.',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: autoActivateEnabled,
+                        activeColor: AppColors.success,
+                        onChanged: (val) async {
+                          await ref.read(systemSettingsProvider.notifier).toggleAutoActivation(val);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(val 
+                                  ? 'Auto-activation enabled. New users will be active immediately!'
+                                  : 'Manual approval enabled. New users must be vetted.'
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                loading: () => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+                error: (e, _) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(LucideIcons.shieldAlert, color: AppColors.error),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Configuration Error',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                                Text(
+                                  'Please run the SQL migration script to create the `system_settings` table on Supabase.',
+                                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              ref.invalidate(systemSettingsProvider);
+                            },
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                      if (e.toString().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Details: $e',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.error,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

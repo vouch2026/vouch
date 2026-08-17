@@ -53,14 +53,16 @@ class NotificationService {
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         try {
           final context = rootNavigatorKey.currentContext;
+          final payload = response.payload;
+          final targetRoute = (payload != null && payload.isNotEmpty) ? payload : RoutePaths.notifications;
           if (context != null) {
-            context.go(RoutePaths.schedule);
+            context.go(targetRoute);
           } else {
-            pendingNotificationPath = RoutePaths.schedule;
+            pendingNotificationPath = targetRoute;
           }
         } catch (e) {
           debugPrint('Error navigating on notification tap: $e');
-          pendingNotificationPath = RoutePaths.schedule;
+          pendingNotificationPath = RoutePaths.notifications;
         }
       },
     );
@@ -83,8 +85,29 @@ class NotificationService {
           description: 'Reminders for tasks and deadlines',
           importance: Importance.max,
         );
+        const AndroidNotificationChannel eventsChannel = AndroidNotificationChannel(
+          'events_channel',
+          'Events',
+          description: 'Notifications for new events and activities',
+          importance: Importance.max,
+        );
+        const AndroidNotificationChannel feesChannel = AndroidNotificationChannel(
+          'fees_channel',
+          'Fees & Finances',
+          description: 'Notifications for fee dues, payments, and financial updates',
+          importance: Importance.max,
+        );
+        const AndroidNotificationChannel announcementsChannel = AndroidNotificationChannel(
+          'announcements_channel',
+          'Announcements',
+          description: 'Notifications for school and program announcements',
+          importance: Importance.max,
+        );
         await androidImplementation.createNotificationChannel(scheduleChannel);
         await androidImplementation.createNotificationChannel(tasksChannel);
+        await androidImplementation.createNotificationChannel(eventsChannel);
+        await androidImplementation.createNotificationChannel(feesChannel);
+        await androidImplementation.createNotificationChannel(announcementsChannel);
       }
     } catch (e) {
       debugPrint('Error creating Android notification channel: $e');
@@ -125,6 +148,7 @@ class NotificationService {
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dateAndTime,
+        payload: RoutePaths.tasks,
       );
     } catch (e) {
       debugPrint('Exact alarm scheduling failed, falling back to inexact alarm: $e');
@@ -136,6 +160,7 @@ class NotificationService {
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dateAndTime,
+        payload: RoutePaths.tasks,
       );
     }
   }
@@ -190,6 +215,7 @@ class NotificationService {
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: RoutePaths.schedule,
       );
     } catch (e) {
       debugPrint('Exact alarm scheduling failed, falling back to inexact alarm: $e');
@@ -201,6 +227,7 @@ class NotificationService {
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: RoutePaths.schedule,
       );
     }
   }
@@ -211,6 +238,44 @@ class NotificationService {
 
   static Future<void> cancelAllNotifications() async {
     await _notificationsPlugin.cancelAll();
+  }
+
+  static Future<void> showImmediateNotification({
+    required int id,
+    required String title,
+    required String body,
+    required String channelId,
+    String? payload,
+  }) async {
+    String channelName = 'General';
+    if (channelId == 'events_channel') {
+      channelName = 'Events';
+    } else if (channelId == 'fees_channel') {
+      channelName = 'Fees & Finances';
+    } else if (channelId == 'announcements_channel') {
+      channelName = 'Announcements';
+    }
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      importance: Importance.max,
+      priority: Priority.high,
+      largeIcon: const DrawableResourceAndroidBitmap('vouch_logo'),
+    );
+
+    final NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(),
+    );
+
+    await _notificationsPlugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+      payload: payload,
+    );
   }
 
   static int _getDayOfWeekIndex(String day) {
