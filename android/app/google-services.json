@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:214610674575:android:90795293d255e6e54301fa",
+        "mobilesdk_app_id": "1:214610674575:android:47038667bcf9879c4301fa",
         "android_client_info": {
-          "package_name": "com.example.vouch_v2"
+          "package_name": "com.vouchsofttech.vouchedu"
         }
       },
       "oauth_client": [],

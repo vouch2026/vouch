@@ -8,6 +8,8 @@ import '../../../faculties/providers/faculty_provider.dart';
 import '../../../programs/models/program_model.dart';
 import '../../../programs/providers/program_provider.dart';
 import '../../../users/providers/users_provider.dart';
+import '../../../auth/models/user_model.dart';
+import 'user_search_selection_dialog.dart';
 
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/providers/storage_provider.dart';
@@ -150,6 +152,15 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
     final facultiesAsync = ref.watch(facultiesProvider);
     final usersAsync = ref.watch(allUsersProvider);
 
+    final selectedHeadUser = _selectedHead == null
+        ? null
+        : usersAsync.whenOrNull(
+            data: (users) {
+              final idx = users.indexWhere((u) => u.id == _selectedHead);
+              return idx != -1 ? users[idx] : null;
+            },
+          );
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
@@ -232,28 +243,59 @@ class _EditProgramModalState extends ConsumerState<EditProgramModal> {
                 style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.xs),
-               usersAsync.when(
-                data: (users) => DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: _selectedHead,
-                  decoration: const InputDecoration(hintText: 'Select Program Head (Optional)'),
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text('No Program Head Assigned'),
-                    ),
-                    ...users.map((u) => DropdownMenuItem(
-                      value: u.id, 
-                      child: Text(
-                        '${u.fullName} (${u.email})',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )).toList(),
-                  ],
-                  onChanged: _isLoading ? null : (val) => setState(() => _selectedHead = val),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                loading: () => const LinearProgressIndicator(),
-                error: (e, s) => Text('Error loading users: $e', style: const TextStyle(color: Colors.red)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: selectedHeadUser != null
+                          ? Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundImage: selectedHeadUser.avatarUrl != null ? NetworkImage(selectedHeadUser.avatarUrl!) : null,
+                                  child: selectedHeadUser.avatarUrl == null ? const Icon(Icons.person, size: 12) : null,
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    '${selectedHeadUser.fullName} (${selectedHeadUser.schoolId})',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const Text(
+                              'No Program Head Assigned',
+                              style: TextStyle(color: AppColors.textGrey, fontStyle: FontStyle.italic),
+                            ),
+                    ),
+                    TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              final selected = await showDialog<UserModel?>(
+                                context: context,
+                                builder: (context) => UserSearchSelectionDialog(
+                                  title: 'Select Program Head',
+                                  initialUser: selectedHeadUser,
+                                ),
+                              );
+                              if (mounted) {
+                                setState(() {
+                                  _selectedHead = selected?.id;
+                                });
+                              }
+                            },
+                      child: Text(selectedHeadUser != null ? 'Change' : 'Choose'),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               Text(

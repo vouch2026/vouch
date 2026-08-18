@@ -2641,6 +2641,18 @@ CREATE INDEX IF NOT EXISTS idx_org_members_user_id ON public.organization_member
 CREATE INDEX IF NOT EXISTS idx_comselec_members_user_id ON public.comselec_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
 
+-- Create trgm indexes for high-speed ILIKE query matching
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX IF NOT EXISTS idx_users_search_name 
+ON public.users USING gin ((first_name || ' ' || last_name) gin_trgm_ops);
+
+CREATE INDEX IF NOT EXISTS idx_users_search_email 
+ON public.users USING gin (email gin_trgm_ops);
+
+CREATE INDEX IF NOT EXISTS idx_users_search_school_id 
+ON public.users USING gin (student_id_number gin_trgm_ops);
+
 -- Clearance Requests (Filter by Org & Status for Officers)
 CREATE INDEX IF NOT EXISTS idx_clearance_requests_org_id ON public.activity_card_clearance_requests(organization_id);
 CREATE INDEX IF NOT EXISTS idx_clearance_requests_status ON public.activity_card_clearance_requests(status);
