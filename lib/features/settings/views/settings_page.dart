@@ -56,13 +56,12 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 
-                _buildSectionTitle('Notifications & Reminders'),
+                 _buildSectionTitle('Notifications & Reminders'),
                 const SizedBox(height: AppSpacing.md),
                 _buildSettingsContainer([
                   _buildSwitchTile(
                     icon: LucideIcons.bell,
                     title: 'Global Notifications',
-                    subtitle: 'Enable or disable push and alarm notifications',
                     value: settings.notificationsEnabled,
                     onChanged: (val) => ref.read(settingsProvider.notifier).toggleNotifications(val),
                   ),
@@ -71,8 +70,7 @@ class SettingsPage extends ConsumerWidget {
                     _buildDropdownTile<int>(
                       context: context,
                       icon: LucideIcons.clock,
-                      title: 'Schedule Lead Time',
-                      subtitle: 'Remind before a class starts',
+                      title: 'Class Reminders',
                       value: settings.scheduleReminderLeadMinutes,
                       options: const [
                         SettingsOption(value: 5, label: '5 minutes before'),
@@ -89,8 +87,7 @@ class SettingsPage extends ConsumerWidget {
                     _buildDropdownTile<int>(
                       context: context,
                       icon: LucideIcons.calendarClock,
-                      title: 'Task Lead Time',
-                      subtitle: 'Remind before a task deadline',
+                      title: 'Task Reminders',
                       value: settings.taskReminderLeadMinutes,
                       options: const [
                         SettingsOption(value: 60, label: '1 hour before'),
@@ -115,7 +112,6 @@ class SettingsPage extends ConsumerWidget {
                     context: context,
                     icon: LucideIcons.palette,
                     title: 'Theme Mode',
-                    subtitle: 'Choose look and feel of the app',
                     value: settings.themeMode,
                     options: const [
                       SettingsOption(value: 'system', label: 'System Default'),
@@ -128,7 +124,6 @@ class SettingsPage extends ConsumerWidget {
                   _buildSwitchTile(
                     icon: LucideIcons.fingerprint,
                     title: 'Biometric Lock',
-                    subtitle: 'Require FaceID/Fingerprint on app launch',
                     value: settings.biometricLockEnabled,
                     onChanged: (val) async {
                       final newSettings = settings.copyWith(biometricLockEnabled: val);
@@ -144,7 +139,6 @@ class SettingsPage extends ConsumerWidget {
                   _buildSwitchTile(
                     icon: LucideIcons.wifi,
                     title: 'WiFi-Only Sync',
-                    subtitle: 'Sync with remote database only over WiFi',
                     value: settings.wifiOnlySync,
                     onChanged: (val) async {
                       final newSettings = settings.copyWith(wifiOnlySync: val);
@@ -155,7 +149,6 @@ class SettingsPage extends ConsumerWidget {
                   ListTile(
                     leading: Icon(LucideIcons.trash2, color: AppColors.error),
                     title: const Text('Clear Image Cache', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Purge all offline cached images to free up space'),
                     onTap: () async {
                       try {
                         await Hive.box('offline_images').clear();
@@ -276,14 +269,14 @@ class SettingsPage extends ConsumerWidget {
   Widget _buildSwitchTile({
     required IconData icon,
     required String title,
-    required String subtitle,
+    String? subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
     return SwitchListTile(
       secondary: Icon(icon, color: AppColors.primary),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textGrey)) : null,
       value: value,
       onChanged: onChanged,
       activeColor: AppColors.primary,
@@ -294,7 +287,7 @@ class SettingsPage extends ConsumerWidget {
     required BuildContext context,
     required IconData icon,
     required String title,
-    required String subtitle,
+    String? subtitle,
     required T value,
     required List<SettingsOption<T>> options,
     required ValueChanged<T> onChanged,
@@ -302,17 +295,17 @@ class SettingsPage extends ConsumerWidget {
     final selectedOption = options.firstWhere((opt) => opt.value == value, orElse: () => options.first);
     return ListTile(
       leading: Icon(icon, color: AppColors.primary),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textGrey)) : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             selectedOption.label,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
           ),
           const SizedBox(width: 4),
-          Icon(LucideIcons.chevronDown, size: 16, color: AppColors.primary),
+          Icon(LucideIcons.chevronDown, size: 14, color: AppColors.primary),
         ],
       ),
       onTap: () => _showSelectionBottomSheet<T>(

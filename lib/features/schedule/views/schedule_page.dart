@@ -518,7 +518,6 @@ class _AddEditScheduleModalState extends ConsumerState<_AddEditScheduleModal> {
   
   List<String> _selectedDays = [];
   bool _isLoading = false;
-  int _reminderMinutes = 0;
 
   final List<String> _allWeekdays = [
     'Monday',
@@ -540,7 +539,6 @@ class _AddEditScheduleModalState extends ConsumerState<_AddEditScheduleModal> {
     _endController = TextEditingController(text: widget.schedule?.endTime ?? '');
     _roomController = TextEditingController(text: widget.schedule?.room ?? '');
     _selectedDays = widget.schedule != null ? List<String>.from(widget.schedule!.days) : [];
-    _reminderMinutes = widget.schedule?.reminderMinutes ?? 0;
   }
 
   @override
@@ -596,7 +594,6 @@ class _AddEditScheduleModalState extends ConsumerState<_AddEditScheduleModal> {
               endTime: _endController.text.trim(),
               days: _selectedDays,
               room: _roomController.text.trim(),
-              reminderMinutes: _reminderMinutes,
             );
       } else {
         final updated = widget.schedule!.copyWith(
@@ -607,7 +604,6 @@ class _AddEditScheduleModalState extends ConsumerState<_AddEditScheduleModal> {
           endTime: _endController.text.trim(),
           days: _selectedDays,
           room: _roomController.text.trim(),
-          reminderMinutes: _reminderMinutes,
         );
         await ref.read(schedulesProvider.notifier).updateSchedule(updated);
       }
@@ -802,27 +798,7 @@ class _AddEditScheduleModalState extends ConsumerState<_AddEditScheduleModal> {
                   }).toList(),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
-                // Reminder selection
-                Text('Reminder (Before Class)', style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: AppSpacing.xs),
-                DropdownButtonFormField<int>(
-                  value: _reminderMinutes,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.notifications_active_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('None')),
-                    DropdownMenuItem(value: 15, child: Text('15 minutes before')),
-                    DropdownMenuItem(value: 30, child: Text('30 minutes before')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _reminderMinutes = val);
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.md),
 
                 // Actions row
                 Row(

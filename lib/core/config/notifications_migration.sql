@@ -46,6 +46,17 @@ CREATE TABLE IF NOT EXISTS public.user_notification_reads (
 );
 
 
+-- 2.1 Create FCM Tokens Table
+CREATE TABLE IF NOT EXISTS public.user_fcm_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    fcm_token TEXT NOT NULL UNIQUE,
+    device_type VARCHAR(50), -- 'android', 'ios', 'web'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
 -- 3. Create Performance & Lookups Indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_targets ON public.notifications (
     target_user_id, 
@@ -53,11 +64,13 @@ CREATE INDEX IF NOT EXISTS idx_notifications_targets ON public.notifications (
     target_faculty_id, 
     target_campus_id
 );
+CREATE INDEX IF NOT EXISTS idx_user_fcm_tokens_user_id ON public.user_fcm_tokens(user_id);
 
 
 -- 4. Enable Row Level Security (RLS)
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_notification_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_fcm_tokens ENABLE ROW LEVEL SECURITY;
 
 
 -- 5. Define Security Policies
@@ -94,3 +107,21 @@ CREATE POLICY "Users can view their own read receipts" ON public.user_notificati
 CREATE POLICY "Users can mark their own notifications as read" ON public.user_notification_reads
     FOR INSERT TO authenticated
     WITH CHECK (user_id = public.get_my_id());
+
+-- RLS policies for user_fcm_tokens
+CREATE POLICY "Users can view FCM tokens" ON public.user_fcm_tokens
+    FOR SELECT TO authenticated
+    USING (true);
+
+CREATE POLICY "Users can insert their own FCM tokens" ON public.user_fcm_tokens
+    FOR INSERT TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update FCM tokens to their own" ON public.user_fcm_tokens
+    FOR UPDATE TO authenticated
+    USING (true)
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own FCM tokens" ON public.user_fcm_tokens
+    FOR DELETE TO authenticated
+    USING (user_id = auth.uid());

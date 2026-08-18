@@ -1342,12 +1342,22 @@ DECLARE
     v_faculty_id UUID;
     v_program_id UUID;
     v_campus_id UUID;
+    v_auto_activate BOOLEAN := false;
 BEGIN
     v_role := new.raw_user_meta_data->>'role';
     v_position := new.raw_user_meta_data->>'position';
     v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
     v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
     v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
+
+    -- Fetch the setting dynamically from system_settings table if it exists
+    BEGIN
+        SELECT COALESCE((value->>'enabled')::boolean, false) INTO v_auto_activate
+        FROM public.system_settings
+        WHERE key = 'auto_activate_registrations';
+    EXCEPTION WHEN OTHERS THEN
+        v_auto_activate := false;
+    END;
 
     IF v_campus_id IS NULL AND v_faculty_id IS NOT NULL THEN
         SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
@@ -1364,7 +1374,10 @@ BEGIN
         COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
         v_campus_id, v_faculty_id, v_program_id,
         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
-        COALESCE(new.raw_user_meta_data->>'status', 'active')
+        CASE 
+            WHEN v_auto_activate THEN 'active'
+            ELSE COALESCE(new.raw_user_meta_data->>'status', 'pending')
+        END
     )
     ON CONFLICT (auth_id) DO UPDATE SET
         email = EXCLUDED.email,
@@ -1890,6 +1903,34 @@ ON public.user_settings
 FOR ALL
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
+
+-- System Settings Table
+CREATE TABLE IF NOT EXISTS public.system_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+
+-- Select policy (everyone authenticated can view system settings)
+CREATE POLICY "System settings are viewable by authenticated users" 
+ON public.system_settings FOR SELECT 
+TO authenticated 
+USING (true);
+
+-- Manage policy (Only Super Admins can manage system settings)
+CREATE POLICY "Only Super Admins can manage system settings" 
+ON public.system_settings 
+FOR ALL 
+TO authenticated 
+USING (public.is_super_admin());
+
+-- Initialize default auto-activation setting
+INSERT INTO public.system_settings (key, value)
+VALUES ('auto_activate_registrations', '{"enabled": false}'::jsonb)
+ON CONFLICT (key) DO NOTHING;
 
 -- ==============================================================================
 -- WORKSPACE EXPANSION ADDITIONS (FACULTY & PROGRAM WORKSPACES)
@@ -2648,19 +2689,33 @@ CREATE TABLE IF NOT EXISTS public.user_notification_reads (
     PRIMARY KEY (user_id, notification_id)
 );
 
--- 17.3 Performance Indexes
+-- 17.3 FCM Tokens Table
+CREATE TABLE IF NOT EXISTS public.user_fcm_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    fcm_token TEXT NOT NULL UNIQUE,
+    device_type VARCHAR(50), -- 'android', 'ios', 'web'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+-- 17.4 Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_targets ON public.notifications (
     target_user_id, 
     target_program_id, 
     target_faculty_id, 
     target_campus_id
 );
+CREATE INDEX IF NOT EXISTS idx_user_fcm_tokens_user_id ON public.user_fcm_tokens(user_id);
 
--- 17.4 Enable RLS
+
+-- 17.5 Enable RLS
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_notification_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_fcm_tokens ENABLE ROW LEVEL SECURITY;
 
--- 17.5 Read policy for notifications based on matching target identifiers
+-- 17.6 Read policy for notifications based on matching target identifiers
 CREATE POLICY "Users can view relevant notifications" ON public.notifications
     FOR SELECT TO authenticated
     USING (
@@ -2692,6 +2747,24 @@ CREATE POLICY "Users can view their own read receipts" ON public.user_notificati
 CREATE POLICY "Users can mark their own notifications as read" ON public.user_notification_reads
     FOR INSERT TO authenticated
     WITH CHECK (user_id = public.get_my_id());
+
+-- RLS policies for user_fcm_tokens
+CREATE POLICY "Users can view FCM tokens" ON public.user_fcm_tokens
+    FOR SELECT TO authenticated
+    USING (true);
+
+CREATE POLICY "Users can insert their own FCM tokens" ON public.user_fcm_tokens
+    FOR INSERT TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update FCM tokens to their own" ON public.user_fcm_tokens
+    FOR UPDATE TO authenticated
+    USING (true)
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own FCM tokens" ON public.user_fcm_tokens
+    FOR DELETE TO authenticated
+    USING (user_id = auth.uid());
 
 
 -- 17.6 Announcement Created Automation Trigger
@@ -2886,7 +2959,7 @@ FOR EACH ROW EXECUTE FUNCTION public.on_fee_created();
 CREATE OR REPLACE FUNCTION public.on_sanction_activated()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (TG_OP = 'INSERT' AND NEW.status = 'active') OR (TG_OP = 'UPDATE' AND NEW.status = 'active' AND (OLD.status IS NULL OR OLD.status != 'active')) THEN
+    IF (TG_OP = 'INSERT' AND NEW.status = 'Pending Item') OR (TG_OP = 'UPDATE' AND NEW.status = 'Pending Item' AND (OLD.status IS NULL OR OLD.status != 'Pending Item')) THEN
         INSERT INTO public.notifications (
             title,
             content,

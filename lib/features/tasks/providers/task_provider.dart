@@ -225,6 +225,14 @@ class TasksNotifier extends AsyncNotifier<List<TaskModel>> {
 
   Future<void> syncAndRefresh() async {
     final repository = ref.read(taskRepositoryProvider);
+    
+    // Cancel current notifications before sync to prevent leaks if IDs change
+    if (state.hasValue) {
+      for (final task in state.value!) {
+        _cancelNotification(task);
+      }
+    }
+
     try {
       await repository.syncTasks();
       final tasks = await repository.getTasks();
@@ -248,7 +256,7 @@ class TasksNotifier extends AsyncNotifier<List<TaskModel>> {
   }
 
   void _scheduleNotification(TaskModel task, AppSettings settings) {
-    if (task.id == null || task.dueDate == null || task.isCompleted) return;
+    if (task.id == null || task.id!.startsWith('temp_') || task.dueDate == null || task.isCompleted) return;
     
     _cancelNotification(task);
     if (!settings.notificationsEnabled) return;
