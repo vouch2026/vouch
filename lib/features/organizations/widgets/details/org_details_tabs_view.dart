@@ -109,13 +109,21 @@ class _OrgDetailsTabsViewState extends State<OrgDetailsTabsView> with SingleTick
 }
 
 
-class _MembersTab extends ConsumerWidget {
+class _MembersTab extends ConsumerStatefulWidget {
   final String orgId;
   const _MembersTab({required this.orgId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final membersAsync = ref.watch(organizationMembersProvider(orgId));
+  ConsumerState<_MembersTab> createState() => _MembersTabState();
+}
+
+class _MembersTabState extends ConsumerState<_MembersTab> {
+  int _currentPage = 0;
+  int _rowsPerPage = 50;
+
+  @override
+  Widget build(BuildContext context) {
+    final membersAsync = ref.watch(organizationMembersProvider(widget.orgId));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
@@ -125,12 +133,126 @@ class _MembersTab extends ConsumerWidget {
           Text('Organization Members', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
           membersAsync.when(
-            data: (members) => _buildMembersTable(context, members),
+            data: (members) {
+              if (members.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              final totalMembers = members.length;
+              final totalPages = (totalMembers / _rowsPerPage).ceil();
+              
+              // Clamp current page
+              final maxPage = (totalPages - 1).clamp(0, totalMembers);
+              if (_currentPage > maxPage) {
+                _currentPage = maxPage;
+              }
+
+              final startIndex = _currentPage * _rowsPerPage;
+              final endIndex = (startIndex + _rowsPerPage).clamp(0, totalMembers);
+              final pagedMembers = members.sublist(startIndex, endIndex);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: pagedMembers.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final user = pagedMembers[index];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+                          leading: CircleAvatar(
+                            backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                            child: user.avatarUrl == null ? const Icon(Icons.person) : null,
+                          ),
+                          title: Text(user.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                          subtitle: Text('${user.schoolId} • ${user.programName ?? user.roleDisplay} • ${user.yearLevel ?? ""}${user.yearLevel != null ? " Year" : ""}', style: AppTextStyles.bodySmall),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildStatusBadge(user.status),
+                              IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert_rounded)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.md),
+                  
+                  // Pagination Controls
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text('Show: ', style: AppTextStyles.bodySmall),
+                            DropdownButton<int>(
+                              value: _rowsPerPage,
+                              underline: const SizedBox(),
+                              style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+                              items: [50, 100].map((int val) {
+                                return DropdownMenuItem<int>(
+                                  value: val,
+                                  child: Text('$val'),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _rowsPerPage = val;
+                                    _currentPage = 0;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Showing ${startIndex + 1}-${endIndex} of $totalMembers',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: _currentPage == 0
+                                  ? null
+                                  : () => setState(() => _currentPage--),
+                              icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                            ),
+                            Text(
+                              '${_currentPage + 1} / $totalPages',
+                              style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              onPressed: _currentPage >= totalPages - 1
+                                  ? null
+                                  : () => setState(() => _currentPage++),
+                              icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
             loading: () => const Center(child: FlickrLoader()),
             error: (err, _) {
               if (OfflineStateView.isOfflineError(err)) {
                 return OfflineStateView(
-                  onRetry: () => ref.invalidate(organizationMembersProvider(orgId)),
+                  onRetry: () => ref.invalidate(organizationMembersProvider(widget.orgId)),
                 );
               }
               return Center(child: Text('Error loading members: $err'));
@@ -141,59 +263,24 @@ class _MembersTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildMembersTable(BuildContext context, List<UserModel> members) {
-    if (members.isEmpty) {
-      return Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(Icons.people_outline_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
-                const SizedBox(height: AppSpacing.md),
-                Text('No members found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
+  Widget _buildEmptyState() {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: AppColors.border),
       ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: members.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final user = members[index];
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-            leading: CircleAvatar(
-              backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-              child: user.avatarUrl == null ? const Icon(Icons.person) : null,
-            ),
-            title: Text(user.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('${user.schoolId} • ${user.programName ?? user.roleDisplay} • ${user.yearLevel ?? ""}${user.yearLevel != null ? " Year" : ""}', style: AppTextStyles.bodySmall),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildStatusBadge(user.status),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert_rounded)),
-              ],
-            ),
-          );
-        },
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.people_outline_rounded, size: 48, color: AppColors.textGrey.withOpacity(0.3)),
+              const SizedBox(height: AppSpacing.md),
+              Text('No members found', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey)),
+            ],
+          ),
+        ),
       ),
     );
   }
