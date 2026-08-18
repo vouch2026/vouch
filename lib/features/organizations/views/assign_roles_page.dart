@@ -27,6 +27,7 @@ class AssignRolesPage extends ConsumerStatefulWidget {
 
 class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
   AcademicTermModel? _selectedTerm;
+  int _senatorsCount = 1;
 
   @override
   void initState() {
@@ -171,49 +172,73 @@ class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
 
                       rolesAsync.when(
                         data: (roles) {
-                          final userProfile = ref.watch(userProfileProvider).value;
-                          final isSuperAdmin = userProfile?.role == 'super_admin';
+                          Map<String, dynamic>? findRole(List<Map<String, dynamic>> rolesList, String targetName) {
+                            final search = targetName.toLowerCase().replaceAll(RegExp(r'[- ]'), '');
+                            for (final r in rolesList) {
+                              final name = r['name'].toString().toLowerCase().replaceAll(RegExp(r'[- ]'), '');
+                              if (name == search) return r;
+                            }
+                            return null;
+                          }
 
-                          // Filter governance roles
-                          final governanceRoles = roles.where((r) {
-                            final name = r['name'].toString().toLowerCase();
-                            final level = r['hierarchy_level'] as int? ?? 0;
-                            final isBaseRole = ['super admin', 'students', 'member', 'instructor'].contains(name);
-                            if (isBaseRole) return false;
-                            if (!isSuperAdmin && level > 15) return false;
-                            return true;
-                          }).toList();
+                          // Get Adviser Role
+                          final adviserRole = findRole(roles, 'Adviser');
 
-                          // Create a combined list containing Adviser first, then governance roles
+                          // Determine leader titles based on org type
+                          final isFacultyBased = org.type == 'faculty-based';
+                          final leaderTitle = isFacultyBased ? 'Governor' : 'President';
+                          final viceLeaderTitle = isFacultyBased ? 'Vice-Governor' : 'Vice-President';
+
+                          final leaderRole = findRole(roles, leaderTitle);
+                          final viceLeaderRole = findRole(roles, viceLeaderTitle);
+                          final secretaryRole = findRole(roles, 'Secretary');
+                          final treasurerRole = findRole(roles, 'Treasurer');
+                          final auditorRole = findRole(roles, 'Auditor');
+                          final businessManagerRole = findRole(roles, 'Business Manager');
+                          final pioRole = findRole(roles, 'PIO');
+                          final senatorRole = findRole(roles, 'Senator');
+
+                          final List<Map<String, dynamic>> targetRoles = [];
+                          if (leaderRole != null) targetRoles.add(leaderRole);
+                          if (viceLeaderRole != null) targetRoles.add(viceLeaderRole);
+                          if (secretaryRole != null) targetRoles.add(secretaryRole);
+                          if (treasurerRole != null) targetRoles.add(treasurerRole);
+                          if (auditorRole != null) targetRoles.add(auditorRole);
+                          if (businessManagerRole != null) targetRoles.add(businessManagerRole);
+                          if (pioRole != null) targetRoles.add(pioRole);
+
                           return officersAsync.when(
                             data: (currentOfficers) {
                               final activeOfficers = currentOfficers.where((o) =>
                                 o.status == 'active' && o.academicTermId == _selectedTerm?.id
                               ).toList();
 
-                              // Get Adviser Role
-                              final adviserRole = roles.firstWhere(
-                                (r) => r['name'].toString().toLowerCase() == 'adviser',
-                                orElse: () => {'id': '', 'name': 'Adviser'},
-                              );
+                              // Filter active senators
+                              final senatorRoleId = senatorRole?['id'] ?? '';
+                              final activeSenators = activeOfficers.where((o) => o.roleId == senatorRoleId).toList();
+                              final totalSenatorsToRender = activeSenators.length > _senatorsCount 
+                                  ? activeSenators.length 
+                                  : _senatorsCount;
 
                               return ListView(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 children: [
                                   // Adviser Row
-                                  _buildRoleAssignmentRow(
-                                    roleId: adviserRole['id'] ?? '',
-                                    roleName: 'Adviser',
-                                    isAdviser: true,
-                                    org: org,
-                                    activeOfficers: activeOfficers,
-                                    royalBlue: royalBlue,
-                                    gold: gold,
-                                  ),
+                                  if (adviserRole != null)
+                                    _buildRoleAssignmentRow(
+                                      roleId: adviserRole['id'] ?? '',
+                                      roleName: 'Adviser',
+                                      isAdviser: true,
+                                      org: org,
+                                      activeOfficers: activeOfficers,
+                                      royalBlue: royalBlue,
+                                      gold: gold,
+                                    ),
                                   const Divider(height: 24),
+                                  
                                   // Governance Positions
-                                  ...governanceRoles.map((role) {
+                                  ...targetRoles.map((role) {
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 12.0),
                                       child: _buildRoleAssignmentRow(
@@ -227,6 +252,49 @@ class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
                                       ),
                                     );
                                   }).toList(),
+
+                                  if (senatorRole != null) ...[
+                                    const Divider(height: 24),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                      child: Text(
+                                        'Senators',
+                                        style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: royalBlue),
+                                      ),
+                                    ),
+                                    ...List.generate(totalSenatorsToRender, (index) {
+                                      final senatorAssignment = activeSenators.length > index ? activeSenators[index] : null;
+                                      final assignedUser = senatorAssignment?.user;
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 12.0),
+                                        child: _buildRoleAssignmentRow(
+                                          roleId: senatorRole['id'],
+                                          roleName: 'Senator #${index + 1}',
+                                          isAdviser: false,
+                                          org: org,
+                                          activeOfficers: activeOfficers,
+                                          royalBlue: royalBlue,
+                                          gold: gold,
+                                          assignedUserOverride: assignedUser,
+                                        ),
+                                      );
+                                    }),
+                                    const SizedBox(height: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          _senatorsCount = totalSenatorsToRender + 1;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.add_rounded, size: 18),
+                                      label: const Text('Add Senator Slot'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: royalBlue,
+                                        side: BorderSide(color: royalBlue.withOpacity(0.5)),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               );
                             },
@@ -264,16 +332,21 @@ class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
     required List<dynamic> activeOfficers,
     required Color royalBlue,
     required Color gold,
+    UserModel? assignedUserOverride,
   }) {
-    OrganizationMembershipModel? assignment;
-    for (final o in activeOfficers) {
-      if (o.roleId == roleId) {
-        assignment = o;
-        break;
+    UserModel? assignedUser;
+    if (assignedUserOverride != null) {
+      assignedUser = assignedUserOverride;
+    } else {
+      OrganizationMembershipModel? assignment;
+      for (final o in activeOfficers) {
+        if (o.roleId == roleId) {
+          assignment = o;
+          break;
+        }
       }
+      assignedUser = assignment?.user;
     }
-
-    final assignedUser = assignment?.user;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
