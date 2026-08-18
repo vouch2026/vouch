@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../routes/route_names.dart';
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -58,7 +59,10 @@ class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
 
         return DashboardLayout(
           title: 'Assign Roles',
-          onBack: () => context.pop(),
+          onBack: () => context.goNamed(
+            RouteNames.organizationDetails,
+            pathParameters: {'id': widget.orgId},
+          ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
@@ -70,7 +74,7 @@ class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
                     Icon(Icons.business_rounded, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 8),
                     InkWell(
-                      onTap: () => context.go('/organizations'),
+                      onTap: () => context.goNamed(RouteNames.organizations),
                       child: Text(
                         'Organizations',
                         style: AppTextStyles.bodySmall.copyWith(
@@ -83,7 +87,10 @@ class _AssignRolesPageState extends ConsumerState<AssignRolesPage> {
                     Icon(Icons.chevron_right_rounded, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 8),
                     InkWell(
-                      onTap: () => context.pop(),
+                      onTap: () => context.goNamed(
+                        RouteNames.organizationDetails,
+                        pathParameters: {'id': widget.orgId},
+                      ),
                       child: Text(
                         org.code,
                         style: AppTextStyles.bodySmall.copyWith(
