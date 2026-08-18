@@ -47,3 +47,4 @@ app.*.map.json
 .vercel
 
 assets/vouch-push-notif-firebase-adminsdk-fbsvc-*.json
+lib/firebase_options.dart
