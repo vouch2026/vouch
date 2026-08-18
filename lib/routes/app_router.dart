@@ -19,6 +19,7 @@ import '../features/activity_cards/views/activity_card_redirector.dart';
 import '../features/activity_cards/views/activity_card_details_page.dart';
 import '../features/organizations/views/organizations_page.dart';
 import '../features/organizations/views/organization_details_page.dart';
+import '../features/organizations/views/assign_roles_page.dart';
 import '../features/elections/views/comselecs_manager_page.dart';
 import '../features/campuses/views/campuses_page.dart';
 import '../features/campuses/views/campus_details_page.dart';
@@ -178,6 +179,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         RoutePaths.programs,
         RoutePaths.programDetails,
         RoutePaths.accountDeletionRequests,
+        RoutePaths.organizationAssignRoles,
       ];
 
       if (matchesAny(location, superAdminRoutes) && !isSuperAdmin) {
@@ -381,6 +383,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = state.pathParameters['id']!;
               return OrganizationDetailsPage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.organizationAssignRoles,
+            name: RouteNames.organizationAssignRoles,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return AssignRolesPage(orgId: id);
             },
           ),
           GoRoute(

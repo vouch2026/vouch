@@ -11,10 +11,10 @@ import 'package:vouch_v2/features/organizations/providers/workspace_provider.dar
 import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
-import './assign_officer_dialog.dart';
-import './assign_adviser_dialog.dart';
 import './organization_settings_panel.dart';
 import '../../../../core/widgets/states/offline_state_view.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../routes/route_names.dart';
 
 class OrgDetailsTabsView extends StatefulWidget {
   final OrganizationModel org;
@@ -230,11 +230,6 @@ class _OfficersTab extends ConsumerWidget {
     final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
-    final canManageMembers = isSuperAdmin || 
-                            activeRoleName.contains('governor') || 
-                            activeRoleName.contains('president') ||
-                            activeRoleName.contains('vice governor') ||
-                            activeRoleName.contains('vice president');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
@@ -260,29 +255,14 @@ class _OfficersTab extends ConsumerWidget {
               ),
               Row(
                 children: [
-                  if (org.type != 'comselec' && isSuperAdmin) ...[
-                    OutlinedButton.icon(
-                      onPressed: () => showDialog(
-                        context: context,
-                        builder: (context) => AssignAdviserDialog(org: org),
-                      ),
-                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                      label: const Text('Assign Adviser'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF041E42),
-                        side: const BorderSide(color: Color(0xFF041E42)),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                  ],
-                  if (isSuperAdmin || canManageMembers)
+                  if (isSuperAdmin)
                     FilledButton.icon(
-                      onPressed: () => showDialog(
-                        context: context,
-                        builder: (context) => AssignOfficerDialog(org: org),
+                      onPressed: () => context.goNamed(
+                        RouteNames.organizationAssignRoles,
+                        pathParameters: {'id': org.id},
                       ),
                       icon: const Icon(Icons.assignment_ind_rounded, size: 18),
-                      label: const Text('Assign Officer'),
+                      label: const Text('Assign Roles'),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF041E42), // Royal Blue
                         foregroundColor: const Color(0xFFC5A059), // Gold
