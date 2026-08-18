@@ -2959,7 +2959,7 @@ FOR EACH ROW EXECUTE FUNCTION public.on_fee_created();
 CREATE OR REPLACE FUNCTION public.on_sanction_activated()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (TG_OP = 'INSERT' AND NEW.status = 'active') OR (TG_OP = 'UPDATE' AND NEW.status = 'active' AND (OLD.status IS NULL OR OLD.status != 'active')) THEN
+    IF (TG_OP = 'INSERT' AND NEW.status = 'Pending Item') OR (TG_OP = 'UPDATE' AND NEW.status = 'Pending Item' AND (OLD.status IS NULL OR OLD.status != 'Pending Item')) THEN
         INSERT INTO public.notifications (
             title,
             content,
