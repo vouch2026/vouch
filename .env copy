@@ -1,0 +1,10 @@
+SUPABASE_URL=https://uwfhvulbhydohufiocev.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_zbFbRuu8-VFEql_UE-oVWw_9OjyJ-NC
+SUPABASE_EVENTS_BUCKET=event-pictures
+SUPABASE_PROFILES_BUCKET=profile-pictures
+SUPABASE_RECEIPTS_BUCKET=receipt-pictures
+SUPABASE_HIGHLIGHTS_BUCKET=highlight-pictures
+SUPABASE_ID_BUCKET=id-pictures
+SUPABASE_ORG_BUCKET=org-pictures
+SUPABASE_ANNOUNCEMENTS_BUCKET=announcement-pictures
+SUPABASE_EXCUSE_BUCKET=excuse-pictures

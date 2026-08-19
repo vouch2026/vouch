@@ -671,6 +671,10 @@ CREATE POLICY "Roles are viewable by authenticated users" ON roles FOR SELECT US
 CREATE POLICY "User roles are viewable by authenticated users" ON user_roles FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Permissions are viewable by authenticated users" ON permissions FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Role permissions are viewable by authenticated users" ON role_permissions FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Super admins can manage roles" ON roles FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage user roles" ON user_roles FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage permissions" ON permissions FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins can manage role permissions" ON role_permissions FOR ALL TO authenticated USING (public.is_super_admin());
 
 -- Academic Structure
 CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
@@ -912,6 +916,12 @@ USING (
     EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL) OR
     EXISTS (SELECT 1 FROM comselec_members cm WHERE cm.user_id = public.get_my_id() AND cm.comselec_id = governance_audit_logs.comselec_id AND cm.role_id IS NOT NULL)
 );
+CREATE POLICY "Authorized officers can insert audit logs" ON governance_audit_logs FOR INSERT TO authenticated
+WITH CHECK (
+    public.is_super_admin() OR 
+    EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = governance_audit_logs.organization_id AND om.role_id IS NOT NULL) OR
+    EXISTS (SELECT 1 FROM comselec_members cm WHERE cm.user_id = public.get_my_id() AND cm.comselec_id = governance_audit_logs.comselec_id AND cm.role_id IS NOT NULL)
+);
 
 -- ------------------------------------------------------------
 -- SYSTEM & EXTERNAL SERVICE GRANTS (e.g. Supabase Storage)
@@ -929,20 +939,27 @@ GRANT SELECT ON auth.users TO authenticated, anon, supabase_storage_admin;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated, anon, supabase_storage_admin;
 
 -- ------------------------------------------------------------
--- SUPABASE STORAGE BUCKETS & POLICIES (e.g. Org Pictures)
+-- SUPABASE STORAGE BUCKETS & POLICIES
 -- ------------------------------------------------------------
--- Create the org-pictures bucket if it does not already exist
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('org-pictures', 'org-pictures', true)
+-- 1. Create all required storage buckets if they do not already exist
+INSERT INTO storage.buckets (id, name, public) VALUES 
+  ('org-pictures', 'org-pictures', true),
+  ('announcement-pictures', 'announcement-pictures', true),
+  ('event-pictures', 'event-pictures', true),
+  ('highlight-pictures', 'highlight-pictures', true),
+  ('ids', 'ids', false),
+  ('receipt-pictures', 'receipt-pictures', false),
+  ('excuse-pictures', 'excuse-pictures', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Policy: Allow anyone (public) to view/read organization pictures
+-- ------------------------------------------------------------
+-- BUCKET 1: org-pictures (Public)
+-- ------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow public select on org pictures" ON storage.objects;
 CREATE POLICY "Allow public select on org pictures" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'org-pictures');
 
--- Policy: Allow officers and super admins to upload new pictures (INSERT)
 DROP POLICY IF EXISTS "Allow officers and super admins to upload org pictures" ON storage.objects;
 CREATE POLICY "Allow officers and super admins to upload org pictures" ON storage.objects
   FOR INSERT TO authenticated
@@ -969,7 +986,6 @@ CREATE POLICY "Allow officers and super admins to upload org pictures" ON storag
     )
   );
 
--- Policy: Allow officers and super admins to overwrite/update pictures (UPDATE)
 DROP POLICY IF EXISTS "Allow officers and super admins to update org pictures" ON storage.objects;
 CREATE POLICY "Allow officers and super admins to update org pictures" ON storage.objects
   FOR UPDATE TO authenticated
@@ -996,7 +1012,6 @@ CREATE POLICY "Allow officers and super admins to update org pictures" ON storag
     )
   );
 
--- Policy: Allow officers and super admins to delete pictures (DELETE)
 DROP POLICY IF EXISTS "Allow officers and super admins to delete org pictures" ON storage.objects;
 CREATE POLICY "Allow officers and super admins to delete org pictures" ON storage.objects
   FOR DELETE TO authenticated
@@ -1023,6 +1038,221 @@ CREATE POLICY "Allow officers and super admins to delete org pictures" ON storag
     )
   );
 
+-- ------------------------------------------------------------
+-- BUCKET 2: announcement-pictures (Public)
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow public select on announcement pictures" ON storage.objects;
+CREATE POLICY "Allow public select on announcement pictures" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'announcement-pictures');
+
+DROP POLICY IF EXISTS "Allow officers and super admins to manage announcement pictures" ON storage.objects;
+CREATE POLICY "Allow officers and super admins to manage announcement pictures" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'announcement-pictures' AND
+    (
+      public.is_super_admin() OR
+      EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
+      )
+    )
+  );
+
+-- ------------------------------------------------------------
+-- BUCKET 3: event-pictures (Public)
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow public select on event pictures" ON storage.objects;
+CREATE POLICY "Allow public select on event pictures" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'event-pictures');
+
+DROP POLICY IF EXISTS "Allow officers and super admins to manage event pictures" ON storage.objects;
+CREATE POLICY "Allow officers and super admins to manage event pictures" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'event-pictures' AND
+    (
+      public.is_super_admin() OR
+      EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
+      )
+    )
+  );
+
+-- ------------------------------------------------------------
+-- BUCKET 4: highlight-pictures (Public Read, Authenticated Write)
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow public select on highlight pictures" ON storage.objects;
+CREATE POLICY "Allow public select on highlight pictures" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'highlight-pictures');
+
+DROP POLICY IF EXISTS "Allow authenticated users to upload highlights" ON storage.objects;
+CREATE POLICY "Allow authenticated users to upload highlights" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'highlight-pictures');
+
+DROP POLICY IF EXISTS "Allow users and super admins to manage highlights" ON storage.objects;
+CREATE POLICY "Allow users and super admins to manage highlights" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'highlight-pictures' AND
+    (
+      public.is_super_admin() OR
+      owner = auth.uid()
+    )
+  );
+
+-- ------------------------------------------------------------
+-- BUCKET 5: ids (Private - Verification Student IDs)
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow students and super admins to view IDs" ON storage.objects;
+CREATE POLICY "Allow students and super admins to view IDs" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'ids' AND
+    (
+      public.is_super_admin() OR
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow students to upload their own ID" ON storage.objects;
+CREATE POLICY "Allow students to upload their own ID" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'ids' AND
+    (
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0 OR
+      public.is_super_admin()
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow students and super admins to manage IDs" ON storage.objects;
+CREATE POLICY "Allow students and super admins to manage IDs" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'ids' AND
+    (
+      public.is_super_admin() OR
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0
+    )
+  );
+
+-- ------------------------------------------------------------
+-- BUCKET 6: receipt-pictures (Private - Financial Payment Receipts)
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow students, officers, and super admins to view receipts" ON storage.objects;
+CREATE POLICY "Allow students, officers, and super admins to view receipts" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'receipt-pictures' AND
+    (
+      public.is_super_admin() OR
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0 OR
+      EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow students to upload receipts" ON storage.objects;
+CREATE POLICY "Allow students to upload receipts" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'receipt-pictures' AND
+    (
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0 OR
+      public.is_super_admin()
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow students and super admins to delete receipts" ON storage.objects;
+CREATE POLICY "Allow students and super admins to delete receipts" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'receipt-pictures' AND
+    (
+      public.is_super_admin() OR
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0
+    )
+  );
+
+-- ------------------------------------------------------------
+-- BUCKET 7: excuse-pictures (Private - Excuse Documents)
+-- ------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow students, officers, and super admins to view excuses" ON storage.objects;
+CREATE POLICY "Allow students, officers, and super admins to view excuses" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'excuse-pictures' AND
+    (
+      public.is_super_admin() OR
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0 OR
+      EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.programs pr WHERE pr.program_head_id = public.get_my_id()
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.faculties f WHERE f.dean_id = public.get_my_id()
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow students to upload excuses" ON storage.objects;
+CREATE POLICY "Allow students to upload excuses" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'excuse-pictures' AND
+    (
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0 OR
+      public.is_super_admin()
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow students and super admins to manage excuses" ON storage.objects;
+CREATE POLICY "Allow students and super admins to manage excuses" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'excuse-pictures' AND
+    (
+      public.is_super_admin() OR
+      position(public.get_my_id()::text in storage.objects.name) > 0 OR
+      position(auth.uid()::text in storage.objects.name) > 0
+    )
+  );
+
 -- ==============================================================================
 -- 9. FUNCTIONS & PROCEDURES
 -- ==============================================================================
@@ -1042,6 +1272,17 @@ DECLARE
     v_scope_id UUID;
     v_scope_type public.scope_type;
 BEGIN
+    -- Security assertion: caller must be Super Admin or an active officer of the target organization
+    IF NOT (public.is_super_admin() OR EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() 
+          AND om.organization_id = p_org_id 
+          AND om.role_id IS NOT NULL 
+          AND om.status = 'active'
+    )) THEN
+        RAISE EXCEPTION 'Access denied: caller does not have permission to assign organization officers.';
+    END IF;
+
     -- Standardize ID: The app might send Auth UID or internal User ID
     SELECT id INTO v_actual_assigned_by_id 
     FROM public.users 
@@ -1116,6 +1357,17 @@ DECLARE
     v_actual_assigned_by_id UUID;
     v_actual_user_id UUID;
 BEGIN
+    -- Security assertion: caller must be Super Admin or an active COMSELEC officer
+    IF NOT (public.is_super_admin() OR EXISTS (
+        SELECT 1 FROM public.comselec_members cm
+        WHERE cm.user_id = public.get_my_id() 
+          AND cm.comselec_id = p_comselec_id 
+          AND cm.role_id IS NOT NULL 
+          AND cm.status = 'active'
+    )) THEN
+        RAISE EXCEPTION 'Access denied: caller does not have permission to assign COMSELEC officers.';
+    END IF;
+
     -- Standardize ID: The app might send Auth UID or internal User ID
     SELECT id INTO v_actual_assigned_by_id 
     FROM public.users 
@@ -1206,6 +1458,10 @@ DECLARE
     v_org_id UUID;
     v_primary_program_id UUID;
 BEGIN
+    IF NOT public.is_super_admin() THEN
+        RAISE EXCEPTION 'Access denied: only Super Admins can create organizations.';
+    END IF;
+
     IF p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
         v_primary_program_id := p_program_ids[1];
     ELSE
@@ -1263,6 +1519,9 @@ CREATE OR REPLACE FUNCTION create_comselec_with_members(
 DECLARE
     v_comselec_id UUID;
 BEGIN
+    IF NOT public.is_super_admin() THEN
+        RAISE EXCEPTION 'Access denied: only Super Admins can create COMSELECs.';
+    END IF;
     INSERT INTO comselecs (name, code, description, campus_id, logo_url, banner_url)
     VALUES (p_name, p_code, p_description, p_campus_id, p_logo_url, p_banner_url)
     RETURNING id INTO v_comselec_id;
