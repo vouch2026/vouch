@@ -1029,8 +1029,8 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   ('event-pictures', 'event-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('highlight-pictures', 'highlight-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('ids', 'ids', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
-  ('receipt-pictures', 'receipt-pictures', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
-  ('excuse-pictures', 'excuse-pictures', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
+  ('receipt-pictures', 'receipt-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('excuse-pictures', 'excuse-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
 ON CONFLICT (id) DO UPDATE SET 
   public = EXCLUDED.public,
   file_size_limit = EXCLUDED.file_size_limit,

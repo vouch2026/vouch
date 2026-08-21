@@ -289,12 +289,19 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   ('event-pictures', 'event-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('highlight-pictures', 'highlight-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('ids', 'ids', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
-  ('receipt-pictures', 'receipt-pictures', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
-  ('excuse-pictures', 'excuse-pictures', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
+  ('receipt-pictures', 'receipt-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('excuse-pictures', 'excuse-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
 ON CONFLICT (id) DO UPDATE SET 
   public = EXCLUDED.public,
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- BUCKET SELECT POLICIES
+DROP POLICY IF EXISTS "Allow public select on receipt pictures" ON storage.objects;
+CREATE POLICY "Allow public select on receipt pictures" ON storage.objects FOR SELECT TO public USING (bucket_id = 'receipt-pictures');
+
+DROP POLICY IF EXISTS "Allow public select on excuse pictures" ON storage.objects;
+CREATE POLICY "Allow public select on excuse pictures" ON storage.objects FOR SELECT TO public USING (bucket_id = 'excuse-pictures');
 
 -- BUCKET 1: org-pictures
 DROP POLICY IF EXISTS "Allow public select on org pictures" ON storage.objects;
