@@ -24,22 +24,30 @@ class WorkspaceExcuseRequestsPage extends ConsumerStatefulWidget {
 }
 
 class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseRequestsPage> {
-  String _selectedFilter = 'All';
+  String _selectedStatusFilter = 'All';
+  String _selectedEventFilter = 'All Events';
   String _searchQuery = '';
+  int _currentPage = 0;
+  int _rowsPerPage = 10;
 
   Widget _buildFilterChips(ThemeData theme) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: ['All', 'Pending', 'Approved', 'Rejected'].map((filter) {
-          final isSelected = _selectedFilter == filter;
+          final isSelected = _selectedStatusFilter == filter;
           return Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: ChoiceChip(
               label: Text(filter),
               selected: isSelected,
               onSelected: (val) {
-                if (val) setState(() => _selectedFilter = filter);
+                if (val) {
+                  setState(() {
+                    _selectedStatusFilter = filter;
+                    _currentPage = 0;
+                  });
+                }
               },
               selectedColor: theme.colorScheme.primaryContainer,
               labelStyle: TextStyle(
@@ -49,6 +57,190 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildEventDropdown(List<String> availableEvents) {
+    final currentValue = availableEvents.contains(_selectedEventFilter) ? _selectedEventFilter : 'All Events';
+
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: currentValue,
+          icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+          isExpanded: true,
+          style: AppTextStyles.bodyMedium,
+          items: availableEvents.map((evt) {
+            final isSelected = evt == currentValue;
+            return DropdownMenuItem<String>(
+              value: evt,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.event_outlined, size: 16, color: AppColors.textGrey),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      evt,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: isSelected ? AppColors.primary : AppColors.textDark,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedEventFilter = val;
+                _currentPage = 0;
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaginationFooter(int totalItems, int currentPage, int rowsPerPage) {
+    final totalPages = (totalItems / rowsPerPage).ceil().clamp(1, 999999).toInt();
+    final startItem = totalItems == 0 ? 0 : (currentPage * rowsPerPage) + 1;
+    final endItem = (currentPage * rowsPerPage) + rowsPerPage > totalItems
+        ? totalItems
+        : (currentPage * rowsPerPage) + rowsPerPage;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+
+          final dropdownWidget = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isNarrow ? 'Rows:' : 'Rows per page:',
+                style: AppTextStyles.bodySmall.copyWith(color: Colors.grey.shade600),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: rowsPerPage,
+                    icon: const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black54),
+                    isDense: true,
+                    items: [5, 10, 20, 50].map((val) {
+                      return DropdownMenuItem<int>(
+                        value: val,
+                        child: Text(
+                          '$val',
+                          style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _rowsPerPage = val;
+                          _currentPage = 0;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+
+          final infoTextWidget = Text(
+            'Showing $startItem-$endItem of $totalItems',
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey.shade600),
+          );
+
+          final navigationWidget = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.first_page_rounded, size: 20),
+                onPressed: currentPage > 0
+                    ? () => setState(() => _currentPage = 0)
+                    : null,
+                tooltip: 'First Page',
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                onPressed: currentPage > 0
+                    ? () => setState(() => _currentPage = currentPage - 1)
+                    : null,
+                tooltip: 'Previous Page',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                child: Text(
+                  '${currentPage + 1} / $totalPages',
+                  style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                onPressed: currentPage < totalPages - 1
+                    ? () => setState(() => _currentPage = currentPage + 1)
+                    : null,
+                tooltip: 'Next Page',
+              ),
+              IconButton(
+                icon: const Icon(Icons.last_page_rounded, size: 20),
+                onPressed: currentPage < totalPages - 1
+                    ? () => setState(() => _currentPage = totalPages - 1)
+                    : null,
+                tooltip: 'Last Page',
+              ),
+            ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    dropdownWidget,
+                    infoTextWidget,
+                  ],
+                ),
+                const SizedBox(height: 8),
+                navigationWidget,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              dropdownWidget,
+              infoTextWidget,
+              navigationWidget,
+            ],
+          );
+        },
       ),
     );
   }
@@ -63,14 +255,44 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
       title: 'Excuse Requests',
       child: excuseRequestsAsync.when(
         data: (requests) {
+          // Extract list of distinct events for filtering
+          final availableEvents = [
+            'All Events',
+            ...requests
+                .map((r) => r.eventName ?? 'Unknown Event')
+                .where((e) => e.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort()
+          ];
+
           // Filter & Search application
           final filteredRequests = requests.where((req) {
-            final matchesStatus = _selectedFilter == 'All' || req.status.toLowerCase() == _selectedFilter.toLowerCase();
+            final matchesStatus = _selectedStatusFilter == 'All' ||
+                req.status.toLowerCase() == _selectedStatusFilter.toLowerCase();
+
+            final matchesEvent = _selectedEventFilter == 'All Events' ||
+                (req.eventName ?? 'Unknown Event') == _selectedEventFilter;
+
             final studentName = req.studentName?.toLowerCase() ?? '';
+            final studentId = req.studentIdNumber?.toLowerCase() ?? '';
             final eventName = req.eventName?.toLowerCase() ?? '';
-            final matchesSearch = studentName.contains(_searchQuery) || eventName.contains(_searchQuery);
-            return matchesStatus && matchesSearch;
+            final matchesSearch = _searchQuery.isEmpty ||
+                studentName.contains(_searchQuery) ||
+                studentId.contains(_searchQuery) ||
+                eventName.contains(_searchQuery);
+
+            return matchesStatus && matchesEvent && matchesSearch;
           }).toList();
+
+          // Pagination logic
+          final totalItems = filteredRequests.length;
+          final totalPages = (totalItems / _rowsPerPage).ceil().clamp(1, 999999).toInt();
+          final safePage = _currentPage.clamp(0, (totalPages - 1).clamp(0, totalPages));
+
+          final startIndex = safePage * _rowsPerPage;
+          final endIndex = (startIndex + _rowsPerPage > totalItems) ? totalItems : (startIndex + _rowsPerPage);
+          final paginatedRequests = totalItems > 0 ? filteredRequests.sublist(startIndex, endIndex) : <ExcuseRequestModel>[];
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -120,41 +342,50 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
                     if (isMobile) ...[
                       TextField(
                         decoration: InputDecoration(
-                          hintText: 'Search student or event...',
+                          hintText: 'Search student, ID, or event...',
                           prefixIcon: const Icon(Icons.search_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                         ),
                         style: AppTextStyles.bodyMedium,
-                        onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                        onChanged: (val) => setState(() {
+                          _searchQuery = val.toLowerCase();
+                          _currentPage = 0;
+                        }),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.sm),
+                      _buildEventDropdown(availableEvents),
+                      const SizedBox(height: AppSpacing.sm),
                       _buildFilterChips(theme),
                     ] else
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: constraints.maxWidth * 0.6,
-                            ),
-                            child: _buildFilterChips(theme),
+                          _buildFilterChips(theme),
+                          const SizedBox(width: AppSpacing.md),
+                          SizedBox(
+                            width: 240,
+                            child: _buildEventDropdown(availableEvents),
                           ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: TextField(
                               decoration: InputDecoration(
-                                hintText: 'Search student or event...',
+                                hintText: 'Search student, ID, or event...',
                                 prefixIcon: const Icon(Icons.search_rounded),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                               ),
                               style: AppTextStyles.bodyMedium,
-                              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                              onChanged: (val) => setState(() {
+                                _searchQuery = val.toLowerCase();
+                                _currentPage = 0;
+                              }),
                             ),
                           ),
                         ],
                       ),
-                    
+
                     const SizedBox(height: AppSpacing.xl),
 
                     if (filteredRequests.isEmpty)
@@ -167,14 +398,19 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
                               Icon(Icons.note_alt_outlined, size: 64, color: Colors.grey[300]),
                               const SizedBox(height: AppSpacing.md),
                               Text(
-                                requests.isEmpty 
-                                  ? 'No excuse requests found in this scope' 
-                                  : 'No excuse requests match your filters',
+                                requests.isEmpty
+                                    ? 'No excuse requests found in this scope'
+                                    : 'No excuse requests match your filters',
                                 style: AppTextStyles.bodyLarge.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
                               ),
                               if (requests.isNotEmpty)
                                 TextButton(
-                                  onPressed: () => setState(() => _selectedFilter = 'All'),
+                                  onPressed: () => setState(() {
+                                    _selectedStatusFilter = 'All';
+                                    _selectedEventFilter = 'All Events';
+                                    _searchQuery = '';
+                                    _currentPage = 0;
+                                  }),
                                   child: const Text('Clear Filters'),
                                 ),
                             ],
@@ -182,9 +418,9 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
                         ),
                       )
                     else if (constraints.maxWidth > 900)
-                      _buildRequestsTable(filteredRequests)
+                      _buildRequestsTable(paginatedRequests, totalItems, safePage, _rowsPerPage)
                     else
-                      _buildRequestsList(filteredRequests),
+                      _buildRequestsList(paginatedRequests, totalItems, safePage, _rowsPerPage),
                   ],
                 ),
               );
@@ -204,7 +440,7 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
     );
   }
 
-  Widget _buildRequestsTable(List<ExcuseRequestModel> requests) {
+  Widget _buildRequestsTable(List<ExcuseRequestModel> requests, int totalItems, int currentPage, int rowsPerPage) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -212,180 +448,200 @@ class _WorkspaceExcuseRequestsPageState extends ConsumerState<WorkspaceExcuseReq
         side: BorderSide(color: Colors.grey.shade200),
       ),
       clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: DataTable(
-                columnSpacing: AppSpacing.lg,
-                headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.04)),
-                columns: [
-                  DataColumn(label: Text('STUDENT', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                  DataColumn(label: Text('EVENT', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                  DataColumn(label: Text('REASON TYPE', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                  DataColumn(label: Text('SUBMITTED AT', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                  DataColumn(label: Text('STATUS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                  DataColumn(label: Text('ACTIONS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                ],
-                rows: requests.map((req) {
-                  final isPending = req.status == 'Pending';
-                  
-                  // Parse reason prefix [Type] Detail
-                  String reasonType = 'General';
-                  if (req.reason.startsWith('[')) {
-                    final closeBracket = req.reason.indexOf(']');
-                    if (closeBracket > 1) {
-                      reasonType = req.reason.substring(1, closeBracket);
-                    }
-                  }
-
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 180),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                req.studentName ?? 'Unknown Student',
-                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              Text(
-                                req.studentIdNumber ?? 'N/A',
-                                style: AppTextStyles.labelSmall.copyWith(fontSize: 10, color: AppColors.textGrey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 200),
-                          child: Text(
-                            req.eventName ?? 'Event',
-                            style: AppTextStyles.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(reasonType, style: AppTextStyles.bodySmall.copyWith(fontSize: 11)),
-                        ),
-                      ),
-                      DataCell(Text(
-                        req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—',
-                        style: AppTextStyles.bodyMedium,
-                      )),
-                      DataCell(_StatusBadge(status: req.status)),
-                      DataCell(
-                        TextButton(
-                          onPressed: () {
-                            if (isPending) {
-                              context.push(RoutePaths.workspaceExcuseRequestReview.replaceAll(':id', req.id))
-                                  .then((_) => ref.invalidate(workspaceExcuseRequestsProvider));
-                            } else {
-                              _showReviewDialog(req);
-                            }
-                          },
-                          child: Text(isPending ? 'Review' : 'View Details'),
-                        ),
-                      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: DataTable(
+                    columnSpacing: AppSpacing.lg,
+                    headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.04)),
+                    columns: [
+                      DataColumn(label: Text('STUDENT', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
+                      DataColumn(label: Text('EVENT', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
+                      DataColumn(label: Text('REASON TYPE', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
+                      DataColumn(label: Text('SUBMITTED AT', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
+                      DataColumn(label: Text('STATUS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
+                      DataColumn(label: Text('ACTIONS', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary))),
                     ],
-                  );
-                }).toList(),
-              ),
-            ),
-          );
-        },
+                    rows: requests.map((req) {
+                      final isPending = req.status == 'Pending';
+
+                      // Parse reason prefix [Type] Detail
+                      String reasonType = 'General';
+                      if (req.reason.startsWith('[')) {
+                        final closeBracket = req.reason.indexOf(']');
+                        if (closeBracket > 1) {
+                          reasonType = req.reason.substring(1, closeBracket);
+                        }
+                      }
+
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 180),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    req.studentName ?? 'Unknown Student',
+                                    style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                  Text(
+                                    req.studentIdNumber ?? 'N/A',
+                                    style: AppTextStyles.labelSmall.copyWith(fontSize: 10, color: AppColors.textGrey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 200),
+                              child: Text(
+                                req.eventName ?? 'Event',
+                                style: AppTextStyles.bodyMedium,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(reasonType, style: AppTextStyles.bodySmall.copyWith(fontSize: 11)),
+                            ),
+                          ),
+                          DataCell(Text(
+                            req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—',
+                            style: AppTextStyles.bodyMedium,
+                          )),
+                          DataCell(_StatusBadge(status: req.status)),
+                          DataCell(
+                            TextButton(
+                              onPressed: () {
+                                if (isPending) {
+                                  context.push(RoutePaths.workspaceExcuseRequestReview.replaceAll(':id', req.id))
+                                      .then((_) => ref.invalidate(workspaceExcuseRequestsProvider));
+                                } else {
+                                  _showReviewDialog(req);
+                                }
+                              },
+                              child: Text(isPending ? 'Review' : 'View Details'),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          _buildPaginationFooter(totalItems, currentPage, rowsPerPage),
+        ],
       ),
     );
   }
 
-  Widget _buildRequestsList(List<ExcuseRequestModel> requests) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: requests.length,
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-      itemBuilder: (context, index) {
-        final req = requests[index];
-        final isPending = req.status == 'Pending';
-        
-        String reasonType = 'General';
-        String explanation = req.reason;
-        if (req.reason.startsWith('[')) {
-          final closeBracket = req.reason.indexOf(']');
-          if (closeBracket > 1) {
-            reasonType = req.reason.substring(1, closeBracket);
-            explanation = req.reason.substring(closeBracket + 1).trim();
-          }
-        }
+  Widget _buildRequestsList(List<ExcuseRequestModel> requests, int totalItems, int currentPage, int rowsPerPage) {
+    return Column(
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: requests.length,
+          padding: EdgeInsets.zero,
+          itemBuilder: (context, index) {
+            final req = requests[index];
+            final isPending = req.status == 'Pending';
 
-        return Card(
+            String reasonType = 'General';
+            String explanation = req.reason;
+            if (req.reason.startsWith('[')) {
+              final closeBracket = req.reason.indexOf(']');
+              if (closeBracket > 1) {
+                reasonType = req.reason.substring(1, closeBracket);
+                explanation = req.reason.substring(closeBracket + 1).trim();
+              }
+            }
+
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(req.studentName ?? 'Unknown Student', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                              Text(req.studentIdNumber ?? 'N/A', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
+                            ],
+                          ),
+                        ),
+                        _StatusBadge(status: req.status),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    _buildInfoRow('Event:', req.eventName ?? 'Event'),
+                    _buildInfoRow('Reason Type:', reasonType),
+                    _buildInfoRow('Explanation:', explanation, maxLines: 2),
+                    _buildInfoRow('Submitted:', req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—'),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          if (isPending) {
+                            context.push(RoutePaths.workspaceExcuseRequestReview.replaceAll(':id', req.id))
+                                .then((_) => ref.invalidate(workspaceExcuseRequestsProvider));
+                          } else {
+                            _showReviewDialog(req);
+                          }
+                        },
+                        child: Text(isPending ? 'Review Request' : 'View Details'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Card(
           elevation: 0,
-          margin: const EdgeInsets.only(bottom: AppSpacing.md),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: Colors.grey.shade200),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(req.studentName ?? 'Unknown Student', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                          Text(req.studentIdNumber ?? 'N/A', style: AppTextStyles.labelSmall.copyWith(color: AppColors.textGrey)),
-                        ],
-                      ),
-                    ),
-                    _StatusBadge(status: req.status),
-                  ],
-                ),
-                const Divider(height: 24),
-                _buildInfoRow('Event:', req.eventName ?? 'Event'),
-                _buildInfoRow('Reason Type:', reasonType),
-                _buildInfoRow('Explanation:', explanation, maxLines: 2),
-                _buildInfoRow('Submitted:', req.createdAt != null ? DateFormat('MMM d, yyyy h:mm a').format(req.createdAt!.toLocal()) : '—'),
-                const SizedBox(height: AppSpacing.sm),
-                 SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      if (isPending) {
-                        context.push(RoutePaths.workspaceExcuseRequestReview.replaceAll(':id', req.id))
-                            .then((_) => ref.invalidate(workspaceExcuseRequestsProvider));
-                      } else {
-                        _showReviewDialog(req);
-                      }
-                    },
-                    child: Text(isPending ? 'Review Request' : 'View Details'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+          child: _buildPaginationFooter(totalItems, currentPage, rowsPerPage),
+        ),
+      ],
     );
   }
 
