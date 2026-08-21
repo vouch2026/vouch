@@ -708,7 +708,19 @@ CREATE POLICY "Officers can update their own organization details" ON public.org
       AND om.status = 'active'
     )
   );
-CREATE POLICY "Super admins can manage academic terms" ON academic_terms FOR ALL TO authenticated USING (public.is_super_admin());
+CREATE POLICY "Super admins and authorized officers can manage academic terms" ON academic_terms 
+  FOR ALL TO authenticated 
+  USING (
+    public.is_super_admin() OR 
+    EXISTS (
+      SELECT 1 FROM public.user_roles ur 
+      WHERE (ur.user_id = public.get_my_id() OR ur.user_id = auth.uid()) AND ur.is_active = true
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public.organization_members om
+      WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
+    )
+  );
 
 -- Organization Settings
 CREATE POLICY "Organization settings are viewable by everyone" ON public.organization_settings FOR SELECT USING (true);
