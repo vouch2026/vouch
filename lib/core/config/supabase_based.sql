@@ -600,24 +600,32 @@ ALTER TABLE sanction_rules ENABLE ROW LEVEL SECURITY;
 -- HELPER FUNCTIONS FOR RBAC
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_super_admin()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN 
+SET search_path = public, pg_temp
+AS $$
 BEGIN
 RETURN EXISTS (
-SELECT 1 FROM public.user_roles ur
-JOIN public.roles r ON ur.role_id = r.id
-WHERE ur.user_id = (SELECT id FROM public.users WHERE auth_id = auth.uid())
-AND r.name = 'Super Admin'
-AND ur.is_active = true
+    SELECT 1 FROM public.user_roles ur
+    JOIN public.roles r ON ur.role_id = r.id
+    JOIN public.users u ON ur.user_id = u.id
+    WHERE (u.auth_id = auth.uid() OR u.id = auth.uid())
+      AND r.name = 'Super Admin'
+      AND ur.is_active = true
 );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.get_my_id()
-RETURNS UUID AS $$
-    SELECT id FROM public.users WHERE auth_id = auth.uid();
+RETURNS UUID 
+SET search_path = public, pg_temp
+AS $$
+    SELECT id FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid() LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION public.has_scope_permission(p_action TEXT, p_scope_type public.scope_type, p_scope_id UUID) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION public.has_scope_permission(p_action TEXT, p_scope_type public.scope_type, p_scope_id UUID) 
+RETURNS BOOLEAN 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
@@ -661,8 +669,8 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 -- ------------------------------------------------------------
 
 -- Users
-CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = auth_id);
-CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = auth_id);
+CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = auth_id OR auth.uid() = id OR public.get_my_id() = id);
+CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = auth_id OR auth.uid() = id OR public.get_my_id() = id);
 CREATE POLICY "Public profiles are viewable by everyone" ON users FOR SELECT USING (true);
 CREATE POLICY "Super admins can update any profile" ON users FOR UPDATE TO authenticated USING (public.is_super_admin());
 
@@ -877,14 +885,35 @@ USING (public.has_scope_permission('receive_sanction_items', scope_type, scope_i
 -- Clearance Requests
 CREATE POLICY "Students can view their own clearance requests" ON activity_card_clearance_requests FOR SELECT 
 USING (student_id = public.get_my_id());
-CREATE POLICY "Officers can view clearance requests for their organization" ON activity_card_clearance_requests FOR SELECT 
-USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = activity_card_clearance_requests.organization_id AND om.role_id IS NOT NULL));
-CREATE POLICY "Officers can view all clearance requests" ON activity_card_clearance_requests FOR SELECT TO authenticated
-USING (EXISTS (SELECT 1 FROM public.organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL) OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.is_active = true));
+
+DROP POLICY IF EXISTS "Officers can view clearance requests for their organization" ON activity_card_clearance_requests;
+DROP POLICY IF EXISTS "Officers can view all clearance requests" ON activity_card_clearance_requests;
+CREATE POLICY "Officers can view clearance requests for their scope" ON activity_card_clearance_requests FOR SELECT TO authenticated
+USING (
+  public.is_super_admin() OR
+  student_id = public.get_my_id() OR
+  EXISTS (
+    SELECT 1 FROM organization_members om 
+    WHERE om.user_id = public.get_my_id() 
+      AND om.organization_id = activity_card_clearance_requests.organization_id 
+      AND om.role_id IS NOT NULL 
+      AND om.status = 'active'
+  ) OR
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur 
+    JOIN public.roles r ON ur.role_id = r.id
+    WHERE ur.user_id = public.get_my_id() 
+      AND ur.is_active = true 
+      AND r.name IN ('Faculty Dean', 'Program Head', 'Super Admin')
+  )
+);
+
 CREATE POLICY "Students can request clearance" ON activity_card_clearance_requests FOR INSERT TO authenticated
 WITH CHECK (student_id = public.get_my_id());
+
 CREATE POLICY "Officers can update clearance status" ON activity_card_clearance_requests FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = activity_card_clearance_requests.organization_id AND om.role_id IS NOT NULL));
+
 CREATE POLICY "Students can update their own rejected clearance requests" ON activity_card_clearance_requests FOR UPDATE TO authenticated
 USING (student_id = public.get_my_id() AND status = 'Rejected')
 WITH CHECK (student_id = public.get_my_id() AND status = 'Pending');
@@ -892,14 +921,48 @@ WITH CHECK (student_id = public.get_my_id() AND status = 'Pending');
 -- Clearance Signatures
 CREATE POLICY "Users can view signatures for their own requests" ON activity_card_clearance_signatures FOR SELECT 
 USING (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND (r.student_id = public.get_my_id() OR EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.organization_id = r.organization_id AND om.role_id IS NOT NULL))));
-CREATE POLICY "Officers can view all clearance signatures" ON activity_card_clearance_signatures FOR SELECT TO authenticated
-USING (EXISTS (SELECT 1 FROM public.organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL) OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.is_active = true));
+
+DROP POLICY IF EXISTS "Officers can view all clearance signatures" ON activity_card_clearance_signatures;
+CREATE POLICY "Officers can view clearance signatures for their scope" ON activity_card_clearance_signatures FOR SELECT TO authenticated
+USING (
+  public.is_super_admin() OR
+  EXISTS (
+    SELECT 1 FROM activity_card_clearance_requests r 
+    WHERE r.id = clearance_request_id AND (
+      r.student_id = public.get_my_id() OR
+      EXISTS (
+        SELECT 1 FROM organization_members om 
+        WHERE om.user_id = public.get_my_id() 
+          AND om.organization_id = r.organization_id 
+          AND om.role_id IS NOT NULL 
+          AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles ur 
+        JOIN public.roles r ON ur.role_id = r.id
+        WHERE ur.user_id = public.get_my_id() 
+          AND ur.is_active = true 
+          AND r.name IN ('Faculty Dean', 'Program Head', 'Super Admin')
+      )
+    )
+  )
+);
+
+DROP POLICY IF EXISTS "Students can insert signatures for their own requests" ON activity_card_clearance_signatures;
 CREATE POLICY "Students can insert signatures for their own requests" ON activity_card_clearance_signatures FOR INSERT TO authenticated
-WITH CHECK (EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id()));
+WITH CHECK (
+  EXISTS (SELECT 1 FROM activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id())
+  AND (status IS NULL OR status = 'Pending')
+  AND signed_by_user_id IS NULL
+  AND signed_at IS NULL
+);
+
 CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id = required_role_id AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)));
+
 CREATE POLICY "Deans and Program Heads can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.role_id = required_role_id AND ur.scope_id = required_scope_id AND ur.is_active = true));
+
 CREATE POLICY "Students can update their own rejected signatures" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM public.activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id() AND (r.status = 'Rejected' OR r.status = 'Pending')))
 WITH CHECK (status = 'Pending' AND signed_by_user_id IS NULL AND signed_at IS NULL AND remarks IS NULL);
@@ -929,28 +992,37 @@ WITH CHECK (
 -- Grant schema usage permissions
 GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, supabase_storage_admin;
 
--- Grant SELECT on all public tables to authenticated, anonymous, and storage manager roles
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated, anon, supabase_storage_admin;
+-- Grant SELECT on all public tables to authenticated and storage manager roles
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated, supabase_storage_admin;
+
+-- Restrict anonymous role access to public reference tables only
+GRANT SELECT ON public.campuses, public.faculties, public.programs, public.roles, public.academic_terms, public.organizations, public.comselecs TO anon;
 
 -- Grant SELECT on auth.users in case storage policies/triggers reference it directly
-GRANT SELECT ON auth.users TO authenticated, anon, supabase_storage_admin;
+GRANT SELECT ON auth.users TO authenticated, supabase_storage_admin;
 
--- Ensure all future tables automatically grant SELECT to authenticated, anon, and supabase_storage_admin
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated, anon, supabase_storage_admin;
+-- Ensure all future tables automatically grant SELECT to authenticated and supabase_storage_admin
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated, supabase_storage_admin;
 
 -- ------------------------------------------------------------
 -- SUPABASE STORAGE BUCKETS & POLICIES
 -- ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- SUPABASE STORAGE BUCKETS & POLICIES
+-- ------------------------------------------------------------
 -- 1. Create all required storage buckets if they do not already exist
-INSERT INTO storage.buckets (id, name, public) VALUES 
-  ('org-pictures', 'org-pictures', true),
-  ('announcement-pictures', 'announcement-pictures', true),
-  ('event-pictures', 'event-pictures', true),
-  ('highlight-pictures', 'highlight-pictures', true),
-  ('ids', 'ids', false),
-  ('receipt-pictures', 'receipt-pictures', false),
-  ('excuse-pictures', 'excuse-pictures', false)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES 
+  ('org-pictures', 'org-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('announcement-pictures', 'announcement-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('event-pictures', 'event-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('highlight-pictures', 'highlight-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('ids', 'ids', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('receipt-pictures', 'receipt-pictures', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+  ('excuse-pictures', 'excuse-pictures', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
+ON CONFLICT (id) DO UPDATE SET 
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- ------------------------------------------------------------
 -- BUCKET 1: org-pictures (Public)
@@ -968,20 +1040,16 @@ CREATE POLICY "Allow officers and super admins to upload org pictures" ON storag
     (
       public.is_super_admin() OR
       EXISTS (
-        SELECT 1 FROM public.organizations o
-        JOIN public.organization_members om ON om.organization_id = o.id
-        WHERE LOWER(o.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
-          AND om.user_id = public.get_my_id()
-          AND om.role_id IS NOT NULL
-          AND om.status = 'active'
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
       ) OR
       EXISTS (
-        SELECT 1 FROM public.comselecs c
-        JOIN public.comselec_members cm ON cm.comselec_id = c.id
-        WHERE LOWER(c.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
-          AND cm.user_id = public.get_my_id()
-          AND cm.role_id IS NOT NULL
-          AND cm.status = 'active'
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
+      ) OR
+      EXISTS (
+        SELECT 1 FROM public.comselec_members cm
+        WHERE cm.user_id = public.get_my_id() AND cm.role_id IS NOT NULL AND cm.status = 'active'
       )
     )
   );
@@ -993,21 +1061,15 @@ CREATE POLICY "Allow officers and super admins to update org pictures" ON storag
     bucket_id = 'org-pictures' AND
     (
       public.is_super_admin() OR
+      owner = auth.uid() OR
+      owner_id = auth.uid()::text OR
       EXISTS (
-        SELECT 1 FROM public.organizations o
-        JOIN public.organization_members om ON om.organization_id = o.id
-        WHERE LOWER(o.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
-          AND om.user_id = public.get_my_id()
-          AND om.role_id IS NOT NULL
-          AND om.status = 'active'
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
       ) OR
       EXISTS (
-        SELECT 1 FROM public.comselecs c
-        JOIN public.comselec_members cm ON cm.comselec_id = c.id
-        WHERE LOWER(c.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
-          AND cm.user_id = public.get_my_id()
-          AND cm.role_id IS NOT NULL
-          AND cm.status = 'active'
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
       )
     )
   );
@@ -1019,37 +1081,28 @@ CREATE POLICY "Allow officers and super admins to delete org pictures" ON storag
     bucket_id = 'org-pictures' AND
     (
       public.is_super_admin() OR
+      owner = auth.uid() OR
+      owner_id = auth.uid()::text OR
       EXISTS (
-        SELECT 1 FROM public.organizations o
-        JOIN public.organization_members om ON om.organization_id = o.id
-        WHERE LOWER(o.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
-          AND om.user_id = public.get_my_id()
-          AND om.role_id IS NOT NULL
-          AND om.status = 'active'
-      ) OR
-      EXISTS (
-        SELECT 1 FROM public.comselecs c
-        JOIN public.comselec_members cm ON cm.comselec_id = c.id
-        WHERE LOWER(c.code) = LOWER(split_part(split_part(storage.objects.name, '/', 2), '_', 2))
-          AND cm.user_id = public.get_my_id()
-          AND cm.role_id IS NOT NULL
-          AND cm.status = 'active'
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
       )
     )
   );
 
 -- ------------------------------------------------------------
--- BUCKET 2: announcement-pictures (Public)
+-- BUCKET 2: announcement-pictures (Public Read, Uploader/Admin Modify)
 -- ------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow public select on announcement pictures" ON storage.objects;
 CREATE POLICY "Allow public select on announcement pictures" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'announcement-pictures');
 
+DROP POLICY IF EXISTS "Allow officers and super admins to upload announcement pictures" ON storage.objects;
 DROP POLICY IF EXISTS "Allow officers and super admins to manage announcement pictures" ON storage.objects;
-CREATE POLICY "Allow officers and super admins to manage announcement pictures" ON storage.objects
-  FOR ALL TO authenticated
-  USING (
+CREATE POLICY "Allow officers and super admins to upload announcement pictures" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
     bucket_id = 'announcement-pictures' AND
     (
       public.is_super_admin() OR
@@ -1064,18 +1117,31 @@ CREATE POLICY "Allow officers and super admins to manage announcement pictures" 
     )
   );
 
+DROP POLICY IF EXISTS "Allow uploader and super admins to manage announcement pictures" ON storage.objects;
+CREATE POLICY "Allow uploader and super admins to manage announcement pictures" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'announcement-pictures' AND
+    (
+      public.is_super_admin() OR
+      owner = auth.uid() OR
+      owner_id = auth.uid()::text
+    )
+  );
+
 -- ------------------------------------------------------------
--- BUCKET 3: event-pictures (Public)
+-- BUCKET 3: event-pictures (Public Read, Uploader/Admin Modify)
 -- ------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow public select on event pictures" ON storage.objects;
 CREATE POLICY "Allow public select on event pictures" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'event-pictures');
 
+DROP POLICY IF EXISTS "Allow officers and super admins to upload event pictures" ON storage.objects;
 DROP POLICY IF EXISTS "Allow officers and super admins to manage event pictures" ON storage.objects;
-CREATE POLICY "Allow officers and super admins to manage event pictures" ON storage.objects
-  FOR ALL TO authenticated
-  USING (
+CREATE POLICY "Allow officers and super admins to upload event pictures" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
     bucket_id = 'event-pictures' AND
     (
       public.is_super_admin() OR
@@ -1090,8 +1156,20 @@ CREATE POLICY "Allow officers and super admins to manage event pictures" ON stor
     )
   );
 
+DROP POLICY IF EXISTS "Allow uploader and super admins to manage event pictures" ON storage.objects;
+CREATE POLICY "Allow uploader and super admins to manage event pictures" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'event-pictures' AND
+    (
+      public.is_super_admin() OR
+      owner = auth.uid() OR
+      owner_id = auth.uid()::text
+    )
+  );
+
 -- ------------------------------------------------------------
--- BUCKET 4: highlight-pictures (Public Read, Authenticated Write)
+-- BUCKET 4: highlight-pictures (Public Read, Owner Restricted Upload & Manage)
 -- ------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow public select on highlight pictures" ON storage.objects;
 CREATE POLICY "Allow public select on highlight pictures" ON storage.objects
@@ -1101,7 +1179,16 @@ CREATE POLICY "Allow public select on highlight pictures" ON storage.objects
 DROP POLICY IF EXISTS "Allow authenticated users to upload highlights" ON storage.objects;
 CREATE POLICY "Allow authenticated users to upload highlights" ON storage.objects
   FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'highlight-pictures');
+  WITH CHECK (
+    bucket_id = 'highlight-pictures' AND
+    (
+      public.is_super_admin() OR
+      split_part(storage.filename(storage.objects.name), '_', 3) = public.get_my_id()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 3) = auth.uid()::text OR
+      owner = auth.uid() OR
+      owner_id = auth.uid()::text
+    )
+  );
 
 DROP POLICY IF EXISTS "Allow users and super admins to manage highlights" ON storage.objects;
 CREATE POLICY "Allow users and super admins to manage highlights" ON storage.objects
@@ -1110,23 +1197,21 @@ CREATE POLICY "Allow users and super admins to manage highlights" ON storage.obj
     bucket_id = 'highlight-pictures' AND
     (
       public.is_super_admin() OR
-      owner = auth.uid()
+      owner = auth.uid() OR
+      owner_id = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 3) = public.get_my_id()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 3) = auth.uid()::text
     )
   );
 
 -- ------------------------------------------------------------
--- BUCKET 5: ids (Private - Verification Student IDs)
+-- BUCKET 5: ids (Private - Verification Student IDs & Profile Photos)
 -- ------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow students and super admins to view IDs" ON storage.objects;
 CREATE POLICY "Allow students and super admins to view IDs" ON storage.objects
   FOR SELECT TO authenticated
   USING (
-    bucket_id = 'ids' AND
-    (
-      public.is_super_admin() OR
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0
-    )
+    bucket_id = 'ids'
   );
 
 DROP POLICY IF EXISTS "Allow students to upload their own ID" ON storage.objects;
@@ -1135,9 +1220,15 @@ CREATE POLICY "Allow students to upload their own ID" ON storage.objects
   WITH CHECK (
     bucket_id = 'ids' AND
     (
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0 OR
-      public.is_super_admin()
+      public.is_super_admin() OR
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      (storage.foldername(storage.objects.name))[1] = 'verification_ids' OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM auth.users WHERE id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = auth.uid()::text
     )
   );
 
@@ -1148,8 +1239,14 @@ CREATE POLICY "Allow students and super admins to manage IDs" ON storage.objects
     bucket_id = 'ids' AND
     (
       public.is_super_admin() OR
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      (storage.foldername(storage.objects.name))[1] = 'verification_ids' OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM auth.users WHERE id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = auth.uid()::text
     )
   );
 
@@ -1163,15 +1260,18 @@ CREATE POLICY "Allow students, officers, and super admins to view receipts" ON s
     bucket_id = 'receipt-pictures' AND
     (
       public.is_super_admin() OR
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0 OR
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text OR
       EXISTS (
-        SELECT 1 FROM public.organization_members om
-        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
-      ) OR
-      EXISTS (
-        SELECT 1 FROM public.user_roles ur
-        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
+        SELECT 1 FROM public.fees f
+        WHERE (f.id::text = split_part(storage.filename(storage.objects.name), '_', 3) OR f.id::text = (storage.foldername(storage.objects.name))[2])
+          AND (
+            public.has_scope_permission('verify_payment', f.scope_type, f.scope_id) OR
+            public.has_scope_permission('manage_collections', f.scope_type, f.scope_id) OR
+            public.has_scope_permission('view_fees', f.scope_type, f.scope_id)
+          )
       )
     )
   );
@@ -1182,9 +1282,11 @@ CREATE POLICY "Allow students to upload receipts" ON storage.objects
   WITH CHECK (
     bucket_id = 'receipt-pictures' AND
     (
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0 OR
-      public.is_super_admin()
+      public.is_super_admin() OR
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text
     )
   );
 
@@ -1195,8 +1297,10 @@ CREATE POLICY "Allow students and super admins to delete receipts" ON storage.ob
     bucket_id = 'receipt-pictures' AND
     (
       public.is_super_admin() OR
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text
     )
   );
 
@@ -1210,15 +1314,18 @@ CREATE POLICY "Allow students, officers, and super admins to view excuses" ON st
     bucket_id = 'excuse-pictures' AND
     (
       public.is_super_admin() OR
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0 OR
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text OR
       EXISTS (
-        SELECT 1 FROM public.organization_members om
-        WHERE om.user_id = public.get_my_id() AND om.role_id IS NOT NULL AND om.status = 'active'
-      ) OR
-      EXISTS (
-        SELECT 1 FROM public.user_roles ur
-        WHERE ur.user_id = public.get_my_id() AND ur.is_active = true
+        SELECT 1 FROM public.events e
+        WHERE (e.id::text = split_part(storage.filename(storage.objects.name), '_', 3) OR e.id::text = (storage.foldername(storage.objects.name))[2])
+          AND (
+            public.has_scope_permission('override_attendance', e.scope_type, e.scope_id) OR
+            public.has_scope_permission('receive_sanction_items', e.scope_type, e.scope_id) OR
+            public.has_scope_permission('view_events', e.scope_type, e.scope_id)
+          )
       ) OR
       EXISTS (
         SELECT 1 FROM public.programs pr WHERE pr.program_head_id = public.get_my_id()
@@ -1235,9 +1342,11 @@ CREATE POLICY "Allow students to upload excuses" ON storage.objects
   WITH CHECK (
     bucket_id = 'excuse-pictures' AND
     (
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0 OR
-      public.is_super_admin()
+      public.is_super_admin() OR
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text
     )
   );
 
@@ -1248,8 +1357,10 @@ CREATE POLICY "Allow students and super admins to manage excuses" ON storage.obj
     bucket_id = 'excuse-pictures' AND
     (
       public.is_super_admin() OR
-      position(public.get_my_id()::text in storage.objects.name) > 0 OR
-      position(auth.uid()::text in storage.objects.name) > 0
+      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
+      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid()) OR
+      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text
     )
   );
 
@@ -1264,7 +1375,9 @@ CREATE OR REPLACE FUNCTION assign_organization_officer(
     p_term_id UUID,
     p_assigned_by UUID,
     p_expired_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
-) RETURNS VOID AS $$
+) RETURNS VOID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_actual_assigned_by_id UUID;
     v_actual_user_id UUID;
@@ -1352,7 +1465,9 @@ CREATE OR REPLACE FUNCTION assign_comselec_officer(
     p_role_id UUID,
     p_term_id UUID,
     p_assigned_by UUID
-) RETURNS VOID AS $$
+) RETURNS VOID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_actual_assigned_by_id UUID;
     v_actual_user_id UUID;
@@ -1406,7 +1521,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Utility to sync existing officers to user_roles
 CREATE OR REPLACE FUNCTION sync_all_officers_to_user_roles()
-RETURNS VOID AS $$
+RETURNS VOID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_rec RECORD;
     v_scope_id UUID;
@@ -1453,7 +1570,9 @@ CREATE OR REPLACE FUNCTION create_organization_with_members(
     p_program_ids UUID[] DEFAULT '{}',
     p_logo_url TEXT DEFAULT NULL,
     p_banner_url TEXT DEFAULT NULL
-) RETURNS UUID AS $$
+) RETURNS UUID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_org_id UUID;
     v_primary_program_id UUID;
@@ -1515,7 +1634,9 @@ CREATE OR REPLACE FUNCTION create_comselec_with_members(
     p_campus_id UUID DEFAULT NULL,
     p_logo_url TEXT DEFAULT NULL,
     p_banner_url TEXT DEFAULT NULL
-) RETURNS UUID AS $$
+) RETURNS UUID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_comselec_id UUID;
 BEGIN
@@ -1563,6 +1684,7 @@ permissions JSONB
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
 RETURN QUERY
@@ -1590,7 +1712,9 @@ $$;
 -- ==============================================================================
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+RETURNS trigger 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     new_user_id UUID;
     target_role_id UUID;
@@ -1605,6 +1729,12 @@ DECLARE
 BEGIN
     v_role := new.raw_user_meta_data->>'role';
     v_position := new.raw_user_meta_data->>'position';
+
+    -- Security Hardening: Prevent Privilege Escalation via Client Metadata Injection
+    -- Self-registering users cannot claim administrative or governing roles via auth sign-up metadata.
+    IF v_role IN ('super_admin', 'comselec_chairman', 'comselec_chair', 'comselec_commissioner', 'faculty') THEN
+        v_role := 'student';
+    END IF;
     v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
     v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
     v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
@@ -1752,7 +1882,9 @@ AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 CREATE OR REPLACE FUNCTION public.handle_new_organization()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     INSERT INTO public.organization_settings (organization_id)
     VALUES (NEW.id)
@@ -1766,7 +1898,9 @@ AFTER INSERT ON public.organizations
 FOR EACH ROW EXECUTE PROCEDURE public.handle_new_organization();
 
 CREATE OR REPLACE FUNCTION public.handle_new_comselec()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     INSERT INTO public.comselec_settings (comselec_id)
     VALUES (NEW.id)
@@ -2218,7 +2352,9 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 2. Automatic Role Synchronization Trigger Functions and Triggers
 CREATE OR REPLACE FUNCTION public.handle_faculty_dean_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     role_id_var UUID;
 BEGIN
@@ -2250,7 +2386,9 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_faculty_dean_change();
 
 
 CREATE OR REPLACE FUNCTION public.handle_program_head_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     role_id_var UUID;
 BEGIN
@@ -2282,7 +2420,9 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_program_head_change();
 
 
 CREATE OR REPLACE FUNCTION public.handle_faculty_deletion()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     role_id_var UUID;
 BEGIN
@@ -2301,7 +2441,9 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_faculty_deletion();
 
 
 CREATE OR REPLACE FUNCTION public.handle_program_deletion()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     role_id_var UUID;
 BEGIN
@@ -2336,6 +2478,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_id UUID;
@@ -2429,30 +2572,13 @@ RETURNS TABLE (
     permissions JSONB
 )
 LANGUAGE plpgsql
+STABLE
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_id UUID;
-    v_member_role_id UUID;
-    v_voter_role_id UUID;
 BEGIN
-    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
-    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
-
-    -- Lazy cleanup of expired organization roles
-    UPDATE public.organization_members
-    SET role_id = v_member_role_id,
-        expired_at = NULL,
-        status = 'active'
-    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
-
-    -- Lazy cleanup of expired comselec roles
-    UPDATE public.comselec_members
-    SET role_id = v_voter_role_id,
-        expired_at = NULL,
-        status = 'active'
-    WHERE expired_at IS NOT NULL AND expired_at <= CURRENT_TIMESTAMP;
-
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
         RETURN;
@@ -2502,6 +2628,7 @@ BEGIN
         WHERE cm.user_id = v_user_id 
           AND cm.comselec_id = p_workspace_id 
           AND cm.status = 'active'
+          AND (cm.expired_at IS NULL OR cm.expired_at > CURRENT_TIMESTAMP)
         GROUP BY r.id, r.name, r.hierarchy_level
         ORDER BY r.hierarchy_level DESC
         LIMIT 1;
@@ -2520,6 +2647,7 @@ BEGIN
         WHERE om.user_id = v_user_id 
           AND om.organization_id = p_workspace_id 
           AND om.status = 'active'
+          AND (om.expired_at IS NULL OR om.expired_at > CURRENT_TIMESTAMP)
         GROUP BY r.id, r.name, r.hierarchy_level
         ORDER BY r.hierarchy_level DESC
         LIMIT 1;
@@ -2543,6 +2671,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     -- Check organizations
@@ -2631,11 +2760,17 @@ $$;
 
 -- Resets all roles, activity cards, events, and fees for a new academic year
 CREATE OR REPLACE FUNCTION public.reset_academic_year_data()
-RETURNS VOID AS $$
+RETURNS VOID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_member_role_id UUID;
     v_voter_role_id UUID;
 BEGIN
+    IF NOT public.is_super_admin() THEN
+        RAISE EXCEPTION 'Access denied: only Super Admins can execute academic year reset.';
+    END IF;
+
     -- 1. Retrieve IDs of default student roles
     SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member';
     SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters';
@@ -2678,37 +2813,31 @@ BEGIN
         clearance_period_end = NULL
     WHERE comselec_id IS NOT NULL;
 
-    -- 7. Delete clearance requests and signatures (Cascade deletes signature records)
-    DELETE FROM public.activity_card_clearance_requests
-    WHERE id IS NOT NULL;
+    -- 7. Archive active clearance requests instead of deleting historical audit records
+    UPDATE public.activity_card_clearance_requests
+    SET status = 'Archived'
+    WHERE status <> 'Archived';
 
-    -- 8. Delete events, attendance, excuses (Cascade deletes attendance/excuses)
-    DELETE FROM public.events
-    WHERE id IS NOT NULL;
-
-    -- 9. Delete fees & payments (Cascade deletes payments)
-    DELETE FROM public.fees
-    WHERE id IS NOT NULL;
-
-    -- 10. Delete student sanctions and rules
-    DELETE FROM public.student_sanction_records
-    WHERE id IS NOT NULL;
-    DELETE FROM public.sanction_rules
-    WHERE id IS NOT NULL;
-
-    -- 11. Delete announcements
-    DELETE FROM public.announcements
-    WHERE id IS NOT NULL;
+    -- 8. Mark active sanction records as Completed/Archived for new term
+    UPDATE public.student_sanction_records
+    SET status = 'Completed'
+    WHERE status IN ('Pending Item', 'In Progress');
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
 -- Redefine single_active_term to trigger the academic year reset
 CREATE OR REPLACE FUNCTION public.single_active_term()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_old_academic_year VARCHAR(20);
 BEGIN
+    -- Prevent trigger recursion
+    IF pg_trigger_depth() > 1 THEN
+        RETURN NEW;
+    END IF;
     IF NEW.is_active = TRUE THEN
         -- Get the academic year of the currently active term (prior to its deactivation)
         SELECT academic_year INTO v_old_academic_year
@@ -2752,7 +2881,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 13. DELETE USER ENTIRELY (DATABASE & AUTHENTICATION)
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.delete_user_entirely(p_user_id UUID)
-RETURNS VOID AS $$
+RETURNS VOID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_auth_id UUID;
 BEGIN
@@ -2784,12 +2915,30 @@ CREATE OR REPLACE FUNCTION public.demote_organization_officer(
     p_user_id UUID,
     p_role_name TEXT,
     p_workspace_type TEXT DEFAULT 'organization'
-) RETURNS VOID AS $$
+) RETURNS VOID 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_actual_user_id UUID;
     v_member_role_id UUID;
     v_voter_role_id UUID;
 BEGIN
+    IF NOT (public.is_super_admin() OR EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = public.get_my_id() 
+          AND om.organization_id = p_org_id 
+          AND om.role_id IS NOT NULL 
+          AND om.status = 'active'
+    ) OR EXISTS (
+        SELECT 1 FROM public.comselec_members cm
+        WHERE cm.user_id = public.get_my_id() 
+          AND cm.comselec_id = p_org_id 
+          AND cm.role_id IS NOT NULL 
+          AND cm.status = 'active'
+    )) THEN
+        RAISE EXCEPTION 'Access denied: caller does not have permission to demote officers.';
+    END IF;
+
     SELECT id INTO v_actual_user_id 
     FROM public.users 
     WHERE id = p_user_id OR auth_id = p_user_id
@@ -3020,27 +3169,33 @@ CREATE POLICY "Users can mark their own notifications as read" ON public.user_no
     WITH CHECK (user_id = public.get_my_id());
 
 -- RLS policies for user_fcm_tokens
+DROP POLICY IF EXISTS "Users can view FCM tokens" ON public.user_fcm_tokens;
 CREATE POLICY "Users can view FCM tokens" ON public.user_fcm_tokens
     FOR SELECT TO authenticated
-    USING (true);
+    USING (user_id = auth.uid() OR user_id = public.get_my_id() OR public.is_super_admin());
 
+DROP POLICY IF EXISTS "Users can insert their own FCM tokens" ON public.user_fcm_tokens;
 CREATE POLICY "Users can insert their own FCM tokens" ON public.user_fcm_tokens
     FOR INSERT TO authenticated
-    WITH CHECK (user_id = auth.uid());
+    WITH CHECK (user_id = auth.uid() OR user_id = public.get_my_id());
 
+DROP POLICY IF EXISTS "Users can update FCM tokens to their own" ON public.user_fcm_tokens;
 CREATE POLICY "Users can update FCM tokens to their own" ON public.user_fcm_tokens
     FOR UPDATE TO authenticated
-    USING (true)
-    WITH CHECK (user_id = auth.uid());
+    USING (user_id = auth.uid() OR user_id = public.get_my_id())
+    WITH CHECK (user_id = auth.uid() OR user_id = public.get_my_id());
 
+DROP POLICY IF EXISTS "Users can delete their own FCM tokens" ON public.user_fcm_tokens;
 CREATE POLICY "Users can delete their own FCM tokens" ON public.user_fcm_tokens
     FOR DELETE TO authenticated
-    USING (user_id = auth.uid());
+    USING (user_id = auth.uid() OR user_id = public.get_my_id());
 
 
 -- 17.6 Announcement Created Automation Trigger
 CREATE OR REPLACE FUNCTION public.on_announcement_created()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     scope_code_val VARCHAR(255);
     scope_logo_val VARCHAR(2048);
@@ -3102,7 +3257,9 @@ FOR EACH ROW EXECUTE FUNCTION public.on_announcement_created();
 
 -- 17.7 Event Created Automation Trigger
 CREATE OR REPLACE FUNCTION public.on_event_created()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     scope_code_val VARCHAR(255);
     scope_logo_val VARCHAR(2048);
@@ -3169,7 +3326,9 @@ FOR EACH ROW EXECUTE FUNCTION public.on_event_created();
 
 -- 17.8 Fee Created Automation Trigger
 CREATE OR REPLACE FUNCTION public.on_fee_created()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     scope_code_val VARCHAR(255);
     scope_logo_val VARCHAR(2048);
@@ -3228,7 +3387,9 @@ FOR EACH ROW EXECUTE FUNCTION public.on_fee_created();
 
 -- 17.9 Sanction Activated Automation Trigger
 CREATE OR REPLACE FUNCTION public.on_sanction_activated()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     IF (TG_OP = 'INSERT' AND NEW.status = 'Pending Item') OR (TG_OP = 'UPDATE' AND NEW.status = 'Pending Item' AND (OLD.status IS NULL OR OLD.status != 'Pending Item')) THEN
         INSERT INTO public.notifications (

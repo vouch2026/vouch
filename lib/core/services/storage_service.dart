@@ -38,6 +38,33 @@ class StorageService {
     return _client.storage.from(bucket).getPublicUrl(path);
   }
 
+  Future<String> uploadProfilePhoto({
+    required String identifier,
+    required XFile file,
+  }) async {
+    final originalBytes = await file.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressImage(
+      bytes: originalBytes,
+      type: ImageTransactionType.profile,
+    );
+    final bytes = compressedBytes ?? originalBytes;
+    final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
+    final fileName = 'avatar_${identifier.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final path = 'avatars/$fileName';
+    final bucket = dotenv.get('SUPABASE_ORG_BUCKET', fallback: 'org-pictures');
+
+    await _client.storage.from(bucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: compressedBytes != null ? 'image/webp' : null,
+          ),
+        );
+
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
+
   Future<String> uploadOrganizationAsset({
     required String code,
     required XFile file,
