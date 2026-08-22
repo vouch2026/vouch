@@ -557,15 +557,40 @@ class ActivityCardRepository {
         .eq('academic_term_id', termId)
         .eq('is_mandatory', true);
 
+    // Resolve target organization IDs for sanction filtering
+    List<String> targetSanctionScopeIds = [];
+    if (orgResponse != null) {
+      targetSanctionScopeIds = [organizationId];
+    } else if (orgType == 'program-based') {
+      final progOrgs = await _client
+          .from('organizations')
+          .select('id')
+          .eq('program_id', organizationId)
+          .eq('type', 'program-based');
+      targetSanctionScopeIds = (progOrgs as List).map((o) => o['id'] as String).toList();
+      if (targetSanctionScopeIds.isEmpty) {
+        targetSanctionScopeIds = [organizationId];
+      }
+    } else if (orgType == 'faculty-based') {
+      final facOrgs = await _client
+          .from('organizations')
+          .select('id')
+          .eq('faculty_id', organizationId)
+          .eq('type', 'faculty-based');
+      targetSanctionScopeIds = (facOrgs as List).map((o) => o['id'] as String).toList();
+      if (targetSanctionScopeIds.isEmpty) {
+        targetSanctionScopeIds = [organizationId];
+      }
+    } else {
+      targetSanctionScopeIds = [organizationId];
+    }
+
     var sanctionsQuery = _client
         .from('student_sanction_records')
         .select()
         .filter('student_id', 'in', studentIds)
+        .filter('scope_id', 'in', targetSanctionScopeIds)
         .eq('academic_term_id', termId);
-
-    if (orgResponse != null) {
-      sanctionsQuery = sanctionsQuery.eq('scope_id', organizationId);
-    }
 
     // 5. Get all attendance, payments, and clearance requests for these students in bulk
     final List<Future<dynamic>> futures = [
