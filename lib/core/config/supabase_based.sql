@@ -49,6 +49,11 @@ DROP TABLE IF EXISTS public.subject_schedules CASCADE;
 DROP TABLE IF EXISTS excuse_requests CASCADE;
 DROP TABLE IF EXISTS governance_audit_logs CASCADE;
 DROP TABLE IF EXISTS public.account_deletion_requests CASCADE;
+DROP TABLE IF EXISTS public.user_notification_reads CASCADE;
+DROP TABLE IF EXISTS public.notifications CASCADE;
+DROP TABLE IF EXISTS public.user_fcm_tokens CASCADE;
+DROP TABLE IF EXISTS public.system_settings CASCADE;
+DROP TABLE IF EXISTS public.organization_settings_history CASCADE;
 
 DROP TABLE IF EXISTS activity_card_clearance_signatures CASCADE;
 DROP TABLE IF EXISTS activity_card_clearance_requests CASCADE;
@@ -128,7 +133,9 @@ DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 -- ==========================================
 -- Automatically updates the updated_at timestamp on row changes
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 BEGIN
 NEW.updated_at = CURRENT_TIMESTAMP;
 RETURN NEW;
@@ -137,9 +144,14 @@ $$ language 'plpgsql';
 
 -- Ensures ONLY ONE term is active at a time
 CREATE OR REPLACE FUNCTION single_active_term()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = public, pg_temp
+AS $$
 BEGIN
 IF NEW.is_active = TRUE THEN
+    IF NEW.id IS NULL THEN
+        NEW.id := gen_random_uuid();
+    END IF;
     UPDATE academic_terms SET is_active = FALSE WHERE id <> NEW.id;
 END IF;
 RETURN NEW;
@@ -154,9 +166,9 @@ CREATE TYPE semester_type AS ENUM ('1st', '2nd', 'Summer');
 CREATE TYPE scope_type AS ENUM ('Faculty', 'Program', 'Institutional'); 
 CREATE TYPE attendance_status AS ENUM ('Pending', 'Present', 'Late', 'Incomplete', 'Absent', 'Excused');
 CREATE TYPE payment_status AS ENUM ('Pending', 'Paid', 'Rejected');
-CREATE TYPE clearance_status AS ENUM ('Pending', 'Cleared', 'Rejected');
+CREATE TYPE clearance_status AS ENUM ('Pending', 'Cleared', 'Rejected', 'Archived');
 CREATE TYPE signature_status AS ENUM ('Pending', 'Signed', 'Rejected');
-CREATE TYPE sanction_status AS ENUM ('Pending Item', 'Item Received');
+CREATE TYPE sanction_status AS ENUM ('Pending Item', 'Item Received', 'Completed', 'In Progress', 'Archived');
 
 -- ==========================================
 -- 2. BASE TABLES (No Foreign Key Dependencies)
@@ -299,6 +311,17 @@ updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TRIGGER update_organization_settings_updated_at BEFORE UPDATE ON public.organization_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS public.organization_settings_history (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+setting_key VARCHAR(100) NOT NULL,
+old_value JSONB,
+new_value JSONB,
+changed_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+academic_term_id UUID REFERENCES public.academic_terms(id) ON DELETE SET NULL,
+changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE organization_members (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -629,7 +652,7 @@ AS $$
 DECLARE
     v_user_id UUID;
 BEGIN
-    SELECT id INTO v_user_id FROM public.users WHERE auth_id = auth.uid();
+    SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN RETURN FALSE; END IF;
 
     IF public.is_super_admin() THEN RETURN TRUE; END IF;
@@ -647,6 +670,18 @@ BEGIN
             (o.type = 'faculty-based' AND p_scope_type::text = 'Faculty' AND (o.faculty_id = p_scope_id OR o.id = p_scope_id)) OR
             (o.type = 'program-based' AND p_scope_type::text = 'Program' AND (o.program_id = p_scope_id OR o.id = p_scope_id))
         )
+    ) THEN RETURN TRUE; END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.comselec_members cm
+        JOIN public.comselecs c ON cm.comselec_id = c.id
+        JOIN public.role_permissions rp ON cm.role_id = rp.role_id
+        JOIN public.permissions p ON rp.permission_id = p.id
+        WHERE cm.user_id = v_user_id
+        AND p.action = p_action
+        AND cm.status = 'active'
+        AND p_scope_type::text = 'Institutional' 
+        AND (c.campus_id = p_scope_id OR c.id = p_scope_id)
     ) THEN RETURN TRUE; END IF;
 
     IF EXISTS (
@@ -939,22 +974,22 @@ CREATE POLICY "Officers can view clearance signatures for their scope" ON activi
 USING (
   public.is_super_admin() OR
   EXISTS (
-    SELECT 1 FROM activity_card_clearance_requests r 
-    WHERE r.id = clearance_request_id AND (
-      r.student_id = public.get_my_id() OR
+    SELECT 1 FROM activity_card_clearance_requests req 
+    WHERE req.id = clearance_request_id AND (
+      req.student_id = public.get_my_id() OR
       EXISTS (
         SELECT 1 FROM organization_members om 
         WHERE om.user_id = public.get_my_id() 
-          AND om.organization_id = r.organization_id 
+          AND om.organization_id = req.organization_id 
           AND om.role_id IS NOT NULL 
           AND om.status = 'active'
       ) OR
       EXISTS (
         SELECT 1 FROM public.user_roles ur 
-        JOIN public.roles r ON ur.role_id = r.id
+        JOIN public.roles ro ON ur.role_id = ro.id
         WHERE ur.user_id = public.get_my_id() 
           AND ur.is_active = true 
-          AND r.name IN ('Faculty Dean', 'Program Head', 'Super Admin')
+          AND ro.name IN ('Faculty Dean', 'Program Head', 'Super Admin')
       )
     )
   )
@@ -970,10 +1005,28 @@ WITH CHECK (
 );
 
 CREATE POLICY "Officers can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
-USING (EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = public.get_my_id() AND om.role_id = required_role_id AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)));
+USING (
+  public.is_super_admin() OR
+  EXISTS (
+    SELECT 1 FROM organization_members om 
+    WHERE om.user_id = public.get_my_id() 
+      AND om.role_id = required_role_id 
+      AND om.organization_id = (SELECT organization_id FROM activity_card_clearance_requests WHERE id = clearance_request_id)
+      AND om.status = 'active'
+  )
+);
 
 CREATE POLICY "Deans and Program Heads can sign slots" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
-USING (EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = public.get_my_id() AND ur.role_id = required_role_id AND ur.scope_id = required_scope_id AND ur.is_active = true));
+USING (
+  public.is_super_admin() OR
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur 
+    WHERE ur.user_id = public.get_my_id() 
+      AND ur.role_id = required_role_id 
+      AND ur.scope_id = required_scope_id 
+      AND ur.is_active = true
+  )
+);
 
 CREATE POLICY "Students can update their own rejected signatures" ON activity_card_clearance_signatures FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM public.activity_card_clearance_requests r WHERE r.id = clearance_request_id AND r.student_id = public.get_my_id() AND (r.status = 'Rejected' OR r.status = 'Pending')))
@@ -1772,7 +1825,7 @@ BEGIN
         new.id, new.email, 
         COALESCE(new.raw_user_meta_data->>'first_name', ''),
         COALESCE(new.raw_user_meta_data->>'last_name', ''), 
-        COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+        COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), NULLIF(new.raw_user_meta_data->>'student_id_number', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
         v_campus_id, v_faculty_id, v_program_id,
         (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
         CASE 
@@ -2593,6 +2646,20 @@ DECLARE
 BEGIN
     SELECT public.get_my_id() INTO v_user_id;
     IF v_user_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    IF public.is_super_admin() THEN
+        RETURN QUERY
+        SELECT 
+            r.name,
+            r.hierarchy_level,
+            COALESCE(jsonb_agg(p.action) FILTER (WHERE p.action IS NOT NULL), '[]'::jsonb)
+        FROM public.roles r
+        LEFT JOIN public.role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN public.permissions p ON rp.permission_id = p.id
+        WHERE r.name = 'Super Admin'
+        GROUP BY r.id, r.name, r.hierarchy_level;
         RETURN;
     END IF;
 
