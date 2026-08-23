@@ -20,7 +20,6 @@ echo "Creating .env file..."
 touch .env
 echo "SUPABASE_URL=$SUPABASE_URL" >> .env
 echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
-echo "SUPABASE_ID_BUCKET=${SUPABASE_ID_BUCKET:-ids}" >> .env
 echo "SUPABASE_ORG_BUCKET=${SUPABASE_ORG_BUCKET:-org-pictures}" >> .env
 echo "SUPABASE_ANNOUNCEMENTS_BUCKET=${SUPABASE_ANNOUNCEMENTS_BUCKET:-announcement-pictures}" >> .env
 EVENTS_BUCKET_VAL="${SUPABASE_EVENT_BUCKET:-${SUPABASE_EVENTS_BUCKET:-event-pictures}}"

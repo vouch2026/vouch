@@ -1081,7 +1081,6 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   ('announcement-pictures', 'announcement-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('event-pictures', 'event-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('highlight-pictures', 'highlight-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
-  ('ids', 'ids', false, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('receipt-pictures', 'receipt-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
   ('excuse-pictures', 'excuse-pictures', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
 ON CONFLICT (id) DO UPDATE SET 
@@ -1266,52 +1265,6 @@ CREATE POLICY "Allow users and super admins to manage highlights" ON storage.obj
       owner_id = auth.uid()::text OR
       split_part(storage.filename(storage.objects.name), '_', 3) = public.get_my_id()::text OR
       split_part(storage.filename(storage.objects.name), '_', 3) = auth.uid()::text
-    )
-  );
-
--- ------------------------------------------------------------
--- BUCKET 5: ids (Private - Verification Student IDs & Profile Photos)
--- ------------------------------------------------------------
-DROP POLICY IF EXISTS "Allow students and super admins to view IDs" ON storage.objects;
-CREATE POLICY "Allow students and super admins to view IDs" ON storage.objects
-  FOR SELECT TO authenticated
-  USING (
-    bucket_id = 'ids'
-  );
-
-DROP POLICY IF EXISTS "Allow students to upload their own ID" ON storage.objects;
-CREATE POLICY "Allow students to upload their own ID" ON storage.objects
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    bucket_id = 'ids' AND
-    (
-      public.is_super_admin() OR
-      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
-      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
-      (storage.foldername(storage.objects.name))[1] = 'verification_ids' OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM auth.users WHERE id = auth.uid()) OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = auth.uid()::text
-    )
-  );
-
-DROP POLICY IF EXISTS "Allow students and super admins to manage IDs" ON storage.objects;
-CREATE POLICY "Allow students and super admins to manage IDs" ON storage.objects
-  FOR ALL TO authenticated
-  USING (
-    bucket_id = 'ids' AND
-    (
-      public.is_super_admin() OR
-      (storage.foldername(storage.objects.name))[1] = public.get_my_id()::text OR
-      (storage.foldername(storage.objects.name))[1] = auth.uid()::text OR
-      (storage.foldername(storage.objects.name))[1] = 'verification_ids' OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT student_id_number FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid()) OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = (SELECT email FROM auth.users WHERE id = auth.uid()) OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = public.get_my_id()::text OR
-      split_part(storage.filename(storage.objects.name), '_', 2) = auth.uid()::text
     )
   );
 

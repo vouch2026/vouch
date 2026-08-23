@@ -40,7 +40,6 @@ jobs:
           touch .env
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-          echo "SUPABASE_ID_BUCKET=${{ secrets.SUPABASE_ID_BUCKET }}" >> .env
           echo "SUPABASE_ORG_BUCKET=${{ secrets.SUPABASE_ORG_BUCKET }}" >> .env
           echo "SUPABASE_ANNOUNCEMENTS_BUCKET=${{ secrets.SUPABASE_ANNOUNCEMENTS_BUCKET }}" >> .env
           echo "SUPABASE_EVENT_BUCKET=${{ secrets.SUPABASE_EVENT_BUCKET || secrets.SUPABASE_EVENTS_BUCKET }}" >> .env
@@ -107,7 +106,6 @@ jobs:
           touch .env
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-          echo "SUPABASE_ID_BUCKET=${{ secrets.SUPABASE_ID_BUCKET }}" >> .env
           echo "SUPABASE_ORG_BUCKET=${{ secrets.SUPABASE_ORG_BUCKET }}" >> .env
           echo "SUPABASE_ANNOUNCEMENTS_BUCKET=${{ secrets.SUPABASE_ANNOUNCEMENTS_BUCKET }}" >> .env
           echo "SUPABASE_EVENT_BUCKET=${{ secrets.SUPABASE_EVENT_BUCKET || secrets.SUPABASE_EVENTS_BUCKET }}" >> .env
