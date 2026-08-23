@@ -97,3 +97,4 @@ class VouchApp extends ConsumerWidget {
   }
 }
 
+// stable supabase_based.sql version
