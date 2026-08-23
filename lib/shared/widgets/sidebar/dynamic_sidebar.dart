@@ -474,6 +474,9 @@ class _SidebarItem extends ConsumerWidget {
                 ),
                 onTap: () {
                   context.go(path);
+                  if (MediaQuery.of(context).size.width < 1024) {
+                    ref.read(sidebarVisibleProvider.notifier).state = false;
+                  }
                 },
               ),
             ),

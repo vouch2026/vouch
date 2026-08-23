@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/sidebar/dynamic_sidebar.dart';
 import '../../core/providers/sidebar_provider.dart';
 
-class ShellLayout extends ConsumerWidget {
+class ShellLayout extends ConsumerStatefulWidget {
   final Widget child;
 
   const ShellLayout({
@@ -12,7 +12,35 @@ class ShellLayout extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ShellLayout> createState() => _ShellLayoutState();
+}
+
+class _ShellLayoutState extends ConsumerState<ShellLayout> {
+  bool? _wasDesktop;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isDesktop = MediaQuery.of(context).size.width >= 1024;
+    if (_wasDesktop == null) {
+      _wasDesktop = isDesktop;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(sidebarVisibleProvider.notifier).state = isDesktop;
+        }
+      });
+    } else if (_wasDesktop != isDesktop) {
+      _wasDesktop = isDesktop;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(sidebarVisibleProvider.notifier).state = isDesktop;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isSidebarVisible = ref.watch(sidebarVisibleProvider);
 
     final size = MediaQuery.of(context).size;
@@ -40,7 +68,7 @@ class ShellLayout extends ConsumerWidget {
                 ),
               ),
               Expanded(
-                child: child,
+                child: widget.child,
               ),
             ],
           ),
