@@ -30,14 +30,25 @@ final activeTermProvider = FutureProvider<AcademicTermModel?>((ref) async {
 
   try {
     final client = SupabaseConfig.client;
-    final response = await client
+    var response = await client
         .from('academic_terms')
         .select()
         .eq('is_active', true)
         .limit(1)
         .maybeSingle()
-        .timeout(const Duration(seconds: 2));
+        .timeout(const Duration(seconds: 5));
     
+    // Fallback: If no term is explicitly marked is_active = true, fetch the latest term
+    if (response == null) {
+      response = await client
+          .from('academic_terms')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 5));
+    }
+
     if (response == null) {
       await box.delete(cacheKey);
       return null;

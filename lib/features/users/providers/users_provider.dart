@@ -91,3 +91,120 @@ final allUsersProvider = FutureProvider<List<UserModel>>((ref) async {
   
   return users;
 });
+
+class UserSearchConfig {
+  final String query;
+  final int page;
+  final int pageSize;
+  final bool isAdviser;
+
+  UserSearchConfig({
+    required this.query,
+    required this.page,
+    required this.pageSize,
+    this.isAdviser = false,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserSearchConfig &&
+          runtimeType == other.runtimeType &&
+          query == other.query &&
+          page == other.page &&
+          pageSize == other.pageSize &&
+          isAdviser == other.isAdviser;
+
+  @override
+  int get hashCode =>
+      query.hashCode ^
+      page.hashCode ^
+      pageSize.hashCode ^
+      isAdviser.hashCode;
+}
+
+final paginatedUsersProvider = FutureProvider.family<List<UserModel>, UserSearchConfig>((ref, config) async {
+  final client = SupabaseConfig.client;
+
+  dynamic queryBuilder = client
+      .from('users')
+      .select('''
+        *,
+        campuses:campus_id(id, name),
+        faculties:faculty_id(id, name, code, campus_id),
+        programs:program_id(id, name, code),
+        user_roles:user_roles!user_roles_user_id_fkey(roles(name, hierarchy_level))
+      ''');
+
+  if (config.query.isNotEmpty) {
+    queryBuilder = queryBuilder.or(
+      'first_name.ilike.%${config.query}%,last_name.ilike.%${config.query}%,student_id_number.ilike.%${config.query}%,email.ilike.%${config.query}%'
+    );
+  }
+
+  // Range for pagination
+  final from = config.page * config.pageSize;
+  final to = from + config.pageSize - 1;
+  queryBuilder = queryBuilder.range(from, to);
+
+  dynamic response;
+  try {
+    response = await queryBuilder;
+  } catch (e, stack) {
+    print('ERROR IN paginatedUsersProvider: $e\n$stack');
+    rethrow;
+  }
+  final users = (response as List).map((data) {
+    final userData = Map<String, dynamic>.from(data);
+
+    if (userData['campuses'] != null) {
+      userData['campus_id'] = userData['campuses']['id'];
+      userData['campusName'] = userData['campuses']['name'];
+    }
+    if (userData['faculties'] != null) {
+      userData['faculty_id'] = userData['faculties']['id'];
+      userData['facultyName'] = userData['faculties']['name'];
+      userData['facultyCode'] = userData['faculties']['code'];
+    }
+    if (userData['programs'] != null) {
+      userData['program_id'] = userData['programs']['id'];
+      userData['programName'] = userData['programs']['name'];
+      userData['programCode'] = userData['programs']['code'];
+    }
+
+    if ((userData['campus_id'] == null || userData['campus_id'] == '') && userData['faculties'] != null) {
+      userData['campus_id'] = userData['faculties']['campus_id'];
+    }
+
+    final userRoles = userData['user_roles'] as List?;
+    String role = 'student';
+    if (userRoles != null && userRoles.isNotEmpty) {
+      final sortedRoles = List.from(userRoles);
+      sortedRoles.sort((a, b) {
+        final rolesA = a['roles'] as Map?;
+        final rolesB = b['roles'] as Map?;
+        if (rolesA == null || rolesB == null) return 0;
+        final levelA = (rolesA['hierarchy_level'] as num?)?.toInt() ?? 0;
+        final levelB = (rolesB['hierarchy_level'] as num?)?.toInt() ?? 0;
+        return levelB.compareTo(levelA);
+      });
+
+      final topRole = sortedRoles.first['roles'] as Map?;
+      if (topRole != null) {
+        role = RoleMapper.mapDbRoleToAppFormat(topRole['name'] as String);
+      }
+    }
+    userData['role'] = role;
+
+    return UserModel.fromJson(userData);
+  }).where((user) {
+    if (user.role == 'super_admin') return false;
+    if (config.isAdviser) {
+      final role = user.role.toLowerCase();
+      return !['student', 'voter', 'super_admin'].contains(role);
+    }
+    return true;
+  }).toList();
+
+  return users;
+});

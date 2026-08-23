@@ -534,9 +534,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
     final userAsync = ref.watch(userProfileProvider);
     final attendanceAsync = ref.watch(userEventAttendanceProvider(event.id!));
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final isPast = event.eventDate.isBefore(today);
+    final isPast = event.isPastTimeout;
 
     return userAsync.when(
       data: (user) {
@@ -1050,9 +1048,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
   }
 
   Widget _buildStudentExcuseAction(BuildContext context, EventModel event, {required bool isOfficer}) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final isPast = event.eventDate.isBefore(today);
+    final isPast = event.isPastTimeout;
     
     if (!isPast) return const SizedBox.shrink();
     

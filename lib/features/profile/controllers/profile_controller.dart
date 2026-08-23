@@ -14,10 +14,9 @@ class ProfileController extends AsyncNotifier<void> {
       final profile = await ref.read(userProfileProvider.future);
       if (profile == null) return false;
 
-      final url = await ref.read(storageServiceProvider).uploadIdImage(
-        identifier: profile.email,
+      final url = await ref.read(storageServiceProvider).uploadProfilePhoto(
+        identifier: profile.id ?? profile.email,
         file: file,
-        isFront: true, // Reuse existing upload logic for now, though it might need a specific folder
       );
 
       await ref.read(profileRepositoryProvider).updateProfile(

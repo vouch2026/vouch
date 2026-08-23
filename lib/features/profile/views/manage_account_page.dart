@@ -348,9 +348,9 @@ class ManageAccountPage extends ConsumerWidget {
                 child: CircleAvatar(
                   radius: 46,
                   backgroundColor: AppColors.background,
-                  backgroundImage: profile.avatarUrl != null && profile.avatarUrl.isNotEmpty && OfflineImageCache.get(profile.avatarUrl) != null
+                  backgroundImage: (profile.avatarUrl != null && profile.avatarUrl.isNotEmpty
                       ? OfflineImageCache.get(profile.avatarUrl)
-                      : const AssetImage('assets/images/my_profile.webp') as ImageProvider,
+                      : null) ?? const AssetImage('assets/images/my_profile.webp'),
                 ),
               ),
               Positioned(

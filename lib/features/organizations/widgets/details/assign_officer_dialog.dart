@@ -25,6 +25,7 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
   Map<String, dynamic>? _selectedRole;
   AcademicTermModel? _selectedTerm;
   bool _isSubmitting = false;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -116,38 +117,102 @@ class _AssignOfficerDialogState extends ConsumerState<AssignOfficerDialog> {
               Text('Student Officer', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               membersAsync.when(
-                data: (members) => DropdownButtonFormField<UserModel>(
-                  value: _selectedUser,
-                  decoration: InputDecoration(
-                    hintText: 'Choose an eligible member',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    prefixIcon: const Icon(Icons.person_search_rounded, size: 20),
-                  ),
-                  items: members.map((user) {
-                    final error = _getEligibilityError(user);
-                    return DropdownMenuItem(
-                      value: user,
-                      enabled: error == null,
-                      child: Row(
-                        children: [
-                          Text('${user.fullName} (${user.schoolId})'),
-                          if (error != null) ...[
-                            const SizedBox(width: 8),
-                            const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 16),
-                          ],
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedUser = val),
-                ),
+                data: (members) {
+                  final filteredMembers = members.where((u) {
+                    final query = _searchQuery.toLowerCase();
+                    return u.fullName.toLowerCase().contains(query) ||
+                        u.schoolId.toLowerCase().contains(query) ||
+                        u.email.toLowerCase().contains(query);
+                  }).toList();
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          decoration: const InputDecoration(
+                            hintText: 'Search by name, email, or school ID...',
+                            prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.textGrey),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          onChanged: (val) => setState(() => _searchQuery = val),
+                        ),
+                        const Divider(height: 1, color: AppColors.border),
+                        Container(
+                          height: 200,
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          child: filteredMembers.isEmpty
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(AppSpacing.md),
+                                    child: Text('No matching members found', style: TextStyle(color: AppColors.textGrey)),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  itemCount: filteredMembers.length,
+                                  itemBuilder: (context, index) {
+                                    final user = filteredMembers[index];
+                                    final error = _getEligibilityError(user);
+                                    final isSelected = _selectedUser?.id == user.id;
+
+                                    return ListTile(
+                                      dense: true,
+                                      enabled: error == null,
+                                      hoverColor: AppColors.primary.withOpacity(0.05),
+                                      selectedTileColor: royalBlue.withOpacity(0.08),
+                                      selected: isSelected,
+                                      leading: CircleAvatar(
+                                        backgroundColor: isSelected ? royalBlue : AppColors.border,
+                                        foregroundColor: isSelected ? gold : royalBlue,
+                                        radius: 16,
+                                        child: Text(
+                                          user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                        ),
+                                      ),
+                                      title: Text(
+                                        user.fullName,
+                                        style: TextStyle(
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          color: isSelected ? royalBlue : (error != null ? AppColors.textGrey.withOpacity(0.5) : AppColors.textDark),
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '${user.schoolId} • ${user.email}',
+                                        style: TextStyle(
+                                          color: isSelected ? royalBlue.withOpacity(0.7) : AppColors.textGrey,
+                                        ),
+                                      ),
+                                      trailing: isSelected
+                                          ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+                                          : (error != null
+                                              ? Tooltip(
+                                                  message: error,
+                                                  child: const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
+                                                )
+                                              : null),
+                                      onTap: () {
+                                        setState(() => _selectedUser = user);
+                                      },
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
                 loading: () => const LinearProgressIndicator(),
                 error: (err, _) => Text('Error loading members: $err', style: const TextStyle(color: AppColors.error)),
               ),
               
-              const SizedBox(height: AppSpacing.lg),
-              
-              // Role Selection
+              const SizedBox(height: AppSpacing.lg),// Role Selection
               Text('Governance Position', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               rolesAsync.when(

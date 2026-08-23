@@ -9,6 +9,7 @@ class RouteNames {
   static const String calendar = 'calendar';
   static const String organizations = 'organizations';
   static const String organizationDetails = 'organization-details';
+  static const String organizationAssignRoles = 'organization-assign-roles';
   static const String events = 'events';
   static const String fees = 'fees';
   static const String attendance = 'attendance';
