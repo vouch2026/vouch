@@ -15,7 +15,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
@@ -33,19 +32,31 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
   Future<void> _downloadVerificationCard() async {
     try {
       if (!kIsWeb) {
-        // Handle Mobile Permissions
-        final status = await Permission.photos.request();
-        if (status.isPermanentlyDenied) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please enable photo permissions in settings to save the card.')),
-            );
-            openAppSettings();
-          }
-          return;
+        // Handle Mobile Permissions gracefully across Android SDK versions & iOS
+        PermissionStatus photosStatus = await Permission.photos.status;
+        if (!photosStatus.isGranted && !photosStatus.isLimited) {
+          photosStatus = await Permission.photos.request();
         }
-        if (!status.isGranted && !status.isLimited) {
-          return;
+
+        if (!photosStatus.isGranted && !photosStatus.isLimited) {
+          PermissionStatus storageStatus = await Permission.storage.status;
+          if (!storageStatus.isGranted) {
+            storageStatus = await Permission.storage.request();
+          }
+
+          if (photosStatus.isPermanentlyDenied || storageStatus.isPermanentlyDenied) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Photo permission is required to save to Gallery.'),
+                  action: SnackBarAction(
+                    label: 'Settings',
+                    onPressed: () => openAppSettings(),
+                  ),
+                ),
+              );
+            }
+          }
         }
       }
 
