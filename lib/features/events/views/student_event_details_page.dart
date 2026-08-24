@@ -234,7 +234,9 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       normalizedRole == 'governor' ||
       normalizedRole == 'vice_governor' ||
       normalizedRole == 'president' ||
-      normalizedRole == 'vice_president'
+      normalizedRole == 'vice_president' ||
+      normalizedRole == 'secretary' ||
+      normalizedRole == 'adviser'
     );
 
     final isFullOfficer = isOfficer && normalizedRole != 'representative';
