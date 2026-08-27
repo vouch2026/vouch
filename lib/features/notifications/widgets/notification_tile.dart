@@ -221,11 +221,20 @@ class NotificationTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
         shape: BoxShape.circle,
+        border: Border.all(
+          color: color.withOpacity(0.25),
+          width: 1,
+        ),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 18,
+      child: Center(
+        child: Text(
+          'V',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -14,6 +15,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   
   static String? pendingNotificationPath;
+
+  static final Int64List _vibrationPattern = Int64List.fromList([0, 500, 250, 500]);
 
   static Future<void> init() async {
     tz.initializeTimeZones();
@@ -67,41 +70,56 @@ class NotificationService {
       },
     );
 
-    // Explicitly create notification channel for Android
+    // Explicitly create notification channel for Android with Vibration Enabled
     try {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       if (androidImplementation != null) {
-        const AndroidNotificationChannel scheduleChannel = AndroidNotificationChannel(
+        final AndroidNotificationChannel scheduleChannel = AndroidNotificationChannel(
           'schedule_channel',
           'Schedule Reminders',
           description: 'Reminders for school schedules and classes',
           importance: Importance.max,
+          enableVibration: true,
+          vibrationPattern: _vibrationPattern,
+          playSound: true,
         );
-        const AndroidNotificationChannel tasksChannel = AndroidNotificationChannel(
+        final AndroidNotificationChannel tasksChannel = AndroidNotificationChannel(
           'tasks_channel',
           'Task Reminders',
           description: 'Reminders for tasks and deadlines',
           importance: Importance.max,
+          enableVibration: true,
+          vibrationPattern: _vibrationPattern,
+          playSound: true,
         );
-        const AndroidNotificationChannel eventsChannel = AndroidNotificationChannel(
+        final AndroidNotificationChannel eventsChannel = AndroidNotificationChannel(
           'events_channel',
           'Events',
           description: 'Notifications for new events and activities',
           importance: Importance.max,
+          enableVibration: true,
+          vibrationPattern: _vibrationPattern,
+          playSound: true,
         );
-        const AndroidNotificationChannel feesChannel = AndroidNotificationChannel(
+        final AndroidNotificationChannel feesChannel = AndroidNotificationChannel(
           'fees_channel',
           'Fees & Finances',
           description: 'Notifications for fee dues, payments, and financial updates',
           importance: Importance.max,
+          enableVibration: true,
+          vibrationPattern: _vibrationPattern,
+          playSound: true,
         );
-        const AndroidNotificationChannel announcementsChannel = AndroidNotificationChannel(
+        final AndroidNotificationChannel announcementsChannel = AndroidNotificationChannel(
           'announcements_channel',
           'Announcements',
           description: 'Notifications for school and program announcements',
           importance: Importance.max,
+          enableVibration: true,
+          vibrationPattern: _vibrationPattern,
+          playSound: true,
         );
         await androidImplementation.createNotificationChannel(scheduleChannel);
         await androidImplementation.createNotificationChannel(tasksChannel);
@@ -123,18 +141,25 @@ class NotificationService {
     final tz.TZDateTime scheduledTZDate = tz.TZDateTime.from(scheduledDate, tz.local);
     if (scheduledTZDate.isBefore(tz.TZDateTime.now(tz.local))) return;
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'tasks_channel',
       'Task Reminders',
       channelDescription: 'Reminders for tasks and deadlines',
       importance: Importance.max,
       priority: Priority.high,
-      largeIcon: DrawableResourceAndroidBitmap('vouch_logo'),
+      largeIcon: const DrawableResourceAndroidBitmap('vouch_logo'),
+      enableVibration: true,
+      vibrationPattern: _vibrationPattern,
+      playSound: true,
     );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -190,18 +215,25 @@ class NotificationService {
     final tz.TZDateTime scheduledTZDate =
         _nextInstanceOfDayOfWeekAndTime(targetWeekday, scheduledHour, scheduledMinute);
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'schedule_channel',
       'Schedule Reminders',
       channelDescription: 'Reminders for school schedules and classes',
       importance: Importance.max,
       priority: Priority.high,
-      largeIcon: DrawableResourceAndroidBitmap('vouch_logo'),
+      largeIcon: const DrawableResourceAndroidBitmap('vouch_logo'),
+      enableVibration: true,
+      vibrationPattern: _vibrationPattern,
+      playSound: true,
     );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -262,11 +294,18 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
       largeIcon: const DrawableResourceAndroidBitmap('vouch_logo'),
+      enableVibration: true,
+      vibrationPattern: _vibrationPattern,
+      playSound: true,
     );
 
     final NotificationDetails details = NotificationDetails(
       android: androidDetails,
-      iOS: const DarwinNotificationDetails(),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
     );
 
     await _notificationsPlugin.show(

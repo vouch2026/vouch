@@ -133,9 +133,24 @@ serve(async (req) => {
     const fcmTokens = tokens.map((t) => t.fcm_token);
 
     // 3. Get Firebase Service Account JSON
-    const serviceAccountJson = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON') ?? '{}');
+    const rawSecret = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (!rawSecret) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON secret is not set in Supabase Edge Function environment.');
+    }
+
+    let serviceAccountJson: Record<string, any>;
+    try {
+      const cleaned = rawSecret.trim();
+      serviceAccountJson = JSON.parse(cleaned);
+      if (typeof serviceAccountJson === 'string') {
+        serviceAccountJson = JSON.parse(serviceAccountJson);
+      }
+    } catch (e) {
+      throw new Error(`FIREBASE_SERVICE_ACCOUNT_JSON secret is invalid JSON: ${e.message}. Ensure valid JSON formatted with double quotes.`);
+    }
+
     const clientEmail = serviceAccountJson.client_email;
-    const privateKey = serviceAccountJson.private_key;
+    const privateKey = serviceAccountJson.private_key ? serviceAccountJson.private_key.replace(/\\n/g, '\n') : '';
     const projectId = serviceAccountJson.project_id;
 
     if (!clientEmail || !privateKey || !projectId) {
@@ -145,7 +160,12 @@ serve(async (req) => {
     // 4. Generate Access Token natively
     const accessToken = await getAccessToken(clientEmail, privateKey);
 
-    // 5. Send FCM requests
+    // 5. Send FCM requests with Android Channel & APNS configuration
+    const targetChannelId = record.category === 'event' ? 'events_channel'
+      : record.category === 'finance' ? 'fees_channel'
+      : record.category === 'announcement' ? 'announcements_channel'
+      : 'events_channel';
+
     const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
     const sendPromises = fcmTokens.map((token) => {
       const message = {
@@ -157,8 +177,30 @@ serve(async (req) => {
           },
           data: {
             category: record.category || 'general',
-            action_route: record.action_route || '/',
+            action_route: '/notifications',
             metadata: JSON.stringify(record.metadata || {}),
+          },
+          android: {
+            priority: 'HIGH',
+            notification: {
+              channel_id: targetChannelId,
+              icon: 'logo_notif',
+              sound: 'default',
+              notification_priority: 'PRIORITY_MAX',
+              default_vibrate_timings: true,
+            },
+          },
+          apns: {
+            payload: {
+              aps: {
+                alert: {
+                  title: record.title,
+                  body: record.content,
+                },
+                sound: 'default',
+                badge: 1,
+              },
+            },
           },
         },
       };
@@ -173,10 +215,23 @@ serve(async (req) => {
       });
     });
 
-    const results = await Promise.all(sendPromises);
-    console.log(`Sent ${results.length} push notifications successfully.`);
+    const responses = await Promise.all(
+      sendPromises.map(async (p) => {
+        const res = await p;
+        const resData = await res.json();
+        return { status: res.status, ok: res.ok, body: resData };
+      })
+    );
 
-    return new Response(JSON.stringify({ success: true, count: fcmTokens.length }), {
+    console.log(`FCM Dispatch Results (${responses.length}):`, JSON.stringify(responses));
+
+    const failureCount = responses.filter((r) => !r.ok).length;
+    return new Response(JSON.stringify({ 
+      success: failureCount === 0, 
+      sent: responses.length - failureCount,
+      failed: failureCount,
+      details: responses 
+    }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     });
