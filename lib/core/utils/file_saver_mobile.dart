@@ -9,7 +9,13 @@ class FileSaverUtil {
         quality: 100,
         name: fileName,
       );
-      return result['isSuccess'] == true;
+      if (result == null) return false;
+      final isSuccess = result['isSuccess'];
+      final filePath = result['filePath'];
+      return isSuccess == true ||
+          isSuccess == 1 ||
+          isSuccess == 'true' ||
+          (filePath != null && filePath.toString().isNotEmpty);
     } catch (e) {
       return false;
     }
