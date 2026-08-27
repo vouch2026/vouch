@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/settings/models/settings_model.dart';
 import '../../routes/app_router.dart';
+import '../../routes/route_paths.dart';
 import 'notification_service.dart';
 
 class PushNotificationService {
@@ -52,7 +53,6 @@ class PushNotificationService {
           final title = message.notification?.title ?? message.data['title'] ?? 'New Notification';
           final body = message.notification?.body ?? message.data['body'] ?? '';
           final category = message.data['category'] as String? ?? 'general';
-          final route = message.data['action_route'] as String?;
 
           // Check user preferences from Hive
           bool enabled = true;
@@ -90,19 +90,8 @@ class PushNotificationService {
             channelId = 'announcements_channel';
           }
 
-          // Map category to route fallback if route is null
-          String? targetRoute = route;
-          if (targetRoute == null || targetRoute.isEmpty) {
-            if (category == 'event') {
-              targetRoute = '/workspace/events';
-            } else if (category == 'finance') {
-              targetRoute = '/workspace/fees';
-            } else if (category == 'announcement') {
-              targetRoute = '/workspace/announcements';
-            } else {
-              targetRoute = '/notifications';
-            }
-          }
+          // Always direct push notification taps to the Notifications screen
+          final targetRoute = RoutePaths.notifications;
 
           await NotificationService.showImmediateNotification(
             id: message.hashCode,
@@ -113,24 +102,11 @@ class PushNotificationService {
           );
         });
 
-        // 5. Handle tapping notification when app is in background/terminated
+        // 5. Handle tapping notification when app is in background
         FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
           debugPrint('PushNotificationService: Notification opened app: ${message.data}');
-          String? route = message.data['action_route'] as String?;
-          final category = message.data['category'] as String? ?? 'general';
+          final route = RoutePaths.notifications;
           
-          if (route == null || route.isEmpty) {
-            if (category == 'event') {
-              route = '/workspace/events';
-            } else if (category == 'finance') {
-              route = '/workspace/fees';
-            } else if (category == 'announcement') {
-              route = '/workspace/announcements';
-            } else {
-              route = '/notifications';
-            }
-          }
-
           try {
             final context = rootNavigatorKey.currentContext;
             if (context != null && context.mounted) {
@@ -140,6 +116,21 @@ class PushNotificationService {
             }
           } catch (e) {
             debugPrint('Error navigating from background notification tap: $e');
+            NotificationService.pendingNotificationPath = RoutePaths.notifications;
+          }
+        });
+
+        // 6. Handle notification tap when app was terminated
+        FirebaseMessaging.instance.getInitialMessage().then((message) {
+          if (message != null) {
+            debugPrint('PushNotificationService: App opened from terminated notification: ${message.data}');
+            final route = RoutePaths.notifications;
+            final context = rootNavigatorKey.currentContext;
+            if (context != null && context.mounted) {
+              context.go(route);
+            } else {
+              NotificationService.pendingNotificationPath = route;
+            }
           }
         });
       } else {

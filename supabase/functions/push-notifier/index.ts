@@ -177,15 +177,16 @@ serve(async (req) => {
           },
           data: {
             category: record.category || 'general',
-            action_route: record.action_route || '/',
+            action_route: '/notifications',
             metadata: JSON.stringify(record.metadata || {}),
           },
           android: {
-            priority: 'high',
+            priority: 'HIGH',
             notification: {
               channel_id: targetChannelId,
               icon: 'logo_notif',
               sound: 'default',
+              notification_priority: 'PRIORITY_MAX',
               default_vibrate_timings: true,
             },
           },
