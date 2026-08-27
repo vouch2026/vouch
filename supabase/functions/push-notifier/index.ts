@@ -133,9 +133,24 @@ serve(async (req) => {
     const fcmTokens = tokens.map((t) => t.fcm_token);
 
     // 3. Get Firebase Service Account JSON
-    const serviceAccountJson = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON') ?? '{}');
+    const rawSecret = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (!rawSecret) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON secret is not set in Supabase Edge Function environment.');
+    }
+
+    let serviceAccountJson: Record<string, any>;
+    try {
+      const cleaned = rawSecret.trim();
+      serviceAccountJson = JSON.parse(cleaned);
+      if (typeof serviceAccountJson === 'string') {
+        serviceAccountJson = JSON.parse(serviceAccountJson);
+      }
+    } catch (e) {
+      throw new Error(`FIREBASE_SERVICE_ACCOUNT_JSON secret is invalid JSON: ${e.message}. Ensure valid JSON formatted with double quotes.`);
+    }
+
     const clientEmail = serviceAccountJson.client_email;
-    const privateKey = serviceAccountJson.private_key;
+    const privateKey = serviceAccountJson.private_key ? serviceAccountJson.private_key.replace(/\\n/g, '\n') : '';
     const projectId = serviceAccountJson.project_id;
 
     if (!clientEmail || !privateKey || !projectId) {
