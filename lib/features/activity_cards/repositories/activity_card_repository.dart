@@ -6,20 +6,31 @@ class ActivityCardRepository {
 
   ActivityCardRepository(this._client);
 
-  Future<List<ActivityCard>> getStudentActivityCards(String studentId) async {
-    // 1. Get active term
-    final termResponseList = await _client
-        .from('academic_terms')
-        .select()
-        .eq('is_active', true)
-        .limit(1);
+  Future<List<ActivityCard>> getStudentActivityCards(String studentId, {String? targetTermId}) async {
+    // 1. Get specified or active term
+    Map<String, dynamic>? termResponse;
+    if (targetTermId != null && targetTermId.isNotEmpty) {
+      termResponse = await _client
+          .from('academic_terms')
+          .select()
+          .eq('id', targetTermId)
+          .maybeSingle();
+    }
     
-    if (termResponseList.isEmpty) return [];
-    final termResponse = termResponseList.first;
+    if (termResponse == null) {
+      final termResponseList = await _client
+          .from('academic_terms')
+          .select()
+          .eq('is_active', true)
+          .limit(1);
+      
+      if (termResponseList.isEmpty) return [];
+      termResponse = termResponseList.first;
+    }
     
-    final termId = termResponse['id'];
-    final academicYear = termResponse['academic_year'];
-    final semester = termResponse['semester'];
+    final termId = termResponse['id'] as String;
+    final academicYear = termResponse['academic_year'] as String;
+    final semester = termResponse['semester'] as String;
 
     // 2. Get student's organizations
     final orgMembersResponse = await _client

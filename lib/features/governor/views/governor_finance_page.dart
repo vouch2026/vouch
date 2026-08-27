@@ -22,6 +22,8 @@ import '../../finance/models/payment_receiver_model.dart';
 import '../../finance/views/student_proof_of_payment_page.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
 
+import '../../academic_structure/providers/academic_context_provider.dart';
+
 class GovernorFinancePage extends ConsumerStatefulWidget {
   const GovernorFinancePage({super.key});
 
@@ -70,8 +72,9 @@ class _GovernorFinancePageState extends ConsumerState<GovernorFinancePage> with 
       return const _StudentFinanceView();
     }
 
+    final isReadOnlyHistorical = ref.watch(isReadOnlyHistoricalTermProvider);
     final allowedRoles = {'Treasurer', 'President', 'Vice President', 'Governor', 'Vice Governor'};
-    final canCreateFee = activeRole != null && allowedRoles.contains(activeRole.roleName);
+    final canCreateFee = !isReadOnlyHistorical && activeRole != null && allowedRoles.contains(activeRole.roleName);
     final isMobile = ResponsiveLayout.isMobile(context);
 
     final theme = Theme.of(context);

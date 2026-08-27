@@ -6,6 +6,8 @@ import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/providers/connectivity_provider.dart';
 
+import '../../academic_structure/providers/academic_context_provider.dart';
+
 final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
   return AnnouncementRepository(SupabaseConfig.client);
 });
@@ -13,6 +15,7 @@ final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
 final workspaceAnnouncementsProvider = FutureProvider<List<AnnouncementModel>>((ref) async {
   final workspace = ref.watch(workspaceProvider);
   final org = workspace.selectedOrganization;
+  final selectedTerm = ref.watch(selectedAcademicTermProvider);
   
   if (org == null) return [];
   
@@ -30,7 +33,7 @@ final workspaceAnnouncementsProvider = FutureProvider<List<AnnouncementModel>>((
   if (scopeId == null) return [];
 
   final box = Hive.box('dashboard');
-  final cacheKey = 'announcements_$scopeId';
+  final cacheKey = 'announcements_${scopeId}_${selectedTerm?.id ?? 'active'}';
   final cached = box.get(cacheKey);
 
   final connectivity = ref.read(connectivityProvider).value;
@@ -46,7 +49,7 @@ final workspaceAnnouncementsProvider = FutureProvider<List<AnnouncementModel>>((
   }
 
   try {
-    final announcements = await ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId);
+    final announcements = await ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId, termId: selectedTerm?.id);
     final jsonList = announcements.map((a) => a.toJson()).toList();
     await box.put(cacheKey, jsonList);
     return announcements;

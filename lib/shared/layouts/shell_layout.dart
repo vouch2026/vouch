@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/sidebar/dynamic_sidebar.dart';
+import '../widgets/historical_archive_banner.dart';
 import '../../core/providers/sidebar_provider.dart';
 
 class ShellLayout extends ConsumerStatefulWidget {
@@ -68,7 +69,12 @@ class _ShellLayoutState extends ConsumerState<ShellLayout> {
                 ),
               ),
               Expanded(
-                child: widget.child,
+                child: Column(
+                  children: [
+                    const HistoricalArchiveBanner(),
+                    Expanded(child: widget.child),
+                  ],
+                ),
               ),
             ],
           ),

@@ -8,6 +8,8 @@ import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../../core/providers/connectivity_provider.dart';
 
+import '../../academic_structure/providers/academic_context_provider.dart';
+
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
   return FinanceRepository(SupabaseConfig.client);
 });
@@ -15,6 +17,7 @@ final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
 final workspaceFeesProvider = FutureProvider<List<FeeModel>>((ref) async {
   final workspace = ref.watch(workspaceProvider);
   final org = workspace.selectedOrganization;
+  final selectedTerm = ref.watch(selectedAcademicTermProvider);
   
   if (org == null) return [];
   
@@ -32,7 +35,7 @@ final workspaceFeesProvider = FutureProvider<List<FeeModel>>((ref) async {
   if (scopeId == null) return [];
 
   final box = Hive.box('dashboard');
-  final cacheKey = 'workspace_fees_${org.id}';
+  final cacheKey = 'workspace_fees_${org.id}_${selectedTerm?.id ?? 'active'}';
   final cached = box.get(cacheKey);
 
   // Fast path: if connectivity provider knows we are offline, load cached instantly
@@ -51,7 +54,7 @@ final workspaceFeesProvider = FutureProvider<List<FeeModel>>((ref) async {
   try {
     final fees = await ref
         .watch(financeRepositoryProvider)
-        .getFeesByScope(scopeType, scopeId);
+        .getFeesByScope(scopeType, scopeId, termId: selectedTerm?.id);
     final feesJson = fees.map((f) => f.toJson()).toList();
     await box.put(cacheKey, feesJson);
     return fees;

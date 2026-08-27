@@ -16,6 +16,8 @@ import '../widgets/governor_past_event_card.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../events/views/student_events_view.dart';
 
+import '../../academic_structure/providers/academic_context_provider.dart';
+
 class GovernorEventsPage extends ConsumerStatefulWidget {
   const GovernorEventsPage({super.key});
 
@@ -52,11 +54,14 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
       );
     }
 
-    final canCreateEvent = activeRole == 'Governor' || 
-                           activeRole == 'President' || 
-                           activeRole == 'Vice Governor' || 
-                           activeRole == 'Vice President' || 
-                           activeRole == 'Secretary';
+    final isReadOnlyHistorical = ref.watch(isReadOnlyHistoricalTermProvider);
+
+    final canCreateEvent = !isReadOnlyHistorical &&
+                           (activeRole == 'Governor' || 
+                            activeRole == 'President' || 
+                            activeRole == 'Vice Governor' || 
+                            activeRole == 'Vice President' || 
+                            activeRole == 'Secretary');
     
     final eventsAsync = ref.watch(workspaceEventsProvider);
     final size = MediaQuery.of(context).size;

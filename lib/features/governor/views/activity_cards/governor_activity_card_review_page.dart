@@ -19,6 +19,7 @@ import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../academic_structure/providers/term_provider.dart';
 import '../../../organizations/providers/organization_provider.dart';
+import '../../../academic_structure/providers/academic_context_provider.dart';
 
 class GovernorActivityCardReviewPage extends ConsumerStatefulWidget {
   final String id; // This is the studentId passed from the list
@@ -45,6 +46,14 @@ class _GovernorActivityCardReviewPageState extends ConsumerState<GovernorActivit
   }
 
   Future<void> _handleSignature(ActivityCard card, String signatureId, bool isReject) async {
+    final isReadOnly = ref.read(isReadOnlyHistoricalTermProvider);
+    if (isReadOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Action unavailable: Historical records are read-only.')),
+      );
+      return;
+    }
+
     final currentUser = ref.read(userProfileProvider).value;
     final term = ref.read(activeTermProvider).value;
     if (currentUser == null || term == null) return;

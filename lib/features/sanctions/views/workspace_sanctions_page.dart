@@ -20,6 +20,7 @@ import '../../users/widgets/user_management_header.dart';
 import 'package:vouch_v2/shared/widgets/loading_overlay.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
 import '../../academic_structure/providers/term_provider.dart';
+import '../../academic_structure/providers/academic_context_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
 class WorkspaceSanctionsPage extends ConsumerStatefulWidget {
@@ -399,9 +400,10 @@ class _WorkspaceSanctionsPageState extends ConsumerState<WorkspaceSanctionsPage>
         ? AppSpacing.md 
         : (isTablet ? AppSpacing.lg : AppSpacing.xl);
 
+    final isReadOnlyHistorical = ref.watch(isReadOnlyHistoricalTermProvider);
     final activeRole = ref.watch(workspaceProvider).activeRole;
-    final canManageRules = activeRole?.hasPermission(AppPermissions.createSanctionRules) ?? false;
-    final canSync = activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false;
+    final canManageRules = !isReadOnlyHistorical && (activeRole?.hasPermission(AppPermissions.createSanctionRules) ?? false);
+    final canSync = !isReadOnlyHistorical && (activeRole?.hasPermission(AppPermissions.receiveSanctionItems) ?? false);
 
     final sanctionsAsync = ref.watch(workspaceSanctionsProvider);
     final rulesAsync = ref.watch(sanctionRulesProvider);

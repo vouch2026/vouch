@@ -5,16 +5,19 @@ import '../models/activity_card_models.dart';
 import '../repositories/activity_card_repository.dart';
 import '../../organizations/providers/workspace_provider.dart';
 
+import '../../academic_structure/providers/academic_context_provider.dart';
+
 final activityCardRepositoryProvider = Provider<ActivityCardRepository>((ref) {
   return ActivityCardRepository(SupabaseConfig.client);
 });
 
 final studentActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) async {
   final userProfile = ref.watch(userProfileProvider).value;
+  final selectedTerm = ref.watch(selectedAcademicTermProvider);
   if (userProfile == null || userProfile.id == null) return [];
   
   final repository = ref.watch(activityCardRepositoryProvider);
-  return repository.getStudentActivityCards(userProfile.id as String);
+  return repository.getStudentActivityCards(userProfile.id as String, targetTermId: selectedTerm?.id);
 });
 
 final organizationActivityCardsProvider = FutureProvider<List<ActivityCard>>((ref) async {

@@ -11,6 +11,7 @@ import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
 import '../../../../core/providers/sidebar_provider.dart';
 import 'organization_switcher.dart';
+import '../academic_context_selector.dart';
 import '../../../../core/config/sidebars/sidebar_config.dart';
 
 class DynamicSidebar extends ConsumerStatefulWidget {
@@ -186,6 +187,11 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                       const _SectionDivider(),
                       const _SidebarHeader(label: 'WORKSPACE'),
                       const OrganizationSwitcher(),
+                      const SizedBox(height: 8),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: AcademicContextSelector(),
+                      ),
                       if (selectedOrg != null) ...[
                         ...workspaceSections.asMap().entries.map((entry) {
                           final idx = entry.key;

@@ -8,13 +8,18 @@ class FinanceRepository {
 
   FinanceRepository(this._client);
 
-  Future<List<FeeModel>> getFeesByScope(String scopeType, String scopeId) async {
-    final response = await _client
+  Future<List<FeeModel>> getFeesByScope(String scopeType, String scopeId, {String? termId}) async {
+    var query = _client
         .from('fees')
         .select()
         .eq('scope_type', scopeType)
-        .eq('scope_id', scopeId)
-        .order('due_date', ascending: true);
+        .eq('scope_id', scopeId);
+
+    if (termId != null && termId.isNotEmpty) {
+      query = query.eq('academic_term_id', termId);
+    }
+
+    final response = await query.order('due_date', ascending: true);
     
     return (response as List).map((json) => FeeModel.fromJson(json)).toList();
   }

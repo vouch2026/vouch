@@ -6,13 +6,18 @@ class EventRepository {
 
   EventRepository(this._client);
 
-  Future<List<EventModel>> getEventsByScope(String scopeType, String scopeId) async {
-    final response = await _client
+  Future<List<EventModel>> getEventsByScope(String scopeType, String scopeId, {String? termId}) async {
+    var query = _client
         .from('events')
         .select()
         .eq('scope_type', scopeType)
-        .eq('scope_id', scopeId)
-        .order('event_date', ascending: false);
+        .eq('scope_id', scopeId);
+        
+    if (termId != null && termId.isNotEmpty) {
+      query = query.eq('academic_term_id', termId);
+    }
+    
+    final response = await query.order('event_date', ascending: false);
     
     return (response as List).map((json) => EventModel.fromJson(json)).toList();
   }

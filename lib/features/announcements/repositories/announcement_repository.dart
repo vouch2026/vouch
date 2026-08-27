@@ -6,8 +6,8 @@ class AnnouncementRepository {
 
   AnnouncementRepository(this._client);
 
-  Future<List<AnnouncementModel>> getAnnouncementsByScope(String scopeType, String scopeId) async {
-    final response = await _client
+  Future<List<AnnouncementModel>> getAnnouncementsByScope(String scopeType, String scopeId, {String? termId}) async {
+    var query = _client
         .from('announcements')
         .select('''
           *,
@@ -17,8 +17,13 @@ class AnnouncementRepository {
           )
         ''')
         .eq('scope_type', scopeType)
-        .eq('scope_id', scopeId)
-        .order('created_at', ascending: false);
+        .eq('scope_id', scopeId);
+
+    if (termId != null && termId.isNotEmpty) {
+      query = query.eq('academic_term_id', termId);
+    }
+
+    final response = await query.order('created_at', ascending: false);
     
     return (response as List).map((json) {
       try {

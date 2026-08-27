@@ -334,7 +334,7 @@ assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 auto_sign_clearance BOOLEAN DEFAULT false,
-UNIQUE(organization_id, user_id, academic_term_id)
+UNIQUE(organization_id, user_id)
 );
 
 -- ==========================================
@@ -380,7 +380,7 @@ assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 expired_at TIMESTAMP WITH TIME ZONE,
 joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 auto_sign_clearance BOOLEAN DEFAULT false,
-UNIQUE(comselec_id, user_id, academic_term_id)
+UNIQUE(comselec_id, user_id)
 );
 
 CREATE TABLE user_roles (
@@ -644,39 +644,6 @@ SET search_path = public, pg_temp
 AS $$
     SELECT id FROM public.users WHERE auth_id = auth.uid() OR id = auth.uid() LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
-
-CREATE OR REPLACE FUNCTION public.is_active_term(p_term_id UUID)
-RETURNS BOOLEAN 
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM public.academic_terms 
-        WHERE id = p_term_id AND is_active = true
-    );
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
-
-CREATE OR REPLACE FUNCTION public.get_user_eligible_terms(p_user_id UUID)
-RETURNS TABLE (term_id UUID) 
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT DISTINCT at.id
-    FROM public.academic_terms at
-    WHERE at.created_at >= (
-        SELECT u.created_at - INTERVAL '30 days' 
-        FROM public.users u 
-        WHERE u.id = p_user_id
-    )
-    OR EXISTS (
-        SELECT 1 FROM public.organization_members om
-        WHERE om.user_id = p_user_id 
-          AND om.academic_term_id = at.id
-    );
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.has_scope_permission(p_action TEXT, p_scope_type public.scope_type, p_scope_id UUID) 
 RETURNS BOOLEAN 
@@ -3481,4 +3448,3 @@ DROP TRIGGER IF EXISTS trigger_sanction_active_notification ON public.student_sa
 CREATE TRIGGER trigger_sanction_active_notification
 AFTER INSERT OR UPDATE ON public.student_sanction_records
 FOR EACH ROW EXECUTE FUNCTION public.on_sanction_activated();
-

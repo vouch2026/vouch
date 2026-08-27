@@ -17,6 +17,7 @@ import '../../../core/widgets/states/offline_state_view.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/providers/connectivity_provider.dart';
+import '../../academic_structure/providers/academic_context_provider.dart';
 
 class GovernorAnnouncementsPage extends ConsumerStatefulWidget {
   const GovernorAnnouncementsPage({super.key});
@@ -50,7 +51,8 @@ class _GovernorAnnouncementsPageState extends ConsumerState<GovernorAnnouncement
     final org = workspace.selectedOrganization;
     final activeRole = workspace.activeRole?.roleName;
     final isOffline = ref.watch(connectivityProvider).value == false;
-    final canPost = activeRole != 'Student' && activeRole != 'Member' && !isOffline;
+    final isReadOnlyHistorical = ref.watch(isReadOnlyHistoricalTermProvider);
+    final canPost = !isReadOnlyHistorical && activeRole != 'Student' && activeRole != 'Member' && !isOffline;
     final isMobile = ResponsiveLayout.isMobile(context);
 
     return DashboardLayout(

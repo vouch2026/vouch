@@ -8,13 +8,17 @@ import '../models/compliance_member_model.dart';
 import '../repositories/sanction_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 
+import '../../academic_structure/providers/academic_context_provider.dart';
+
 final sanctionRepositoryProvider = Provider<SanctionRepository>((ref) {
   return SanctionRepository(SupabaseConfig.client);
 });
 
 final workspaceSanctionsProvider = FutureProvider<List<SanctionModel>>((ref) async {
   final workspace = ref.watch(workspaceProvider);
-  final term = ref.watch(activeTermProvider).value;
+  final selectedTerm = ref.watch(selectedAcademicTermProvider);
+  final activeTerm = ref.watch(activeTermProvider).value;
+  final term = selectedTerm ?? activeTerm;
   final org = workspace.selectedOrganization;
 
   if (org == null || term == null) return [];
@@ -25,7 +29,9 @@ final workspaceSanctionsProvider = FutureProvider<List<SanctionModel>>((ref) asy
 
 final mySanctionsProvider = FutureProvider<List<SanctionModel>>((ref) async {
   final userProfile = await ref.watch(userProfileProvider.future);
-  final term = await ref.watch(activeTermProvider.future);
+  final selectedTerm = ref.watch(selectedAcademicTermProvider);
+  final activeTerm = await ref.watch(activeTermProvider.future);
+  final term = selectedTerm ?? activeTerm;
   final workspace = ref.watch(workspaceProvider);
   final org = workspace.selectedOrganization;
 
@@ -37,13 +43,14 @@ final mySanctionsProvider = FutureProvider<List<SanctionModel>>((ref) async {
   final repository = ref.watch(sanctionRepositoryProvider);
 
   debugPrint('mySanctionsProvider: Fetching all sanctions for student ${userProfile.id}, term ${term.id}');
-  // Fetching all sanctions for the student in the current term, regardless of workspace
   return repository.getMySanctions(userProfile.id!, termId: term.id);
 });
 
 final workspaceComplianceProvider = FutureProvider<List<ComplianceMemberModel>>((ref) async {
   final workspace = ref.watch(workspaceProvider);
-  final term = ref.watch(activeTermProvider).value;
+  final selectedTerm = ref.watch(selectedAcademicTermProvider);
+  final activeTerm = ref.watch(activeTermProvider).value;
+  final term = selectedTerm ?? activeTerm;
   final org = workspace.selectedOrganization;
 
   if (org == null || term == null) return [];
