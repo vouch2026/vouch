@@ -30,7 +30,8 @@ class PushNotificationService {
 
       debugPrint('PushNotificationService: Permission status: ${settings.authorizationStatus}');
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
         // 2. Fetch and register Token
         String? token = await _fcm.getToken();
         debugPrint('PushNotificationService: Fetched FCM Token: $token');

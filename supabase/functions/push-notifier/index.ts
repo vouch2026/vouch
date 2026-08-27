@@ -160,7 +160,12 @@ serve(async (req) => {
     // 4. Generate Access Token natively
     const accessToken = await getAccessToken(clientEmail, privateKey);
 
-    // 5. Send FCM requests
+    // 5. Send FCM requests with Android Channel & APNS configuration
+    const targetChannelId = record.category === 'event' ? 'events_channel'
+      : record.category === 'finance' ? 'fees_channel'
+      : record.category === 'announcement' ? 'announcements_channel'
+      : 'events_channel';
+
     const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
     const sendPromises = fcmTokens.map((token) => {
       const message = {
@@ -175,6 +180,27 @@ serve(async (req) => {
             action_route: record.action_route || '/',
             metadata: JSON.stringify(record.metadata || {}),
           },
+          android: {
+            priority: 'high',
+            notification: {
+              channel_id: targetChannelId,
+              icon: 'logo_notif',
+              sound: 'default',
+              default_vibrate_timings: true,
+            },
+          },
+          apns: {
+            payload: {
+              aps: {
+                alert: {
+                  title: record.title,
+                  body: record.content,
+                },
+                sound: 'default',
+                badge: 1,
+              },
+            },
+          },
         },
       };
 
@@ -188,10 +214,23 @@ serve(async (req) => {
       });
     });
 
-    const results = await Promise.all(sendPromises);
-    console.log(`Sent ${results.length} push notifications successfully.`);
+    const responses = await Promise.all(
+      sendPromises.map(async (p) => {
+        const res = await p;
+        const resData = await res.json();
+        return { status: res.status, ok: res.ok, body: resData };
+      })
+    );
 
-    return new Response(JSON.stringify({ success: true, count: fcmTokens.length }), {
+    console.log(`FCM Dispatch Results (${responses.length}):`, JSON.stringify(responses));
+
+    const failureCount = responses.filter((r) => !r.ok).length;
+    return new Response(JSON.stringify({ 
+      success: failureCount === 0, 
+      sent: responses.length - failureCount,
+      failed: failureCount,
+      details: responses 
+    }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     });
