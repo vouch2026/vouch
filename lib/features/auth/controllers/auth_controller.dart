@@ -1,10 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
-import '../../../core/providers/storage_provider.dart';
+import '../../../core/services/push_notification_service.dart';
 
 class AuthController extends AsyncNotifier<void> {
   late final AuthRepository _repository;
@@ -42,9 +42,11 @@ class AuthController extends AsyncNotifier<void> {
     if (!result.hasError) {
       ref.invalidate(userProfileProvider);
       ref.invalidate(workspaceProvider);
+      PushNotificationService().initialize();
     }
     state = result;
   }
+
 
   Future<bool> signUp({
     required String email,
@@ -127,6 +129,11 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<void> signOut() async {
     state = const AsyncLoading();
+    try {
+      await PushNotificationService().deleteTokenOnSignOut();
+    } catch (e) {
+      debugPrint('AuthController: Error deleting FCM token on sign out: $e');
+    }
     await _repository.signOut();
     ref.invalidate(userProfileProvider);
     ref.invalidate(workspaceProvider);

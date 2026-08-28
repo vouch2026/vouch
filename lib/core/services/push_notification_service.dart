@@ -147,16 +147,55 @@ class PushNotificationService {
     debugPrint('PushNotificationService: Attempting to save token to database. User: ${user?.id}');
     if (user == null) return;
 
+    final deviceType = Platform.isAndroid ? 'android' : Platform.isIOS ? 'ios' : 'web';
+
     try {
-      await _supabase.from('user_fcm_tokens').upsert({
-        'user_id': user.id,
-        'fcm_token': token,
-        'device_type': Platform.isAndroid ? 'android' : 'ios',
-        'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'fcm_token');
-      debugPrint('PushNotificationService: Successfully saved token to Supabase database.');
+      // 1. Primary path: Use Security Definer RPC function to bypass RLS token ownership transfer conflicts
+      await _supabase.rpc('register_fcm_token', params: {
+        'p_fcm_token': token,
+        'p_device_type': deviceType,
+      });
+      debugPrint('PushNotificationService: Successfully registered FCM token via RPC.');
     } catch (e) {
-      debugPrint('PushNotificationService: Error saving token to Supabase: $e');
+      debugPrint('PushNotificationService: RPC register_fcm_token failed ($e), falling back to direct table operations...');
+      try {
+        // Fallback: Delete any existing token entry to clear ownership conflicts before inserting
+        await _supabase.from('user_fcm_tokens').delete().eq('fcm_token', token);
+        await _supabase.from('user_fcm_tokens').insert({
+          'user_id': user.id,
+          'fcm_token': token,
+          'device_type': deviceType,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+        debugPrint('PushNotificationService: Successfully saved token via direct query fallback.');
+      } catch (fallbackError) {
+        debugPrint('PushNotificationService: Error saving token to Supabase: $fallbackError');
+      }
+    }
+  }
+
+  Future<void> deleteTokenOnSignOut() async {
+    if (kIsWeb) return;
+    try {
+      String? token = await _fcm.getToken();
+      if (token != null) {
+        debugPrint('PushNotificationService: Unregistering token on sign out: $token');
+        try {
+          await _supabase.rpc('unregister_fcm_token', params: {'p_fcm_token': token});
+        } catch (_) {
+          final user = _supabase.auth.currentUser;
+          if (user != null) {
+            await _supabase
+                .from('user_fcm_tokens')
+                .delete()
+                .eq('fcm_token', token)
+                .eq('user_id', user.id);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('PushNotificationService: Error unregistering token on sign out: $e');
     }
   }
 }
+
