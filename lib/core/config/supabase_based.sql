@@ -3222,6 +3222,41 @@ CREATE POLICY "Users can delete their own FCM tokens" ON public.user_fcm_tokens
     FOR DELETE TO authenticated
     USING (user_id = auth.uid() OR user_id = public.get_my_id());
 
+-- 17.3.1 FCM Token Helper Functions
+CREATE OR REPLACE FUNCTION public.register_fcm_token(
+    p_fcm_token TEXT,
+    p_device_type TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    -- Remove old registration for this token if it belonged to another user/account on this device
+    DELETE FROM public.user_fcm_tokens WHERE fcm_token = p_fcm_token;
+
+    -- Insert token for current authenticated user
+    INSERT INTO public.user_fcm_tokens (user_id, fcm_token, device_type, updated_at)
+    VALUES (auth.uid(), p_fcm_token, p_device_type, CURRENT_TIMESTAMP);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.unregister_fcm_token(
+    p_fcm_token TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    DELETE FROM public.user_fcm_tokens 
+    WHERE fcm_token = p_fcm_token AND user_id = auth.uid();
+END;
+$$;
+
+
 
 -- 17.6 Announcement Created Automation Trigger
 CREATE OR REPLACE FUNCTION public.on_announcement_created()

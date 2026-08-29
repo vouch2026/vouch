@@ -48,3 +48,8 @@ app.*.map.json
 
 assets/vouch-push-notif-firebase-adminsdk-fbsvc-*.json
 lib/firebase_options.dart
+
+# Android signing secrets
+**/android/key.properties
+*.jks
+*.keystore
