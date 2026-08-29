@@ -478,19 +478,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             const SizedBox(height: AppSpacing.xl),
             _buildLabel('Campus'),
             campusesAsync.when(
-              data: (campuses) => _buildDropdown<String>(
-                hint: 'Select Campus',
-                value: _selectedCampusId,
-                items: campuses.map((c) => DropdownItem(
-                  value: c.id,
-                  label: c.name,
-                )).toList(),
-                onChanged: (val) => setState(() {
-                  _selectedCampusId = val;
-                  _selectedFacultyId = null;
-                  _selectedProgramId = null;
-                }),
-              ),
+              data: (campuses) {
+                final visibleCampuses = campuses.where(
+                  (c) => c.name != 'Google' && c.status != 'hidden',
+                ).toList();
+
+                return _buildDropdown<String>(
+                  hint: 'Select Campus',
+                  value: _selectedCampusId,
+                  items: visibleCampuses.map((c) => DropdownItem(
+                    value: c.id,
+                    label: c.name,
+                  )).toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedCampusId = val;
+                    _selectedFacultyId = null;
+                    _selectedProgramId = null;
+                  }),
+                );
+              },
               loading: () => _buildDropdownPlaceholder('Loading campuses...'),
               error: (e, _) => _buildDropdownPlaceholder('Error loading campuses'),
             ),
