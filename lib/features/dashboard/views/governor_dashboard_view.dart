@@ -281,8 +281,12 @@ class GovernorDashboardView extends ConsumerWidget {
     int mandatoryFeesCount,
   ) {
     final bool isOfficer = roleName != null && roleName != 'Student';
-    final totalMembers = members.length;
-    final activeMembers = members.where((m) => m.status.toLowerCase() == 'active').length;
+    final regularMembers = members.where((m) {
+      final role = m.role.toLowerCase();
+      return role == 'member' || role == 'student';
+    }).toList();
+    final activeMembers = regularMembers.where((m) => m.status.toLowerCase() == 'active').length;
+    final totalMembers = activeMembers + totalOfficers;
     final upcomingCount = events.where((e) => !e.isPastTimeout).length;
     final mandatoryEventsCount = events.where((e) => e.isMandatory).length;
 

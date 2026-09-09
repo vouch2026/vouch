@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
 import '../controllers/auth_controller.dart';
+import '../providers/auth_provider.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../core/utils/validators.dart';
 
@@ -28,10 +30,16 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
 
+  // Email Validation State
+  Timer? _emailDebounceTimer;
+  bool _isCheckingEmail = false;
+  bool _isEmailRegistered = false;
+  String? _emailValidationError;
+
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_onFieldChanged);
+    _emailController.addListener(_onEmailChanged);
     _codeController.addListener(_onFieldChanged);
     _newPasswordController.addListener(_onFieldChanged);
     _confirmPasswordController.addListener(_onFieldChanged);
@@ -41,8 +49,78 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     setState(() {});
   }
 
+  void _onEmailChanged() {
+    _onFieldChanged();
+    _emailDebounceTimer?.cancel();
+    
+    if (_isEmailRegistered || _emailValidationError != null) {
+      setState(() {
+        _isEmailRegistered = false;
+        _emailValidationError = null;
+      });
+    }
+
+    _emailDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      if (_emailController.text.trim().isNotEmpty) {
+        _checkEmailExistence(_emailController.text);
+      }
+    });
+  }
+
+  Future<void> _checkEmailExistence(String email) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      setState(() {
+        _isEmailRegistered = false;
+        _emailValidationError = null;
+      });
+      return;
+    }
+
+    final formatError = Validators.email(trimmedEmail);
+    if (formatError != null) {
+      setState(() {
+        _isEmailRegistered = false;
+        _emailValidationError = formatError;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingEmail = true;
+      _emailValidationError = null;
+    });
+
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      final exists = await repository.isEmailRegistered(trimmedEmail);
+      
+      if (mounted) {
+        setState(() {
+          _isEmailRegistered = exists;
+          _isCheckingEmail = false;
+          if (!exists) {
+            _emailValidationError = 'This email is not registered in our system';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCheckingEmail = false;
+          _emailValidationError = 'Error verifying email. Please try again.';
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _emailDebounceTimer?.cancel();
+    _emailController.removeListener(_onEmailChanged);
+    _codeController.removeListener(_onFieldChanged);
+    _newPasswordController.removeListener(_onFieldChanged);
+    _confirmPasswordController.removeListener(_onFieldChanged);
     _emailController.dispose();
     _codeController.dispose();
     _newPasswordController.dispose();
@@ -66,9 +144,14 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   }
 
   bool get _isFormValid {
-    final isEmailValid = Validators.email(_emailController.text) == null;
+    final isEmailFormatValid = Validators.email(_emailController.text) == null;
+    final isEmailReady = isEmailFormatValid &&
+        !_isCheckingEmail &&
+        _isEmailRegistered &&
+        _emailValidationError == null;
+
     if (!_codeSent) {
-      return isEmailValid;
+      return isEmailReady;
     }
     
     final isCodeValid = _codeController.text.trim().length == 8;
@@ -76,7 +159,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         _isPasswordComplexityMet(_newPasswordController.text);
     final isConfirmPasswordValid = _newPasswordController.text == _confirmPasswordController.text;
     
-    return isEmailValid && isCodeValid && isNewPasswordValid && isConfirmPasswordValid;
+    return isEmailReady && isCodeValid && isNewPasswordValid && isConfirmPasswordValid;
   }
 
   @override
@@ -200,7 +283,33 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
               icon: Icons.mail_outline,
               keyboardType: TextInputType.emailAddress,
               enabled: !_codeSent,
-              validator: Validators.email,
+              errorText: _emailValidationError,
+              suffixIcon: _isCheckingEmail
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    )
+                  : (_emailController.text.isNotEmpty && Validators.email(_emailController.text) == null)
+                      ? _isEmailRegistered
+                          ? const Icon(Icons.check_circle_outline, color: AppColors.success)
+                          : const Icon(Icons.error_outline, color: AppColors.error)
+                      : null,
+              validator: (val) {
+                final formatError = Validators.email(val);
+                if (formatError != null) return formatError;
+
+                if (_emailValidationError != null) {
+                  return _emailValidationError;
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             if (!_codeSent)

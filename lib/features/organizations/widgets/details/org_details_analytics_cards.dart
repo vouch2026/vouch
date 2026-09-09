@@ -24,8 +24,13 @@ class OrgDetailsAnalyticsCards extends ConsumerWidget {
         final eventsAsync = ref.watch(orgEventsProvider(org));
         final feesAsync = ref.watch(orgFeesProvider(org));
 
-        final totalMembers = membersAsync.valueOrNull?.length ?? 0;
+        final allMembers = membersAsync.valueOrNull ?? [];
+        final activeMembers = allMembers.where((m) {
+          final role = m.role.toLowerCase();
+          return (role == 'member' || role == 'student') && m.status.toLowerCase() == 'active';
+        }).length;
         final totalOfficers = officersAsync.valueOrNull?.length ?? 0;
+        final totalMembers = activeMembers + totalOfficers;
         final mandatoryEvents = eventsAsync.valueOrNull?.where((e) => e.isMandatory).length ?? 0;
         final mandatoryFees = feesAsync.valueOrNull?.where((f) => f.isMandatory).length ?? 0;
 
