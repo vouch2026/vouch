@@ -444,6 +444,9 @@ class OrganizationRepository {
           'hierarchy_level': roleData?['hierarchy_level'],
           'permissions': permissions,
         });
+      }).where((o) {
+        final role = o.roleName?.toLowerCase() ?? '';
+        return role != 'member' && role != 'student' && role != 'voter' && role != 'voters';
       }).toList();
     }
 
@@ -495,6 +498,9 @@ class OrganizationRepository {
         'hierarchy_level': roleData?['hierarchy_level'],
         'permissions': permissions,
       });
+    }).where((o) {
+      final role = o.roleName?.toLowerCase() ?? '';
+      return role != 'member' && role != 'student' && role != 'voter' && role != 'voters';
     }).toList();
   }
 
