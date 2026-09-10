@@ -40,11 +40,19 @@ class NotificationRepository {
         .or(orFilter)
         .order('created_at', ascending: false);
 
-    return (response as List).map((json) {
-      // In Supabase, if a user has read this notification, there will be a list in `user_notification_reads`.
-      // We pass it to fromJson which handles detecting if that list is non-empty.
-      return NotificationModel.fromJson(json);
-    }).toList();
+    final list = <NotificationModel>[];
+    for (final json in (response as List)) {
+      try {
+        if (json is Map<String, dynamic>) {
+          list.add(NotificationModel.fromJson(json));
+        } else if (json is Map) {
+          list.add(NotificationModel.fromJson(Map<String, dynamic>.from(json)));
+        }
+      } catch (_) {
+        // Ignore single malformed notification rows gracefully
+      }
+    }
+    return list;
   }
 
   /// Mark a notification as read by creating a record in `user_notification_reads`

@@ -73,11 +73,16 @@ class NotificationController extends AsyncNotifier<List<NotificationModel>> {
             }
 
             if (matches) {
-              final currentList = state.value ?? [];
-              final newNotif = NotificationModel.fromJson(payload.newRecord);
-              
-              if (!currentList.any((n) => n.id == newNotif.id)) {
-                state = AsyncData([newNotif, ...currentList]);
+              try {
+                final currentList = state.value ?? [];
+                final recordMap = Map<String, dynamic>.from(payload.newRecord);
+                final newNotif = NotificationModel.fromJson(recordMap);
+                
+                if (!currentList.any((n) => n.id == newNotif.id)) {
+                  state = AsyncData([newNotif, ...currentList]);
+                }
+              } catch (e) {
+                // Ignore realtime parsing error
               }
             }
           },

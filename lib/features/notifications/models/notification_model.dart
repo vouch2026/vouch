@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class NotificationModel {
   final String id;
   final String? senderId;
@@ -71,31 +73,57 @@ class NotificationModel {
     );
   }
 
+  static Map<String, dynamic> _parseMetadata(dynamic raw) {
+    if (raw == null) return {};
+    if (raw is Map) {
+      try {
+        return Map<String, dynamic>.from(raw);
+      } catch (_) {
+        return {};
+      }
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  static DateTime _parseDate(dynamic dateVal) {
+    if (dateVal == null) return DateTime.now();
+    try {
+      return DateTime.parse(dateVal.toString()).toLocal();
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     // Determine isRead by checking if user_notification_reads relation exists
     final reads = json['user_notification_reads'] as List?;
     final hasReadReceipt = reads != null && reads.isNotEmpty;
+    final isReadVal = json['is_read'] is bool ? json['is_read'] as bool : hasReadReceipt;
 
     return NotificationModel(
-      id: json['id'] as String,
-      senderId: json['sender_id'] as String?,
-      title: json['title'] as String,
-      content: json['content'] as String,
-      notificationType: json['notification_type'] as String,
-      targetUserId: json['target_user_id'] as String?,
-      targetProgramId: json['target_program_id'] as String?,
-      targetFacultyId: json['target_faculty_id'] as String?,
-      targetCampusId: json['target_campus_id'] as String?,
-      category: json['category'] ?? 'general',
-      actionRoute: json['action_route'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>? ?? {},
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at'] as String).toLocal()
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String).toLocal()
-          : DateTime.now(),
-      isRead: json['is_read'] as bool? ?? hasReadReceipt,
+      id: json['id']?.toString() ?? '',
+      senderId: json['sender_id']?.toString(),
+      title: json['title']?.toString() ?? 'Notification',
+      content: json['content']?.toString() ?? '',
+      notificationType: json['notification_type']?.toString() ?? 'global',
+      targetUserId: json['target_user_id']?.toString(),
+      targetProgramId: json['target_program_id']?.toString(),
+      targetFacultyId: json['target_faculty_id']?.toString(),
+      targetCampusId: json['target_campus_id']?.toString(),
+      category: json['category']?.toString() ?? 'general',
+      actionRoute: json['action_route']?.toString(),
+      metadata: _parseMetadata(json['metadata']),
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
+      isRead: isReadVal,
     );
   }
 

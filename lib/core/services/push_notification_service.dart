@@ -10,10 +10,19 @@ import '../../routes/route_paths.dart';
 import 'notification_service.dart';
 
 class PushNotificationService {
+  static bool _initialized = false;
   FirebaseMessaging get _fcm => FirebaseMessaging.instance;
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient? get _supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
     debugPrint('PushNotificationService: Initializing...');
     // Web is bypassed for FCM unless you have a service worker (firebase-messaging-sw.js)
     if (kIsWeb) {
@@ -143,7 +152,9 @@ class PushNotificationService {
 
   Future<void> _saveTokenToDatabase(String token) async {
     if (kIsWeb) return;
-    final user = _supabase.auth.currentUser;
+    final client = _supabase;
+    if (client == null) return;
+    final user = client.auth.currentUser;
     debugPrint('PushNotificationService: Attempting to save token to database. User: ${user?.id}');
     if (user == null) return;
 
@@ -151,7 +162,7 @@ class PushNotificationService {
 
     try {
       // 1. Primary path: Use Security Definer RPC function to bypass RLS token ownership transfer conflicts
-      await _supabase.rpc('register_fcm_token', params: {
+      await client.rpc('register_fcm_token', params: {
         'p_fcm_token': token,
         'p_device_type': deviceType,
       });
@@ -160,8 +171,8 @@ class PushNotificationService {
       debugPrint('PushNotificationService: RPC register_fcm_token failed ($e), falling back to direct table operations...');
       try {
         // Fallback: Delete any existing token entry to clear ownership conflicts before inserting
-        await _supabase.from('user_fcm_tokens').delete().eq('fcm_token', token);
-        await _supabase.from('user_fcm_tokens').insert({
+        await client.from('user_fcm_tokens').delete().eq('fcm_token', token);
+        await client.from('user_fcm_tokens').insert({
           'user_id': user.id,
           'fcm_token': token,
           'device_type': deviceType,
@@ -175,17 +186,20 @@ class PushNotificationService {
   }
 
   Future<void> deleteTokenOnSignOut() async {
+    _initialized = false;
     if (kIsWeb) return;
+    final client = _supabase;
+    if (client == null) return;
     try {
       String? token = await _fcm.getToken();
       if (token != null) {
         debugPrint('PushNotificationService: Unregistering token on sign out: $token');
         try {
-          await _supabase.rpc('unregister_fcm_token', params: {'p_fcm_token': token});
+          await client.rpc('unregister_fcm_token', params: {'p_fcm_token': token});
         } catch (_) {
-          final user = _supabase.auth.currentUser;
+          final user = client.auth.currentUser;
           if (user != null) {
-            await _supabase
+            await client
                 .from('user_fcm_tokens')
                 .delete()
                 .eq('fcm_token', token)
