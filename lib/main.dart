@@ -78,7 +78,9 @@ class VouchApp extends ConsumerWidget {
     // Run initialization on startup if user is already logged in
     final currentUser = ref.read(currentUserProvider);
     if (currentUser != null) {
-      PushNotificationService().initialize();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        PushNotificationService().initialize();
+      });
     }
 
     return ScreenUtilInit(

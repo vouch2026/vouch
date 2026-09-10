@@ -95,6 +95,12 @@ class StorageService {
     return _client.storage.from(bucket).getPublicUrl(path);
   }
 
+  String _sanitizeSlug(String input) {
+    final clean = input.trim().replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_').replaceAll(RegExp(r'_+'), '_');
+    if (clean.isEmpty) return 'asset';
+    return clean.length > 30 ? clean.substring(0, 30) : clean;
+  }
+
   Future<String> uploadAnnouncementImage({
     required XFile file,
     required String title,
@@ -106,7 +112,9 @@ class StorageService {
     );
     final bytes = compressedBytes ?? originalBytes;
     final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
-    final fileName = 'announcement_${title.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final slug = _sanitizeSlug(title);
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final fileName = 'announcement_${slug}_$timestamp$extension';
     final path = 'announcements/$fileName';
     final bucket = dotenv.get('SUPABASE_ANNOUNCEMENTS_BUCKET', fallback: 'announcement-pictures');
 
@@ -133,7 +141,9 @@ class StorageService {
     );
     final bytes = compressedBytes ?? originalBytes;
     final extension = compressedBytes != null ? '.webp' : p.extension(file.name);
-    final fileName = 'event_${eventName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final slug = _sanitizeSlug(eventName);
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final fileName = 'event_${slug}_$timestamp$extension';
     final path = 'events/$fileName';
     final bucket = dotenv.get('SUPABASE_EVENT_BUCKET', fallback: dotenv.get('SUPABASE_EVENTS_BUCKET', fallback: 'event-pictures'));
 
