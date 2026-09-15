@@ -2,10 +2,10 @@
 
 **Effective Date:** July 16, 2026
 
-Welcome to Vouch (the "Application"). By creating an account or using the Application, you agree to be bound by these Terms and Conditions. These terms constitute a legal agreement between you and Vouch SoftTech Services ("the Company"). If you do not agree to these Terms, please do not use the Application.
+Welcome to VouchEDU (the "Application"). By creating an account or using the Application, you agree to be bound by these Terms and Conditions. These terms constitute a legal agreement between you and Vouch SoftTech Services ("the Company"). If you do not agree to these Terms, please do not use the Application.
 
 ### 1. Description of Service
-Vouch is a centralized student governance, multi-tiered clearance, attendance mapping, and organization fee tracking platform designed for institutional campuses, faculties, and student programs. The platform offers multi-tenant workspaces handling localized requirements via distinct organizational roles.
+VouchEDU is a centralized student governance, multi-tiered clearance, attendance mapping, and organization fee tracking platform designed for institutional campuses, faculties, and student programs. The platform offers multi-tenant workspaces handling localized requirements via distinct organizational roles.
 
 ### 2. User Accounts and Verification
 * **Registration:** Users must register using an authentic, institutionally aligned email address and provide precise personal details.
@@ -19,9 +19,9 @@ The Application employs strict Role-Based Access Controls linked to structural s
 * **Abuse Policy:** Attempting to manipulate metadata or circumvent row-level security policies to perform ungranted actions will result in immediate termination of account access and referral to institutional disciplinary committees.
 
 ### 4. Payment Management and Digital Ledgers
-* **Platform Role:** Vouch acts purely as an administrative registration ledger for organizing fees, payment targets, and financial compliance.
+* **Platform Role:** VouchEDU acts purely as an administrative registration ledger for organizing fees, payment targets, and financial compliance.
 * **Verification:** Organizational Treasurers or authorized officers verify receipts, reference numbers, and photos submitted by students to clear administrative fee lines.
-* **Liability Disclaimer:** Vouch does not process digital financial transactions directly and carries no liability for actual cash handling or bank transfer discrepancies executed outside the framework of the application.
+* **Liability Disclaimer:** VouchEDU does not process digital financial transactions directly and carries no liability for actual cash handling or bank transfer discrepancies executed outside the framework of the application.
 
 ### 5. Attendance Recording and Excuse Processing
 * **Attendance Tracking:** The app logs event attendance metrics via authorized scanning mechanisms.
@@ -29,7 +29,7 @@ The Application employs strict Role-Based Access Controls linked to structural s
 * **Sanctions:** Failure to fulfill minimum attendance records triggers automatic sanction records requiring designated items as configured by organizational bylaws.
 
 ### 6. User Support, Bug Reporting, and Community Guidelines
-* **Official Support Channel:** Technical support, feature requests, and bug software reports are systematically handled via the official Vouch Community Facebook group.
+* **Official Support Channel:** Technical support, feature requests, and bug software reports are systematically handled via the official VouchEDU Community Facebook group.
 * **User Cooperation:** As a software service tailored for institutional student bodies, users are encouraged to interact constructively within the community group to aid peers in navigating standard operational procedures.
 * **Prohibited Community Conduct:** Falsifying bug reports, weaponizing the support community to target institutional officers or student leaders, or using the group to distribute malicious exploits targeting the application architecture is strictly forbidden and grounds for immediate platform bans.
 

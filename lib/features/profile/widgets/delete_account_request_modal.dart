@@ -105,7 +105,7 @@ class _DeleteAccountRequestModalState extends ConsumerState<DeleteAccountRequest
                 
                 // Description Text
                 Text(
-                  'Please use this form to request the permanent deletion of your Vouch account and associated data. Because your account is integrated with institutional attendance logs, fees, and clearances, your request is subject to administrative review. An administrator will review your academic record within 7-14 days to ensure there are no pending sanctions or unpaid fees. Once cleared, your account, authentication credentials, and personal data will be permanently purged from our system.',
+                  'Please use this form to request the permanent deletion of your VouchEDU account and associated data. Because your account is integrated with institutional attendance logs, fees, and clearances, your request is subject to administrative review. An administrator will review your academic record within 7-14 days to ensure there are no pending sanctions or unpaid fees. Once cleared, your account, authentication credentials, and personal data will be permanently purged from our system.',
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textGrey, height: 1.5),
                 ),
                 const Divider(height: AppSpacing.xxl),

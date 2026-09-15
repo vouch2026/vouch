@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/vouch_edu_brand_title.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
@@ -14,7 +15,7 @@ class AboutUsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DashboardLayout(
-      title: 'About Vouch',
+      title: 'About VouchEDU',
       onBack: Navigator.canPop(context) ? () => Navigator.pop(context) : null,
       child: ResponsiveLayout(
         mobile: _buildMobileLayout(context),
@@ -204,13 +205,7 @@ class AboutUsPage extends StatelessWidget {
             child: Image.asset('assets/logos/vouch.webp', fit: BoxFit.contain),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            'Vouch',
-            style: AppTextStyles.headlineLarge.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
+          const VouchEduBrandTitle(fontSize: 28),
           const SizedBox(height: AppSpacing.xs),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),

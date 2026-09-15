@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/vouch_edu_brand_title.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
@@ -166,10 +166,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildLogo(size: 110),
+                  _buildLogo(size: 64, fontSize: 44),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Simplify your student organization\'s management with Vouch.',
+                    'Simplify your student organization\'s management with VouchEDU.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.headlineMedium.copyWith(
                       color: Colors.black54,
@@ -196,7 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _buildLogo({double size = 40}) {
+  Widget _buildLogo({double size = 32, double? fontSize}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -206,24 +206,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           height: size,
         ),
         const SizedBox(width: AppSpacing.sm),
-        RichText(
-          text: TextSpan(
-            style: GoogleFonts.poppins(
-              fontSize: size,
-              fontWeight: FontWeight.w700,
-            ),
-            children: const [
-              TextSpan(
-                text: 'Vou',
-                style: TextStyle(color: AppColors.primary),
-              ),
-              TextSpan(
-                text: 'ch',
-                style: TextStyle(color: AppColors.accent),
-              ),
-            ],
-          ),
-        ),
+        VouchEduBrandTitle(fontSize: fontSize ?? 24),
       ],
     );
   }
@@ -266,7 +249,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             else
               Column(
                 children: [
-                  _buildLogo(size: 50),
+                  _buildLogo(size: 32, fontSize: 24),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Welcome back',

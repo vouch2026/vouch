@@ -101,12 +101,12 @@ class _SplashPageState extends ConsumerState<SplashPage>
       }
 
       final bool didAuthenticate = await _auth.authenticate(
-        localizedReason: 'Please Authenticate to Unlock Vouch',
+        localizedReason: 'Please Authenticate to Unlock VouchEDU',
         biometricOnly: true,
         persistAcrossBackgrounding: true,
         authMessages: const <AuthMessages>[
           AndroidAuthMessages(
-            signInTitle: 'Unlock Vouch',
+            signInTitle: 'Unlock VouchEDU',
             signInHint: '',
           ),
           IOSAuthMessages(
@@ -177,7 +177,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Vouch is Locked',
+                      'VouchEDU is Locked',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
