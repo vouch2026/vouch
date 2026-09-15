@@ -12,7 +12,8 @@ abstract class AttendanceModel with _$AttendanceModel {
     @JsonKey(name: 'actual_time_in') DateTime? actualTimeIn,
     @JsonKey(name: 'actual_time_out') DateTime? actualTimeOut,
     @Default('Pending') String status,
-    @JsonKey(name: 'scanned_by_user_id') String? scannedByUserId,
+    @JsonKey(name: 'time_in_scanned_by_user_id') String? timeInScannedByUserId,
+    @JsonKey(name: 'time_out_scanned_by_user_id') String? timeOutScannedByUserId,
     @JsonKey(name: 'override_reason') String? overrideReason,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _AttendanceModel;

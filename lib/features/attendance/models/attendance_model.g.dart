@@ -18,7 +18,8 @@ _AttendanceModel _$AttendanceModelFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['actual_time_out'] as String),
       status: json['status'] as String? ?? 'Pending',
-      scannedByUserId: json['scanned_by_user_id'] as String?,
+      timeInScannedByUserId: json['time_in_scanned_by_user_id'] as String?,
+      timeOutScannedByUserId: json['time_out_scanned_by_user_id'] as String?,
       overrideReason: json['override_reason'] as String?,
       updatedAt: json['updated_at'] == null
           ? null
@@ -33,7 +34,8 @@ Map<String, dynamic> _$AttendanceModelToJson(_AttendanceModel instance) =>
       'actual_time_in': instance.actualTimeIn?.toIso8601String(),
       'actual_time_out': instance.actualTimeOut?.toIso8601String(),
       'status': instance.status,
-      'scanned_by_user_id': instance.scannedByUserId,
+      'time_in_scanned_by_user_id': instance.timeInScannedByUserId,
+      'time_out_scanned_by_user_id': instance.timeOutScannedByUserId,
       'override_reason': instance.overrideReason,
       'updated_at': instance.updatedAt?.toIso8601String(),
     };

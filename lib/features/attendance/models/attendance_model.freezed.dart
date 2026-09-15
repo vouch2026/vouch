@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AttendanceModel {
 
- String? get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'event_id') String get eventId;@JsonKey(name: 'actual_time_in') DateTime? get actualTimeIn;@JsonKey(name: 'actual_time_out') DateTime? get actualTimeOut; String get status;@JsonKey(name: 'scanned_by_user_id') String? get scannedByUserId;@JsonKey(name: 'override_reason') String? get overrideReason;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
+ String? get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'event_id') String get eventId;@JsonKey(name: 'actual_time_in') DateTime? get actualTimeIn;@JsonKey(name: 'actual_time_out') DateTime? get actualTimeOut; String get status;@JsonKey(name: 'time_in_scanned_by_user_id') String? get timeInScannedByUserId;@JsonKey(name: 'time_out_scanned_by_user_id') String? get timeOutScannedByUserId;@JsonKey(name: 'override_reason') String? get overrideReason;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
 /// Create a copy of AttendanceModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $AttendanceModelCopyWith<AttendanceModel> get copyWith => _$AttendanceModelCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AttendanceModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.eventId, eventId) || other.eventId == eventId)&&(identical(other.actualTimeIn, actualTimeIn) || other.actualTimeIn == actualTimeIn)&&(identical(other.actualTimeOut, actualTimeOut) || other.actualTimeOut == actualTimeOut)&&(identical(other.status, status) || other.status == status)&&(identical(other.scannedByUserId, scannedByUserId) || other.scannedByUserId == scannedByUserId)&&(identical(other.overrideReason, overrideReason) || other.overrideReason == overrideReason)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AttendanceModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.eventId, eventId) || other.eventId == eventId)&&(identical(other.actualTimeIn, actualTimeIn) || other.actualTimeIn == actualTimeIn)&&(identical(other.actualTimeOut, actualTimeOut) || other.actualTimeOut == actualTimeOut)&&(identical(other.status, status) || other.status == status)&&(identical(other.timeInScannedByUserId, timeInScannedByUserId) || other.timeInScannedByUserId == timeInScannedByUserId)&&(identical(other.timeOutScannedByUserId, timeOutScannedByUserId) || other.timeOutScannedByUserId == timeOutScannedByUserId)&&(identical(other.overrideReason, overrideReason) || other.overrideReason == overrideReason)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,studentId,eventId,actualTimeIn,actualTimeOut,status,scannedByUserId,overrideReason,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,studentId,eventId,actualTimeIn,actualTimeOut,status,timeInScannedByUserId,timeOutScannedByUserId,overrideReason,updatedAt);
 
 @override
 String toString() {
-  return 'AttendanceModel(id: $id, studentId: $studentId, eventId: $eventId, actualTimeIn: $actualTimeIn, actualTimeOut: $actualTimeOut, status: $status, scannedByUserId: $scannedByUserId, overrideReason: $overrideReason, updatedAt: $updatedAt)';
+  return 'AttendanceModel(id: $id, studentId: $studentId, eventId: $eventId, actualTimeIn: $actualTimeIn, actualTimeOut: $actualTimeOut, status: $status, timeInScannedByUserId: $timeInScannedByUserId, timeOutScannedByUserId: $timeOutScannedByUserId, overrideReason: $overrideReason, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $AttendanceModelCopyWith<$Res>  {
   factory $AttendanceModelCopyWith(AttendanceModel value, $Res Function(AttendanceModel) _then) = _$AttendanceModelCopyWithImpl;
 @useResult
 $Res call({
- String? id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'event_id') String eventId,@JsonKey(name: 'actual_time_in') DateTime? actualTimeIn,@JsonKey(name: 'actual_time_out') DateTime? actualTimeOut, String status,@JsonKey(name: 'scanned_by_user_id') String? scannedByUserId,@JsonKey(name: 'override_reason') String? overrideReason,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String? id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'event_id') String eventId,@JsonKey(name: 'actual_time_in') DateTime? actualTimeIn,@JsonKey(name: 'actual_time_out') DateTime? actualTimeOut, String status,@JsonKey(name: 'time_in_scanned_by_user_id') String? timeInScannedByUserId,@JsonKey(name: 'time_out_scanned_by_user_id') String? timeOutScannedByUserId,@JsonKey(name: 'override_reason') String? overrideReason,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$AttendanceModelCopyWithImpl<$Res>
 
 /// Create a copy of AttendanceModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? studentId = null,Object? eventId = null,Object? actualTimeIn = freezed,Object? actualTimeOut = freezed,Object? status = null,Object? scannedByUserId = freezed,Object? overrideReason = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? studentId = null,Object? eventId = null,Object? actualTimeIn = freezed,Object? actualTimeOut = freezed,Object? status = null,Object? timeInScannedByUserId = freezed,Object? timeOutScannedByUserId = freezed,Object? overrideReason = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,8 @@ as String,eventId: null == eventId ? _self.eventId : eventId // ignore: cast_nul
 as String,actualTimeIn: freezed == actualTimeIn ? _self.actualTimeIn : actualTimeIn // ignore: cast_nullable_to_non_nullable
 as DateTime?,actualTimeOut: freezed == actualTimeOut ? _self.actualTimeOut : actualTimeOut // ignore: cast_nullable_to_non_nullable
 as DateTime?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,scannedByUserId: freezed == scannedByUserId ? _self.scannedByUserId : scannedByUserId // ignore: cast_nullable_to_non_nullable
+as String,timeInScannedByUserId: freezed == timeInScannedByUserId ? _self.timeInScannedByUserId : timeInScannedByUserId // ignore: cast_nullable_to_non_nullable
+as String?,timeOutScannedByUserId: freezed == timeOutScannedByUserId ? _self.timeOutScannedByUserId : timeOutScannedByUserId // ignore: cast_nullable_to_non_nullable
 as String?,overrideReason: freezed == overrideReason ? _self.overrideReason : overrideReason // ignore: cast_nullable_to_non_nullable
 as String?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'event_id')  String eventId, @JsonKey(name: 'actual_time_in')  DateTime? actualTimeIn, @JsonKey(name: 'actual_time_out')  DateTime? actualTimeOut,  String status, @JsonKey(name: 'scanned_by_user_id')  String? scannedByUserId, @JsonKey(name: 'override_reason')  String? overrideReason, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'event_id')  String eventId, @JsonKey(name: 'actual_time_in')  DateTime? actualTimeIn, @JsonKey(name: 'actual_time_out')  DateTime? actualTimeOut,  String status, @JsonKey(name: 'time_in_scanned_by_user_id')  String? timeInScannedByUserId, @JsonKey(name: 'time_out_scanned_by_user_id')  String? timeOutScannedByUserId, @JsonKey(name: 'override_reason')  String? overrideReason, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AttendanceModel() when $default != null:
-return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.actualTimeOut,_that.status,_that.scannedByUserId,_that.overrideReason,_that.updatedAt);case _:
+return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.actualTimeOut,_that.status,_that.timeInScannedByUserId,_that.timeOutScannedByUserId,_that.overrideReason,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'event_id')  String eventId, @JsonKey(name: 'actual_time_in')  DateTime? actualTimeIn, @JsonKey(name: 'actual_time_out')  DateTime? actualTimeOut,  String status, @JsonKey(name: 'scanned_by_user_id')  String? scannedByUserId, @JsonKey(name: 'override_reason')  String? overrideReason, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'event_id')  String eventId, @JsonKey(name: 'actual_time_in')  DateTime? actualTimeIn, @JsonKey(name: 'actual_time_out')  DateTime? actualTimeOut,  String status, @JsonKey(name: 'time_in_scanned_by_user_id')  String? timeInScannedByUserId, @JsonKey(name: 'time_out_scanned_by_user_id')  String? timeOutScannedByUserId, @JsonKey(name: 'override_reason')  String? overrideReason, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _AttendanceModel():
-return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.actualTimeOut,_that.status,_that.scannedByUserId,_that.overrideReason,_that.updatedAt);case _:
+return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.actualTimeOut,_that.status,_that.timeInScannedByUserId,_that.timeOutScannedByUserId,_that.overrideReason,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'event_id')  String eventId, @JsonKey(name: 'actual_time_in')  DateTime? actualTimeIn, @JsonKey(name: 'actual_time_out')  DateTime? actualTimeOut,  String status, @JsonKey(name: 'scanned_by_user_id')  String? scannedByUserId, @JsonKey(name: 'override_reason')  String? overrideReason, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'event_id')  String eventId, @JsonKey(name: 'actual_time_in')  DateTime? actualTimeIn, @JsonKey(name: 'actual_time_out')  DateTime? actualTimeOut,  String status, @JsonKey(name: 'time_in_scanned_by_user_id')  String? timeInScannedByUserId, @JsonKey(name: 'time_out_scanned_by_user_id')  String? timeOutScannedByUserId, @JsonKey(name: 'override_reason')  String? overrideReason, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _AttendanceModel() when $default != null:
-return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.actualTimeOut,_that.status,_that.scannedByUserId,_that.overrideReason,_that.updatedAt);case _:
+return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.actualTimeOut,_that.status,_that.timeInScannedByUserId,_that.timeOutScannedByUserId,_that.overrideReason,_that.updatedAt);case _:
   return null;
 
 }
@@ -217,7 +218,7 @@ return $default(_that.id,_that.studentId,_that.eventId,_that.actualTimeIn,_that.
 @JsonSerializable()
 
 class _AttendanceModel implements AttendanceModel {
-  const _AttendanceModel({this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'event_id') required this.eventId, @JsonKey(name: 'actual_time_in') this.actualTimeIn, @JsonKey(name: 'actual_time_out') this.actualTimeOut, this.status = 'Pending', @JsonKey(name: 'scanned_by_user_id') this.scannedByUserId, @JsonKey(name: 'override_reason') this.overrideReason, @JsonKey(name: 'updated_at') this.updatedAt});
+  const _AttendanceModel({this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'event_id') required this.eventId, @JsonKey(name: 'actual_time_in') this.actualTimeIn, @JsonKey(name: 'actual_time_out') this.actualTimeOut, this.status = 'Pending', @JsonKey(name: 'time_in_scanned_by_user_id') this.timeInScannedByUserId, @JsonKey(name: 'time_out_scanned_by_user_id') this.timeOutScannedByUserId, @JsonKey(name: 'override_reason') this.overrideReason, @JsonKey(name: 'updated_at') this.updatedAt});
   factory _AttendanceModel.fromJson(Map<String, dynamic> json) => _$AttendanceModelFromJson(json);
 
 @override final  String? id;
@@ -226,7 +227,8 @@ class _AttendanceModel implements AttendanceModel {
 @override@JsonKey(name: 'actual_time_in') final  DateTime? actualTimeIn;
 @override@JsonKey(name: 'actual_time_out') final  DateTime? actualTimeOut;
 @override@JsonKey() final  String status;
-@override@JsonKey(name: 'scanned_by_user_id') final  String? scannedByUserId;
+@override@JsonKey(name: 'time_in_scanned_by_user_id') final  String? timeInScannedByUserId;
+@override@JsonKey(name: 'time_out_scanned_by_user_id') final  String? timeOutScannedByUserId;
 @override@JsonKey(name: 'override_reason') final  String? overrideReason;
 @override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
 
@@ -243,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AttendanceModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.eventId, eventId) || other.eventId == eventId)&&(identical(other.actualTimeIn, actualTimeIn) || other.actualTimeIn == actualTimeIn)&&(identical(other.actualTimeOut, actualTimeOut) || other.actualTimeOut == actualTimeOut)&&(identical(other.status, status) || other.status == status)&&(identical(other.scannedByUserId, scannedByUserId) || other.scannedByUserId == scannedByUserId)&&(identical(other.overrideReason, overrideReason) || other.overrideReason == overrideReason)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AttendanceModel&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.eventId, eventId) || other.eventId == eventId)&&(identical(other.actualTimeIn, actualTimeIn) || other.actualTimeIn == actualTimeIn)&&(identical(other.actualTimeOut, actualTimeOut) || other.actualTimeOut == actualTimeOut)&&(identical(other.status, status) || other.status == status)&&(identical(other.timeInScannedByUserId, timeInScannedByUserId) || other.timeInScannedByUserId == timeInScannedByUserId)&&(identical(other.timeOutScannedByUserId, timeOutScannedByUserId) || other.timeOutScannedByUserId == timeOutScannedByUserId)&&(identical(other.overrideReason, overrideReason) || other.overrideReason == overrideReason)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,studentId,eventId,actualTimeIn,actualTimeOut,status,scannedByUserId,overrideReason,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,studentId,eventId,actualTimeIn,actualTimeOut,status,timeInScannedByUserId,timeOutScannedByUserId,overrideReason,updatedAt);
 
 @override
 String toString() {
-  return 'AttendanceModel(id: $id, studentId: $studentId, eventId: $eventId, actualTimeIn: $actualTimeIn, actualTimeOut: $actualTimeOut, status: $status, scannedByUserId: $scannedByUserId, overrideReason: $overrideReason, updatedAt: $updatedAt)';
+  return 'AttendanceModel(id: $id, studentId: $studentId, eventId: $eventId, actualTimeIn: $actualTimeIn, actualTimeOut: $actualTimeOut, status: $status, timeInScannedByUserId: $timeInScannedByUserId, timeOutScannedByUserId: $timeOutScannedByUserId, overrideReason: $overrideReason, updatedAt: $updatedAt)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$AttendanceModelCopyWith<$Res> implements $AttendanceModel
   factory _$AttendanceModelCopyWith(_AttendanceModel value, $Res Function(_AttendanceModel) _then) = __$AttendanceModelCopyWithImpl;
 @override @useResult
 $Res call({
- String? id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'event_id') String eventId,@JsonKey(name: 'actual_time_in') DateTime? actualTimeIn,@JsonKey(name: 'actual_time_out') DateTime? actualTimeOut, String status,@JsonKey(name: 'scanned_by_user_id') String? scannedByUserId,@JsonKey(name: 'override_reason') String? overrideReason,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String? id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'event_id') String eventId,@JsonKey(name: 'actual_time_in') DateTime? actualTimeIn,@JsonKey(name: 'actual_time_out') DateTime? actualTimeOut, String status,@JsonKey(name: 'time_in_scanned_by_user_id') String? timeInScannedByUserId,@JsonKey(name: 'time_out_scanned_by_user_id') String? timeOutScannedByUserId,@JsonKey(name: 'override_reason') String? overrideReason,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -280,7 +282,7 @@ class __$AttendanceModelCopyWithImpl<$Res>
 
 /// Create a copy of AttendanceModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? studentId = null,Object? eventId = null,Object? actualTimeIn = freezed,Object? actualTimeOut = freezed,Object? status = null,Object? scannedByUserId = freezed,Object? overrideReason = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? studentId = null,Object? eventId = null,Object? actualTimeIn = freezed,Object? actualTimeOut = freezed,Object? status = null,Object? timeInScannedByUserId = freezed,Object? timeOutScannedByUserId = freezed,Object? overrideReason = freezed,Object? updatedAt = freezed,}) {
   return _then(_AttendanceModel(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
@@ -288,7 +290,8 @@ as String,eventId: null == eventId ? _self.eventId : eventId // ignore: cast_nul
 as String,actualTimeIn: freezed == actualTimeIn ? _self.actualTimeIn : actualTimeIn // ignore: cast_nullable_to_non_nullable
 as DateTime?,actualTimeOut: freezed == actualTimeOut ? _self.actualTimeOut : actualTimeOut // ignore: cast_nullable_to_non_nullable
 as DateTime?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,scannedByUserId: freezed == scannedByUserId ? _self.scannedByUserId : scannedByUserId // ignore: cast_nullable_to_non_nullable
+as String,timeInScannedByUserId: freezed == timeInScannedByUserId ? _self.timeInScannedByUserId : timeInScannedByUserId // ignore: cast_nullable_to_non_nullable
+as String?,timeOutScannedByUserId: freezed == timeOutScannedByUserId ? _self.timeOutScannedByUserId : timeOutScannedByUserId // ignore: cast_nullable_to_non_nullable
 as String?,overrideReason: freezed == overrideReason ? _self.overrideReason : overrideReason // ignore: cast_nullable_to_non_nullable
 as String?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,

@@ -196,14 +196,16 @@ class ExcuseRepository {
           'student_id': studentId,
           'event_id': eventId,
           'status': 'Excused',
-          'scanned_by_user_id': officerId,
+          'time_in_scanned_by_user_id': officerId,
+          'time_out_scanned_by_user_id': officerId,
           'override_reason': 'Excuse request approved',
           'updated_at': now,
         });
       } else {
         await _client.from('student_attendance').update({
           'status': 'Excused',
-          'scanned_by_user_id': officerId,
+          'time_in_scanned_by_user_id': officerId,
+          'time_out_scanned_by_user_id': officerId,
           'override_reason': 'Excuse request approved',
           'updated_at': now,
         }).eq('id', existingAttendance['id']);
@@ -222,7 +224,8 @@ class ExcuseRepository {
           'student_id': studentId,
           'event_id': eventId,
           'status': 'Absent',
-          'scanned_by_user_id': officerId,
+          'time_in_scanned_by_user_id': officerId,
+          'time_out_scanned_by_user_id': officerId,
           'override_reason': 'Excuse request rejected: ${rejectionReason ?? 'No reason provided'}',
           'updated_at': now,
         });

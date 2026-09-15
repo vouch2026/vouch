@@ -371,15 +371,29 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
                                         height: 20,
                                       ),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        'VERIFIED BY VOUCH',
-                                        style: AppTextStyles.labelSmall.copyWith(
-                                          color: AppColors.primary.withValues(alpha: 0.6),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
+                                       RichText(
+                                         text: TextSpan(
+                                           style: AppTextStyles.labelSmall.copyWith(
+                                             fontWeight: FontWeight.bold,
+                                             fontSize: 10,
+                                             letterSpacing: 1.2,
+                                           ),
+                                           children: [
+                                             TextSpan(
+                                               text: 'VERIFIED BY VOUCH',
+                                               style: TextStyle(
+                                                 color: AppColors.primary.withValues(alpha: 0.6),
+                                               ),
+                                             ),
+                                             const TextSpan(
+                                               text: 'EDU',
+                                               style: TextStyle(
+                                                 color: AppColors.accent,
+                                               ),
+                                             ),
+                                           ],
+                                         ),
+                                       ),
                                     ],
                                   ),
                                 ),
