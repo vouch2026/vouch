@@ -44,7 +44,7 @@ class SettingsPage extends ConsumerWidget {
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Text(
-                          'Note: These preferences and reminder options are only applicable in the mobile app version of Vouch.',
+                          'Note: These preferences and reminder options are only applicable in the mobile app version of VouchEDU.',
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.info,
                             fontWeight: FontWeight.w500,

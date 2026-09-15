@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/vouch_edu_brand_title.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
@@ -364,24 +365,7 @@ class DashboardPage extends ConsumerWidget {
                 height: isCompact ? 32 : 38,
               ),
               const SizedBox(width: AppSpacing.sm),
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: isCompact ? 20 : 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  children: const [
-                    TextSpan(
-                      text: 'Vou',
-                      style: TextStyle(color: AppColors.primary),
-                    ),
-                    TextSpan(
-                      text: 'ch',
-                      style: TextStyle(color: AppColors.accent),
-                    ),
-                  ],
-                ),
-              ),
+              VouchEduBrandTitle(fontSize: isCompact ? 20 : 22),
             ],
           ),
         ),
@@ -512,7 +496,7 @@ class DashboardPage extends ConsumerWidget {
       ),
       _ShortcutItemData(
         title: 'About Us',
-        description: 'Learn more about the Vouch platform development team.',
+        description: 'Learn more about the VouchEDU platform development team.',
         icon: Icons.info_outline_rounded,
         path: RoutePaths.aboutUs,
       ),

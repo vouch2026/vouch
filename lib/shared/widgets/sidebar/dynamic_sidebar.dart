@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../vouch_edu_brand_title.dart';
 import '../../../../routes/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -326,24 +327,7 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
                 height: 32,
               ),
               const SizedBox(width: AppSpacing.sm),
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  children: const [
-                    TextSpan(
-                      text: 'Vou',
-                      style: TextStyle(color: AppColors.primary),
-                    ),
-                    TextSpan(
-                      text: 'ch',
-                      style: TextStyle(color: AppColors.accent),
-                    ),
-                  ],
-                ),
-              ),
+              const VouchEduBrandTitle(fontSize: 24),
             ],
           ),
           IconButton(

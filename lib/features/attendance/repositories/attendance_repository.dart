@@ -71,7 +71,8 @@ class AttendanceRepository {
       await _client.from('student_attendance').insert({
         'event_id': eventId,
         'student_id': actualStudentUuid,
-        'scanned_by_user_id': scannedByUserId,
+        'time_in_scanned_by_user_id': isTimeIn ? scannedByUserId : null,
+        'time_out_scanned_by_user_id': isTimeIn ? null : scannedByUserId,
         'actual_time_in': isTimeIn ? now : null,
         'actual_time_out': isTimeIn ? null : now,
         'status': 'Present',
@@ -79,7 +80,8 @@ class AttendanceRepository {
       });
     } else {
       await _client.from('student_attendance').update({
-        'scanned_by_user_id': scannedByUserId,
+        if (isTimeIn) 'time_in_scanned_by_user_id': scannedByUserId,
+        if (!isTimeIn) 'time_out_scanned_by_user_id': scannedByUserId,
         if (isTimeIn) 'actual_time_in': now,
         if (!isTimeIn) 'actual_time_out': now,
         'status': 'Present',
@@ -91,11 +93,16 @@ class AttendanceRepository {
   Future<List<Map<String, dynamic>>> getRecentScansForEvent(String eventId, {String? scannedByUserId}) async {
     var query = _client
         .from('student_attendance')
-        .select('*, student:users!student_attendance_student_id_fkey(*, program:programs!users_program_id_fkey(*, faculty:faculties(*))))')
+        .select('''
+          *,
+          time_in_officer:users!student_attendance_time_in_scanned_by_user_id_fkey(id, student_id_number, first_name, last_name),
+          time_out_officer:users!student_attendance_time_out_scanned_by_user_id_fkey(id, student_id_number, first_name, last_name),
+          student:users!student_attendance_student_id_fkey(*, program:programs!users_program_id_fkey(*, faculty:faculties(*)))
+        ''')
         .eq('event_id', eventId);
         
     if (scannedByUserId != null) {
-      query = query.eq('scanned_by_user_id', scannedByUserId);
+      query = query.or('time_in_scanned_by_user_id.eq.$scannedByUserId,time_out_scanned_by_user_id.eq.$scannedByUserId');
     }
     
     final response = await query
@@ -127,6 +134,8 @@ class AttendanceRepository {
         .from('student_attendance')
         .select('''
           *,
+          time_in_officer:users!student_attendance_time_in_scanned_by_user_id_fkey(id, student_id_number, first_name, last_name),
+          time_out_officer:users!student_attendance_time_out_scanned_by_user_id_fkey(id, student_id_number, first_name, last_name),
           student:users!student_attendance_student_id_fkey!inner(
             *,
             program:programs!users_program_id_fkey(*, faculty:faculties(*)),

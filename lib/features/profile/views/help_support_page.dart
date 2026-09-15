@@ -133,7 +133,7 @@ class HelpSupportPage extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Vouch Support',
+            'VouchEDU Support',
             style: AppTextStyles.headlineLarge.copyWith(
               fontWeight: FontWeight.w800,
               color: AppColors.primary,
@@ -181,7 +181,7 @@ class HelpSupportPage extends StatelessWidget {
       ),
       (
         'What should I do if my scanner isn\'t working?',
-        'Make sure you have granted camera permissions to Vouch. Try cleaning your camera lens and ensure you are scanning in a well-lit environment. If it persists, try restarting the application or browser.'
+        'Make sure you have granted camera permissions to VouchEDU. Try cleaning your camera lens and ensure you are scanning in a well-lit environment. If it persists, try restarting the application or browser.'
       ),
       (
         'How do I submit an excuse request?',
@@ -395,7 +395,7 @@ class _FacebookGroupCardState extends State<FacebookGroupCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Vouch Community',
+                          'VouchEDU Community',
                           style: AppTextStyles.bodyLarge.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textDark,
@@ -415,7 +415,7 @@ class _FacebookGroupCardState extends State<FacebookGroupCard> {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Join our active user community on Facebook. Share ideas, ask questions, report bugs, and collaborate directly with other Vouch users and developers.',
+                'Join our active user community on Facebook. Share ideas, ask questions, report bugs, and collaborate directly with other VouchEDU users and developers.',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textDark.withValues(alpha: 0.8),
                   height: 1.5,

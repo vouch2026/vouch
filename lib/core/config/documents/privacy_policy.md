@@ -2,7 +2,7 @@
 
 **Effective Date:** July 16, 2026
 
-Vouch built the Vouch app as a commercial/institutional service. This Privacy Policy outlines exactly how Vouch SoftTech Services ("we," "our," or "the Company") collects, processes, manages, and secures user information within the application structure.
+VouchEDU built the VouchEDU app as a commercial/institutional service. This Privacy Policy outlines exactly how Vouch SoftTech Services ("we," "our," or "the Company") collects, processes, manages, and secures user information within the application structure.
 
 ### 1. Information Collection and Usage
 To optimize the clearance and student governance workflows, the platform processes explicitly designated data variables:
@@ -26,6 +26,6 @@ Your privacy is fundamentally hardcoded into the backend architecture. The appli
 * **Automated Lifecycle Purges:** To protect systemic privacy, user fulfillment histories (including payment sheets, specific event attendance tracks, and clearance signature rows) are systematically swept clean during routine academic changeovers via cyclical database protocols.
 
 ### 5. Support, Community Operations, and Contact Info
-* **Community-Driven Support:** To facilitate efficient troubleshooting, bug reporting, and feature discussions, we operate the official Vouch Community Facebook Group. Users are encouraged to utilize this forum to interact with the developer and collaborate with peer students to resolve operational app questions.
-* **Public Information Warning:** When posting inside the Vouch Community group, you must never share sensitive personal details, student password tokens, screenshots containing private student identification numbers, or confidential financial reference numbers. The Company is not responsible for data exposure caused by user posts in public social media forums.
+* **Community-Driven Support:** To facilitate efficient troubleshooting, bug reporting, and feature discussions, we operate the official VouchEDU Community Facebook Group. Users are encouraged to utilize this forum to interact with the developer and collaborate with peer students to resolve operational app questions.
+* **Public Information Warning:** When posting inside the VouchEDU Community group, you must never share sensitive personal details, student password tokens, screenshots containing private student identification numbers, or confidential financial reference numbers. The Company is not responsible for data exposure caused by user posts in public social media forums.
 * **Direct Administrative Inquiries:** For formal legal notices, data inquiries, or account deletion escalations, you may contact the Vouch SoftTech Services administration team directly via our registered developer support channels.

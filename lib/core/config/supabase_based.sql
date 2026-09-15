@@ -493,7 +493,8 @@ event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
 actual_time_in TIMESTAMP WITH TIME ZONE,
 actual_time_out TIMESTAMP WITH TIME ZONE,
 status attendance_status DEFAULT 'Pending',
-scanned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+time_in_scanned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+time_out_scanned_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
 override_reason VARCHAR(255),
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 UNIQUE(student_id, event_id)
@@ -871,7 +872,7 @@ WITH CHECK (
     WHERE e.id = event_id 
     AND public.has_scope_permission('scan_event_attendance', e.scope_type, e.scope_id)
   )
-  AND scanned_by_user_id = public.get_my_id()
+  AND (time_in_scanned_by_user_id = public.get_my_id() OR time_out_scanned_by_user_id = public.get_my_id())
 );
 CREATE POLICY "Officers can scan attendance update" ON student_attendance FOR UPDATE TO authenticated
 USING (
@@ -882,7 +883,7 @@ USING (
   )
 )
 WITH CHECK (
-  scanned_by_user_id = public.get_my_id()
+  (time_in_scanned_by_user_id = public.get_my_id() OR time_out_scanned_by_user_id = public.get_my_id())
 );
 CREATE POLICY "Officers can override attendance" ON student_attendance FOR UPDATE TO authenticated
 USING (EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND public.has_scope_permission('override_attendance', e.scope_type, e.scope_id)));

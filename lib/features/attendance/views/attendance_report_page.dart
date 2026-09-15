@@ -137,7 +137,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         .eq('organizations.$orgField', scopeId),
       ]);
 
-      final rawScans = results[0] as List<Map<String, dynamic>>;
+      final rawScans = results[0];
       final members = results[1] as List<dynamic>;
       _totalStudentsCount = members.length;
       
@@ -209,6 +209,12 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         final timeInRaw = scanRecord?['actual_time_in'];
         final timeOutRaw = scanRecord?['actual_time_out'];
         
+        final timeInOfficerData = scanRecord?['time_in_officer'] as Map<String, dynamic>?;
+        final timeOutOfficerData = scanRecord?['time_out_officer'] as Map<String, dynamic>?;
+
+        final timeInOfficerIdNum = timeInOfficerData?['student_id_number'] as String? ?? (scanRecord?['time_in_scanned_by_user_id'] as String? ?? '-');
+        final timeOutOfficerIdNum = timeOutOfficerData?['student_id_number'] as String? ?? (scanRecord?['time_out_scanned_by_user_id'] as String? ?? '-');
+        
         final formattedTimeIn = timeInRaw != null
             ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
             : 'N/A';
@@ -223,7 +229,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
           program: programName,
           yearLevel: yearLevel,
           timeIn: formattedTimeIn,
+          timeInScannedByUserId: timeInRaw != null ? timeInOfficerIdNum : '-',
           timeOut: formattedTimeOut,
+          timeOutScannedByUserId: timeOutRaw != null ? timeOutOfficerIdNum : '-',
         );
       }).toList();
 
@@ -321,7 +329,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         excel_lib.TextCellValue('Program'),
         excel_lib.TextCellValue('Year Level'),
         excel_lib.TextCellValue('Time in'),
+        excel_lib.TextCellValue('Scanned by'),
         excel_lib.TextCellValue('Time out'),
+        excel_lib.TextCellValue('Scanned by'),
       ]);
 
       // Data Rows
@@ -340,6 +350,12 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
         final timeInRaw = data['actual_time_in'];
         final timeOutRaw = data['actual_time_out'];
 
+        final timeInOfficerData = data['time_in_officer'] as Map<String, dynamic>?;
+        final timeOutOfficerData = data['time_out_officer'] as Map<String, dynamic>?;
+
+        final timeInOfficerIdNum = timeInOfficerData?['student_id_number'] as String? ?? (data['time_in_scanned_by_user_id'] as String? ?? '-');
+        final timeOutOfficerIdNum = timeOutOfficerData?['student_id_number'] as String? ?? (data['time_out_scanned_by_user_id'] as String? ?? '-');
+
         if (timeInRaw == null && timeOutRaw == null) continue;
         
         final formattedTimeIn = timeInRaw != null
@@ -356,7 +372,9 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
           excel_lib.TextCellValue(programName),
           excel_lib.TextCellValue(yearLevel),
           excel_lib.TextCellValue(formattedTimeIn),
+          excel_lib.TextCellValue(timeInRaw != null ? timeInOfficerIdNum : '-'),
           excel_lib.TextCellValue(formattedTimeOut),
+          excel_lib.TextCellValue(timeOutRaw != null ? timeOutOfficerIdNum : '-'),
         ]);
       }
 
@@ -1277,7 +1295,27 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                     ),
                     DataColumn(
                       label: Text(
+                        'Scanned by',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
                         'Time Out',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Scanned by',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -1327,34 +1365,46 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: row.timeIn != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
+                              color: row.timeIn != 'N/A' && row.timeIn != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               row.timeIn,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
-                                fontWeight: row.timeIn != '-' ? FontWeight.w600 : FontWeight.normal,
-                                color: row.timeIn != '-' ? Colors.green[800] : Colors.black45,
+                                fontWeight: row.timeIn != 'N/A' && row.timeIn != '-' ? FontWeight.w600 : FontWeight.normal,
+                                color: row.timeIn != 'N/A' && row.timeIn != '-' ? Colors.green[800] : Colors.black45,
                               ),
                             ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            row.timeInScannedByUserId,
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
                           ),
                         ),
                         DataCell(
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: row.timeOut != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
+                              color: row.timeOut != 'N/A' && row.timeOut != '-' ? Colors.green.withValues(alpha: 0.08) : Colors.transparent,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               row.timeOut,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
-                                fontWeight: row.timeOut != '-' ? FontWeight.w600 : FontWeight.normal,
-                                color: row.timeOut != '-' ? Colors.green[800] : Colors.black45,
+                                fontWeight: row.timeOut != 'N/A' && row.timeOut != '-' ? FontWeight.w600 : FontWeight.normal,
+                                color: row.timeOut != 'N/A' && row.timeOut != '-' ? Colors.green[800] : Colors.black45,
                               ),
                             ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            row.timeOutScannedByUserId,
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
                           ),
                         ),
                       ],
@@ -1390,7 +1440,7 @@ class _AttendanceReportPageState extends ConsumerState<AttendanceReportPage> {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         children: [
-          ...paginatedScans.map((scan) => QrRecentScanCard(scan: scan)).toList(),
+          ...paginatedScans.map((scan) => QrRecentScanCard(scan: scan)),
           const SizedBox(height: 16),
           _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
         ],
@@ -1631,7 +1681,9 @@ class ExcelRowData {
   final String program;
   final String yearLevel;
   final String timeIn;
+  final String timeInScannedByUserId;
   final String timeOut;
+  final String timeOutScannedByUserId;
 
   ExcelRowData({
     required this.studentId,
@@ -1640,6 +1692,8 @@ class ExcelRowData {
     required this.program,
     required this.yearLevel,
     required this.timeIn,
+    required this.timeInScannedByUserId,
     required this.timeOut,
+    required this.timeOutScannedByUserId,
   });
 }

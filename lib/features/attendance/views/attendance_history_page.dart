@@ -121,24 +121,30 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
 
         final timeInRaw = data['actual_time_in'];
         final timeOutRaw = data['actual_time_out'];
+        final timeInOfficer = data['time_in_scanned_by_user_id'];
+        final timeOutOfficer = data['time_out_scanned_by_user_id'];
 
         if (timeInRaw != null) {
-          extractedScans.add({
-            'name': '$firstName $lastName',
-            'studentId': studentId,
-            'program': program,
-            'dateTime': DateTime.parse(timeInRaw).toLocal(),
-            'type': 'Time In',
-          });
+          if (widget.scannedByUserId == null || timeInOfficer == widget.scannedByUserId) {
+            extractedScans.add({
+              'name': '$firstName $lastName',
+              'studentId': studentId,
+              'program': program,
+              'dateTime': DateTime.parse(timeInRaw).toLocal(),
+              'type': 'Time In',
+            });
+          }
         }
         if (timeOutRaw != null) {
-          extractedScans.add({
-            'name': '$firstName $lastName',
-            'studentId': studentId,
-            'program': program,
-            'dateTime': DateTime.parse(timeOutRaw).toLocal(),
-            'type': 'Time Out',
-          });
+          if (widget.scannedByUserId == null || timeOutOfficer == widget.scannedByUserId) {
+            extractedScans.add({
+              'name': '$firstName $lastName',
+              'studentId': studentId,
+              'program': program,
+              'dateTime': DateTime.parse(timeOutRaw).toLocal(),
+              'type': 'Time Out',
+            });
+          }
         }
       }
 
@@ -734,7 +740,9 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         excel_lib.TextCellValue('Faculty'),
         excel_lib.TextCellValue('program'),
         excel_lib.TextCellValue('Time in'),
+        excel_lib.TextCellValue('Scanned by'),
         excel_lib.TextCellValue('Time out'),
+        excel_lib.TextCellValue('Scanned by'),
       ]);
 
       // Data Rows
@@ -752,6 +760,12 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
         final timeInRaw = data['actual_time_in'];
         final timeOutRaw = data['actual_time_out'];
 
+        final timeInOfficerData = data['time_in_officer'] as Map<String, dynamic>?;
+        final timeOutOfficerData = data['time_out_officer'] as Map<String, dynamic>?;
+
+        final timeInOfficerIdNum = timeInOfficerData?['student_id_number'] as String? ?? (data['time_in_scanned_by_user_id'] as String? ?? '-');
+        final timeOutOfficerIdNum = timeOutOfficerData?['student_id_number'] as String? ?? (data['time_out_scanned_by_user_id'] as String? ?? '-');
+
         final formattedTimeIn = timeInRaw != null
             ? DateFormat('h:mm a').format(DateTime.parse(timeInRaw).toLocal())
             : '-';
@@ -765,7 +779,9 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           excel_lib.TextCellValue(facultyName),
           excel_lib.TextCellValue(programName),
           excel_lib.TextCellValue(formattedTimeIn),
+          excel_lib.TextCellValue(timeInRaw != null ? timeInOfficerIdNum : '-'),
           excel_lib.TextCellValue(formattedTimeOut),
+          excel_lib.TextCellValue(timeOutRaw != null ? timeOutOfficerIdNum : '-'),
         ]);
       }
 

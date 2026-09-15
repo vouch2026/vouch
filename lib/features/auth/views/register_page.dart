@@ -1,14 +1,12 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../core/widgets/dialogs/document_viewer_dialog.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/vouch_edu_brand_title.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
@@ -18,7 +16,6 @@ import '../providers/auth_provider.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../campuses/providers/campus_provider.dart';
-import '../../campuses/models/campus_model.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
 import '../../faculties/models/faculty_model.dart';
@@ -355,10 +352,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildLogo(size: 110),
+                  _buildLogo(size: 64, fontSize: 44),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Join Vouch and simplify your campus organization management.',
+                    'Join VouchEDU and simplify your campus organization management.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.headlineMedium.copyWith(
                       color: Colors.black54,
@@ -385,7 +382,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
-  Widget _buildLogo({double size = 40}) {
+  Widget _buildLogo({double size = 32, double? fontSize}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -395,24 +392,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           height: size,
         ),
         const SizedBox(width: AppSpacing.sm),
-        RichText(
-          text: TextSpan(
-            style: GoogleFonts.poppins(
-              fontSize: size,
-              fontWeight: FontWeight.w700,
-            ),
-            children: const [
-              TextSpan(
-                text: 'Vou',
-                style: TextStyle(color: AppColors.primary),
-              ),
-              TextSpan(
-                text: 'ch',
-                style: TextStyle(color: AppColors.accent),
-              ),
-            ],
-          ),
-        ),
+        VouchEduBrandTitle(fontSize: fontSize ?? 24),
       ],
     );
   }
@@ -465,7 +445,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             else
               Column(
                 children: [
-                  _buildLogo(size: 50),
+                  _buildLogo(size: 32, fontSize: 24),
                   const SizedBox(height: AppSpacing.xs),
                   Center(
                     child: Text(

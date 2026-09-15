@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/vouch_edu_brand_title.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes/route_paths.dart';
@@ -262,21 +262,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
     );
   }
 
-  Widget _buildLogo({double size = 40}) {
+  Widget _buildLogo({double size = 32, double? fontSize}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset('assets/logos/vouch.webp', width: size, height: size),
         const SizedBox(width: AppSpacing.sm),
-        RichText(
-          text: TextSpan(
-            style: GoogleFonts.poppins(fontSize: 30, fontWeight: FontWeight.w700),
-            children: const [
-              TextSpan(text: 'Vou', style: TextStyle(color: AppColors.primary)),
-              TextSpan(text: 'ch', style: TextStyle(color: AppColors.accent)),
-            ],
-          ),
-        ),
+        VouchEduBrandTitle(fontSize: fontSize ?? 24),
       ],
     );
   }
