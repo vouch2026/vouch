@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../campuses/providers/campus_provider.dart';
 import '../../../faculties/providers/faculty_provider.dart';
 import '../../../programs/providers/program_provider.dart';
+import '../../../schools/providers/school_provider.dart';
 import '../../controllers/organization_controller.dart';
 
 class OrganizationCreationModal extends ConsumerStatefulWidget {
@@ -23,6 +24,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
   final _descriptionController = TextEditingController();
   
   String _selectedType = 'campus-based';
+  String? _selectedSchoolId;
   String? _selectedCampusId;
   String? _selectedFacultyId;
   final List<String> _selectedProgramIds = [];
@@ -67,6 +69,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
       },
     );
 
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
     final facultiesAsync = _selectedCampusId != null 
         ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
@@ -99,7 +102,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 
                 _buildFieldLabel('Organization Type'),
                 DropdownButtonFormField<String>(
-                  value: _selectedType,
+                  initialValue: _selectedType,
                   items: [
                     {'value': 'school-based', 'label': 'School-based (University-Wide)'},
                     {'value': 'campus-based', 'label': 'Campus-based'},
@@ -112,6 +115,8 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
 
                   onChanged: (val) => setState(() {
                     _selectedType = val!;
+                    _selectedSchoolId = null;
+                    _selectedCampusId = null;
                     _selectedFacultyId = null;
                     _selectedProgramIds.clear();
                   }),
@@ -135,29 +140,49 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 const SizedBox(height: AppSpacing.md),
 
                 // Dynamic Fields based on Type
-                _buildFieldLabel('Campus'),
-                campusesAsync.when(
-                  data: (campuses) => DropdownButtonFormField<String>(
-                    value: _selectedCampusId,
-                    items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
-                    onChanged: (val) => setState(() {
-                      _selectedCampusId = val;
-                      _selectedFacultyId = null;
-                      _selectedProgramIds.clear();
-                    }),
-                    validator: (val) => val == null ? 'Campus is required' : null,
-                    decoration: const InputDecoration(hintText: 'Select Campus'),
+                if (_selectedType == 'school-based') ...[
+                  _buildFieldLabel('University / School'),
+                  schoolsAsync.when(
+                    data: (schools) => DropdownButtonFormField<String>(
+                      initialValue: _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null),
+                      items: schools.map((s) => DropdownMenuItem<String>(
+                        value: s.id, 
+                        child: Text('${s.name} (${s.code})'),
+                      )).toList(),
+                      onChanged: (val) => setState(() {
+                        _selectedSchoolId = val;
+                      }),
+                      validator: (val) => val == null ? 'School is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select School'),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error loading schools'),
                   ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const Text('Error loading campuses'),
-                ),
+                ] else ...[
+                  _buildFieldLabel('Campus'),
+                  campusesAsync.when(
+                    data: (campuses) => DropdownButtonFormField<String>(
+                      initialValue: _selectedCampusId,
+                      items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
+                      onChanged: (val) => setState(() {
+                        _selectedCampusId = val;
+                        _selectedFacultyId = null;
+                        _selectedProgramIds.clear();
+                      }),
+                      validator: (val) => val == null ? 'Campus is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select Campus'),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error loading campuses'),
+                  ),
+                ],
 
                 if (_selectedType == 'faculty-based' || _selectedType == 'program-based') ...[
                   const SizedBox(height: AppSpacing.md),
                   _buildFieldLabel('Faculty'),
                   facultiesAsync.when(
                     data: (faculties) => DropdownButtonFormField<String>(
-                      value: _selectedFacultyId,
+                      initialValue: _selectedFacultyId,
                       items: faculties.map((f) => DropdownMenuItem<String>(value: f.id, child: Text(f.name))).toList(),
                       onChanged: (val) => setState(() {
                         _selectedFacultyId = val;
@@ -264,12 +289,18 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
         return;
       }
       
+      final schools = ref.read(schoolsProvider).valueOrNull ?? [];
+      final effectiveSchoolId = _selectedType == 'school-based'
+          ? (_selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null))
+          : null;
+
       final success = await ref.read(organizationControllerProvider.notifier).createOrganization(
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         description: _descriptionController.text.trim(),
         type: _selectedType,
-        campusId: _selectedCampusId,
+        schoolId: effectiveSchoolId,
+        campusId: _selectedType != 'school-based' ? _selectedCampusId : null,
         facultyId: _selectedFacultyId,
         programIds: _selectedProgramIds,
         logo: _logoImage,
