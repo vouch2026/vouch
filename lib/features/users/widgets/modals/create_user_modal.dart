@@ -487,7 +487,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                     child: Text('None (Optional)', style: TextStyle(color: AppColors.textGrey)),
                   ),
                 ...programs.map((p) => DropdownMenuItem<String>(
-                  value: p.id!, 
+                  value: p.id, 
                   child: Text(p.name, overflow: TextOverflow.ellipsis),
                 )),
               ],

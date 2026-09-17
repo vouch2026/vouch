@@ -72,6 +72,7 @@ DECLARE
     v_org_id UUID;
     v_primary_program_id UUID;
     v_effective_school_id UUID;
+    v_member_role_id UUID;
 BEGIN
     IF NOT public.is_super_admin() THEN
         RAISE EXCEPTION 'Access denied: only Super Admins can create organizations.';
@@ -84,8 +85,14 @@ BEGIN
     END IF;
 
     v_effective_school_id := p_school_id;
-    IF v_effective_school_id IS NULL AND p_type = 'school-based' THEN
+    IF v_effective_school_id IS NULL THEN
         SELECT id INTO v_effective_school_id FROM public.schools WHERE code = 'DORSU' LIMIT 1;
+    END IF;
+
+    -- Fetch default Member role ID safely
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    IF v_member_role_id IS NULL THEN
+        SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Students' LIMIT 1;
     END IF;
 
     INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id, logo_url, banner_url, school_id)
@@ -94,43 +101,76 @@ BEGIN
 
     IF p_type = 'school-based' THEN
         INSERT INTO organization_members (organization_id, user_id, role_id)
-        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        SELECT DISTINCT v_org_id, u.id, v_member_role_id
         FROM public.users u
-        JOIN public.user_roles ur ON u.id = ur.user_id
-        JOIN public.roles r ON ur.role_id = r.id
-        WHERE (v_effective_school_id IS NULL OR u.school_id = v_effective_school_id OR u.school_id IS NULL)
-          AND r.name = 'Students'
-          AND ur.is_active = true
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles r ON ur.role_id = r.id
+        WHERE (
+            v_effective_school_id IS NULL 
+            OR u.school_id = v_effective_school_id 
+            OR u.school_id IS NULL
+            OR u.campus_id IN (SELECT id FROM public.campuses WHERE school_id = v_effective_school_id OR school_id IS NULL)
+        )
+          AND (r.name IS NULL OR r.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
         ON CONFLICT DO NOTHING;
     ELSIF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
         INSERT INTO organization_members (organization_id, user_id, role_id)
-        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        SELECT DISTINCT v_org_id, u.id, v_member_role_id
         FROM public.users u
-        JOIN public.user_roles ur ON u.id = ur.user_id
-        JOIN public.roles r ON ur.role_id = r.id
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles r ON ur.role_id = r.id
         WHERE u.campus_id = p_campus_id
-          AND r.name = 'Students'
-          AND ur.is_active = true
+          AND (r.name IS NULL OR r.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
         ON CONFLICT DO NOTHING;
     ELSIF p_type = 'faculty-based' AND p_faculty_id IS NOT NULL THEN
         INSERT INTO organization_members (organization_id, user_id, role_id)
-        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        SELECT DISTINCT v_org_id, u.id, v_member_role_id
         FROM public.users u
-        JOIN public.user_roles ur ON u.id = ur.user_id
-        JOIN public.roles r ON ur.role_id = r.id
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles r ON ur.role_id = r.id
         WHERE u.faculty_id = p_faculty_id
-          AND r.name = 'Students'
-          AND ur.is_active = true
+          AND (r.name IS NULL OR r.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
         ON CONFLICT DO NOTHING;
     ELSIF p_type = 'program-based' AND p_program_ids IS NOT NULL AND array_length(p_program_ids, 1) > 0 THEN
         INSERT INTO organization_members (organization_id, user_id, role_id)
-        SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+        SELECT DISTINCT v_org_id, u.id, v_member_role_id
         FROM public.users u
-        JOIN public.user_roles ur ON u.id = ur.user_id
-        JOIN public.roles r ON ur.role_id = r.id
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles r ON ur.role_id = r.id
         WHERE u.program_id = ANY(p_program_ids)
-          AND r.name = 'Students'
-          AND ur.is_active = true
+          AND (r.name IS NULL OR r.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -138,7 +178,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. Update handle_new_user() trigger function to extract school_uuid
+-- 6. Update handle_new_user() trigger function to extract school_uuid and auto-member
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger 
 SET search_path = public, pg_temp
@@ -250,9 +290,81 @@ BEGIN
         ON CONFLICT (user_id, role_id, scope_type, scope_id) DO NOTHING;
     END IF;
 
+    -- Auto-assign new student user to existing organizations
+    IF v_role = 'student' OR target_role_id = (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1) THEN
+        IF v_school_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, COALESCE((SELECT id FROM public.roles WHERE name = 'Member' LIMIT 1), (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1))
+            FROM public.organizations 
+            WHERE type = 'school-based' AND (school_id = v_school_id OR school_id IS NULL)
+            ON CONFLICT DO NOTHING;
+        END IF;
+
+        IF v_campus_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, COALESCE((SELECT id FROM public.roles WHERE name = 'Member' LIMIT 1), (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1))
+            FROM public.organizations 
+            WHERE type = 'campus-based' AND campus_id = v_campus_id
+            ON CONFLICT DO NOTHING;
+        END IF;
+
+        IF v_faculty_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, COALESCE((SELECT id FROM public.roles WHERE name = 'Member' LIMIT 1), (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1))
+            FROM public.organizations 
+            WHERE type = 'faculty-based' AND faculty_id = v_faculty_id
+            ON CONFLICT DO NOTHING;
+        END IF;
+
+        IF v_program_id IS NOT NULL THEN
+            INSERT INTO public.organization_members (organization_id, user_id, role_id)
+            SELECT id, new_user_id, COALESCE((SELECT id FROM public.roles WHERE name = 'Member' LIMIT 1), (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1))
+            FROM public.organizations 
+            WHERE type = 'program-based' AND program_id = v_program_id
+            ON CONFLICT DO NOTHING;
+        END IF;
+    END IF;
+
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7. Backfill existing school-based organizations with student members
+DO $$
+DECLARE
+    v_member_role_id UUID;
+    r RECORD;
+BEGIN
+    SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member' LIMIT 1;
+    IF v_member_role_id IS NULL THEN
+        SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Students' LIMIT 1;
+    END IF;
+
+    FOR r IN SELECT id, school_id FROM public.organizations WHERE type = 'school-based' LOOP
+        INSERT INTO public.organization_members (organization_id, user_id, role_id)
+        SELECT DISTINCT r.id, u.id, v_member_role_id
+        FROM public.users u
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles ro ON ur.role_id = r.id
+        WHERE (
+            r.school_id IS NULL 
+            OR u.school_id = r.school_id 
+            OR u.school_id IS NULL
+            OR u.campus_id IN (SELECT id FROM public.campuses WHERE school_id = r.school_id OR school_id IS NULL)
+        )
+          AND (ro.name IS NULL OR ro.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
+        ON CONFLICT DO NOTHING;
+    END LOOP;
+END $$;
+
 
 
 
