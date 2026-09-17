@@ -2859,56 +2859,28 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
--- Redefine single_active_term to trigger the academic year reset
+-- Non-destructive active term switching trigger (preserves historical roles, events & clearances)
 CREATE OR REPLACE FUNCTION public.single_active_term()
 RETURNS TRIGGER 
 SET search_path = public, pg_temp
 AS $$
-DECLARE
-    v_old_academic_year VARCHAR(20);
 BEGIN
     -- Prevent trigger recursion
     IF pg_trigger_depth() > 1 THEN
         RETURN NEW;
     END IF;
+
     IF NEW.is_active = TRUE THEN
-        -- Get the academic year of the currently active term (prior to its deactivation)
-        SELECT academic_year INTO v_old_academic_year
-        FROM public.academic_terms
-        WHERE is_active = TRUE AND id <> NEW.id
-        LIMIT 1;
-
-        -- Deactivate all other terms
-        UPDATE public.academic_terms SET is_active = FALSE WHERE id <> NEW.id;
-
-        -- Perform reset only if academic year changes
-        IF v_old_academic_year IS NOT NULL AND v_old_academic_year <> NEW.academic_year THEN
-            PERFORM public.reset_academic_year_data();
-        ELSIF v_old_academic_year IS NOT NULL AND v_old_academic_year = NEW.academic_year THEN
-            -- If academic year is the same (e.g. changing from 1st sem to 2nd sem),
-            -- carry over the academic_term_id of all active officers/advisers to the new active term.
-            UPDATE public.organization_members
-            SET academic_term_id = NEW.id
-            WHERE status = 'active'
-              AND role_id IS NOT NULL
-              AND academic_term_id IN (
-                  SELECT id FROM public.academic_terms 
-                  WHERE academic_year = NEW.academic_year AND id <> NEW.id
-              );
-
-            UPDATE public.comselec_members
-            SET academic_term_id = NEW.id
-            WHERE status = 'active'
-              AND role_id IS NOT NULL
-              AND academic_term_id IN (
-                  SELECT id FROM public.academic_terms 
-                  WHERE academic_year = NEW.academic_year AND id <> NEW.id
-              );
-        END IF;
+        -- Deactivate all other terms without deleting or overwriting historical data
+        UPDATE public.academic_terms 
+        SET is_active = FALSE 
+        WHERE id <> NEW.id;
     END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 -- ==============================================================================
 -- 13. DELETE USER ENTIRELY (DATABASE & AUTHENTICATION)

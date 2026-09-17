@@ -101,6 +101,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 DropdownButtonFormField<String>(
                   value: _selectedType,
                   items: [
+                    {'value': 'school-based', 'label': 'School-based (University-Wide)'},
                     {'value': 'campus-based', 'label': 'Campus-based'},
                     {'value': 'faculty-based', 'label': 'Faculty-based'},
                     {'value': 'program-based', 'label': 'Program-based'},
@@ -108,6 +109,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                     value: e['value'], 
                     child: Text(e['label']!)
                   )).toList(),
+
                   onChanged: (val) => setState(() {
                     _selectedType = val!;
                     _selectedFacultyId = null;

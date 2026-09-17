@@ -6,20 +6,33 @@ class ActivityCardRepository {
 
   ActivityCardRepository(this._client);
 
-  Future<List<ActivityCard>> getStudentActivityCards(String studentId) async {
-    // 1. Get active term
-    final termResponseList = await _client
-        .from('academic_terms')
-        .select()
-        .eq('is_active', true)
-        .limit(1);
-    
-    if (termResponseList.isEmpty) return [];
-    final termResponse = termResponseList.first;
-    
-    final termId = termResponse['id'];
-    final academicYear = termResponse['academic_year'];
-    final semester = termResponse['semester'];
+  Future<List<ActivityCard>> getStudentActivityCards(String studentId, {String? selectedTermId}) async {
+    String termId;
+    String academicYear = '';
+    String semester = '';
+
+    if (selectedTermId != null) {
+      termId = selectedTermId;
+      final termData = await _client.from('academic_terms').select().eq('id', selectedTermId).maybeSingle();
+      if (termData != null) {
+        academicYear = termData['academic_year'] ?? '';
+        semester = termData['semester'] ?? '';
+      }
+    } else {
+      // 1. Get active term
+      final termResponseList = await _client
+          .from('academic_terms')
+          .select()
+          .eq('is_active', true)
+          .limit(1);
+      
+      if (termResponseList.isEmpty) return [];
+      final termResponse = termResponseList.first;
+      
+      termId = termResponse['id'];
+      academicYear = termResponse['academic_year'];
+      semester = termResponse['semester'];
+    }
 
     // 2. Get student's organizations
     final orgMembersResponse = await _client
@@ -37,13 +50,16 @@ class ActivityCardRepository {
       final org = member['organizations'];
       final orgType = org['type'];
       String? scopeId = org['campus_id'];
-      if (orgType == 'faculty-based') {
+      if (orgType == 'school-based' || orgType == 'institutional') {
+        scopeId = org['campus_id'] ?? org['id'];
+      } else if (orgType == 'faculty-based') {
         scopeId = org['faculty_id'];
       } else if (orgType == 'program-based') {
         scopeId = org['program_id'];
       }
       if (scopeId != null) scopeIds.add(scopeId);
     }
+
 
     if (scopeIds.isEmpty) return [];
 

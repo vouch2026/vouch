@@ -8,6 +8,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../events/models/event_model.dart';
 import '../../attendance/providers/attendance_provider.dart';
 import '../views/student_event_details_page.dart';
+import 'event_rating_modal.dart';
+
 
 class StudentPastEventCard extends ConsumerStatefulWidget {
   final EventModel event;
@@ -128,6 +130,30 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
                   error: (err, stack) => const Text('Error loading attendance'),
                 ),
                 const SizedBox(height: AppSpacing.xs),
+                SizedBox(
+                  width: double.infinity,
+                  height: 36,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await showDialog(
+                        context: context,
+                        builder: (_) => EventRatingModal(event: widget.event),
+                      );
+                    },
+                    icon: const Icon(Icons.star_outline_rounded, size: 16, color: Colors.amber),
+                    label: Text(
+                      'Rate Event',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -135,6 +161,7 @@ class _StudentPastEventCardState extends ConsumerState<StudentPastEventCard> {
       ),
     );
   }
+
 
   Widget _buildTimeRow(BuildContext context, IconData icon, String label, String? time) {
     final theme = Theme.of(context);

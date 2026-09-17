@@ -65,3 +65,27 @@ final activeTermProvider = FutureProvider<AcademicTermModel?>((ref) async {
     return null;
   }
 });
+
+/// Holds the currently selected Academic Term across the application.
+/// Defaults to active term if not explicitly set.
+final selectedTermOverrideProvider = StateProvider<AcademicTermModel?>((ref) => null);
+
+final selectedTermProvider = Provider<AcademicTermModel?>((ref) {
+  final override = ref.watch(selectedTermOverrideProvider);
+  if (override != null) return override;
+  return ref.watch(activeTermProvider).value;
+});
+
+/// Indicates whether the currently selected term is a past/historical term (read-only mode)
+final isHistoricalViewProvider = Provider<bool>((ref) {
+  final activeTerm = ref.watch(activeTermProvider).value;
+  final selectedTerm = ref.watch(selectedTermProvider);
+  if (activeTerm == null || selectedTerm == null) return false;
+  return selectedTerm.id != activeTerm.id;
+});
+
+/// Returns accessible terms filtered for student history restriction
+final accessibleTermsProvider = FutureProvider.family<List<AcademicTermModel>, ({String userId, bool isAdmin})>((ref, arg) async {
+  return ref.watch(termRepositoryProvider).getAccessibleTermsForUser(arg.userId, arg.isAdmin);
+});
+

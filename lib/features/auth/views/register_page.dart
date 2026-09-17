@@ -15,6 +15,7 @@ import '../controllers/auth_controller.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/loaders/flickr_loader.dart';
+import '../../schools/providers/school_provider.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
@@ -40,10 +41,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _confirmPasswordController = TextEditingController();
 
   // State
+  String? _selectedSchoolId;
   String? _selectedCampusId;
   String? _selectedFacultyId;
   String? _selectedProgramId;
   String? _selectedYearLevel;
+
   bool _agreeToTerms = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
@@ -229,10 +232,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   bool get _isFormValid {
-    return _selectedCampusId != null &&
+    return _selectedSchoolId != null &&
+        _selectedCampusId != null &&
         _selectedFacultyId != null &&
         _selectedProgramId != null &&
         _selectedYearLevel != null &&
+
         _firstNameController.text.trim().isNotEmpty &&
         _lastNameController.text.trim().isNotEmpty &&
         _schoolIdController.text.trim().isNotEmpty &&
@@ -399,6 +404,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Widget _buildRegisterFormCard(BuildContext context, {required bool isDesktop}) {
     final authState = ref.watch(authControllerProvider);
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
     final facultiesAsync = _selectedCampusId != null
         ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
@@ -456,21 +462,46 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ],
               ),
             const SizedBox(height: AppSpacing.xl),
+            _buildLabel('School / University'),
+            schoolsAsync.when(
+              data: (schools) => _buildDropdown<String>(
+                hint: 'Select School / University',
+                value: _selectedSchoolId,
+                items: schools.map((s) => DropdownItem(
+                  value: s.id,
+                  label: s.name,
+                )).toList(),
+                onChanged: (val) => setState(() {
+                  _selectedSchoolId = val;
+                  _selectedCampusId = null;
+                  _selectedFacultyId = null;
+                  _selectedProgramId = null;
+                }),
+              ),
+              loading: () => _buildDropdownPlaceholder('Loading schools...'),
+              error: (e, _) => _buildDropdownPlaceholder('Error loading schools'),
+            ),
+            const SizedBox(height: AppSpacing.md),
             _buildLabel('Campus'),
+
             campusesAsync.when(
               data: (campuses) {
-                final visibleCampuses = campuses.where(
+                var visibleCampuses = campuses.where(
                   (c) => c.name != 'Google' && c.status != 'hidden',
                 ).toList();
 
+                if (_selectedSchoolId != null && visibleCampuses.any((c) => c.schoolId == _selectedSchoolId)) {
+                  visibleCampuses = visibleCampuses.where((c) => c.schoolId == _selectedSchoolId).toList();
+                }
+
                 return _buildDropdown<String>(
-                  hint: 'Select Campus',
+                  hint: _selectedSchoolId == null ? 'Select School first' : 'Select Campus',
                   value: _selectedCampusId,
                   items: visibleCampuses.map((c) => DropdownItem(
                     value: c.id,
                     label: c.name,
                   )).toList(),
-                  onChanged: (val) => setState(() {
+                  onChanged: _selectedSchoolId == null ? null : (val) => setState(() {
                     _selectedCampusId = val;
                     _selectedFacultyId = null;
                     _selectedProgramId = null;
@@ -480,6 +511,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               loading: () => _buildDropdownPlaceholder('Loading campuses...'),
               error: (e, _) => _buildDropdownPlaceholder('Error loading campuses'),
             ),
+
+
             const SizedBox(height: AppSpacing.md),
             _buildLabel('Faculty'),
             facultiesAsync.when(

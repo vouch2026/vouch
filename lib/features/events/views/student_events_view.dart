@@ -11,6 +11,9 @@ import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../widgets/student_past_event_card.dart';
 import '../widgets/student_event_card.dart';
+import '../../academic_structure/widgets/academic_term_selector.dart';
+import '../../academic_structure/providers/term_provider.dart';
+
 
 class StudentEventsView extends ConsumerStatefulWidget {
   const StudentEventsView({super.key});
@@ -114,17 +117,54 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
                         ),
                       ),
                     ],
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Events',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
+                    if (ref.watch(isHistoricalViewProvider)) ...[
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.amber.shade400,
+                            width: 1,
                           ),
                         ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.history_toggle_off_rounded, color: Colors.amber.shade900, size: 18),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                "Viewing Historical Records — Read Only Mode",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Events',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const AcademicTermSelector(),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -138,6 +178,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
                       style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
                     ),
                     const SizedBox(height: AppSpacing.lg),
+
                     
                     Container(
                       width: double.infinity,
