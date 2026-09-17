@@ -140,38 +140,52 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 const SizedBox(height: AppSpacing.md),
 
                 // Dynamic Fields based on Type
-                if (_selectedType == 'school-based') ...[
-                  _buildFieldLabel('University / School'),
-                  schoolsAsync.when(
-                    data: (schools) => DropdownButtonFormField<String>(
-                      initialValue: _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null),
+                _buildFieldLabel('University / School'),
+                schoolsAsync.when(
+                  data: (schools) {
+                    final defaultSchoolId = _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null);
+                    return DropdownButtonFormField<String>(
+                      initialValue: defaultSchoolId,
                       items: schools.map((s) => DropdownMenuItem<String>(
                         value: s.id, 
                         child: Text('${s.name} (${s.code})'),
                       )).toList(),
                       onChanged: (val) => setState(() {
                         _selectedSchoolId = val;
-                      }),
-                      validator: (val) => val == null ? 'School is required' : null,
-                      decoration: const InputDecoration(hintText: 'Select School'),
-                    ),
-                    loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => const Text('Error loading schools'),
-                  ),
-                ] else ...[
-                  _buildFieldLabel('Campus'),
-                  campusesAsync.when(
-                    data: (campuses) => DropdownButtonFormField<String>(
-                      initialValue: _selectedCampusId,
-                      items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
-                      onChanged: (val) => setState(() {
-                        _selectedCampusId = val;
+                        _selectedCampusId = null;
                         _selectedFacultyId = null;
                         _selectedProgramIds.clear();
                       }),
-                      validator: (val) => val == null ? 'Campus is required' : null,
-                      decoration: const InputDecoration(hintText: 'Select Campus'),
-                    ),
+                      validator: (val) => val == null ? 'School is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select School'),
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('Error loading schools'),
+                ),
+
+                if (_selectedType != 'school-based') ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _buildFieldLabel('Campus'),
+                  campusesAsync.when(
+                    data: (allCampuses) {
+                      final effectiveSchoolId = _selectedSchoolId ?? (schoolsAsync.valueOrNull?.isNotEmpty == true ? schoolsAsync.valueOrNull!.first.id : null);
+                      final campuses = effectiveSchoolId != null
+                          ? allCampuses.where((c) => c.schoolId == effectiveSchoolId || c.schoolId == null).toList()
+                          : allCampuses;
+
+                      return DropdownButtonFormField<String>(
+                        initialValue: _selectedCampusId,
+                        items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
+                        onChanged: (val) => setState(() {
+                          _selectedCampusId = val;
+                          _selectedFacultyId = null;
+                          _selectedProgramIds.clear();
+                        }),
+                        validator: (val) => val == null ? 'Campus is required' : null,
+                        decoration: const InputDecoration(hintText: 'Select Campus'),
+                      );
+                    },
                     loading: () => const LinearProgressIndicator(),
                     error: (_, __) => const Text('Error loading campuses'),
                   ),
@@ -290,9 +304,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
       }
       
       final schools = ref.read(schoolsProvider).valueOrNull ?? [];
-      final effectiveSchoolId = _selectedType == 'school-based'
-          ? (_selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null))
-          : null;
+      final effectiveSchoolId = _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null);
 
       final success = await ref.read(organizationControllerProvider.notifier).createOrganization(
         name: _nameController.text.trim(),

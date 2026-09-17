@@ -1,8 +1,7 @@
-import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/widgets/loaders/flickr_loader.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -13,6 +12,8 @@ import '../../../faculties/providers/faculty_provider.dart';
 import '../../../faculties/models/faculty_model.dart';
 import '../../../programs/providers/program_provider.dart';
 import '../../../programs/models/program_model.dart';
+import '../../../schools/providers/school_provider.dart';
+import '../../../schools/models/school_model.dart';
 import '../../controllers/user_controller.dart';
 
 class CreateUserModal extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
   
   bool _obscurePassword = true;
   String _selectedRole = 'student';
+  String? _selectedSchoolId;
   String? _selectedCampusId;
   String? _selectedFacultyId;
   String? _selectedProgramId;
@@ -52,6 +54,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
 
   @override
   Widget build(BuildContext context) {
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
     final facultiesAsync = _selectedCampusId != null
         ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
@@ -96,6 +99,9 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
                       _buildPasswordInfo(),
                       const SizedBox(height: AppSpacing.md),
                       
+                      _buildSchoolField(schoolsAsync),
+                      const SizedBox(height: AppSpacing.md),
+
                       _buildCampusField(campusesAsync),
                       const SizedBox(height: AppSpacing.md),
                       
@@ -115,27 +121,67 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
     );
   }
 
+  Widget _buildSchoolField(AsyncValue<List<SchoolModel>> schoolsAsync) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('University / School'),
+        schoolsAsync.when(
+          data: (schools) {
+            if (_selectedSchoolId == null && schools.isNotEmpty) {
+              _selectedSchoolId = schools.first.id;
+            }
+            return DropdownButtonFormField<String>(
+              initialValue: _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null),
+              isExpanded: true,
+              items: schools.map((s) => DropdownMenuItem(
+                value: s.id, 
+                child: Text('${s.name} (${s.code})', overflow: TextOverflow.ellipsis),
+              )).toList(),
+              onChanged: (v) => setState(() {
+                _selectedSchoolId = v;
+                _selectedCampusId = null;
+                _selectedFacultyId = null;
+                _selectedProgramId = null;
+              }),
+              decoration: const InputDecoration(hintText: 'Select School'),
+              validator: (v) => v == null ? 'Required' : null,
+            );
+          },
+          loading: () => const LinearProgressIndicator(),
+          error: (_, __) => const Text('Error loading schools'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCampusField(AsyncValue<List<CampusModel>> campusesAsync) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildLabel('Campus'),
         campusesAsync.when(
-          data: (campuses) => DropdownButtonFormField<String>(
-            value: _selectedCampusId,
-            isExpanded: true,
-            items: campuses.map((c) => DropdownMenuItem(
-              value: c.id, 
-              child: Text(c.name, overflow: TextOverflow.ellipsis),
-            )).toList(),
-            onChanged: (v) => setState(() {
-              _selectedCampusId = v;
-              _selectedFacultyId = null;
-              _selectedProgramId = null;
-            }),
-            decoration: const InputDecoration(hintText: 'Select Campus'),
-            validator: (v) => v == null ? 'Required' : null,
-          ),
+          data: (allCampuses) {
+            final campuses = _selectedSchoolId != null
+                ? allCampuses.where((c) => c.schoolId == _selectedSchoolId || c.schoolId == null).toList()
+                : allCampuses;
+
+            return DropdownButtonFormField<String>(
+              initialValue: _selectedCampusId,
+              isExpanded: true,
+              items: campuses.map((c) => DropdownMenuItem(
+                value: c.id, 
+                child: Text(c.name, overflow: TextOverflow.ellipsis),
+              )).toList(),
+              onChanged: (v) => setState(() {
+                _selectedCampusId = v;
+                _selectedFacultyId = null;
+                _selectedProgramId = null;
+              }),
+              decoration: const InputDecoration(hintText: 'Select Campus'),
+              validator: (v) => v == null ? 'Required' : null,
+            );
+          },
           loading: () => const LinearProgressIndicator(),
           error: (_, __) => const Text('Error loading campuses'),
         ),
@@ -472,7 +518,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         FilledButton.icon(
           onPressed: isLoading ? null : _handleCreate,
           icon: isLoading 
-            ? const SizedBox(width: 18, height: 18, child: FlickrLoader())
+            ? SizedBox(width: 18, height: 18, child: FlickrLoader())
             : const Icon(Icons.check_rounded, size: 18),
           label: Text(isLoading ? 'Creating...' : 'Create & Activate'),
         ),
@@ -488,6 +534,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         schoolId: _idController.text.trim(),
+        schoolUuid: _selectedSchoolId,
         campusId: _selectedCampusId,
         facultyId: _selectedFacultyId,
         programId: _selectedProgramId,

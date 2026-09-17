@@ -227,20 +227,24 @@ class OrganizationRepository {
     String? logoUrl,
     String? bannerUrl,
   }) async {
+    final Map<String, dynamic> params = {
+      'p_name': name,
+      'p_code': code,
+      'p_description': description,
+      'p_type': type,
+      'p_campus_id': campusId,
+      'p_faculty_id': facultyId,
+      'p_program_ids': programIds,
+      'p_logo_url': logoUrl,
+      'p_banner_url': bannerUrl,
+    };
+    if (schoolId != null) {
+      params['p_school_id'] = schoolId;
+    }
+
     final response = await _client.rpc(
       'create_organization_with_members',
-      params: {
-        'p_name': name,
-        'p_code': code,
-        'p_description': description,
-        'p_type': type,
-        'p_school_id': schoolId,
-        'p_campus_id': campusId,
-        'p_faculty_id': facultyId,
-        'p_program_ids': programIds,
-        'p_logo_url': logoUrl,
-        'p_banner_url': bannerUrl,
-      },
+      params: params,
     );
     return response as String;
   }

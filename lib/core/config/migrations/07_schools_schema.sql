@@ -51,7 +51,10 @@ SET school_id = (SELECT id FROM public.schools WHERE code = 'DORSU' LIMIT 1)
 WHERE school_id IS NULL;
 
 -- 5. Update create_organization_with_members() RPC to support p_school_id
-CREATE OR REPLACE FUNCTION create_organization_with_members(
+DROP FUNCTION IF EXISTS public.create_organization_with_members(TEXT, TEXT, TEXT, TEXT, UUID, UUID, UUID[], TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.create_organization_with_members(TEXT, TEXT, TEXT, TEXT, UUID, UUID, UUID[], TEXT, TEXT, UUID);
+
+CREATE OR REPLACE FUNCTION public.create_organization_with_members(
     p_name TEXT,
     p_code TEXT,
     p_description TEXT,
@@ -134,5 +137,122 @@ BEGIN
     RETURN v_org_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Update handle_new_user() trigger function to extract school_uuid
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger 
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    new_user_id UUID;
+    target_role_id UUID;
+    v_role TEXT;
+    v_position TEXT;
+    v_scope_type public.scope_type;
+    v_scope_id UUID;
+    v_school_id UUID;
+    v_faculty_id UUID;
+    v_program_id UUID;
+    v_campus_id UUID;
+    v_auto_activate BOOLEAN := false;
+BEGIN
+    v_role := new.raw_user_meta_data->>'role';
+    v_position := new.raw_user_meta_data->>'position';
+
+    IF v_role IN ('super_admin', 'comselec_chairman', 'comselec_chair', 'comselec_commissioner', 'faculty') THEN
+        v_role := 'student';
+    END IF;
+    v_school_id := (NULLIF(new.raw_user_meta_data->>'school_uuid', ''))::uuid;
+    v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
+    v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
+    v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
+
+    BEGIN
+        SELECT COALESCE((value->>'enabled')::boolean, false) INTO v_auto_activate
+        FROM public.system_settings
+        WHERE key = 'auto_activate_registrations';
+    EXCEPTION WHEN OTHERS THEN
+        v_auto_activate := false;
+    END;
+
+    IF v_campus_id IS NULL AND v_faculty_id IS NOT NULL THEN
+        SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
+    END IF;
+
+    IF v_school_id IS NULL AND v_campus_id IS NOT NULL THEN
+        SELECT school_id INTO v_school_id FROM public.campuses WHERE id = v_campus_id;
+    END IF;
+
+    IF v_school_id IS NULL THEN
+        SELECT id INTO v_school_id FROM public.schools WHERE code = 'DORSU' LIMIT 1;
+    END IF;
+
+    INSERT INTO public.users (
+        auth_id, email, first_name, last_name, student_id_number, 
+        school_id, campus_id, faculty_id, program_id, year, account_status
+    )
+    VALUES (
+        new.id, new.email, 
+        COALESCE(new.raw_user_meta_data->>'first_name', ''),
+        COALESCE(new.raw_user_meta_data->>'last_name', ''), 
+        COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), NULLIF(new.raw_user_meta_data->>'student_id_number', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+        v_school_id, v_campus_id, v_faculty_id, v_program_id,
+        (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
+        CASE 
+            WHEN v_auto_activate THEN 'active'
+            ELSE COALESCE(new.raw_user_meta_data->>'status', 'pending')
+        END
+    )
+    ON CONFLICT (auth_id) DO UPDATE SET
+        email = EXCLUDED.email,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        school_id = EXCLUDED.school_id,
+        campus_id = EXCLUDED.campus_id,
+        faculty_id = EXCLUDED.faculty_id,
+        program_id = EXCLUDED.program_id,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO new_user_id;
+
+    IF v_role = 'super_admin' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Super Admin';
+        v_scope_type := 'Institutional';
+        v_scope_id := '00000000-0000-0000-0000-000000000000';
+    ELSIF v_role = 'student' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
+        v_scope_type := 'Program';
+        v_scope_id := v_program_id;
+    ELSIF v_role = 'voter' OR v_role = 'voters' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Voters';
+        v_scope_type := 'Program';
+        v_scope_id := v_program_id;
+    ELSIF v_role = 'personnel' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Personnel';
+        v_scope_type := 'Faculty';
+        v_scope_id := v_faculty_id;
+    ELSIF v_role = 'comselec_chairman' OR v_role = 'comselec_chair' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Comselec Chair';
+        v_scope_type := 'Institutional';
+        v_scope_id := COALESCE(v_campus_id, '00000000-0000-0000-0000-000000000000'::uuid);
+    ELSIF v_role = 'comselec_commissioner' THEN
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Comselec Commissioner';
+        v_scope_type := 'Institutional';
+        v_scope_id := COALESCE(v_campus_id, '00000000-0000-0000-0000-000000000000'::uuid);
+    ELSE
+        SELECT id INTO target_role_id FROM public.roles WHERE name = 'Students';
+        v_scope_type := 'Program';
+        v_scope_id := v_program_id;
+    END IF;
+
+    IF target_role_id IS NOT NULL THEN
+        INSERT INTO public.user_roles (user_id, role_id, scope_type, scope_id, is_active)
+        VALUES (new_user_id, target_role_id, v_scope_type, v_scope_id, true)
+        ON CONFLICT (user_id, role_id, scope_type, scope_id) DO NOTHING;
+    END IF;
+
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 
