@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/campus_model.dart';
 import '../repositories/campus_repository.dart';
+import '../../schools/providers/school_provider.dart';
 
 final campusRepositoryProvider = Provider((ref) => CampusRepository());
 
@@ -53,3 +54,17 @@ final campusProvider = FutureProvider.family<CampusModel?, String>((ref, id) asy
     return null;
   }
 });
+
+final campusesBySchoolProvider = FutureProvider.family<List<CampusModel>, String>((ref, schoolId) async {
+  final campuses = await ref.watch(campusesProvider.future);
+  final schools = await ref.watch(schoolsProvider.future);
+  if (schools.isEmpty) return campuses;
+  final firstSchoolId = schools.first.id;
+  
+  return campuses.where((c) {
+    if (c.schoolId == schoolId) return true;
+    if (c.schoolId == null && schoolId == firstSchoolId) return true;
+    return false;
+  }).toList();
+});
+

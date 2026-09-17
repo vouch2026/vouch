@@ -13,6 +13,9 @@ import '../../programs/models/program_model.dart';
 import './modals/edit_campus_modal.dart';
 import './modals/edit_faculty_modal.dart';
 import './modals/edit_program_modal.dart';
+import '../../schools/providers/school_provider.dart';
+import '../../schools/models/school_model.dart';
+import './modals/edit_school_modal.dart';
 
 class AcademicHierarchyView extends ConsumerStatefulWidget {
   const AcademicHierarchyView({super.key});
@@ -22,7 +25,18 @@ class AcademicHierarchyView extends ConsumerStatefulWidget {
 }
 
 class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
+  final Set<String> _expandedSchools = {};
   final Set<String> _expandedCampuses = {};
+
+  void _toggleSchool(String id) {
+    setState(() {
+      if (_expandedSchools.contains(id)) {
+        _expandedSchools.remove(id);
+      } else {
+        _expandedSchools.add(id);
+      }
+    });
+  }
 
   void _toggleCampus(String id) {
     setState(() {
@@ -36,6 +50,7 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
 
   @override
   Widget build(BuildContext context) {
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
 
     return Container(
@@ -65,7 +80,7 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'Expand to view faculties and programs',
+                        'Expand schools to view campuses, faculties, and programs',
                         style: AppTextStyles.labelMedium.copyWith(
                           color: AppColors.textGrey,
                         ),
@@ -76,7 +91,10 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
                 ),
                 const SizedBox(width: AppSpacing.md),
                 TextButton.icon(
-                  onPressed: () => setState(() => _expandedCampuses.clear()),
+                  onPressed: () => setState(() {
+                    _expandedSchools.clear();
+                    _expandedCampuses.clear();
+                  }),
                   icon: const Icon(Icons.unfold_less_rounded, size: 20),
                   label: const Text('Collapse All'),
                 ),
@@ -84,20 +102,42 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
             ),
           ),
           const Divider(height: 1),
-          campusesAsync.when(
-            data: (campuses) => ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: campuses.length,
-              itemBuilder: (context, index) {
-                final campus = campuses[index];
-                return _CampusNode(
-                  campus: campus,
-                  isExpanded: _expandedCampuses.contains(campus.id),
-                  onTap: () => _toggleCampus(campus.id),
+          schoolsAsync.when(
+            data: (schools) {
+              if (schools.isEmpty) {
+                return campusesAsync.when(
+                  data: (campuses) => ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: campuses.length,
+                    itemBuilder: (context, index) {
+                      final campus = campuses[index];
+                      return _CampusNode(
+                        campus: campus,
+                        initialExpanded: _expandedCampuses.contains(campus.id),
+                        onTap: () => _toggleCampus(campus.id),
+                      );
+                    },
+                  ),
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: FlickrLoader())),
+                  error: (e, s) => Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: Text('Error: $e'))),
                 );
-              },
-            ),
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: schools.length,
+                itemBuilder: (context, index) {
+                  final school = schools[index];
+                  return _SchoolNode(
+                    school: school,
+                    isExpanded: _expandedSchools.isEmpty || _expandedSchools.contains(school.id),
+                    onTap: () => _toggleSchool(school.id),
+                  );
+                },
+              );
+            },
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: FlickrLoader())),
             error: (e, s) => Center(child: Padding(padding: EdgeInsets.all(AppSpacing.xl), child: Text('Error: $e'))),
           ),
@@ -107,23 +147,46 @@ class _AcademicHierarchyViewState extends ConsumerState<AcademicHierarchyView> {
   }
 }
 
-class _CampusNode extends ConsumerWidget {
+
+class _CampusNode extends ConsumerStatefulWidget {
   final CampusModel campus;
-  final bool isExpanded;
-  final VoidCallback onTap;
+  final bool initialExpanded;
+  final VoidCallback? onTap;
 
   const _CampusNode({
+    super.key,
     required this.campus,
-    required this.isExpanded,
-    required this.onTap,
+    this.initialExpanded = false,
+    this.onTap,
   });
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<_CampusNode> createState() => _CampusNodeState();
+}
+
+class _CampusNodeState extends ConsumerState<_CampusNode> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initialExpanded;
+  }
+
+  @override
+  void didUpdateWidget(covariant _CampusNode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialExpanded != widget.initialExpanded) {
+      _isExpanded = widget.initialExpanded;
+    }
+  }
+
+  Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Campus?'),
-        content: Text('Are you sure you want to delete ${campus.name}? This will also delete all associated faculties and programs.'),
+        content: Text('Are you sure you want to delete ${widget.campus.name}? This will also delete all associated faculties and programs.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -140,14 +203,14 @@ class _CampusNode extends ConsumerWidget {
 
     if (confirmed == true) {
       try {
-        await ref.read(campusesProvider.notifier).deleteCampus(campus.id);
-        if (context.mounted) {
+        await ref.read(campusesProvider.notifier).deleteCampus(widget.campus.id);
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Campus deleted successfully')),
           );
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error deleting campus: $e')),
           );
@@ -157,8 +220,8 @@ class _CampusNode extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final facultiesAsync = ref.watch(facultiesByCampusProvider(campus.id));
+  Widget build(BuildContext context) {
+    final facultiesAsync = ref.watch(facultiesByCampusProvider(widget.campus.id));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -167,23 +230,26 @@ class _CampusNode extends ConsumerWidget {
         return Column(
           children: [
             ListTile(
-              onTap: onTap,
+              onTap: () {
+                setState(() => _isExpanded = !_isExpanded);
+                widget.onTap?.call();
+              },
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md, // Increased padding
+                vertical: AppSpacing.md,
               ),
               leading: Container(
-                width: 56, // Increased size
-                height: 56, // Increased size
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16), // More rounded
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: campus.logoUrl != null && campus.logoUrl!.isNotEmpty
+                child: widget.campus.logoUrl != null && widget.campus.logoUrl!.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Image.network(
-                          campus.logoUrl!,
+                          widget.campus.logoUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
@@ -192,14 +258,14 @@ class _CampusNode extends ConsumerWidget {
                     : const Icon(Icons.business_rounded, color: AppColors.primary, size: 28),
               ),
               title: Text(
-                campus.name,
-                style: AppTextStyles.titleMedium.copyWith( // Larger font
+                widget.campus.name,
+                style: AppTextStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.textDark,
                 ),
               ),
               subtitle: Text(
-                campus.location, 
+                widget.campus.location, 
                 style: AppTextStyles.labelMedium.copyWith(color: AppColors.textGrey),
               ),
               trailing: Row(
@@ -208,13 +274,13 @@ class _CampusNode extends ConsumerWidget {
                   IconButton(
                     onPressed: () => showDialog(
                       context: context,
-                      builder: (context) => EditCampusModal(campus: campus),
+                      builder: (context) => EditCampusModal(campus: widget.campus),
                     ),
                     icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
                     tooltip: 'Edit Campus',
                   ),
                   IconButton(
-                    onPressed: () => _confirmDelete(context, ref),
+                    onPressed: () => _confirmDelete(),
                     icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
                     tooltip: 'Delete Campus',
                   ),
@@ -229,7 +295,7 @@ class _CampusNode extends ConsumerWidget {
                             const SizedBox(width: 16),
                           ],
                           Icon(
-                            isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                            _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                             color: AppColors.textGrey,
                             size: 28,
                           ),
@@ -242,7 +308,7 @@ class _CampusNode extends ConsumerWidget {
                 ],
               ),
             ),
-            if (isExpanded)
+            if (_isExpanded)
               Padding(
                 padding: EdgeInsets.only(left: isMobile ? 32 : 64, right: AppSpacing.lg, bottom: AppSpacing.md),
                 child: facultiesAsync.when(
@@ -535,6 +601,155 @@ class _ProgramNode extends ConsumerWidget {
   }
 }
 
+class _SchoolNode extends ConsumerWidget {
+  final SchoolModel school;
+  final bool isExpanded;
+  final VoidCallback onTap;
+
+  const _SchoolNode({
+    required this.school,
+    required this.isExpanded,
+    required this.onTap,
+  });
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete School?'),
+        content: Text('Are you sure you want to delete ${school.name}? This will also delete all associated campuses, faculties, and programs.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(schoolsProvider.notifier).deleteSchool(school.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('School deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting school: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final campusesAsync = ref.watch(campusesBySchoolProvider(school.id));
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          children: [
+            ListTile(
+              onTap: onTap,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              leading: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: school.logoUrl != null && school.logoUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          school.logoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.school_rounded, color: AppColors.primary, size: 28),
+                        ),
+                      )
+                    : const Icon(Icons.school_rounded, color: AppColors.primary, size: 28),
+              ),
+              title: Text(
+                school.name,
+                style: AppTextStyles.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              subtitle: Text(
+                '${school.code} • ${school.description ?? "University System"}',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textGrey),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_rounded, color: AppColors.textGrey, size: 20),
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (_) => EditSchoolModal(school: school),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                    onPressed: () => _confirmDelete(context, ref),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textGrey,
+                  ),
+                ],
+              ),
+            ),
+            if (isExpanded)
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.lg),
+                child: campusesAsync.when(
+                  data: (campuses) {
+                    if (campuses.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        child: Text('No campuses under this school.', style: TextStyle(color: Colors.grey)),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: campuses.length,
+                      itemBuilder: (context, index) {
+                        final campus = campuses[index];
+                        return _CampusNode(
+                          campus: campus,
+                          initialExpanded: false,
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const FlickrLoader(),
+                  error: (e, _) => Text('Error loading campuses: $e'),
+                ),
+              ),
+            const Divider(height: 1),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _StatBadge extends StatelessWidget {
   final String label;
   final Color color;
@@ -564,3 +779,4 @@ class _StatBadge extends StatelessWidget {
     );
   }
 }
+

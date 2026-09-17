@@ -17,12 +17,12 @@ class AcademicKpiSection extends ConsumerWidget {
     return statsAsync.when(
       data: (stats) => LayoutBuilder(
         builder: (context, constraints) {
-          int crossAxisCount = 4;
+          int crossAxisCount = 5;
           if (constraints.maxWidth < 600) {
             crossAxisCount = 1;
           } else if (constraints.maxWidth < 900) {
             crossAxisCount = 2;
-          } else if (constraints.maxWidth < 1200) {
+          } else if (constraints.maxWidth < 1300) {
             crossAxisCount = 3;
           }
 
@@ -32,8 +32,18 @@ class AcademicKpiSection extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: crossAxisCount == 1 ? 2.0 : 1.2,
+            childAspectRatio: crossAxisCount == 1 ? 2.0 : 1.1,
             children: [
+              _AcademicKpiCard(
+                title: 'Schools',
+                value: (stats['schoolsCount'] ?? 1).toString(),
+                subtitle: 'Active: ${stats['activeSchools'] ?? 1}',
+                trend: '+0%',
+                isPositive: true,
+                icon: Icons.domain_rounded,
+                iconColor: Colors.purple,
+                chartData: const [1, 1, 1, 1, 1, 1, 1],
+              ),
               _AcademicKpiCard(
                 title: 'Campuses',
                 value: stats['campusesCount'].toString(),
@@ -69,7 +79,7 @@ class AcademicKpiSection extends ConsumerWidget {
                 value: stats['totalStudents'] >= 1000 
                     ? '${(stats['totalStudents'] / 1000).toStringAsFixed(1)}k' 
                     : stats['totalStudents'].toString(),
-                subtitle: 'Organizations: ${stats['totalOrgs']}',
+                subtitle: 'Orgs: ${stats['totalOrgs']}',
                 trend: '+0%',
                 isPositive: true,
                 icon: Icons.people_outline_rounded,

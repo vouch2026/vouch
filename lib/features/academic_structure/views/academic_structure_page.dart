@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_colors.dart';
 import '../widgets/academic_kpi_section.dart';
 import '../widgets/academic_hierarchy_view.dart';
+import '../widgets/modals/create_school_modal.dart';
 import '../widgets/modals/create_campus_modal.dart';
 import '../widgets/modals/create_faculty_modal.dart';
 import '../widgets/modals/create_program_modal.dart';
@@ -131,6 +132,16 @@ class AcademicStructurePage extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
+                  _QuickActionButton(
+                    icon: Icons.domain_rounded,
+                    label: 'Add School',
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => const CreateSchoolModal(),
+                    ),
+                    color: Colors.purple,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
                   _QuickActionButton(
                     icon: Icons.add_business_rounded,
                     label: 'Add Campus',

@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../schools/providers/school_provider.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
 
 final academicStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final schools = await ref.watch(schoolsProvider.future);
   final campuses = await ref.watch(campusesProvider.future);
   final faculties = await ref.watch(facultiesProvider.future);
   final programs = await ref.watch(programsProvider.future);
@@ -20,6 +22,8 @@ final academicStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final totalOrgs = (orgResponse as List).length;
 
   return {
+    'schoolsCount': schools.length,
+    'activeSchools': schools.where((s) => s.status == 'active').length,
     'campusesCount': campuses.length,
     'activeCampuses': campuses.where((c) => c.status == 'active').length,
     'facultiesCount': faculties.length,

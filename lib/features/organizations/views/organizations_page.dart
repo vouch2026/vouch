@@ -18,6 +18,8 @@ import '../providers/workspace_provider.dart';
 import '../../../core/utils/role_mapper.dart';
 import '../providers/organization_provider.dart';
 import '../models/organization_model.dart';
+import '../../schools/providers/school_provider.dart';
+import '../../schools/models/school_model.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
@@ -147,6 +149,7 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
 
   Widget _buildAnalyticsSection(List<OrganizationModel> orgs) {
     final total = orgs.length;
+    final schoolCount = orgs.where((o) => o.type == 'school-based').length;
     final campusCount = orgs.where((o) => o.type == 'campus-based').length;
     final facultyCount = orgs.where((o) => o.type == 'faculty-based').length;
     final programCount = orgs.where((o) => o.type == 'program-based').length;
@@ -156,10 +159,13 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isSmall = constraints.maxWidth < 600;
+          final isMedium = constraints.maxWidth >= 600 && constraints.maxWidth < 1100;
           final double cardSpacing = 12.0;
           final itemWidth = isSmall 
               ? (constraints.maxWidth - cardSpacing) / 2 
-              : (constraints.maxWidth - (cardSpacing * 3)) / 4;
+              : isMedium
+                  ? (constraints.maxWidth - (cardSpacing * 2)) / 3
+                  : (constraints.maxWidth - (cardSpacing * 4)) / 5;
           
           Widget buildGridRow(List<Widget> children) {
             return Wrap(
@@ -177,6 +183,14 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
               icon: LucideIcons.building,
               isSelected: _selectedType == 'All',
               onTap: () => setState(() => _selectedType = 'All'),
+            ),
+            _buildKpiCard(
+              title: 'School-Based',
+              value: '$schoolCount',
+              color: Colors.teal,
+              icon: LucideIcons.university,
+              isSelected: _selectedType == 'school-based',
+              onTap: () => setState(() => _selectedType = _selectedType == 'school-based' ? 'All' : 'school-based'),
             ),
             _buildKpiCard(
               title: 'Institutional',
@@ -347,6 +361,7 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
             itemBuilder: (BuildContext context) {
               final types = [
                 {'label': 'All Types', 'value': 'All'},
+                {'label': 'School-Based', 'value': 'school-based'},
                 {'label': 'Institutional', 'value': 'campus-based'},
                 {'label': 'Faculty-Based', 'value': 'faculty-based'},
                 {'label': 'Program-Based', 'value': 'program-based'},
@@ -440,6 +455,7 @@ class _OrganizationsPageState extends ConsumerState<OrganizationsPage> {
 
   String _getTypeFilterLabel(String type) {
     if (type == 'All') return 'Type: All';
+    if (type == 'school-based') return 'School-Based';
     if (type == 'campus-based') return 'Institutional';
     if (type == 'faculty-based') return 'Faculty-Based';
     if (type == 'program-based') return 'Program-Based';

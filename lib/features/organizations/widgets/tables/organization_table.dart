@@ -172,6 +172,10 @@ class OrganizationTable extends ConsumerWidget {
           Color typeColor;
           String typeText;
           switch (org.type) {
+            case 'school-based':
+              typeColor = Colors.teal;
+              typeText = 'School-Based';
+              break;
             case 'campus-based':
               typeColor = Colors.blue;
               typeText = 'Institutional';
