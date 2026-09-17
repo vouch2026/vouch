@@ -85,5 +85,24 @@ BEGIN
     FROM public.programs p
     JOIN public.faculties f ON p.faculty_id = f.id
     WHERE p.program_head_id = v_user_id;
+
+    -- 4. COMSELEC Workspaces (where user is an active member/voter)
+    RETURN QUERY
+    SELECT DISTINCT
+        c.id,
+        c.name,
+        c.code,
+        'comselec'::VARCHAR AS type,
+        c.logo_url,
+        c.banner_url,
+        c.status,
+        c.campus_id,
+        NULL::UUID AS faculty_id,
+        NULL::UUID AS program_id
+    FROM public.comselecs c
+    JOIN public.comselec_members cm ON c.id = cm.comselec_id
+    WHERE cm.user_id = v_user_id 
+      AND cm.status = 'active'
+      AND (cm.expired_at IS NULL OR cm.expired_at > CURRENT_TIMESTAMP);
 END;
 $$;
