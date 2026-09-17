@@ -323,6 +323,23 @@ BEGIN
             WHERE type = 'program-based' AND program_id = v_program_id
             ON CONFLICT DO NOTHING;
         END IF;
+
+        -- Auto-assign student as Voter in COMSELECs
+        IF v_school_id IS NOT NULL THEN
+            INSERT INTO public.comselec_members (comselec_id, user_id, role_id)
+            SELECT id, new_user_id, COALESCE((SELECT id FROM public.roles WHERE name = 'Voters' LIMIT 1), (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1))
+            FROM public.comselecs 
+            WHERE type = 'school-based' AND (school_id = v_school_id OR school_id IS NULL)
+            ON CONFLICT DO NOTHING;
+        END IF;
+
+        IF v_campus_id IS NOT NULL THEN
+            INSERT INTO public.comselec_members (comselec_id, user_id, role_id)
+            SELECT id, new_user_id, COALESCE((SELECT id FROM public.roles WHERE name = 'Voters' LIMIT 1), (SELECT id FROM public.roles WHERE name = 'Students' LIMIT 1))
+            FROM public.comselecs 
+            WHERE (type = 'campus-based' OR type IS NULL) AND campus_id = v_campus_id
+            ON CONFLICT DO NOTHING;
+        END IF;
     END IF;
 
     RETURN new;
@@ -364,6 +381,164 @@ BEGIN
         ON CONFLICT DO NOTHING;
     END LOOP;
 END $$;
+
+-- 8. COMSELEC School-Based Support & Auto-Voters RPC
+ALTER TABLE public.comselecs ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
+ALTER TABLE public.comselecs ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'campus-based';
+
+DROP FUNCTION IF EXISTS public.create_comselec_with_members(TEXT, TEXT, TEXT, UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.create_comselec_with_members(TEXT, TEXT, TEXT, UUID, TEXT, TEXT, TEXT, UUID);
+
+CREATE OR REPLACE FUNCTION public.create_comselec_with_members(
+    p_name TEXT,
+    p_code TEXT,
+    p_description TEXT,
+    p_campus_id UUID DEFAULT NULL,
+    p_logo_url TEXT DEFAULT NULL,
+    p_banner_url TEXT DEFAULT NULL,
+    p_type TEXT DEFAULT 'campus-based',
+    p_school_id UUID DEFAULT NULL
+) RETURNS UUID 
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_comselec_id UUID;
+    v_effective_school_id UUID;
+    v_voter_role_id UUID;
+BEGIN
+    IF NOT public.is_super_admin() THEN
+        RAISE EXCEPTION 'Access denied: only Super Admins can create COMSELECs.';
+    END IF;
+
+    v_effective_school_id := p_school_id;
+    IF v_effective_school_id IS NULL AND p_type = 'school-based' THEN
+        SELECT id INTO v_effective_school_id FROM public.schools WHERE code = 'DORSU' LIMIT 1;
+    END IF;
+
+    -- Fetch default Voter role ID safely
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
+    IF v_voter_role_id IS NULL THEN
+        SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Students' LIMIT 1;
+    END IF;
+
+    INSERT INTO comselecs (name, code, description, type, campus_id, school_id, logo_url, banner_url)
+    VALUES (p_name, p_code, p_description, p_type, p_campus_id, v_effective_school_id, p_logo_url, p_banner_url)
+    RETURNING id INTO v_comselec_id;
+
+    -- Automatically assign comselec chair and commissioners from user_roles
+    INSERT INTO comselec_members (comselec_id, user_id, role_id)
+    SELECT DISTINCT v_comselec_id, ur.user_id, ur.role_id
+    FROM public.user_roles ur
+    JOIN public.roles r ON ur.role_id = r.id
+    WHERE r.name IN ('Comselec Chair', 'Comselec Commissioner', 'COMSELEC Commissioner')
+      AND (
+          (p_type = 'campus-based' AND ur.scope_id = p_campus_id)
+          OR (p_type = 'school-based' AND (ur.scope_id = v_effective_school_id OR ur.scope_type = 'Institutional'))
+      )
+      AND ur.is_active = true
+    ON CONFLICT DO NOTHING;
+
+    -- Auto-assign student voters into comselec_members
+    IF p_type = 'school-based' THEN
+        INSERT INTO comselec_members (comselec_id, user_id, role_id)
+        SELECT DISTINCT v_comselec_id, u.id, v_voter_role_id
+        FROM public.users u
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles r ON ur.role_id = r.id
+        WHERE (
+            v_effective_school_id IS NULL 
+            OR u.school_id = v_effective_school_id 
+            OR u.school_id IS NULL
+            OR u.campus_id IN (SELECT id FROM public.campuses WHERE school_id = v_effective_school_id OR school_id IS NULL)
+        )
+          AND (r.name IS NULL OR r.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
+        ON CONFLICT DO NOTHING;
+    ELSIF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
+        INSERT INTO comselec_members (comselec_id, user_id, role_id)
+        SELECT DISTINCT v_comselec_id, u.id, v_voter_role_id
+        FROM public.users u
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN public.roles r ON ur.role_id = r.id
+        WHERE u.campus_id = p_campus_id
+          AND (r.name IS NULL OR r.name IN ('Students', 'Student', 'Voters', 'Member'))
+          AND (u.account_status IS NULL OR u.account_status != 'deleted')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.user_roles ur2
+              JOIN public.roles r2 ON ur2.role_id = r2.id
+              WHERE ur2.user_id = u.id
+                AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                AND ur2.is_active = true
+          )
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    RETURN v_comselec_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Backfill existing COMSELECs with student voters
+DO $$
+DECLARE
+    v_voter_role_id UUID;
+    c RECORD;
+BEGIN
+    SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters' LIMIT 1;
+    IF v_voter_role_id IS NULL THEN
+        SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Students' LIMIT 1;
+    END IF;
+
+    FOR c IN SELECT id, school_id, campus_id, COALESCE(type, 'campus-based') AS type FROM public.comselecs LOOP
+        IF c.type = 'school-based' THEN
+            INSERT INTO public.comselec_members (comselec_id, user_id, role_id)
+            SELECT DISTINCT c.id, u.id, v_voter_role_id
+            FROM public.users u
+            LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+            LEFT JOIN public.roles ro ON ur.role_id = ro.id
+            WHERE (
+                c.school_id IS NULL 
+                OR u.school_id = c.school_id 
+                OR u.school_id IS NULL
+                OR u.campus_id IN (SELECT id FROM public.campuses WHERE school_id = c.school_id OR school_id IS NULL)
+            )
+              AND (ro.name IS NULL OR ro.name IN ('Students', 'Student', 'Voters', 'Member'))
+              AND (u.account_status IS NULL OR u.account_status != 'deleted')
+              AND NOT EXISTS (
+                  SELECT 1 FROM public.user_roles ur2
+                  JOIN public.roles r2 ON ur2.role_id = r2.id
+                  WHERE ur2.user_id = u.id
+                    AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                    AND ur2.is_active = true
+              )
+            ON CONFLICT DO NOTHING;
+        ELSIF c.campus_id IS NOT NULL THEN
+            INSERT INTO public.comselec_members (comselec_id, user_id, role_id)
+            SELECT DISTINCT c.id, u.id, v_voter_role_id
+            FROM public.users u
+            LEFT JOIN public.user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+            LEFT JOIN public.roles ro ON ur.role_id = ro.id
+            WHERE u.campus_id = c.campus_id
+              AND (ro.name IS NULL OR ro.name IN ('Students', 'Student', 'Voters', 'Member'))
+              AND (u.account_status IS NULL OR u.account_status != 'deleted')
+              AND NOT EXISTS (
+                  SELECT 1 FROM public.user_roles ur2
+                  JOIN public.roles r2 ON ur2.role_id = r2.id
+                  WHERE ur2.user_id = u.id
+                    AND r2.name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Comselec Chair', 'Comselec Commissioner')
+                    AND ur2.is_active = true
+              )
+            ON CONFLICT DO NOTHING;
+        END IF;
+    END LOOP;
+END $$;
+
 
 
 

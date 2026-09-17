@@ -6,6 +6,9 @@ class ComselecModel {
   final String? logoUrl;
   final String? bannerUrl;
   final String status;
+  final String type;
+  final String? schoolId;
+  final String? schoolName;
   final String? campusId;
   final String? campusName;
   final int memberCount;
@@ -25,6 +28,9 @@ class ComselecModel {
     this.logoUrl,
     this.bannerUrl,
     required this.status,
+    this.type = 'campus-based',
+    this.schoolId,
+    this.schoolName,
     this.campusId,
     this.campusName,
     this.memberCount = 0,
@@ -46,6 +52,9 @@ class ComselecModel {
       logoUrl: json['logo_url'] as String?,
       bannerUrl: json['banner_url'] as String?,
       status: json['status'] as String? ?? 'active',
+      type: json['type'] as String? ?? 'campus-based',
+      schoolId: json['school_id'] as String?,
+      schoolName: json['schoolName'] as String?,
       campusId: json['campus_id'] as String?,
       campusName: json['campusName'] as String?,
       memberCount: json['memberCount'] as int? ?? 0,
@@ -74,6 +83,9 @@ class ComselecModel {
       'logo_url': logoUrl,
       'banner_url': bannerUrl,
       'status': status,
+      'type': type,
+      'school_id': schoolId,
+      'schoolName': schoolName,
       'campus_id': campusId,
       'campusName': campusName,
       'memberCount': memberCount,

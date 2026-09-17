@@ -25,6 +25,8 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
     final comselecsAsync = ref.watch(comselecsProvider);
 
     return comselecsAsync.when(
+      skipLoadingOnRefresh: true,
+      skipLoadingOnReload: true,
       data: (comselecs) {
         final filteredComselecs = comselecs.where((com) {
           final matchesSearch = com.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -89,6 +91,7 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                                   width: 32,
                                   height: 32,
                                   fit: BoxFit.cover,
+                                  filterQuality: FilterQuality.low,
                                   errorBuilder: (context, error, stackTrace) => Text(
                                     com.code[0], 
                                     style: TextStyle(
@@ -115,7 +118,12 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                       context.push(RoutePaths.comselecDashboard);
                     },
                   ),
-                  DataCell(Text(com.campusName ?? 'Not Assigned', style: AppTextStyles.bodySmall)),
+                  DataCell(Text(
+                    com.type == 'school-based' 
+                        ? (com.schoolName != null ? '${com.schoolName} (All Campuses)' : 'University-Wide') 
+                        : (com.campusName ?? 'Not Assigned'), 
+                    style: AppTextStyles.bodySmall,
+                  )),
                   DataCell(Text('${com.memberCount}', style: AppTextStyles.bodySmall)),
                   DataCell(_StatusBadge(status: com.status)),
                   DataCell(PopupMenuButton<String>(
@@ -205,6 +213,7 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,
+                      filterQuality: FilterQuality.low,
                       errorBuilder: (context, error, stackTrace) => Text(com.code[0]),
                     ),
                   ) 

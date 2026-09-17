@@ -285,7 +285,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                       ? null
                       : _handleSubmit,
                     child: organizationState.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: FlickrLoader())
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                       : const Text('Create Organization'),
                   ),
                 ),

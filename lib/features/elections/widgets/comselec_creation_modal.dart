@@ -1,10 +1,10 @@
-import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../campuses/providers/campus_provider.dart';
+import '../../schools/providers/school_provider.dart';
 import '../controllers/comselec_controller.dart';
 
 class ComselecCreationModal extends ConsumerStatefulWidget {
@@ -20,6 +20,8 @@ class _ComselecCreationModalState extends ConsumerState<ComselecCreationModal> {
   final _codeController = TextEditingController();
   final _descriptionController = TextEditingController();
   
+  String _selectedType = 'campus-based';
+  String? _selectedSchoolId;
   String? _selectedCampusId;
 
   XFile? _logoImage;
@@ -62,11 +64,16 @@ class _ComselecCreationModalState extends ConsumerState<ComselecCreationModal> {
       },
     );
 
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
     final comselecState = ref.watch(comselecControllerProvider);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5)),
+      ),
       child: Container(
         width: 600,
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -86,6 +93,23 @@ class _ComselecCreationModalState extends ConsumerState<ComselecCreationModal> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
+                _buildFieldLabel('COMSELEC Scope / Type'),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedType,
+                  items: [
+                    {'value': 'school-based', 'label': 'School-based (University-Wide)'},
+                    {'value': 'campus-based', 'label': 'Campus-based'},
+                  ].map((e) => DropdownMenuItem<String>(
+                    value: e['value'], 
+                    child: Text(e['label']!),
+                  )).toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedType = val!;
+                    _selectedCampusId = null;
+                  }),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
                 _buildFieldLabel('COMSELEC Name'),
                 TextFormField(
                   controller: _nameController,
@@ -102,20 +126,52 @@ class _ComselecCreationModalState extends ConsumerState<ComselecCreationModal> {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                _buildFieldLabel('Campus'),
-                campusesAsync.when(
-                  data: (campuses) => DropdownButtonFormField<String>(
-                    value: _selectedCampusId,
-                    items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
-                    onChanged: (val) => setState(() {
-                      _selectedCampusId = val;
-                    }),
-                    validator: (val) => val == null ? 'Campus is required' : null,
-                    decoration: const InputDecoration(hintText: 'Select Campus'),
-                  ),
+                _buildFieldLabel('University / School'),
+                schoolsAsync.when(
+                  data: (schools) {
+                    final defaultSchoolId = _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null);
+                    return DropdownButtonFormField<String>(
+                      value: defaultSchoolId,
+                      items: schools.map((s) => DropdownMenuItem<String>(
+                        value: s.id, 
+                        child: Text('${s.name} (${s.code})'),
+                      )).toList(),
+                      onChanged: (val) => setState(() {
+                        _selectedSchoolId = val;
+                        _selectedCampusId = null;
+                      }),
+                      validator: (val) => val == null ? 'School is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select School'),
+                    );
+                  },
                   loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const Text('Error loading campuses'),
+                  error: (_, __) => const Text('Error loading schools'),
                 ),
+
+                if (_selectedType != 'school-based') ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _buildFieldLabel('Campus'),
+                  campusesAsync.when(
+                    data: (allCampuses) {
+                      final effectiveSchoolId = _selectedSchoolId ?? (schoolsAsync.valueOrNull?.isNotEmpty == true ? schoolsAsync.valueOrNull!.first.id : null);
+                      final campuses = effectiveSchoolId != null
+                          ? allCampuses.where((c) => c.schoolId == effectiveSchoolId || c.schoolId == null).toList()
+                          : allCampuses;
+
+                      return DropdownButtonFormField<String>(
+                        value: _selectedCampusId,
+                        items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
+                        onChanged: (val) => setState(() {
+                          _selectedCampusId = val;
+                        }),
+                        validator: (val) => val == null ? 'Campus is required' : null,
+                        decoration: const InputDecoration(hintText: 'Select Campus'),
+                      );
+                    },
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error loading campuses'),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
 
                 _buildFieldLabel('Description'),
@@ -156,7 +212,7 @@ class _ComselecCreationModalState extends ConsumerState<ComselecCreationModal> {
                       ? null
                       : _handleSubmit,
                     child: comselecState.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: FlickrLoader())
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                       : const Text('Create COMSELEC'),
                   ),
                 ),
@@ -170,18 +226,23 @@ class _ComselecCreationModalState extends ConsumerState<ComselecCreationModal> {
 
   void _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
+      final schools = ref.read(schoolsProvider).valueOrNull ?? [];
+      final effectiveSchoolId = _selectedSchoolId ?? (schools.isNotEmpty ? schools.first.id : null);
+
       final success = await ref.read(comselecControllerProvider.notifier).createComselec(
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         description: _descriptionController.text.trim(),
-        campusId: _selectedCampusId,
+        type: _selectedType,
+        schoolId: effectiveSchoolId,
+        campusId: _selectedType != 'school-based' ? _selectedCampusId : null,
         logo: _logoImage,
         banner: _bannerImage,
       );
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('COMSELEC branch created successfully. Students on this campus have been registered as Voters.')),
+          const SnackBar(content: Text('COMSELEC branch created successfully with auto-registered Voters.')),
         );
         Navigator.pop(context);
       }

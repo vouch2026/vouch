@@ -12,6 +12,7 @@ class ComselecRepository {
         .select('''
           *,
           campuses(name),
+          schools(name),
           comselec_settings (
             requires_chairman_signature,
             requires_commissioner_signature,
@@ -31,6 +32,9 @@ class ComselecRepository {
       
       final campusData = json['campuses'] as Map<String, dynamic>?;
       final campusName = campusData?['name'] as String?;
+
+      final schoolData = json['schools'] as Map<String, dynamic>?;
+      final schoolName = schoolData?['name'] as String?;
       
       final settingsData = json['comselec_settings'];
       final settings = settingsData is List 
@@ -55,6 +59,7 @@ class ComselecRepository {
         ...json,
         'memberCount': count,
         'campusName': campusName,
+        'schoolName': schoolName,
         'requires_chairman_signature': requiresChairman,
         'requires_commissioner_signature': requiresCommissioner,
         'allow_member_card_printing': allowMemberCardPrinting,
@@ -71,6 +76,7 @@ class ComselecRepository {
         .select('''
           *,
           campuses(name),
+          schools(name),
           comselec_settings (
             requires_chairman_signature,
             requires_commissioner_signature,
@@ -86,6 +92,9 @@ class ComselecRepository {
 
     final campusData = response['campuses'] as Map<String, dynamic>?;
     final campusName = campusData?['name'] as String?;
+
+    final schoolData = response['schools'] as Map<String, dynamic>?;
+    final schoolName = schoolData?['name'] as String?;
 
     final settingsData = response['comselec_settings'];
     final settings = settingsData is List 
@@ -109,6 +118,7 @@ class ComselecRepository {
     return ComselecModel.fromJson({
       ...response,
       'campusName': campusName,
+      'schoolName': schoolName,
       'requires_chairman_signature': requiresChairman,
       'requires_commissioner_signature': requiresCommissioner,
       'allow_member_card_printing': allowMemberCardPrinting,
@@ -122,20 +132,28 @@ class ComselecRepository {
     required String name,
     required String code,
     required String description,
+    String type = 'campus-based',
+    String? schoolId,
     String? campusId,
     String? logoUrl,
     String? bannerUrl,
   }) async {
+    final Map<String, dynamic> params = {
+      'p_name': name,
+      'p_code': code,
+      'p_description': description,
+      'p_type': type,
+      'p_campus_id': campusId,
+      'p_logo_url': logoUrl,
+      'p_banner_url': bannerUrl,
+    };
+    if (schoolId != null) {
+      params['p_school_id'] = schoolId;
+    }
+
     final response = await _client.rpc(
       'create_comselec_with_members',
-      params: {
-        'p_name': name,
-        'p_code': code,
-        'p_description': description,
-        'p_campus_id': campusId,
-        'p_logo_url': logoUrl,
-        'p_banner_url': bannerUrl,
-      },
+      params: params,
     );
     return response as String;
   }

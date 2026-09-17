@@ -518,7 +518,7 @@ class _CreateUserModalState extends ConsumerState<CreateUserModal> {
         FilledButton.icon(
           onPressed: isLoading ? null : _handleCreate,
           icon: isLoading 
-            ? SizedBox(width: 18, height: 18, child: FlickrLoader())
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
             : const Icon(Icons.check_rounded, size: 18),
           label: Text(isLoading ? 'Creating...' : 'Create & Activate'),
         ),

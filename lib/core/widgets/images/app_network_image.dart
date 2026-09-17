@@ -36,6 +36,7 @@ class AppNetworkImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        filterQuality: FilterQuality.low,
         errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
       );
     }
@@ -47,6 +48,7 @@ class AppNetworkImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        filterQuality: FilterQuality.low,
         errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
       );
     }
@@ -56,6 +58,7 @@ class AppNetworkImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      filterQuality: FilterQuality.low,
       placeholder: (context, url) => placeholder ?? const Center(child: FlickrLoader()),
       errorWidget: (context, url, error) => errorWidget ?? _buildErrorWidget(),
     );
