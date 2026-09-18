@@ -38,10 +38,20 @@ import '../features/profile/views/help_support_page.dart';
 import '../features/elections/views/comselec_dashboard_page.dart';
 import '../features/elections/views/elections_page.dart';
 import '../features/candidates/views/candidates_page.dart';
-import '../features/voters/views/voters_page.dart';
 import '../features/elections/views/election_results_page.dart';
 import '../features/elections/views/election_analytics_page.dart';
 import '../features/elections/views/comselec_officials_page.dart';
+import '../features/elections/views/comselec_positions_page.dart';
+import '../features/elections/views/comselec_voters_page.dart';
+import '../features/elections/views/comselec_my_eligibility_page.dart';
+import '../features/elections/views/comselec_voting_page.dart';
+import '../features/elections/views/comselec_my_status_page.dart';
+import '../features/elections/views/comselec_monitoring_page.dart';
+import '../features/elections/views/comselec_offline_voting_page.dart';
+import '../features/elections/views/comselec_guidelines_page.dart';
+import '../features/elections/views/comselec_incidents_page.dart';
+import '../features/elections/views/comselec_profile_page.dart';
+import '../features/elections/views/comselec_assign_roles_page.dart';
 import '../features/academic_structure/views/academic_structure_page.dart';
 import '../features/dashboard/views/governor_module_placeholder.dart';
 import '../features/governor/views/governor_events_page.dart';
@@ -473,7 +483,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.comselecVoters,
             name: RouteNames.comselecVoters,
-            builder: (context, state) => const VotersPage(),
+            builder: (context, state) => const ComselecVotersPage(),
           ),
           GoRoute(
             path: RoutePaths.comselecResults,
@@ -489,6 +499,62 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: RoutePaths.comselecOfficials,
             name: RouteNames.comselecOfficials,
             builder: (context, state) => const ComselecOfficialsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecPositions,
+            name: RouteNames.comselecPositions,
+            builder: (context, state) => const ComselecPositionsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecMyEligibility,
+            name: RouteNames.comselecMyEligibility,
+            builder: (context, state) => const ComselecMyEligibilityPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecVoting,
+            name: RouteNames.comselecVoting,
+            builder: (context, state) => const ComselecVotingPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecMyStatus,
+            name: RouteNames.comselecMyStatus,
+            builder: (context, state) => const ComselecMyStatusPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecMonitoring,
+            name: RouteNames.comselecMonitoring,
+            builder: (context, state) => const ComselecMonitoringPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecOfflineVoting,
+            name: RouteNames.comselecOfflineVoting,
+            builder: (context, state) => const ComselecOfflineVotingPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecGuidelines,
+            name: RouteNames.comselecGuidelines,
+            builder: (context, state) => const ComselecGuidelinesPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecIncidents,
+            name: RouteNames.comselecIncidents,
+            builder: (context, state) => const ComselecIncidentsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.comselecProfile,
+            name: RouteNames.comselecProfile,
+            builder: (context, state) {
+              final id = state.pathParameters['id'] ?? '';
+              return ComselecProfilePage(id: id);
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.comselecAssignRoles,
+            name: RouteNames.comselecAssignRoles,
+            builder: (context, state) {
+              final id = state.pathParameters['id'] ?? '';
+              return ComselecAssignRolesPage(comselecId: id);
+            },
           ),
 
           // Workspace Routes

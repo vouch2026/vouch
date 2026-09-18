@@ -1,7 +1,12 @@
 enum UserRole {
   superAdmin('super_admin'),
   comselecChairman('comselec_chairman'),
+  comselecCoChairman('comselec_co_chairman'),
   comselecCommissioner('comselec_commissioner'),
+  campusCommissioner('campus_commissioner'),
+  facultyCommissioner('faculty_commissioner'),
+  programCommissioner('program_commissioner'),
+  electionObserver('election_observer'),
   adviser('adviser'),
   governor('governor'),
   viceGovernor('vice_governor'),

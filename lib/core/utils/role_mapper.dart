@@ -18,9 +18,21 @@ class RoleMapper {
       case 'comselec chair':
       case 'comselec chairman':
         return 'comselec_chairman';
+      case 'comselec co-chair':
+      case 'comselec co-chairman':
+        return 'comselec_co_chairman';
+      case 'campus commissioner':
+        return 'campus_commissioner';
+      case 'faculty commissioner':
+        return 'faculty_commissioner';
+      case 'program commissioner':
+        return 'program_commissioner';
       case 'comselec officer':
       case 'comselec commissioner':
         return 'comselec_commissioner';
+      case 'election observer':
+      case 'observer':
+        return 'election_observer';
       case 'faculty governor':
       case 'program governor':
       case 'governor':

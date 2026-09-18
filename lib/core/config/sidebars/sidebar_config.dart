@@ -27,6 +27,20 @@ class SidebarSectionConfig {
 String getSidebarRoleKey(String roleName) {
   final normalized = RoleMapper.mapDbRoleToAppFormat(roleName);
   switch (normalized) {
+    case 'comselec_chairman':
+      return 'comselec_chairman';
+    case 'comselec_co_chairman':
+      return 'comselec_co_chairman';
+    case 'campus_commissioner':
+      return 'campus_commissioner';
+    case 'faculty_commissioner':
+      return 'faculty_commissioner';
+    case 'program_commissioner':
+      return 'program_commissioner';
+    case 'comselec_commissioner':
+      return 'comselec_commissioner';
+    case 'voter':
+      return 'voter';
     case 'governor':
     case 'president':
       return 'governor_president';
@@ -698,6 +712,198 @@ final Map<String, List<SidebarSectionConfig>> roleSidebars = {
       title: 'STUDENT AFFAIRS',
       items: [
         SidebarItemConfig(label: 'Activity Clearances', icon: Icons.assignment_outlined, path: RoutePaths.workspaceActivityCards),
+      ],
+    ),
+  ],
+
+  'comselec_chairman': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE',
+      items: [
+        SidebarItemConfig(label: 'COMSELEC Dashboard', icon: Icons.dashboard_rounded, path: RoutePaths.comselecDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'ELECTION MANAGEMENT',
+      items: [
+        SidebarItemConfig(label: 'Elections', icon: Icons.how_to_vote_rounded, path: RoutePaths.comselecElections),
+        SidebarItemConfig(label: 'Election Positions', icon: Icons.badge_outlined, path: RoutePaths.comselecPositions),
+        SidebarItemConfig(label: 'Candidates', icon: Icons.people_outline_rounded, path: RoutePaths.comselecCandidates),
+        SidebarItemConfig(label: 'Voter Eligibility', icon: Icons.verified_user_outlined, path: RoutePaths.comselecVoters),
+        SidebarItemConfig(label: 'Voting Monitoring', icon: Icons.monitor_heart_outlined, path: RoutePaths.comselecMonitoring),
+        SidebarItemConfig(label: 'Election Results', icon: Icons.assessment_outlined, path: RoutePaths.comselecResults),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'COMMISSION MANAGEMENT',
+      items: [
+        SidebarItemConfig(label: 'Commissioners', icon: Icons.group_work_outlined, path: RoutePaths.comselecOfficials),
+        SidebarItemConfig(label: 'Role Permissions', icon: Icons.security_outlined, path: RoutePaths.settings),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Offline Voting Sessions', icon: Icons.edgesensor_high_outlined, path: RoutePaths.comselecOfflineVoting),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.announcements),
+        SidebarItemConfig(label: 'Election Guidelines', icon: Icons.description_outlined, path: RoutePaths.comselecGuidelines),
+        SidebarItemConfig(label: 'Incident Log', icon: Icons.report_problem_outlined, path: RoutePaths.comselecIncidents),
+        SidebarItemConfig(label: 'Audit Logs', icon: Icons.receipt_long_outlined, path: RoutePaths.workspaceAuditLogs),
+      ],
+    ),
+  ],
+
+  'comselec_co_chairman': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE',
+      items: [
+        SidebarItemConfig(label: 'COMSELEC Dashboard', icon: Icons.dashboard_rounded, path: RoutePaths.comselecDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'ELECTION MANAGEMENT',
+      items: [
+        SidebarItemConfig(label: 'Elections', icon: Icons.how_to_vote_rounded, path: RoutePaths.comselecElections),
+        SidebarItemConfig(label: 'Election Positions', icon: Icons.badge_outlined, path: RoutePaths.comselecPositions),
+        SidebarItemConfig(label: 'Candidates', icon: Icons.people_outline_rounded, path: RoutePaths.comselecCandidates),
+        SidebarItemConfig(label: 'Voter Eligibility', icon: Icons.verified_user_outlined, path: RoutePaths.comselecVoters),
+        SidebarItemConfig(label: 'Voting Monitoring', icon: Icons.monitor_heart_outlined, path: RoutePaths.comselecMonitoring),
+        SidebarItemConfig(label: 'Election Results', icon: Icons.assessment_outlined, path: RoutePaths.comselecResults),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'COMMISSION MANAGEMENT',
+      items: [
+        SidebarItemConfig(label: 'Commissioners', icon: Icons.group_work_outlined, path: RoutePaths.comselecOfficials),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Offline Voting Sessions', icon: Icons.edgesensor_high_outlined, path: RoutePaths.comselecOfflineVoting),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.announcements),
+        SidebarItemConfig(label: 'Election Guidelines', icon: Icons.description_outlined, path: RoutePaths.comselecGuidelines),
+      ],
+    ),
+  ],
+
+  'faculty_commissioner': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.comselecDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'FACULTY ELECTIONS',
+      items: [
+        SidebarItemConfig(label: 'Faculty Elections', icon: Icons.how_to_vote_rounded, path: RoutePaths.comselecElections),
+        SidebarItemConfig(label: 'Faculty Positions', icon: Icons.badge_outlined, path: RoutePaths.comselecPositions),
+        SidebarItemConfig(label: 'Candidates', icon: Icons.people_outline_rounded, path: RoutePaths.comselecCandidates),
+        SidebarItemConfig(label: 'Voter Eligibility', icon: Icons.verified_user_outlined, path: RoutePaths.comselecVoters),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Offline Voting Sessions', icon: Icons.edgesensor_high_outlined, path: RoutePaths.comselecOfflineVoting),
+        SidebarItemConfig(label: 'Voting Monitoring', icon: Icons.monitor_heart_outlined, path: RoutePaths.comselecMonitoring),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.announcements),
+        SidebarItemConfig(label: 'Election Guidelines', icon: Icons.description_outlined, path: RoutePaths.comselecGuidelines),
+      ],
+    ),
+  ],
+
+  'program_commissioner': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'WORKSPACE',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.comselecDashboard),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'PROGRAM ELECTIONS',
+      items: [
+        SidebarItemConfig(label: 'Program Elections', icon: Icons.how_to_vote_rounded, path: RoutePaths.comselecElections),
+        SidebarItemConfig(label: 'Program Positions', icon: Icons.badge_outlined, path: RoutePaths.comselecPositions),
+        SidebarItemConfig(label: 'Candidates', icon: Icons.people_outline_rounded, path: RoutePaths.comselecCandidates),
+        SidebarItemConfig(label: 'Eligible Voters', icon: Icons.verified_user_outlined, path: RoutePaths.comselecVoters),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'OPERATIONS',
+      items: [
+        SidebarItemConfig(label: 'Offline Voting Sessions', icon: Icons.edgesensor_high_outlined, path: RoutePaths.comselecOfflineVoting),
+        SidebarItemConfig(label: 'Voting Monitoring', icon: Icons.monitor_heart_outlined, path: RoutePaths.comselecMonitoring),
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.announcements),
+        SidebarItemConfig(label: 'Election Guidelines', icon: Icons.description_outlined, path: RoutePaths.comselecGuidelines),
+      ],
+    ),
+  ],
+
+  'voter': [
+    const SidebarSectionConfig(
+      title: 'PERSONAL HUB',
+      items: [
+        SidebarItemConfig(label: 'Home', icon: Icons.home_outlined, path: RoutePaths.dashboard),
+        SidebarItemConfig(label: 'Tasks', icon: Icons.assignment_turned_in_outlined, path: RoutePaths.tasks),
+        SidebarItemConfig(label: 'Calendar', icon: Icons.calendar_today_outlined, path: RoutePaths.calendar),
+        SidebarItemConfig(label: 'Schedule', icon: Icons.schedule_outlined, path: RoutePaths.schedule),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'COMSELEC',
+      items: [
+        SidebarItemConfig(label: 'Dashboard', icon: Icons.grid_view_rounded, path: RoutePaths.comselecDashboard),
+        SidebarItemConfig(label: 'Active Elections', icon: Icons.how_to_vote_rounded, path: RoutePaths.comselecElections),
+        SidebarItemConfig(label: 'My Eligibility', icon: Icons.verified_user_outlined, path: RoutePaths.comselecMyEligibility),
+        SidebarItemConfig(label: 'Candidates', icon: Icons.groups_outlined, path: RoutePaths.comselecCandidates),
+        SidebarItemConfig(label: 'Voting', icon: Icons.how_to_vote_sharp, path: RoutePaths.comselecVoting),
+        SidebarItemConfig(label: 'My Voting Status', icon: Icons.fact_check_outlined, path: RoutePaths.comselecMyStatus),
+      ],
+    ),
+    const SidebarSectionConfig(
+      title: 'INFORMATION',
+      items: [
+        SidebarItemConfig(label: 'Announcements', icon: Icons.campaign_outlined, path: RoutePaths.announcements),
+        SidebarItemConfig(label: 'Election Guidelines', icon: Icons.description_outlined, path: RoutePaths.comselecGuidelines),
+        SidebarItemConfig(label: 'Election Schedule', icon: Icons.event_note_outlined, path: RoutePaths.schedule),
       ],
     ),
   ],

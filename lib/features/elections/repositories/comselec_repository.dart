@@ -194,4 +194,148 @@ class ComselecRepository {
   Future<void> deleteComselec(String id) async {
     await _client.from('comselecs').delete().eq('id', id);
   }
+
+  // --- Election & Position Management ---
+
+  Future<List<Map<String, dynamic>>> getElections({
+    String? scopeType,
+    String? campusId,
+    String? facultyId,
+    String? programId,
+    String? status,
+  }) async {
+    var query = _client.from('elections').select('''
+      *,
+      campuses(name),
+      faculties(name),
+      programs(name)
+    ''');
+
+    if (scopeType != null) query = query.eq('scope_type', scopeType);
+    if (campusId != null) query = query.eq('campus_id', campusId);
+    if (facultyId != null) query = query.eq('faculty_id', facultyId);
+    if (programId != null) query = query.eq('program_id', programId);
+    if (status != null) query = query.eq('status', status);
+
+    final response = await query.order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<Map<String, dynamic>> createElection(Map<String, dynamic> data) async {
+    final response = await _client.from('elections').insert(data).select().single();
+    return response as Map<String, dynamic>;
+  }
+
+  Future<void> updateElectionStatus(String electionId, String status) async {
+    await _client.from('elections').update({'status': status}).eq('id', electionId);
+  }
+
+  Future<List<Map<String, dynamic>>> getPositions(String electionId) async {
+    final response = await _client
+        .from('election_positions')
+        .select()
+        .eq('election_id', electionId)
+        .order('display_order');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<Map<String, dynamic>> createPosition(Map<String, dynamic> data) async {
+    final response = await _client.from('election_positions').insert(data).select().single();
+    return response as Map<String, dynamic>;
+  }
+
+  // --- Candidates & Applications ---
+
+  Future<List<Map<String, dynamic>>> getCandidateApplications(String electionId) async {
+    final response = await _client
+        .from('candidate_applications')
+        .select('''
+          *,
+          users(full_name, student_number),
+          election_positions(name)
+        ''')
+        .eq('election_id', electionId)
+        .order('submitted_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<void> submitCandidateApplication(Map<String, dynamic> data) async {
+    await _client.from('candidate_applications').insert(data);
+  }
+
+  Future<void> reviewCandidateApplication({
+    required String applicationId,
+    required String status, // APPROVED, REJECTED, RETURNED_FOR_CORRECTION
+    required String reviewerId,
+    String? reviewNotes,
+    String? rejectionReason,
+  }) async {
+    await _client.from('candidate_applications').update({
+      'status': status,
+      'review_notes': reviewNotes,
+      'rejection_reason': rejectionReason,
+      'reviewed_by': reviewerId,
+      'reviewed_at': DateTime.now().toIso8601String(),
+    }).eq('id', applicationId);
+  }
+
+  Future<List<Map<String, dynamic>>> getApprovedCandidates(String electionId) async {
+    final response = await _client
+        .from('election_candidates')
+        .select('''
+          *,
+          election_positions(name, voting_type, seat_count)
+        ''')
+        .eq('election_id', electionId)
+        .order('ballot_order');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  // --- Voter Eligibility ---
+
+  Future<List<Map<String, dynamic>>> getVoterEligibility(String electionId) async {
+    final response = await _client
+        .from('election_voter_eligibility')
+        .select('''
+          *,
+          users(full_name, student_number)
+        ''')
+        .eq('election_id', electionId);
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  // --- Voting Engine RPC ---
+
+  Future<Map<String, dynamic>> submitOnlineBallot({
+    required String electionId,
+    required List<Map<String, dynamic>> selections,
+  }) async {
+    final response = await _client.rpc(
+      'submit_online_ballot',
+      params: {
+        'p_election_id': electionId,
+        'p_selections': selections,
+      },
+    );
+    final list = response as List;
+    if (list.isNotEmpty) {
+      return Map<String, dynamic>.from(list.first as Map);
+    }
+    return {'success': false, 'message': 'No response from server.'};
+  }
+
+  // --- Incidents ---
+
+  Future<List<Map<String, dynamic>>> getIncidents(String electionId) async {
+    final response = await _client
+        .from('election_incidents')
+        .select()
+        .eq('election_id', electionId)
+        .order('reported_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<void> reportIncident(Map<String, dynamic> data) async {
+    await _client.from('election_incidents').insert(data);
+  }
 }

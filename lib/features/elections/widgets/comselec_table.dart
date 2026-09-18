@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../routes/route_names.dart';
 import '../../../../routes/route_paths.dart';
 import '../models/comselec_model.dart';
 import '../providers/comselec_provider.dart';
@@ -115,7 +116,10 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                       ],
                     ),
                     onTap: () {
-                      context.push(RoutePaths.comselecDashboard);
+                      context.pushNamed(
+                        RouteNames.comselecProfile,
+                        pathParameters: {'id': com.id},
+                      );
                     },
                   ),
                   DataCell(Text(
@@ -129,7 +133,17 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                   DataCell(PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert_rounded, size: 20),
                     onSelected: (value) async {
-                      if (value == 'view') {
+                      if (value == 'profile') {
+                        context.pushNamed(
+                          RouteNames.comselecProfile,
+                          pathParameters: {'id': com.id},
+                        );
+                      } else if (value == 'assign_roles') {
+                        context.pushNamed(
+                          RouteNames.comselecAssignRoles,
+                          pathParameters: {'id': com.id},
+                        );
+                      } else if (value == 'manage_elections') {
                         context.push(RoutePaths.comselecDashboard);
                       } else if (value == 'delete') {
                         final confirmed = await showDialog<bool>(
@@ -176,8 +190,9 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'view', child: Text('Manage Elections')),
-                      const PopupMenuItem(value: 'edit', child: Text('Edit Settings')),
+                      const PopupMenuItem(value: 'profile', child: Text('Branch Profile')),
+                      const PopupMenuItem(value: 'assign_roles', child: Text('Assign Roles / Commissioners')),
+                      const PopupMenuItem(value: 'manage_elections', child: Text('Manage Elections')),
                       const PopupMenuDivider(),
                       const PopupMenuItem(
                         value: 'delete', 
@@ -223,7 +238,10 @@ class _ComselecTableState extends ConsumerState<ComselecTable> {
             subtitle: Text('${com.memberCount} voters'),
             trailing: _StatusBadge(status: com.status),
             onTap: () {
-              context.push(RoutePaths.comselecDashboard);
+              context.pushNamed(
+                RouteNames.comselecProfile,
+                pathParameters: {'id': com.id},
+              );
             },
           ),
         )).toList(),

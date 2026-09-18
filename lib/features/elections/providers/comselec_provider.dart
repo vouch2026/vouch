@@ -14,3 +14,5 @@ final comselecsProvider = FutureProvider<List<ComselecModel>>((ref) async {
 final comselecProvider = FutureProvider.family<ComselecModel?, String>((ref, id) async {
   return ref.watch(comselecRepositoryProvider).getComselecById(id);
 });
+
+final comselecDetailsProvider = comselecProvider;

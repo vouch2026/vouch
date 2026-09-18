@@ -43,11 +43,21 @@ class RoutePaths {
   static const String comselecDashboard = '/comselec';
   static const String comselecsManager = '/comselecs-manager';
   static const String comselecElections = '/comselec/elections';
+  static const String comselecPositions = '/comselec/positions';
   static const String comselecCandidates = '/comselec/candidates';
   static const String comselecVoters = '/comselec/voters';
+  static const String comselecMyEligibility = '/comselec/my-eligibility';
+  static const String comselecVoting = '/comselec/voting';
+  static const String comselecMyStatus = '/comselec/my-status';
+  static const String comselecMonitoring = '/comselec/monitoring';
+  static const String comselecOfflineVoting = '/comselec/offline-voting';
   static const String comselecResults = '/comselec/results';
   static const String comselecAnalytics = '/comselec/analytics';
   static const String comselecOfficials = '/comselec/officials';
+  static const String comselecGuidelines = '/comselec/guidelines';
+  static const String comselecIncidents = '/comselec/incidents';
+  static const String comselecProfile = '/comselec/profile/:id';
+  static const String comselecAssignRoles = '/comselec/profile/:id/assign-roles';
 
   // Workspace Routes
   static const String workspaceDashboard = '/workspace/dashboard';
