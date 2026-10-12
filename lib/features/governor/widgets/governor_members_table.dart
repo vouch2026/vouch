@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -11,19 +10,80 @@ import '../../organizations/providers/organization_provider.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
+import 'member_directory_helpers.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
 class GovernorMembersTable extends ConsumerStatefulWidget {
-  const GovernorMembersTable({super.key});
+  final String searchQuery;
+  final Map<String, dynamic> activeFilters;
+  final VoidCallback? onClearFilters;
+
+  const GovernorMembersTable({
+    super.key,
+    this.searchQuery = '',
+    this.activeFilters = const {},
+    this.onClearFilters,
+  });
 
   @override
-  ConsumerState<GovernorMembersTable> createState() => _GovernorMembersTableState();
+  ConsumerState<GovernorMembersTable> createState() =>
+      _GovernorMembersTableState();
 }
 
 class _GovernorMembersTableState extends ConsumerState<GovernorMembersTable> {
   int _currentPage = 0;
   int _rowsPerPage = 10;
+  String _sortValue = 'nameAsc';
+
+  @override
+  void didUpdateWidget(covariant GovernorMembersTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.searchQuery != oldWidget.searchQuery ||
+        !_mapsEqual(widget.activeFilters, oldWidget.activeFilters)) {
+      _currentPage = 0;
+    }
+  }
+
+  bool _mapsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key)) return false;
+      if (a[key]?.toString() != b[key]?.toString()) return false;
+    }
+    return true;
+  }
+
+  bool get _isFiltered {
+    if (widget.searchQuery.trim().isNotEmpty) return true;
+    for (final value in widget.activeFilters.values) {
+      if (value == null) continue;
+      final asStr = value.toString().trim();
+      if (asStr.isEmpty || asStr.toLowerCase() == 'null') continue;
+      return true;
+    }
+    return false;
+  }
+
+  String _programYearText(UserModel member) {
+    final program = member.programName ?? member.programCode;
+    final year = member.yearLevel;
+    if ((program == null || program.trim().isEmpty) && year == null) {
+      return 'N/A';
+    }
+    if (program == null || program.trim().isEmpty) {
+      return MemberDirectoryHelpers.yearLabel(year!);
+    }
+    if (year == null) return program;
+    return '$program • ${MemberDirectoryHelpers.yearLabel(year)}';
+  }
+
+  String _initialOf(String fullName) {
+    final trimmed = fullName.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +94,7 @@ class _GovernorMembersTableState extends ConsumerState<GovernorMembersTable> {
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
     final canManageMembers = isSuperAdmin ||
-                            activeRoleName.contains('governor') || 
+                            activeRoleName.contains('governor') ||
                             activeRoleName.contains('president') ||
                             activeRoleName.contains('vice governor') ||
                             activeRoleName.contains('vice president');
@@ -47,111 +107,77 @@ class _GovernorMembersTableState extends ConsumerState<GovernorMembersTable> {
 
     return membersAsync.when(
       data: (members) {
-        final filteredMembers = members.where((m) {
+        final baseMembers = members.where((m) {
           final role = m.role.toLowerCase();
           return role == 'member' || role == 'student';
         }).toList();
 
-        if (filteredMembers.isEmpty) {
-          return _buildEmptyState(theme);
+        if (baseMembers.isEmpty) {
+          return _buildEmptyState(
+            theme,
+            isFiltered: false,
+            title: 'No members found',
+            message: 'This organization doesn\'t have any members yet.',
+          );
         }
 
-        final totalItems = filteredMembers.length;
+        final filtered = baseMembers
+            .where((m) => MemberDirectoryHelpers.matchesDirectoryFilters(
+                m, widget.searchQuery, widget.activeFilters))
+            .toList();
+        final sorted = MemberDirectoryHelpers.applyDirectorySort(
+            filtered, _sortValue);
+
+        if (sorted.isEmpty) {
+          return _buildEmptyState(
+            theme,
+            isFiltered: true,
+            title: 'No results found',
+            message: _isFiltered
+                ? 'No members match your current search and filters. Try adjusting them.'
+                : 'No members match.',
+          );
+        }
+
+        final totalItems = sorted.length;
         final totalPages = (totalItems / _rowsPerPage).ceil();
         final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+        if (safePage != _currentPage) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _currentPage = safePage);
+          });
+        }
 
         final startIndex = safePage * _rowsPerPage;
         final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
-        final paginatedMembers = filteredMembers.sublist(startIndex, endIndex);
+        final paginatedMembers = sorted.sublist(startIndex, endIndex);
 
-        return Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                      child: DataTable(
-                        columnSpacing: AppSpacing.lg,
-                        headingRowColor: MaterialStateProperty.all(theme.colorScheme.surfaceVariant.withOpacity(0.3)),
-                        columns: [
-                          const DataColumn(label: Text('Member')),
-                          const DataColumn(label: Text('Student ID')),
-                          const DataColumn(label: Text('Program & Year')),
-                          const DataColumn(label: Text('Joined Date')),
-                          const DataColumn(label: Text('Role')),
-                          if (canManageMembers) const DataColumn(label: Text('Actions')),
-                        ],
-                        rows: paginatedMembers.map((member) {
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: theme.colorScheme.primaryContainer,
-                                      backgroundImage: member.avatarUrl != null ? NetworkImage(member.avatarUrl!) : null,
-                                      child: member.avatarUrl == null
-                                          ? Text(
-                                              member.fullName[0].toUpperCase(),
-                                              style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(member.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                                        Text(member.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              DataCell(Text(member.schoolId, style: AppTextStyles.bodySmall)),
-                              DataCell(Text(
-                                '${member.programName ?? 'N/A'} - ${member.yearLevel ?? ''}${member.yearLevel != null ? " Year" : ""}',
-                                style: AppTextStyles.bodySmall,
-                              )),
-                              DataCell(Text(
-                                member.joinedAt != null ? DateFormat.yMMMd().format(member.joinedAt!) : 'N/A',
-                                style: AppTextStyles.bodySmall,
-                              )),
-                              DataCell(_RoleBadge(role: member.role)),
-                              if (canManageMembers)
-                                DataCell(
-                                  _buildMemberActions(context, member),
-                                ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
-            ],
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildToolbar(
+              context,
+              totalFiltered: totalItems,
+              totalBase: baseMembers.length,
+              filteredForExport: sorted,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 800) {
+                  return _buildCardList(
+                      paginatedMembers, canManageMembers, theme);
+                }
+                return _buildDesktopTable(
+                    paginatedMembers, canManageMembers, theme);
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+          ],
         );
       },
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xl),
-          child: FlickrLoader(),
-        ),
-      ),
+      loading: () => _buildLoadingSkeleton(theme),
       error: (error, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -166,6 +192,413 @@ class _GovernorMembersTableState extends ConsumerState<GovernorMembersTable> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToolbar(
+    BuildContext context, {
+    required int totalFiltered,
+    required int totalBase,
+    required List<UserModel> filteredForExport,
+  }) {
+    final theme = Theme.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+        final resultText = _isFiltered
+            ? '$totalFiltered of $totalBase members'
+            : '$totalBase member${totalBase == 1 ? '' : 's'}';
+
+        final sortDropdown = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _sortValue,
+              icon: const Icon(Icons.arrow_drop_down, size: 18,
+                  color: Colors.black54),
+              elevation: 4,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              items: [
+                for (final opt in MemberDirectoryHelpers.sortOptions)
+                  DropdownMenuItem<String>(
+                    value: opt['value']!,
+                    child: Text(
+                      opt['label']!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    _sortValue = val;
+                    _currentPage = 0;
+                  });
+                }
+              },
+            ),
+          ),
+        );
+
+        final exportButton = OutlinedButton.icon(
+          onPressed: filteredForExport.isEmpty
+              ? null
+              : () => MemberDirectoryHelpers.exportDirectoryExcel(
+                    context,
+                    filteredForExport,
+                    'Members_Directory_Report',
+                    'Organization Members Report',
+                  ),
+          icon: const Icon(Icons.file_download_outlined, size: 18),
+          label: Text(isNarrow ? 'Export' : 'Export Excel'),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+        );
+
+        if (isNarrow) {
+          return Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                  color:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.people_alt_rounded,
+                          size: 16, color: theme.colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          resultText,
+                          style: AppTextStyles.labelMedium.copyWith(
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      const Text('Sort: ',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.black54)),
+                      Expanded(child: sortDropdown),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(width: double.infinity, child: exportButton),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            child: Row(
+              children: [
+                Icon(Icons.people_alt_rounded,
+                    size: 16, color: theme.colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  resultText,
+                  style: AppTextStyles.labelMedium
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                const Text('Sort by: ',
+                    style: TextStyle(fontSize: 12, color: Colors.black54)),
+                sortDropdown,
+                const SizedBox(width: AppSpacing.md),
+                exportButton,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopTable(
+    List<UserModel> paginatedMembers,
+    bool canManageMembers,
+    ThemeData theme,
+  ) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: DataTable(
+                    columnSpacing: AppSpacing.lg,
+                    headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35)),
+                    headingTextStyle: AppTextStyles.labelMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    columns: [
+                      const DataColumn(label: Text('Member')),
+                      const DataColumn(label: Text('Student ID')),
+                      const DataColumn(label: Text('Program & Year')),
+                      const DataColumn(label: Text('Joined Date')),
+                      const DataColumn(label: Text('Role')),
+                      const DataColumn(label: Text('Status')),
+                      if (canManageMembers) const DataColumn(label: Text('Actions')),
+                    ],
+                    rows: paginatedMembers.map((member) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: theme.colorScheme.primaryContainer,
+                                  backgroundImage: member.avatarUrl != null ? NetworkImage(member.avatarUrl!) : null,
+                                  child: member.avatarUrl == null
+                                      ? Text(
+                                          _initialOf(member.fullName),
+                                          style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(member.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                                    Text(member.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          DataCell(Text(member.schoolId, style: AppTextStyles.bodySmall)),
+                          DataCell(Text(
+                            _programYearText(member),
+                            style: AppTextStyles.bodySmall,
+                          )),
+                          DataCell(Text(
+                            member.joinedAt != null ? DateFormat.yMMMd().format(member.joinedAt!) : 'N/A',
+                            style: AppTextStyles.bodySmall,
+                          )),
+                          DataCell(_RoleBadge(role: member.role)),
+                          DataCell(_StatusBadge(status: member.status)),
+                          if (canManageMembers)
+                            DataCell(
+                              _buildMemberActions(context, member),
+                            ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardList(
+    List<UserModel> paginatedMembers,
+    bool canManageMembers,
+    ThemeData theme,
+  ) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: paginatedMembers.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, index) {
+        final member = paginatedMembers[index];
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  backgroundImage: member.avatarUrl != null
+                      ? NetworkImage(member.avatarUrl!)
+                      : null,
+                  child: member.avatarUrl == null
+                      ? Text(
+                          _initialOf(member.fullName),
+                          style: TextStyle(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(member.fullName,
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(fontWeight: FontWeight.bold)),
+                      Text(member.email,
+                          style: AppTextStyles.labelSmall
+                              .copyWith(color: Colors.grey[600])),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${member.schoolId} • ${_programYearText(member)}',
+                        style: AppTextStyles.labelSmall
+                            .copyWith(color: Colors.grey[700]),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _RoleBadge(role: member.role),
+                          _StatusBadge(status: member.status),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (canManageMembers)
+                  _buildMemberActions(context, member),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingSkeleton(ThemeData theme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 120,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 90,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            for (var i = 0; i < 5; i++) ...[
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 10,
+                          width: 160,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (i < 4) const SizedBox(height: AppSpacing.md),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Loading members...',
+              style:
+                  AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+            ),
+          ],
         ),
       ),
     );
@@ -396,28 +829,48 @@ class _GovernorMembersTableState extends ConsumerState<GovernorMembersTable> {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(
+    ThemeData theme, {
+    required bool isFiltered,
+    required String title,
+    required String message,
+  }) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           children: [
-            Icon(Icons.people_outline_rounded, size: 64, color: theme.colorScheme.primary.withOpacity(0.2)),
+            Icon(
+              isFiltered
+                  ? Icons.search_off_rounded
+                  : Icons.people_outline_rounded,
+              size: 64,
+              color: theme.colorScheme.primary.withValues(alpha: 0.25)),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'No members found',
+              title,
               style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'This organization doesn\'t have any members yet.',
+              message,
               style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
+            if (isFiltered && widget.onClearFilters != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton.tonalIcon(
+                onPressed: widget.onClearFilters,
+                icon: const Icon(Icons.clear_all_rounded, size: 18),
+                label: const Text('Clear search & filters'),
+              ),
+            ],
           ],
         ),
       ),
@@ -518,10 +971,10 @@ class _PromoteRepresentativeDialogState extends ConsumerState<_PromoteRepresenta
               const SizedBox(height: AppSpacing.xs),
               Card(
                 elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+                  side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
                 ),
                 child: Column(
                   children: [
@@ -555,8 +1008,8 @@ class _PromoteRepresentativeDialogState extends ConsumerState<_PromoteRepresenta
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _isSubmitting 
-              ? null 
+          onPressed: _isSubmitting
+              ? null
               : () => _handlePromotion(selectedOrg),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary,
@@ -661,7 +1114,7 @@ class _RoleBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     final lowerRole = role.toLowerCase();
-    
+
     if (lowerRole.contains('governor')) {
       color = AppColors.primary;
     } else if (lowerRole.contains('treasurer')) {
@@ -679,12 +1132,48 @@ class _RoleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         role.toUpperCase(),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (status.trim().toLowerCase()) {
+      case 'active':
+        color = Colors.green;
+        break;
+      case 'pending':
+        color = Colors.orange;
+        break;
+      case 'suspended':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        status.toUpperCase(),
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
