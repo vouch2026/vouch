@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -10,19 +9,80 @@ import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
+import 'member_directory_helpers.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
 class GovernorOfficersTable extends ConsumerStatefulWidget {
-  const GovernorOfficersTable({super.key});
+  final String searchQuery;
+  final Map<String, dynamic> activeFilters;
+  final VoidCallback? onClearFilters;
+
+  const GovernorOfficersTable({
+    super.key,
+    this.searchQuery = '',
+    this.activeFilters = const {},
+    this.onClearFilters,
+  });
 
   @override
-  ConsumerState<GovernorOfficersTable> createState() => _GovernorOfficersTableState();
+  ConsumerState<GovernorOfficersTable> createState() =>
+      _GovernorOfficersTableState();
 }
 
 class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
   int _currentPage = 0;
   int _rowsPerPage = 10;
+  String _sortValue = 'nameAsc';
+
+  @override
+  void didUpdateWidget(covariant GovernorOfficersTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.searchQuery != oldWidget.searchQuery ||
+        !_mapsEqual(widget.activeFilters, oldWidget.activeFilters)) {
+      _currentPage = 0;
+    }
+  }
+
+  bool _mapsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key)) return false;
+      if (a[key]?.toString() != b[key]?.toString()) return false;
+    }
+    return true;
+  }
+
+  bool get _isFiltered {
+    if (widget.searchQuery.trim().isNotEmpty) return true;
+    for (final value in widget.activeFilters.values) {
+      if (value == null) continue;
+      final asStr = value.toString().trim();
+      if (asStr.isEmpty || asStr.toLowerCase() == 'null') continue;
+      return true;
+    }
+    return false;
+  }
+
+  String _programYearText(UserModel officer) {
+    final program = officer.programName ?? officer.programCode;
+    final year = officer.yearLevel;
+    if ((program == null || program.trim().isEmpty) && year == null) {
+      return 'N/A';
+    }
+    if (program == null || program.trim().isEmpty) {
+      return MemberDirectoryHelpers.yearLabel(year!);
+    }
+    if (year == null) return program;
+    return '$program • ${MemberDirectoryHelpers.yearLabel(year)}';
+  }
+
+  String _initialOf(String fullName) {
+    final trimmed = fullName.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +92,8 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
     final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
     final userProfile = ref.watch(userProfileProvider).value;
     final isSuperAdmin = userProfile?.role == 'super_admin';
-    final canManageMembers = isSuperAdmin || 
-                            activeRoleName.contains('governor') || 
+    final canManageMembers = isSuperAdmin ||
+                            activeRoleName.contains('governor') ||
                             activeRoleName.contains('president') ||
                             activeRoleName.contains('vice governor') ||
                             activeRoleName.contains('vice president');
@@ -46,117 +106,77 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
 
     return membersAsync.when(
       data: (members) {
-        final officers = members.where((m) {
+        final baseOfficers = members.where((m) {
           final role = m.role.toLowerCase();
           return role != 'member' && role != 'student';
         }).toList();
 
-        if (officers.isEmpty) {
-          return _buildEmptyState(theme);
+        if (baseOfficers.isEmpty) {
+          return _buildEmptyState(
+            theme,
+            isFiltered: false,
+            title: 'No officers found',
+            message:
+                'This organization doesn\'t have any officers assigned yet.',
+          );
         }
 
-        final totalItems = officers.length;
+        final filtered = baseOfficers
+            .where((m) => MemberDirectoryHelpers.matchesDirectoryFilters(
+                m, widget.searchQuery, widget.activeFilters))
+            .toList();
+        final sorted = MemberDirectoryHelpers.applyDirectorySort(
+            filtered, _sortValue);
+
+        if (sorted.isEmpty) {
+          return _buildEmptyState(
+            theme,
+            isFiltered: true,
+            title: 'No results found',
+            message: 'No officers match your current search and filters. '
+                'Try adjusting them.',
+          );
+        }
+
+        final totalItems = sorted.length;
         final totalPages = (totalItems / _rowsPerPage).ceil();
         final safePage = _currentPage >= totalPages ? (totalPages > 0 ? totalPages - 1 : 0) : _currentPage;
+        if (safePage != _currentPage) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _currentPage = safePage);
+          });
+        }
 
         final startIndex = safePage * _rowsPerPage;
         final endIndex = startIndex + _rowsPerPage > totalItems ? totalItems : startIndex + _rowsPerPage;
-        final paginatedOfficers = officers.sublist(startIndex, endIndex);
+        final paginatedOfficers = sorted.sublist(startIndex, endIndex);
 
-        return Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                      child: DataTable(
-                        columnSpacing: AppSpacing.lg,
-                        headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
-                        columns: [
-                          const DataColumn(label: Text('Officer')),
-                          const DataColumn(label: Text('Student ID')),
-                          const DataColumn(label: Text('Program & Year')),
-                          const DataColumn(label: Text('Joined Date')),
-                          const DataColumn(label: Text('Role')),
-                          const DataColumn(label: Text('Duration')),
-                          if (canManageMembers) const DataColumn(label: Text('Actions')),
-                        ],
-                        rows: paginatedOfficers.map((officer) {
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: theme.colorScheme.primaryContainer,
-                                      backgroundImage: officer.avatarUrl != null ? NetworkImage(officer.avatarUrl!) : null,
-                                      child: officer.avatarUrl == null
-                                          ? Text(
-                                              officer.fullName[0].toUpperCase(),
-                                              style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(officer.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                                        Text(officer.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              DataCell(Text(officer.schoolId, style: AppTextStyles.bodySmall)),
-                              DataCell(Text(
-                                '${officer.programName ?? 'N/A'} - ${officer.yearLevel ?? ''}${officer.yearLevel != null ? " Year" : ""}',
-                                style: AppTextStyles.bodySmall,
-                              )),
-                              DataCell(Text(
-                                officer.joinedAt != null ? DateFormat.yMMMd().format(officer.joinedAt!) : 'N/A',
-                                style: AppTextStyles.bodySmall,
-                              )),
-                              DataCell(_RoleBadge(role: officer.role)),
-                              DataCell(
-                                officer.expiredAt != null
-                                    ? _CountdownTimerText(expiredAt: officer.expiredAt!)
-                                    : Text('Academic Year', style: AppTextStyles.bodySmall),
-                              ),
-                              if (canManageMembers)
-                                DataCell(
-                                  _buildOfficerActions(context, ref, officer, selectedOrg),
-                                ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
-            ],
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildToolbar(
+              context,
+              totalFiltered: totalItems,
+              totalBase: baseOfficers.length,
+              filteredForExport: sorted,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 800) {
+                  return _buildCardList(
+                      paginatedOfficers, canManageMembers, theme, selectedOrg);
+                }
+                return _buildDesktopTable(paginatedOfficers, canManageMembers,
+                    theme, selectedOrg);
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildPaginationFooter(totalItems, safePage, _rowsPerPage),
+          ],
         );
       },
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xl),
-          child: FlickrLoader(),
-        ),
-      ),
+      loading: () => _buildLoadingSkeleton(theme),
       error: (error, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -171,6 +191,428 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToolbar(
+    BuildContext context, {
+    required int totalFiltered,
+    required int totalBase,
+    required List<UserModel> filteredForExport,
+  }) {
+    final theme = Theme.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+        final resultText = _isFiltered
+            ? '$totalFiltered of $totalBase officers'
+            : '$totalBase officer${totalBase == 1 ? '' : 's'}';
+
+        final sortDropdown = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _sortValue,
+              icon: const Icon(Icons.arrow_drop_down, size: 18,
+                  color: Colors.black54),
+              elevation: 4,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              items: [
+                for (final opt in MemberDirectoryHelpers.sortOptions)
+                  DropdownMenuItem<String>(
+                    value: opt['value']!,
+                    child: Text(
+                      opt['label']!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    _sortValue = val;
+                    _currentPage = 0;
+                  });
+                }
+              },
+            ),
+          ),
+        );
+
+        final exportButton = OutlinedButton.icon(
+          onPressed: filteredForExport.isEmpty
+              ? null
+              : () => MemberDirectoryHelpers.exportDirectoryExcel(
+                    context,
+                    filteredForExport,
+                    'Officers_Directory_Report',
+                    'Organization Officers Report',
+                  ),
+          icon: const Icon(Icons.file_download_outlined, size: 18),
+          label: Text(isNarrow ? 'Export' : 'Export Excel'),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+        );
+
+        if (isNarrow) {
+          return Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                  color:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.badge_rounded,
+                          size: 16, color: theme.colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          resultText,
+                          style: AppTextStyles.labelMedium.copyWith(
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      const Text('Sort: ',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.black54)),
+                      Expanded(child: sortDropdown),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(width: double.infinity, child: exportButton),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            child: Row(
+              children: [
+                Icon(Icons.badge_rounded,
+                    size: 16, color: theme.colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  resultText,
+                  style: AppTextStyles.labelMedium
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                const Text('Sort by: ',
+                    style: TextStyle(fontSize: 12, color: Colors.black54)),
+                sortDropdown,
+                const SizedBox(width: AppSpacing.md),
+                exportButton,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopTable(
+    List<UserModel> paginatedOfficers,
+    bool canManageMembers,
+    ThemeData theme,
+    dynamic selectedOrg,
+  ) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: DataTable(
+                    columnSpacing: AppSpacing.lg,
+                    headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35)),
+                    headingTextStyle: AppTextStyles.labelMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    columns: [
+                      const DataColumn(label: Text('Officer')),
+                      const DataColumn(label: Text('Student ID')),
+                      const DataColumn(label: Text('Program & Year')),
+                      const DataColumn(label: Text('Joined Date')),
+                      const DataColumn(label: Text('Role')),
+                      const DataColumn(label: Text('Duration')),
+                      const DataColumn(label: Text('Status')),
+                      if (canManageMembers) const DataColumn(label: Text('Actions')),
+                    ],
+                    rows: paginatedOfficers.map((officer) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: theme.colorScheme.primaryContainer,
+                                  backgroundImage: officer.avatarUrl != null ? NetworkImage(officer.avatarUrl!) : null,
+                                  child: officer.avatarUrl == null
+                                      ? Text(
+                                          _initialOf(officer.fullName),
+                                          style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(officer.fullName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                                    Text(officer.email, style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[600])),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          DataCell(Text(officer.schoolId, style: AppTextStyles.bodySmall)),
+                          DataCell(Text(
+                            _programYearText(officer),
+                            style: AppTextStyles.bodySmall,
+                          )),
+                          DataCell(Text(
+                            officer.joinedAt != null ? DateFormat.yMMMd().format(officer.joinedAt!) : 'N/A',
+                            style: AppTextStyles.bodySmall,
+                          )),
+                          DataCell(_RoleBadge(role: officer.role)),
+                          DataCell(
+                            officer.expiredAt != null
+                                ? _CountdownTimerText(expiredAt: officer.expiredAt!)
+                                : Text('Academic Year', style: AppTextStyles.bodySmall),
+                          ),
+                          DataCell(_StatusBadge(status: officer.status)),
+                          if (canManageMembers)
+                            DataCell(
+                              _buildOfficerActions(context, ref, officer, selectedOrg),
+                            ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardList(
+    List<UserModel> paginatedOfficers,
+    bool canManageMembers,
+    ThemeData theme,
+    dynamic selectedOrg,
+  ) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: paginatedOfficers.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, index) {
+        final officer = paginatedOfficers[index];
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  backgroundImage: officer.avatarUrl != null
+                      ? NetworkImage(officer.avatarUrl!)
+                      : null,
+                  child: officer.avatarUrl == null
+                      ? Text(
+                          _initialOf(officer.fullName),
+                          style: TextStyle(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(officer.fullName,
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(fontWeight: FontWeight.bold)),
+                      Text(officer.email,
+                          style: AppTextStyles.labelSmall
+                              .copyWith(color: Colors.grey[600])),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${officer.schoolId} • ${_programYearText(officer)}',
+                        style: AppTextStyles.labelSmall
+                            .copyWith(color: Colors.grey[700]),
+                      ),
+                      const SizedBox(height: 4),
+                      officer.expiredAt != null
+                          ? _CountdownTimerText(
+                              expiredAt: officer.expiredAt!)
+                          : Text('Academic Year',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                  color: Colors.grey[600])),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _RoleBadge(role: officer.role),
+                          _StatusBadge(status: officer.status),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (canManageMembers)
+                  _buildOfficerActions(context, ref, officer, selectedOrg),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingSkeleton(ThemeData theme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 120,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 90,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            for (var i = 0; i < 5; i++) ...[
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 10,
+                          width: 160,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (i < 4) const SizedBox(height: AppSpacing.md),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Loading officers...',
+              style:
+                  AppTextStyles.labelSmall.copyWith(color: Colors.grey[600]),
+            ),
+          ],
         ),
       ),
     );
@@ -401,7 +843,12 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(
+    ThemeData theme, {
+    required bool isFiltered,
+    required String title,
+    required String message,
+  }) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -412,17 +859,30 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
         padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           children: [
-            Icon(Icons.badge_outlined, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+            Icon(
+              isFiltered ? Icons.search_off_rounded : Icons.badge_outlined,
+              size: 64,
+              color: theme.colorScheme.primary.withValues(alpha: 0.25)),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'No officers found',
+              title,
               style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'This organization doesn\'t have any officers assigned yet.',
+              message,
               style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
+            if (isFiltered && widget.onClearFilters != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton.tonalIcon(
+                onPressed: widget.onClearFilters,
+                icon: const Icon(Icons.clear_all_rounded, size: 18),
+                label: const Text('Clear search & filters'),
+              ),
+            ],
           ],
         ),
       ),
@@ -431,7 +891,7 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
 
   Widget _buildOfficerActions(BuildContext context, WidgetRef ref, UserModel officer, dynamic selectedOrg) {
     final role = officer.role.toLowerCase();
-    
+
     // Only representatives can be actioned (demoted)
     if (role != 'representative') {
       return const SizedBox.shrink();
@@ -483,10 +943,10 @@ class _GovernorOfficersTableState extends ConsumerState<GovernorOfficersTable> {
                   roleName: 'Representative',
                   workspaceType: selectedOrg.type,
                 );
-                
+
                 ref.invalidate(organizationMembersProvider(selectedOrg.id));
                 ref.invalidate(organizationOfficersProvider(selectedOrg.id));
-                
+
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -526,7 +986,7 @@ class _RoleBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     final lowerRole = role.toLowerCase();
-    
+
     if (lowerRole.contains('governor')) {
       color = AppColors.primary;
     } else if (lowerRole.contains('treasurer')) {
@@ -553,6 +1013,42 @@ class _RoleBadge extends StatelessWidget {
           color: color,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (status.trim().toLowerCase()) {
+      case 'active':
+        color = Colors.green;
+        break;
+      case 'pending':
+        color = Colors.orange;
+        break;
+      case 'suspended':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

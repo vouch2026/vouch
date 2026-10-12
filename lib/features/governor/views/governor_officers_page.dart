@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -8,18 +10,71 @@ import '../../organizations/providers/organization_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../widgets/governor_members_kpi.dart';
 import '../widgets/governor_officers_table.dart';
+import '../widgets/member_directory_helpers.dart';
 
-class GovernorOfficersPage extends ConsumerWidget {
+class GovernorOfficersPage extends ConsumerStatefulWidget {
   const GovernorOfficersPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GovernorOfficersPage> createState() =>
+      _GovernorOfficersPageState();
+}
+
+class _GovernorOfficersPageState extends ConsumerState<GovernorOfficersPage> {
+  Timer? _debounce;
+  String _searchQuery = '';
+  Map<String, dynamic> _activeFilters = {};
+  int _filterResetToken = 0;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChangedRaw(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() => _searchQuery = query);
+    });
+  }
+
+  void _onFiltersChanged(Map<String, dynamic> filters) {
+    setState(() => _activeFilters = Map<String, dynamic>.of(filters));
+  }
+
+  void _clearSearchAndFilters() {
+    _debounce?.cancel();
+    setState(() {
+      _searchQuery = '';
+      _activeFilters = {};
+      _filterResetToken++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final workspace = ref.watch(workspaceProvider);
     final activeRoleName = workspace.activeRole?.roleName.toLowerCase() ?? '';
-    final canManageMembers = activeRoleName.contains('governor') || 
-                            activeRoleName.contains('president') ||
-                            activeRoleName.contains('vice governor') ||
-                            activeRoleName.contains('vice president');
+    final canManageMembers = activeRoleName.contains('governor') ||
+        activeRoleName.contains('president') ||
+        activeRoleName.contains('vice governor') ||
+        activeRoleName.contains('vice president');
+    final selectedOrg = workspace.selectedOrganization;
+
+    final membersAsync = selectedOrg == null
+        ? null
+        : ref.watch(organizationMembersProvider(selectedOrg.id));
+    final baseOfficers = membersAsync?.valueOrNull
+            ?.where((m) {
+              final role = m.role.toLowerCase();
+              return role != 'member' && role != 'student';
+            })
+            .toList() ??
+        const [];
+    final dynamicFilters =
+        MemberDirectoryHelpers.buildOfficerFilterOptions(baseOfficers);
 
     return DashboardLayout(
       title: 'Organization Officers',
@@ -33,6 +88,7 @@ class GovernorOfficersPage extends ConsumerWidget {
               final selectedOrg = ref.read(workspaceProvider).selectedOrganization;
               if (selectedOrg != null) {
                 try {
+                  // ignore: unused_result
                   await ref.refresh(organizationMembersProvider(selectedOrg.id).future);
                 } catch (_) {}
               }
@@ -45,54 +101,30 @@ class GovernorOfficersPage extends ConsumerWidget {
                 children: [
                   UserManagementHeader(
                     title: 'Officers',
-                    subtitle: canManageMembers 
+                    subtitle: canManageMembers
                         ? 'View and manage all officers of your organization'
                         : 'View all officers of your organization',
                     actions: const [],
                   ),
                   SizedBox(height: verticalGap),
-                  
+
                   const GovernorMembersKpi(isOfficersScreen: true),
                   SizedBox(height: verticalGap),
-                  
+
                   AdvancedUserFilterPanel(
-                    filters: const [
-                      FilterOption(
-                        label: 'Year Level',
-                        key: 'yearLevel',
-                        options: [
-                          FilterValue(label: '1st Year', value: 1),
-                          FilterValue(label: '2nd Year', value: 2),
-                          FilterValue(label: '3rd Year', value: 3),
-                          FilterValue(label: '4th Year', value: 4),
-                          FilterValue(label: '5th Year', value: 5),
-                        ],
-                      ),
-                      FilterOption(
-                        label: 'Program',
-                        key: 'program',
-                        options: [
-                          FilterValue(label: 'BSIT', value: 'BSIT'),
-                          FilterValue(label: 'BSCS', value: 'BSCS'),
-                          FilterValue(label: 'BSBA', value: 'BSBA'),
-                          FilterValue(label: 'BSCrim', value: 'BSCrim'),
-                        ],
-                      ),
-                      FilterOption(
-                        label: 'Faculty',
-                        key: 'faculty',
-                        options: [
-                          FilterValue(label: 'College of Engineering', value: 'COE'),
-                          FilterValue(label: 'College of Arts & Sciences', value: 'CAS'),
-                        ],
-                      ),
-                    ],
-                    onSearchChanged: (query) {},
-                    onFiltersChanged: (filters) {},
+                    filters: dynamicFilters,
+                    searchHint: 'Search by name, ID, or email...',
+                    resetToken: _filterResetToken,
+                    onSearchChanged: _onSearchChangedRaw,
+                    onFiltersChanged: _onFiltersChanged,
                   ),
                   SizedBox(height: verticalGap),
-                  
-                  const GovernorOfficersTable(),
+
+                  GovernorOfficersTable(
+                    searchQuery: _searchQuery,
+                    activeFilters: _activeFilters,
+                    onClearFilters: _clearSearchAndFilters,
+                  ),
                 ],
               ),
             ),

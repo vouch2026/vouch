@@ -32,31 +32,27 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
   Future<void> _downloadVerificationCard() async {
     try {
       if (!kIsWeb) {
-        // Handle Mobile Permissions gracefully across Android SDK versions & iOS
-        PermissionStatus photosStatus = await Permission.photos.status;
-        if (!photosStatus.isGranted && !photosStatus.isLimited) {
-          photosStatus = await Permission.photos.request();
-        }
-
-        if (!photosStatus.isGranted && !photosStatus.isLimited) {
-          PermissionStatus storageStatus = await Permission.storage.status;
-          if (!storageStatus.isGranted) {
-            storageStatus = await Permission.storage.request();
+        // Best-effort permission pre-check only.
+        // READ_MEDIA_IMAGES/VIDEO are stripped from the manifest (Play review:
+        // app uses system Photo Picker + MediaStore insert, no broad media access),
+        // so on Android 13+ Permission.photos will report denied — that is expected
+        // and must NOT block saving. The save below still succeeds via MediaStore.
+        // On Android <=32 / iOS this still requests the legacy permission when needed.
+        try {
+          PermissionStatus photosStatus = await Permission.photos.status;
+          if (!photosStatus.isGranted && !photosStatus.isLimited) {
+            photosStatus = await Permission.photos.request();
           }
 
-          if (photosStatus.isPermanentlyDenied || storageStatus.isPermanentlyDenied) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Photo permission is required to save to Gallery.'),
-                  action: SnackBarAction(
-                    label: 'Settings',
-                    onPressed: () => openAppSettings(),
-                  ),
-                ),
-              );
+          if (!photosStatus.isGranted && !photosStatus.isLimited) {
+            PermissionStatus storageStatus = await Permission.storage.status;
+            if (!storageStatus.isGranted) {
+              await Permission.storage.request();
             }
           }
+        } catch (_) {
+          // Permission plugin can throw when the permission is absent from the
+          // manifest (expected after stripping). Ignore and proceed to save.
         }
       }
 
@@ -85,14 +81,42 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
 
       if (mounted) {
         setState(() => _isCapturing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isSuccess 
-              ? (kIsWeb ? 'Verification Card download started!' : 'Verification Card saved to Gallery!') 
-              : 'Failed to save card.'),
-            backgroundColor: isSuccess ? AppColors.success : AppColors.error,
-          ),
-        );
+        if (isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(kIsWeb
+                  ? 'Verification Card download started!'
+                  : 'Verification Card saved to Gallery!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else {
+          // Save failed: only then check if it's a permission issue (legacy
+          // Android <=32 / iOS) and offer Settings. On Android 13+ with
+          // stripped READ_MEDIA_* this branch rarely triggers since MediaStore
+          // insert needs no permission.
+          bool permanentlyDenied = false;
+          if (!kIsWeb) {
+            try {
+              final photosStatus = await Permission.photos.status;
+              final storageStatus = await Permission.storage.status;
+              permanentlyDenied = photosStatus.isPermanentlyDenied ||
+                  storageStatus.isPermanentlyDenied;
+            } catch (_) {}
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Failed to save card.'),
+              backgroundColor: AppColors.error,
+              action: permanentlyDenied
+                  ? SnackBarAction(
+                      label: 'Settings',
+                      onPressed: () => openAppSettings(),
+                    )
+                  : null,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
