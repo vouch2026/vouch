@@ -20,12 +20,30 @@ class TermRepository {
     required String academicYear,
     required String semester,
     bool isActive = false,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
-    await _client.from('academic_terms').insert({
+    final payload = <String, dynamic>{
       'academic_year': academicYear,
       'semester': semester,
       'is_active': isActive,
-    });
+    };
+    // Omit date keys on DBs predating the 20261019 migration.
+    if (startDate != null) {
+      payload['start_date'] =
+          startDate.toIso8601String().substring(0, 10);
+    }
+    if (endDate != null) {
+      payload['end_date'] = endDate.toIso8601String().substring(0, 10);
+    }
+    try {
+      await _client.from('academic_terms').insert(payload);
+    } catch (_) {
+      // Pre-dates-migration DB rejects unknown columns — retry dateless.
+      payload.remove('start_date');
+      payload.remove('end_date');
+      await _client.from('academic_terms').insert(payload);
+    }
   }
 
   Future<void> setActiveTerm(String id) async {

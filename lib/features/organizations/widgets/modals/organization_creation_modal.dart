@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../campuses/providers/campus_provider.dart';
 import '../../../faculties/providers/faculty_provider.dart';
 import '../../../programs/providers/program_provider.dart';
+import '../../../schools/providers/school_provider.dart';
 import '../../controllers/organization_controller.dart';
 
 class OrganizationCreationModal extends ConsumerStatefulWidget {
@@ -23,6 +24,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
   final _descriptionController = TextEditingController();
   
   String _selectedType = 'campus-based';
+  String? _selectedSchoolId;
   String? _selectedCampusId;
   String? _selectedFacultyId;
   final List<String> _selectedProgramIds = [];
@@ -67,6 +69,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
       },
     );
 
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
     final facultiesAsync = _selectedCampusId != null 
         ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
@@ -101,11 +104,12 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 DropdownButtonFormField<String>(
                   value: _selectedType,
                   items: [
+                    {'value': 'school-based', 'label': 'School-based (university-wide, e.g. USC)'},
                     {'value': 'campus-based', 'label': 'Campus-based'},
                     {'value': 'faculty-based', 'label': 'Faculty-based'},
                     {'value': 'program-based', 'label': 'Program-based'},
                   ].map((e) => DropdownMenuItem<String>(
-                    value: e['value'], 
+                    value: e['value'],
                     child: Text(e['label']!)
                   )).toList(),
                   onChanged: (val) => setState(() {
@@ -113,6 +117,32 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                     _selectedFacultyId = null;
                     _selectedProgramIds.clear();
                   }),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                _buildFieldLabel('School'),
+                schoolsAsync.when(
+                  data: (schools) {
+                    if (schools.isEmpty) {
+                      return const Text(
+                        'No schools yet — create one in Academic Structure first.',
+                      );
+                    }
+                    return DropdownButtonFormField<String>(
+                      value: _selectedSchoolId,
+                      items: schools
+                          .map((s) => DropdownMenuItem<String>(
+                              value: s.id, child: Text(s.displayName)))
+                          .toList(),
+                      onChanged: (val) => setState(() {
+                        _selectedSchoolId = val;
+                      }),
+                      validator: (val) => val == null ? 'School is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select School'),
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('Error loading schools'),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -133,22 +163,25 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
                 const SizedBox(height: AppSpacing.md),
 
                 // Dynamic Fields based on Type
-                _buildFieldLabel('Campus'),
-                campusesAsync.when(
-                  data: (campuses) => DropdownButtonFormField<String>(
-                    value: _selectedCampusId,
-                    items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
-                    onChanged: (val) => setState(() {
-                      _selectedCampusId = val;
-                      _selectedFacultyId = null;
-                      _selectedProgramIds.clear();
-                    }),
-                    validator: (val) => val == null ? 'Campus is required' : null,
-                    decoration: const InputDecoration(hintText: 'Select Campus'),
+                // School-based orgs (e.g. USC) span all campuses — no campus pick.
+                if (_selectedType != 'school-based') ...[
+                  _buildFieldLabel('Campus'),
+                  campusesAsync.when(
+                    data: (campuses) => DropdownButtonFormField<String>(
+                      value: _selectedCampusId,
+                      items: campuses.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.name))).toList(),
+                      onChanged: (val) => setState(() {
+                        _selectedCampusId = val;
+                        _selectedFacultyId = null;
+                        _selectedProgramIds.clear();
+                      }),
+                      validator: (val) => val == null ? 'Campus is required' : null,
+                      decoration: const InputDecoration(hintText: 'Select Campus'),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error loading campuses'),
                   ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const Text('Error loading campuses'),
-                ),
+                ],
 
                 if (_selectedType == 'faculty-based' || _selectedType == 'program-based') ...[
                   const SizedBox(height: AppSpacing.md),
@@ -270,6 +303,7 @@ class _OrganizationCreationModalState extends ConsumerState<OrganizationCreation
         campusId: _selectedCampusId,
         facultyId: _selectedFacultyId,
         programIds: _selectedProgramIds,
+        schoolId: _selectedSchoolId,
         logo: _logoImage,
         banner: _bannerImage,
       );

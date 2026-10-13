@@ -13,6 +13,7 @@ import '../../../core/providers/storage_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/repositories/announcement_repository.dart';
 import '../../announcements/providers/announcement_provider.dart';
@@ -96,6 +97,13 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
     setState(() => _isLoading = true);
 
     try {
+      // Past AY|SEM is view-only — creation only allowed on the active term.
+      final isPast = await ref.read(isViewingPastProvider.future);
+      if (isPast) {
+        throw Exception(
+            'You are viewing a past term (read-only). Switch back to the active term to post announcements.');
+      }
+
       final workspace = ref.read(workspaceProvider);
       final org = workspace.selectedOrganization!;
       final user = ref.read(userProfileProvider).value!;
@@ -113,13 +121,23 @@ class _GovernorCreateAnnouncementPageState extends ConsumerState<GovernorCreateA
         );
       }
 
-      final scopeType = org.type == 'campus-based' 
-          ? 'Institutional' 
-          : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
-      
-      final scopeId = org.type == 'campus-based' 
-          ? org.campusId 
-          : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+      // School-based orgs (e.g. USC) use scope_type `School`.
+      String scopeType;
+      String? scopeId;
+      if (org.type == 'school-based' || org.type == 'school') {
+        scopeType = 'School';
+        scopeId = await ref
+            .read(organizationRepositoryProvider)
+            .getOrganizationSchoolId(org.id)
+            .catchError((_) => null);
+      } else {
+        scopeType = org.type == 'campus-based'
+            ? 'Institutional'
+            : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
+        scopeId = org.type == 'campus-based'
+            ? org.campusId
+            : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+      }
 
       final linkUrls = _linkControllers
           .map((c) => c.text.trim())

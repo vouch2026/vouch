@@ -17,6 +17,8 @@ class ManageTermsModal extends ConsumerStatefulWidget {
 class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
   final _yearController = TextEditingController();
   String _selectedSemester = '1st';
+  DateTime? _startDate;
+  DateTime? _endDate;
   bool _isSubmitting = false;
 
   final List<String> _semesters = ['1st', '2nd', 'Summer'];
@@ -27,6 +29,27 @@ class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
     super.dispose();
   }
 
+  Future<void> _pickDate(bool isStart) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isStart ? _startDate : _endDate) ?? now,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 10),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+        if (_endDate != null && _endDate!.isBefore(picked)) {
+          _endDate = null;
+        }
+      } else {
+        _endDate = picked;
+      }
+    });
+  }
+
   Future<void> _handleCreate() async {
     if (_yearController.text.isEmpty) return;
 
@@ -35,8 +58,14 @@ class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
       await ref.read(termRepositoryProvider).createTerm(
             academicYear: _yearController.text,
             semester: _selectedSemester,
+            startDate: _startDate,
+            endDate: _endDate,
           );
       _yearController.clear();
+      setState(() {
+        _startDate = null;
+        _endDate = null;
+      });
       ref.invalidate(academicTermsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,9 +168,41 @@ class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: _isSubmitting 
+                  child: _isSubmitting
                       ? const SizedBox(width: 20, height: 20, child: FlickrLoader())
                       : const Text('Create'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Optional period bounds: students registered after end_date
+            // won't see this term in the School Year picker.
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _isSubmitting ? null : () => _pickDate(true),
+                    icon: const Icon(Icons.event_rounded, size: 18),
+                    label: Text(
+                      _startDate == null
+                          ? 'Start date (optional)'
+                          : 'Starts ${_startDate!.toLocal().toString().substring(0, 10)}',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _isSubmitting ? null : () => _pickDate(false),
+                    icon: const Icon(Icons.event_available_rounded, size: 18),
+                    label: Text(
+                      _endDate == null
+                          ? 'End date (optional)'
+                          : 'Ends ${_endDate!.toLocal().toString().substring(0, 10)}',
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -162,6 +223,14 @@ class _ManageTermsModalState extends ConsumerState<ManageTermsModal> {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text('${term.academicYear} - ${term.semester}'),
+                      subtitle:
+                          (term.startDate != null || term.endDate != null)
+                              ? Text(
+                                  '${term.startDate?.toLocal().toString().substring(0, 10) ?? '?'} → ${term.endDate?.toLocal().toString().substring(0, 10) ?? '?'}',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                      color: Colors.grey[600]),
+                                )
+                              : null,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

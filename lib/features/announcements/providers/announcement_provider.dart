@@ -4,6 +4,7 @@ import '../models/announcement_model.dart';
 import '../repositories/announcement_repository.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
 import '../../../core/providers/connectivity_provider.dart';
 
 final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
@@ -15,22 +16,19 @@ final workspaceAnnouncementsProvider = FutureProvider<List<AnnouncementModel>>((
   final org = workspace.selectedOrganization;
   
   if (org == null) return [];
-  
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional 
-      ? 'Institutional' 
-      : (isFaculty ? 'Faculty' : 'Program');
-  
-  final scopeId = isInstitutional 
-      ? org.campusId 
-      : (isFaculty ? org.facultyId : org.programId);
 
-  if (scopeId == null) return [];
+  // School-based orgs (e.g. USC) resolve to scope_type `School`.
+  final scope = await ref.watch(organizationScopeProvider(org).future);
+  if (scope.scopeId == null) return [];
+  final scopeType = scope.scopeType;
+  final scopeId = scope.scopeId!;
+
+  // AY|SEM history: default active, selectable via the sidebar. Past = view-only.
+  final viewingTerm = await ref.watch(viewingTermProvider.future);
+  final termId = viewingTerm?.id;
 
   final box = Hive.box('dashboard');
-  final cacheKey = 'announcements_$scopeId';
+  final cacheKey = 'announcements_${scopeId}_${termId ?? 'all'}';
   final cached = box.get(cacheKey);
 
   final connectivity = ref.read(connectivityProvider).value;
@@ -46,7 +44,7 @@ final workspaceAnnouncementsProvider = FutureProvider<List<AnnouncementModel>>((
   }
 
   try {
-    final announcements = await ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId);
+    final announcements = await ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId, academicTermId: termId);
     final jsonList = announcements.map((a) => a.toJson()).toList();
     await box.put(cacheKey, jsonList);
     return announcements;

@@ -18,6 +18,8 @@ import '../../../core/widgets/loaders/flickr_loader.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
+import '../../schools/providers/school_provider.dart';
+import '../../schools/providers/school_scope_provider.dart';
 import '../../faculties/models/faculty_model.dart';
 import '../../programs/models/program_model.dart';
 
@@ -40,6 +42,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _confirmPasswordController = TextEditingController();
 
   // State
+  // NOTE: _selectedUniversityId is the university (schools table, e.g. DORSU).
+  // It is intentionally NOT named schoolId: schoolId already means the student
+  // ID number (student_id_number) throughout the auth flow.
+  String? _selectedUniversityId;
   String? _selectedCampusId;
   String? _selectedFacultyId;
   String? _selectedProgramId;
@@ -63,6 +69,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   void initState() {
     super.initState();
+    // Pre-select the university only when exactly one school exists.
+    // With multiple schools the user must choose explicitly.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final schools = await ref.read(schoolsProvider.future);
+        if (mounted && _selectedUniversityId == null && schools.length == 1) {
+          setState(() => _selectedUniversityId = schools.first.id);
+        }
+      } catch (_) {
+        // Pre-schools DB or offline — campus list stays unfiltered.
+      }
+    });
     _firstNameController.addListener(_onFieldChanged);
     _lastNameController.addListener(_onFieldChanged);
     _schoolIdController.addListener(_onSchoolIdChanged);
@@ -229,7 +247,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   bool get _isFormValid {
-    return _selectedCampusId != null &&
+    final schools = ref.read(schoolsProvider).valueOrNull ?? [];
+    // University required only when schools exist (pre-schools DB skips it).
+    final universityOk = schools.isEmpty || _selectedUniversityId != null;
+    return universityOk &&
+        _selectedCampusId != null &&
         _selectedFacultyId != null &&
         _selectedProgramId != null &&
         _selectedYearLevel != null &&
@@ -399,7 +421,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Widget _buildRegisterFormCard(BuildContext context, {required bool isDesktop}) {
     final authState = ref.watch(authControllerProvider);
+    final schoolsAsync = ref.watch(schoolsProvider);
     final campusesAsync = ref.watch(campusesProvider);
+    final campusSchoolMapAsync = ref.watch(campusSchoolMapProvider);
     final facultiesAsync = _selectedCampusId != null
         ? ref.watch(facultiesByCampusProvider(_selectedCampusId!))
         : const AsyncValue<List<FacultyModel>>.data([]);
@@ -456,25 +480,66 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ],
               ),
             const SizedBox(height: AppSpacing.xl),
+            _buildLabel('School / University'),
+            schoolsAsync.when(
+              data: (schools) {
+                if (schools.isEmpty) {
+                  // Pre-schools DB: hide the picker, campus list unfiltered.
+                  return const SizedBox();
+                }
+                return _buildDropdown<String>(
+                  key: const ValueKey('university'),
+                  hint: 'Select School / University',
+                  value: _selectedUniversityId,
+                  items: schools.map((s) => DropdownItem(
+                    value: s.id,
+                    label: s.displayName,
+                  )).toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedUniversityId = val;
+                    _selectedCampusId = null;
+                    _selectedFacultyId = null;
+                    _selectedProgramId = null;
+                  }),
+                );
+              },
+              loading: () => _buildDropdownPlaceholder('Loading schools...'),
+              error: (e, _) => const SizedBox(),
+            ),
+            const SizedBox(height: AppSpacing.md),
             _buildLabel('Campus'),
             campusesAsync.when(
               data: (campuses) {
-                final visibleCampuses = campuses.where(
+                var visibleCampuses = campuses.where(
                   (c) => c.name != 'Google' && c.status != 'hidden',
                 ).toList();
+                // Narrow campuses to the selected university when the
+                // campus->school mapping is known (no-op on old DBs).
+                final schoolMap = campusSchoolMapAsync.valueOrNull ?? {};
+                final mustPickSchoolFirst = _selectedUniversityId == null &&
+                    schoolMap.isNotEmpty;
+                if (_selectedUniversityId != null && schoolMap.isNotEmpty) {
+                  visibleCampuses = visibleCampuses.where(
+                    (c) => schoolMap[c.id] == _selectedUniversityId,
+                  ).toList();
+                }
 
                 return _buildDropdown<String>(
-                  hint: 'Select Campus',
+                  hint: mustPickSchoolFirst
+                      ? 'Select School first'
+                      : 'Select Campus',
                   value: _selectedCampusId,
                   items: visibleCampuses.map((c) => DropdownItem(
                     value: c.id,
                     label: c.name,
                   )).toList(),
-                  onChanged: (val) => setState(() {
-                    _selectedCampusId = val;
-                    _selectedFacultyId = null;
-                    _selectedProgramId = null;
-                  }),
+                  onChanged: mustPickSchoolFirst
+                      ? null
+                      : (val) => setState(() {
+                            _selectedCampusId = val;
+                            _selectedFacultyId = null;
+                            _selectedProgramId = null;
+                          }),
                 );
               },
               loading: () => _buildDropdownPlaceholder('Loading campuses...'),
@@ -826,9 +891,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             );
                             return;
                           }
-                          if (_selectedCampusId == null || _selectedFacultyId == null || _selectedProgramId == null || _selectedYearLevel == null) {
+                          final schools = ref.read(schoolsProvider).valueOrNull ?? [];
+                          final universityRequired = schools.isNotEmpty;
+                          if ((universityRequired && _selectedUniversityId == null) || _selectedCampusId == null || _selectedFacultyId == null || _selectedProgramId == null || _selectedYearLevel == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please select campus, faculty, program, and year level')),
+                              const SnackBar(content: Text('Please select school, campus, faculty, program, and year level')),
                             );
                             return;
                           }
@@ -843,6 +910,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 facultyId: _selectedFacultyId ?? '',
                                 programId: _selectedProgramId ?? '',
                                 yearLevel: int.tryParse(_selectedYearLevel ?? '') ?? 0,
+                                universityId: _selectedUniversityId,
                               ).then((success) {
                                 if (success && mounted) {
                                   context.goNamed(

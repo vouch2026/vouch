@@ -3,8 +3,10 @@ import '../../../core/config/supabase_config.dart';
 import '../../campuses/providers/campus_provider.dart';
 import '../../faculties/providers/faculty_provider.dart';
 import '../../programs/providers/program_provider.dart';
+import '../../schools/providers/school_provider.dart';
 
 final academicStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final schools = await ref.watch(schoolsProvider.future);
   final campuses = await ref.watch(campusesProvider.future);
   final faculties = await ref.watch(facultiesProvider.future);
   final programs = await ref.watch(programsProvider.future);
@@ -20,6 +22,15 @@ final academicStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final totalOrgs = (orgResponse as List).length;
 
   return {
+    'schoolsCount': schools.length,
+    'activeSchools':
+        schools.where((s) => s.status.toLowerCase() == 'active').length,
+    'inactiveCampuses':
+        campuses.where((c) => c.status.toLowerCase() != 'active').length,
+    'facultiesWithoutDean':
+        faculties.where((f) => f.deanId == null).length,
+    'programsWithoutHead':
+        programs.where((p) => p.programHeadId == null).length,
     'campusesCount': campuses.length,
     'activeCampuses': campuses.where((c) => c.status == 'active').length,
     'facultiesCount': faculties.length,

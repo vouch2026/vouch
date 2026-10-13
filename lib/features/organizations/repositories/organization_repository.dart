@@ -203,6 +203,86 @@ class OrganizationRepository {
         'clearance_period_end': clearancePeriodEndStr,
         'is_clearance_active': isClearanceActive,
       });
+    } else if (type == 'school-based') {
+      // School-wide orgs (e.g. USC) live in organizations like campus-based
+      // ones — same settings/adviser merge so logo_url and flags survive
+      // the refresh-restore path instead of falling into the generic else.
+      bool requiresAdviser = false;
+      bool requiresProgramHead = false;
+      bool requiresFacultyDean = false;
+      bool allowMemberCardPrinting = true;
+      bool restrictClearanceRequest = false;
+      String? clearancePeriodStartStr;
+      String? clearancePeriodEndStr;
+      try {
+        final settingsResponseList = await _client
+            .from('organization_settings')
+            .select('''
+              requires_adviser_signature,
+              requires_dean_signature,
+              requires_program_head_signature,
+              allow_member_to_print,
+              clearance_period_start,
+              clearance_period_end,
+              restrict_clearance_request
+            ''')
+            .eq('organization_id', id)
+            .limit(1);
+        final settings = settingsResponseList.isEmpty
+            ? null
+            : settingsResponseList.first as Map<String, dynamic>;
+        requiresAdviser =
+            settings?['requires_adviser_signature'] as bool? ?? false;
+        requiresProgramHead =
+            settings?['requires_program_head_signature'] as bool? ?? false;
+        requiresFacultyDean =
+            settings?['requires_dean_signature'] as bool? ?? false;
+        allowMemberCardPrinting =
+            settings?['allow_member_to_print'] as bool? ?? true;
+        restrictClearanceRequest =
+            settings?['restrict_clearance_request'] as bool? ?? false;
+        clearancePeriodStartStr =
+            settings?['clearance_period_start'] as String?;
+        clearancePeriodEndStr =
+            settings?['clearance_period_end'] as String?;
+      } catch (_) {}
+
+      String? adviserName;
+      try {
+        final orgResponseList = await _client
+            .from('organizations')
+            .select('adviser_name')
+            .eq('id', id)
+            .limit(1);
+        if (orgResponseList.isNotEmpty) {
+          adviserName =
+              (orgResponseList.first as Map<String, dynamic>)['adviser_name']
+                  as String?;
+        }
+      } catch (_) {}
+
+      final now = DateTime.now();
+      bool isClearanceActive = false;
+      if (clearancePeriodStartStr != null && clearancePeriodEndStr != null) {
+        try {
+          final start = DateTime.parse(clearancePeriodStartStr);
+          final end = DateTime.parse(clearancePeriodEndStr);
+          isClearanceActive = now.isAfter(start) && now.isBefore(end);
+        } catch (_) {}
+      }
+
+      return OrganizationModel.fromJson({
+        ...workspaceJson,
+        if (adviserName != null) 'adviser_name': adviserName,
+        'requires_adviser_signature': requiresAdviser,
+        'requires_program_head_signature': requiresProgramHead,
+        'requires_faculty_dean_signature': requiresFacultyDean,
+        'allow_member_card_printing': allowMemberCardPrinting,
+        'restrict_clearance_request': restrictClearanceRequest,
+        'clearance_period_start': clearancePeriodStartStr,
+        'clearance_period_end': clearancePeriodEndStr,
+        'is_clearance_active': isClearanceActive,
+      });
     } else {
       return OrganizationModel.fromJson({
         ...workspaceJson,
@@ -215,6 +295,22 @@ class OrganizationRepository {
     }
   }
 
+  /// Raw school_id for an org (OrganizationModel has no schoolId field yet).
+  /// Returns null on old DBs without the column.
+  Future<String?> getOrganizationSchoolId(String orgId) async {
+    try {
+      final response = await _client
+          .from('organizations')
+          .select('school_id')
+          .eq('id', orgId)
+          .maybeSingle();
+      if (response == null) return null;
+      return (response as Map)['school_id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String> createOrganization({
     required String name,
     required String code,
@@ -223,28 +319,66 @@ class OrganizationRepository {
     String? campusId,
     String? facultyId,
     List<String> programIds = const [],
+    String? schoolId,
     String? logoUrl,
     String? bannerUrl,
   }) async {
-    final response = await _client.rpc(
-      'create_organization_with_members',
-      params: {
-        'p_name': name,
-        'p_code': code,
-        'p_description': description,
-        'p_type': type,
-        'p_campus_id': campusId,
-        'p_faculty_id': facultyId,
-        'p_program_ids': programIds,
-        'p_logo_url': logoUrl,
-        'p_banner_url': bannerUrl,
-      },
-    );
-    return response as String;
+    // New RPC accepts p_school_id (20261018) and backfills school-based
+    // members itself. Fall back to the legacy signature on DBs where the
+    // migration hasn't been applied yet.
+    Object? response;
+    try {
+      response = await _client.rpc(
+        'create_organization_with_members',
+        params: {
+          'p_name': name,
+          'p_code': code,
+          'p_description': description,
+          'p_type': type,
+          'p_campus_id': campusId,
+          'p_faculty_id': facultyId,
+          'p_program_ids': programIds,
+          'p_logo_url': logoUrl,
+          'p_banner_url': bannerUrl,
+          if (schoolId != null && schoolId.isNotEmpty)
+            'p_school_id': schoolId,
+        },
+      );
+    } catch (_) {
+      response = await _client.rpc(
+        'create_organization_with_members',
+        params: {
+          'p_name': name,
+          'p_code': code,
+          'p_description': description,
+          'p_type': type,
+          'p_campus_id': campusId,
+          'p_faculty_id': facultyId,
+          'p_program_ids': programIds,
+          'p_logo_url': logoUrl,
+          'p_banner_url': bannerUrl,
+        },
+      );
+    }
+    final newId = response as String;
+    // Attach school (new column from 20261012 migration). Direct update keeps
+    // this working even when the RPC itself doesn't accept p_school_id yet.
+    // Silently skipped on DBs where the column doesn't exist.
+    if (schoolId != null && schoolId.isNotEmpty) {
+      try {
+        await _client
+            .from('organizations')
+            .update({'school_id': schoolId})
+            .eq('id', newId);
+      } catch (_) {
+        // Old DB without school_id — ignore; org still created.
+      }
+    }
+    return newId;
   }
 
   Future<void> updateOrganization(String id, Map<String, dynamic> data) async {
-    final orgKeys = ['name', 'code', 'description', 'adviser_name', 'logo_url', 'banner_url', 'status', 'type', 'campus_id', 'faculty_id', 'program_id'];
+    final orgKeys = ['name', 'code', 'description', 'adviser_name', 'logo_url', 'banner_url', 'status', 'type', 'campus_id', 'faculty_id', 'program_id', 'school_id'];
     
     final orgData = <String, dynamic>{};
     final settingsData = <String, dynamic>{};

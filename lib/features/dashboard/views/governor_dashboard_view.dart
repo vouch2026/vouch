@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/offline_image_cache.dart';
+import '../../../core/widgets/images/org_logo_avatar.dart';
 import '../../organizations/providers/workspace_provider.dart';
 import '../../organizations/providers/organization_provider.dart';
 import '../../auth/models/user_model.dart';
@@ -219,11 +220,13 @@ class GovernorDashboardView extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 50,
+                      child: OrgLogoAvatar(
+                        logoUrl: org.logoUrl,
+                        size: 100,
+                        circle: true,
+                        fallbackIcon: Icons.business,
                         backgroundColor: AppColors.primary,
-                        backgroundImage: OfflineImageCache.get(org.logoUrl),
-                        child: org.logoUrl == null ? const Icon(Icons.business, color: Colors.white, size: 40) : null,
+                        iconColor: Colors.white,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),

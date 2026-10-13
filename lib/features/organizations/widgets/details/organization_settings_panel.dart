@@ -11,6 +11,7 @@ import '../../providers/workspace_provider.dart';
 import '../../controllers/organization_controller.dart';
 import '../../../../core/widgets/loaders/flickr_loader.dart';
 import '../../../../core/utils/offline_image_cache.dart';
+import '../../../../core/widgets/images/org_logo_avatar.dart';
 import '../../../../core/providers/connectivity_provider.dart';
 
 class OrganizationSettingsPanel extends ConsumerWidget {
@@ -633,19 +634,28 @@ class OrganizationSettingsPanel extends ConsumerWidget {
               height: 120,
               width: double.infinity,
               color: AppColors.primary,
-              child: org.bannerUrl != null && org.bannerUrl!.isNotEmpty
-                  ? Image(
-                      image: OfflineImageCache.get(org.bannerUrl)!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Opacity(
-                        opacity: 0.1,
-                        child: Icon(LucideIcons.image, size: 100, color: Colors.white),
-                      ),
-                    )
-                  : const Opacity(
+              child: Builder(
+                builder: (context) {
+                  final bannerProvider =
+                      (org.bannerUrl != null && org.bannerUrl!.isNotEmpty)
+                          ? OfflineImageCache.get(org.bannerUrl)
+                          : null;
+                  if (bannerProvider == null) {
+                    return const Opacity(
+                      opacity: 0.1,
+                      child: Icon(LucideIcons.image, size: 100, color: Colors.white),
+                    );
+                  }
+                  return Image(
+                    image: bannerProvider,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Opacity(
                       opacity: 0.1,
                       child: Icon(LucideIcons.image, size: 100, color: Colors.white),
                     ),
+                  );
+                },
+              ),
             ),
           ),
           
@@ -686,15 +696,13 @@ class OrganizationSettingsPanel extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 50,
+                      child: OrgLogoAvatar(
+                        logoUrl: org.logoUrl,
+                        size: 100,
+                        circle: true,
+                        fallbackIcon: LucideIcons.building,
                         backgroundColor: AppColors.primary,
-                        backgroundImage: org.logoUrl != null && org.logoUrl!.isNotEmpty
-                            ? OfflineImageCache.get(org.logoUrl)
-                            : null,
-                        child: org.logoUrl == null || org.logoUrl!.isEmpty
-                            ? const Icon(LucideIcons.building, color: Colors.white, size: 40)
-                            : null,
+                        iconColor: Colors.white,
                       ),
                     ),
                     if (canEdit)

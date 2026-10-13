@@ -10,6 +10,8 @@ abstract class AcademicTermModel with _$AcademicTermModel {
     @JsonKey(name: 'academic_year') required String academicYear,
     required String semester,
     @JsonKey(name: 'is_active') @Default(false) bool isActive,
+    @JsonKey(name: 'start_date') DateTime? startDate,
+    @JsonKey(name: 'end_date') DateTime? endDate,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _AcademicTermModel;
 

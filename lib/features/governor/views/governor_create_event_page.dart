@@ -10,12 +10,17 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../../core/providers/storage_provider.dart';
+import '../../organizations/models/organization_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../sanctions/providers/sanction_provider.dart';
+import '../../../shared/widgets/scope_selector.dart';
+import '../../../shared/widgets/member_multi_select_dialog.dart';
+import '../../../core/utils/scope_helpers.dart';
 
 class GovernorCreateEventPage extends ConsumerStatefulWidget {
   final EventModel? eventToEdit;
@@ -70,9 +75,38 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   bool _isMandatory = true;
   bool _isLoading = false;
 
+  // Scoped targeting: broad visibility scope + explicit obligated members.
+  ScopeSelection? _scope;
+  Set<String> _targetIds = {};
+  String? _orgSchoolId;
+
   @override
   void initState() {
     super.initState();
+    // Resolve raw school_id for school-based orgs (USC) for the picker default.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final workspace = ref.read(workspaceProvider);
+        final org = workspace.selectedOrganization;
+        if (org != null &&
+            (org.type == 'school-based' || org.type == 'school')) {
+          final schoolId = await ref
+              .read(organizationRepositoryProvider)
+              .getOrganizationSchoolId(org.id)
+              .catchError((_) => null);
+          if (mounted) setState(() => _orgSchoolId = schoolId);
+        }
+        // Prefill edit-mode targets.
+        if (widget.eventToEdit?.id != null) {
+          final targets = await ref
+              .read(eventRepositoryProvider)
+              .getEventTargets(widget.eventToEdit!.id!);
+          if (mounted) setState(() => _targetIds = targets.toSet());
+        }
+      } catch (_) {
+        // Picker still works with org-derived defaults; ignore.
+      }
+    });
     if (widget.eventToEdit != null) {
       final event = widget.eventToEdit!;
       _nameController.text = event.name;
@@ -238,13 +272,20 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
+      // Past AY|SEM is view-only — creation only allowed on the active term.
+      final isPast = await ref.read(isViewingPastProvider.future);
+      if (isPast) {
+        throw Exception(
+            'You are viewing a past term (read-only). Switch back to the active term to create events.');
+      }
+
       final workspace = ref.read(workspaceProvider);
       final org = workspace.selectedOrganization!;
       final user = ref.read(userProfileProvider).value!;
       final activeTerm = await ref.read(activeTermProvider.future);
-      
+
       if (activeTerm == null) {
         throw Exception('No active academic term found. Please contact an administrator.');
       }
@@ -273,6 +314,9 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         );
 
         await ref.read(eventRepositoryProvider).updateEvent(updatedEvent);
+        await ref
+            .read(eventRepositoryProvider)
+            .setEventTargets(updatedEvent.id!, _targetIds.toList());
 
         if (mounted) {
           ref.invalidate(workspaceEventsProvider);
@@ -286,13 +330,24 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         return;
       }
       
-      final scopeType = org.type == 'campus-based' 
-          ? 'Institutional' 
-          : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
-      
-      final scopeId = org.type == 'campus-based' 
-          ? org.campusId 
-          : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+      // Scope: picker selection wins (allows narrowing, e.g. USC targeting
+      // one campus/faculty/program); falls back to org-derived scope so old
+      // behavior is preserved when the picker hasn't resolved yet.
+      String scopeType;
+      String? scopeId;
+      if (_scope != null) {
+        scopeType = _scope!.scopeType;
+        scopeId = _scope!.scopeId;
+      } else if (org.type == 'school-based' || org.type == 'school') {
+        scopeType = 'School';
+        scopeId = await ref
+            .read(organizationRepositoryProvider)
+            .getOrganizationSchoolId(org.id)
+            .catchError((_) => null);
+      } else {
+        scopeType = resolveScopeType(org);
+        scopeId = resolveScopeId(org);
+      }
 
       final List<EventModel> eventsToCreate = [];
 
@@ -379,7 +434,12 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       }
 
       for (final event in eventsToCreate) {
-        await ref.read(eventRepositoryProvider).createEvent(event);
+        final newId =
+            await ref.read(eventRepositoryProvider).createEvent(event);
+        // Explicit obligation targets; empty = legacy (all in scope).
+        await ref
+            .read(eventRepositoryProvider)
+            .setEventTargets(newId, _targetIds.toList());
       }
       
       if (mounted) {
@@ -813,7 +873,10 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         value: _isMandatory,
         onChanged: (v) => setState(() => _isMandatory = v),
       ),
-      
+
+      const SizedBox(height: AppSpacing.md),
+      _buildTargetScopeSection(),
+
       const SizedBox(height: AppSpacing.xxl),
       if (widget.eventToEdit != null) ...[
         SizedBox(
@@ -979,6 +1042,100 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         ),
       ),
     );
+  }
+
+  Widget _buildTargetScopeSection() {
+    final org = ref.watch(workspaceProvider).selectedOrganization;
+    if (org == null) return const SizedBox();
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Target Scope & Members',
+            style: AppTextStyles.bodyLarge.copyWith(
+                fontWeight: FontWeight.bold, color: AppColors.primary),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Everyone in scope can view the event. Only selected members are obligated (counts toward clearance). Leave member selection empty for legacy behavior (all in scope obligated).',
+            style: TextStyle(color: Colors.grey, fontSize: 11),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ScopeSelector(
+            orgType: org.type,
+            orgSchoolId: _orgSchoolId,
+            orgCampusId: org.campusId,
+            orgFacultyId: org.facultyId,
+            orgProgramId: org.programId,
+            onChanged: (sel) => setState(() {
+              _scope = sel;
+              // Scope changed — prior member picks may be out of scope.
+              _targetIds = {};
+            }),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final scopeType =
+                  _scope?.scopeType ?? _fallbackScopeType(org);
+              final scopeId = _scope?.scopeId ?? _fallbackScopeId(org);
+              if (scopeId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text(
+                          'Pick a target scope first (scope is still resolving).')),
+                );
+                return;
+              }
+              final picked = await showDialog<Set<String>>(
+                context: context,
+                builder: (_) => MemberMultiSelectDialog(
+                  scopeType: scopeType,
+                  scopeId: scopeId,
+                  initiallySelected: _targetIds,
+                  title: 'Select Obligated Members',
+                  obligationLabel: 'obligated to attend',
+                ),
+              );
+              if (picked != null) setState(() => _targetIds = picked);
+            },
+            icon: const Icon(Icons.group_add_rounded, size: 18),
+            label: Text(
+              _targetIds.isEmpty
+                  ? 'Select obligated members (optional)'
+                  : '${_targetIds.length} member${_targetIds.length == 1 ? '' : 's'} obligated — tap to edit',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              side: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.3)),
+              foregroundColor: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fallbackScopeType(OrganizationModel org) => resolveScopeType(org);
+
+  String? _fallbackScopeId(OrganizationModel org) {
+    if (org.type == 'school-based' || org.type == 'school') {
+      return _orgSchoolId;
+    }
+    return org.type == 'campus-based'
+        ? org.campusId
+        : (org.type == 'faculty-based' ? org.facultyId : org.programId);
   }
 
   Widget _buildSectionTitle(String title) {

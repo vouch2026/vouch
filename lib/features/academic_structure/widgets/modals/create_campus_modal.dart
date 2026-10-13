@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../campuses/models/campus_model.dart';
 import '../../../campuses/providers/campus_provider.dart';
+import '../../../schools/providers/school_provider.dart';
 
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/providers/storage_provider.dart';
@@ -22,7 +23,24 @@ class _CreateCampusModalState extends ConsumerState<CreateCampusModal> {
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
+  String? _selectedSchoolId;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default to the first school (DORSU seed) once loaded.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final schools = await ref.read(schoolsProvider.future);
+        if (mounted && _selectedSchoolId == null && schools.isNotEmpty) {
+          setState(() => _selectedSchoolId = schools.first.id);
+        }
+      } catch (_) {
+        // Offline / table missing — leave unselected; server backfill covers DORSU.
+      }
+    });
+  }
   XFile? _logoImage;
   XFile? _bannerImage;
   final ImagePicker _picker = ImagePicker();
@@ -114,7 +132,15 @@ class _CreateCampusModalState extends ConsumerState<CreateCampusModal> {
         bannerUrl: bannerUrl,
       );
 
-      await ref.read(campusesProvider.notifier).addCampus(campus);
+      // Resolve school even if the post-frame default hasn't landed yet.
+      String? schoolId = _selectedSchoolId;
+      schoolId ??= await ref
+          .read(schoolsProvider.future)
+          .then((schools) => schools.isEmpty ? null : schools.first.id)
+          .catchError((_) => null);
+      await ref
+          .read(campusesProvider.notifier)
+          .addCampus(campus, schoolId: schoolId);
       
       if (mounted) {
         Navigator.pop(context);
@@ -135,6 +161,7 @@ class _CreateCampusModalState extends ConsumerState<CreateCampusModal> {
 
   @override
   Widget build(BuildContext context) {
+    final schoolsAsync = ref.watch(schoolsProvider);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
@@ -160,6 +187,42 @@ class _CreateCampusModalState extends ConsumerState<CreateCampusModal> {
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
+              Text(
+                'School (University)',
+                style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              schoolsAsync.when(
+                data: (schools) {
+                  if (schools.isEmpty) {
+                    return const Text(
+                      'No schools yet — create a school first. Campus will attach to DORSU on the server if available.',
+                    );
+                  }
+                  final effectiveId = _selectedSchoolId ??
+                      (schools.any((s) => s.id == _selectedSchoolId)
+                          ? _selectedSchoolId
+                          : schools.first.id);
+                  return DropdownButtonFormField<String>(
+                    value: effectiveId,
+                    items: schools
+                        .map((s) => DropdownMenuItem<String>(
+                              value: s.id,
+                              child: Text(s.displayName),
+                            ))
+                        .toList(),
+                    onChanged: _isLoading
+                        ? null
+                        : (val) => setState(() => _selectedSchoolId = val),
+                    decoration: const InputDecoration(
+                      hintText: 'Select school',
+                    ),
+                  );
+                },
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => Text('Could not load schools: $e'),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Campus Name',
                 style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),

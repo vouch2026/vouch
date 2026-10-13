@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CampusModel {
 
- String get id; String get name; String get location; String? get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl; String get status;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
+ String get id; String get name; String get location; String? get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl;@JsonKey(name: 'school_id') String? get schoolId; String get status;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
 /// Create a copy of CampusModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $CampusModelCopyWith<CampusModel> get copyWith => _$CampusModelCopyWithImpl<Camp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CampusModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.location, location) || other.location == location)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CampusModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.location, location) || other.location == location)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.schoolId, schoolId) || other.schoolId == schoolId)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,location,description,logoUrl,bannerUrl,status,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,location,description,logoUrl,bannerUrl,schoolId,status,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'CampusModel(id: $id, name: $name, location: $location, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'CampusModel(id: $id, name: $name, location: $location, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, schoolId: $schoolId, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $CampusModelCopyWith<$Res>  {
   factory $CampusModelCopyWith(CampusModel value, $Res Function(CampusModel) _then) = _$CampusModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String location, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl, String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String id, String name, String location, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'school_id') String? schoolId, String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$CampusModelCopyWithImpl<$Res>
 
 /// Create a copy of CampusModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? location = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? status = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? location = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? schoolId = freezed,Object? status = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -73,6 +73,7 @@ as String,location: null == location ? _self.location : location // ignore: cast
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,logoUrl: freezed == logoUrl ? _self.logoUrl : logoUrl // ignore: cast_nullable_to_non_nullable
 as String?,bannerUrl: freezed == bannerUrl ? _self.bannerUrl : bannerUrl // ignore: cast_nullable_to_non_nullable
+as String?,schoolId: freezed == schoolId ? _self.schoolId : schoolId // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String location,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String location,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'school_id')  String? schoolId,  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CampusModel() when $default != null:
-return $default(_that.id,_that.name,_that.location,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.location,_that.description,_that.logoUrl,_that.bannerUrl,_that.schoolId,_that.status,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.id,_that.name,_that.location,_that.description,_that.logoU
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String location,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String location,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'school_id')  String? schoolId,  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _CampusModel():
-return $default(_that.id,_that.name,_that.location,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.location,_that.description,_that.logoUrl,_that.bannerUrl,_that.schoolId,_that.status,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.id,_that.name,_that.location,_that.description,_that.logoU
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String location,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl,  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String location,  String? description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'school_id')  String? schoolId,  String status, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _CampusModel() when $default != null:
-return $default(_that.id,_that.name,_that.location,_that.description,_that.logoUrl,_that.bannerUrl,_that.status,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.location,_that.description,_that.logoUrl,_that.bannerUrl,_that.schoolId,_that.status,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -217,7 +218,7 @@ return $default(_that.id,_that.name,_that.location,_that.description,_that.logoU
 @JsonSerializable()
 
 class _CampusModel implements CampusModel {
-  const _CampusModel({required this.id, required this.name, required this.location, this.description, @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, this.status = 'active', @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt});
+  const _CampusModel({required this.id, required this.name, required this.location, this.description, @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, @JsonKey(name: 'school_id') this.schoolId, this.status = 'active', @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt});
   factory _CampusModel.fromJson(Map<String, dynamic> json) => _$CampusModelFromJson(json);
 
 @override final  String id;
@@ -226,6 +227,7 @@ class _CampusModel implements CampusModel {
 @override final  String? description;
 @override@JsonKey(name: 'logo_url') final  String? logoUrl;
 @override@JsonKey(name: 'banner_url') final  String? bannerUrl;
+@override@JsonKey(name: 'school_id') final  String? schoolId;
 @override@JsonKey() final  String status;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
@@ -243,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CampusModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.location, location) || other.location == location)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CampusModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.location, location) || other.location == location)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.schoolId, schoolId) || other.schoolId == schoolId)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,location,description,logoUrl,bannerUrl,status,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,location,description,logoUrl,bannerUrl,schoolId,status,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'CampusModel(id: $id, name: $name, location: $location, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'CampusModel(id: $id, name: $name, location: $location, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, schoolId: $schoolId, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$CampusModelCopyWith<$Res> implements $CampusModelCopyWith
   factory _$CampusModelCopyWith(_CampusModel value, $Res Function(_CampusModel) _then) = __$CampusModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String location, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl, String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String id, String name, String location, String? description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'school_id') String? schoolId, String status,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -280,7 +282,7 @@ class __$CampusModelCopyWithImpl<$Res>
 
 /// Create a copy of CampusModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? location = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? status = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? location = null,Object? description = freezed,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? schoolId = freezed,Object? status = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_CampusModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -288,6 +290,7 @@ as String,location: null == location ? _self.location : location // ignore: cast
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,logoUrl: freezed == logoUrl ? _self.logoUrl : logoUrl // ignore: cast_nullable_to_non_nullable
 as String?,bannerUrl: freezed == bannerUrl ? _self.bannerUrl : bannerUrl // ignore: cast_nullable_to_non_nullable
+as String?,schoolId: freezed == schoolId ? _self.schoolId : schoolId // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable

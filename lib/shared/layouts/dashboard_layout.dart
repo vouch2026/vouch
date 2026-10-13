@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/navbar/profile_dropdown.dart';
+import '../widgets/past_term_banner.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/organizations/providers/workspace_provider.dart';
 import '../../core/providers/sidebar_provider.dart';
@@ -197,7 +198,12 @@ class DashboardLayout extends ConsumerWidget {
             ),
           ),
         ),
-        body: child,
+        body: Column(
+          children: [
+            const PastTermBanner(),
+            Expanded(child: child),
+          ],
+        ),
         floatingActionButton: floatingActionButton,
       ),
     );

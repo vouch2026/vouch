@@ -21,6 +21,7 @@ class OrganizationController extends AsyncNotifier<void> {
     String? campusId,
     String? facultyId,
     List<String> programIds = const [],
+    String? schoolId,
     XFile? logo,
     XFile? banner,
   }) async {
@@ -54,6 +55,7 @@ class OrganizationController extends AsyncNotifier<void> {
         campusId: campusId,
         facultyId: facultyId,
         programIds: programIds,
+        schoolId: schoolId,
         logoUrl: logoUrl,
         bannerUrl: bannerUrl,
       );

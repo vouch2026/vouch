@@ -8,15 +8,82 @@ class FinanceRepository {
 
   FinanceRepository(this._client);
 
-  Future<List<FeeModel>> getFeesByScope(String scopeType, String scopeId) async {
-    final response = await _client
+  Future<List<FeeModel>> getFeesByScope(
+    String scopeType,
+    String scopeId, {
+    String? academicTermId,
+  }) async {
+    var query = _client
         .from('fees')
         .select()
         .eq('scope_type', scopeType)
-        .eq('scope_id', scopeId)
-        .order('due_date', ascending: true);
-    
+        .eq('scope_id', scopeId);
+    if (academicTermId != null) {
+      query = query.eq('academic_term_id', academicTermId);
+    }
+    final response = await query.order('due_date', ascending: true);
+
     return (response as List).map((json) => FeeModel.fromJson(json)).toList();
+  }
+
+  // --- Obligation targets -------------------------------------------------
+  // Visibility = parent scope (everyone in scope sees the fee).
+  // Obligation = row in fee_targets (only selected members must pay and it
+  // counts toward activity-card clearance). Fees with zero target rows keep
+  // legacy behavior: all in scope are obligated.
+
+  /// User ids obligated for [feeId]. Empty = legacy (all in scope).
+  /// Returns [] (not error) when the table doesn't exist yet (old DB).
+  Future<List<String>> getFeeTargets(String feeId) async {
+    try {
+      final response = await _client
+          .from('fee_targets')
+          .select('user_id')
+          .eq('fee_id', feeId);
+      return (response as List)
+          .map((row) => (row as Map)['user_id'] as String)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Replace the full target set for [feeId] (delete + bulk insert).
+  /// Pass an empty list to clear back to legacy "all in scope" behavior.
+  Future<void> setFeeTargets(String feeId, List<String> userIds) async {
+    try {
+      await _client.from('fee_targets').delete().eq('fee_id', feeId);
+      if (userIds.isEmpty) return;
+      final rows = userIds
+          .toSet()
+          .map((uid) => {'fee_id': feeId, 'user_id': uid})
+          .toList();
+      await _client.from('fee_targets').insert(rows);
+    } catch (_) {
+      // Table missing on old DBs — fee itself is already created; ignore.
+    }
+  }
+
+  /// Fee ids for which [userId] is explicitly targeted.
+  Future<Set<String>> getObligatedFeeIds(
+    String userId, {
+    String? academicTermId,
+  }) async {
+    try {
+      var query = _client
+          .from('fee_targets')
+          .select('fee_id, fees!inner(academic_term_id)')
+          .eq('user_id', userId);
+      if (academicTermId != null) {
+        query = query.eq('fees.academic_term_id', academicTermId);
+      }
+      final response = await query;
+      return (response as List)
+          .map((row) => (row as Map)['fee_id'] as String)
+          .toSet();
+    } catch (_) {
+      return {};
+    }
   }
 
   Future<String> createFee(FeeModel fee) async {

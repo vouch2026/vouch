@@ -13,6 +13,7 @@ import '../../../../features/organizations/providers/workspace_provider.dart';
 import '../../../../core/providers/sidebar_provider.dart';
 import 'organization_switcher.dart';
 import '../../../../core/config/sidebars/sidebar_config.dart';
+import '../../../../features/academic_structure/widgets/sidebar_term_selector.dart';
 
 class DynamicSidebar extends ConsumerStatefulWidget {
   const DynamicSidebar({super.key});
@@ -162,6 +163,7 @@ class _DynamicSidebarState extends ConsumerState<DynamicSidebar> {
           Column(
             children: [
               _buildSidebarHeader(context),
+              const SidebarTermSelector(),
               Expanded(
                 child: ListView(
                   controller: _scrollController,

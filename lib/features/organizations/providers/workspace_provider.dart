@@ -5,6 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/organization_model.dart';
 import '../models/organization_membership_model.dart';
+import '../../../core/utils/scope_helpers.dart';
 import '../repositories/organization_repository.dart';
 import 'organization_provider.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -122,10 +123,27 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       return;
     }
 
-    state = state.copyWith(isLoading: true, selectedOrganization: org);
-    
+    // Prefer the canonical list object (fresh RPC shape with logo/banner)
+    // over a possibly stale caller-provided copy (refresh restore via
+    // getOrganizationById, Hive cache, settings-save round trip).
+    OrganizationModel resolvedOrg = org;
+    try {
+      final known = _ref.read(userOrganizationsProvider).valueOrNull;
+      if (known != null) {
+        for (final o in known) {
+          if (o.id == org.id) {
+            resolvedOrg = o;
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+    final current = resolvedOrg;
+
+    state = state.copyWith(isLoading: true, selectedOrganization: current);
+
     if (persist) {
-      Hive.box('settings').put('selected_organization_id', org.id);
+      Hive.box('settings').put('selected_organization_id', current.id);
     }
     
     try {
@@ -142,43 +160,43 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       final connectivity = _ref.read(connectivityProvider).value;
       if (connectivity == false) {
         // Fast path for offline: Load role from cache immediately!
-        role = _loadCachedRole(org.id, org.type);
+        role = _loadCachedRole(current.id, current.type);
       } else {
         try {
           if (!isSuperAdmin) {
             final userOrgs = await _repository.getUserOrganizations(profile.id!).timeout(const Duration(seconds: 2));
-            final isMember = userOrgs.any((o) => o.id == org.id);
+            final isMember = userOrgs.any((o) => o.id == current.id);
             if (!isMember) {
               state = const WorkspaceState(isInitialized: true);
               _clearPersistedWorkspace();
-              debugPrint('Unauthorized workspace selection attempt: ${org.name}');
+              debugPrint('Unauthorized workspace selection attempt: ${current.name}');
               return;
             }
           }
 
-          final roleData = await _repository.getWorkspaceRoleAndPermissions(org.id, org.type).timeout(const Duration(seconds: 2));
+          final roleData = await _repository.getWorkspaceRoleAndPermissions(current.id, current.type).timeout(const Duration(seconds: 2));
 
           if (roleData != null) {
             role = AppRole(
               roleName: roleData['role_name'] as String,
               hierarchyLevel: roleData['hierarchy_level'] as int,
-              scopeType: org.type,
+              scopeType: current.type,
               permissions: List<String>.from(roleData['permissions'] as List),
             );
           } else {
             role = AppRole(
               roleName: 'Member',
               hierarchyLevel: 5,
-              scopeType: org.type,
+              scopeType: current.type,
               permissions: ['view_events', 'view_announcements', 'view_fees', 'view_activity_cards', 'request_clearance', 'view_sanctions'],
             );
           }
-          
+
           final box = Hive.box('workspaces');
-          await box.put('role_${org.id}', role.toJson());
+          await box.put('role_${current.id}', role.toJson());
         } catch (e) {
           debugPrint('Error in selectOrganization network calls: $e. Falling back to cache...');
-          role = _loadCachedRole(org.id, org.type);
+          role = _loadCachedRole(current.id, current.type);
         }
       }
 
@@ -190,7 +208,7 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
       );
     } catch (e, stack) {
       debugPrint('Error in selectOrganization: $e\n$stack');
-      final role = _loadCachedRole(org.id, org.type);
+      final role = _loadCachedRole(current.id, current.type);
       state = state.copyWith(
         activeMembership: null,
         activeRole: role,
@@ -225,4 +243,29 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
 final workspaceProvider = StateNotifierProvider<WorkspaceNotifier, WorkspaceState>((ref) {
   final repository = ref.watch(organizationRepositoryProvider);
   return WorkspaceNotifier(repository, ref);
+});
+
+/// Resolved read scope for an org: (scopeType, scopeId).
+/// - `school-based` (e.g. USC) -> `School` + raw `school_id` (fetched because
+///   OrganizationModel carries no schoolId field yet).
+/// - `campus-based`/`institutional` -> `Institutional` + campusId.
+/// - `faculty-based`/`faculty` -> `Faculty` + facultyId.
+/// - else -> `Program` + programId.
+/// A null scopeId means the org is misconfigured for its type — callers
+/// should treat it as "no scope" and return [].
+final organizationScopeProvider = FutureProvider.family<
+    ({String scopeType, String? scopeId}), OrganizationModel>((ref, org) async {
+  final scopeType = resolveScopeType(org);
+  if (scopeType == 'School') {
+    String? schoolId;
+    try {
+      schoolId = await ref
+          .watch(organizationRepositoryProvider)
+          .getOrganizationSchoolId(org.id);
+    } catch (_) {
+      schoolId = null;
+    }
+    return (scopeType: scopeType, scopeId: schoolId);
+  }
+  return (scopeType: scopeType, scopeId: resolveScopeId(org));
 });

@@ -15,6 +15,7 @@ import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../announcements/models/announcement_model.dart';
 import '../../announcements/providers/announcement_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
 import '../../../core/providers/connectivity_provider.dart';
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>((ref) {
@@ -221,34 +222,25 @@ final availableRolesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) 
 });
 
 final orgEventsProvider = FutureProvider.family<List<EventModel>, OrganizationModel>((ref, org) async {
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional ? 'Institutional' : (isFaculty ? 'Faculty' : 'Program');
-  final scopeId = isInstitutional ? org.campusId : (isFaculty ? org.facultyId : org.programId);
-  if (scopeId == null) return [];
-  
-  return ref.watch(eventRepositoryProvider).getEventsByScope(scopeType, scopeId);
+  final scope = await ref.watch(organizationScopeProvider(org).future);
+  if (scope.scopeId == null) return [];
+  final viewingTerm = await ref.watch(viewingTermProvider.future);
+
+  return ref.watch(eventRepositoryProvider).getEventsByScope(scope.scopeType, scope.scopeId!, academicTermId: viewingTerm?.id);
 });
 
 final orgFeesProvider = FutureProvider.family<List<FeeModel>, OrganizationModel>((ref, org) async {
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional ? 'Institutional' : (isFaculty ? 'Faculty' : 'Program');
-  final scopeId = isInstitutional ? org.campusId : (isFaculty ? org.facultyId : org.programId);
-  if (scopeId == null) return [];
-  
-  return ref.watch(financeRepositoryProvider).getFeesByScope(scopeType, scopeId);
+  final scope = await ref.watch(organizationScopeProvider(org).future);
+  if (scope.scopeId == null) return [];
+  final viewingTerm = await ref.watch(viewingTermProvider.future);
+
+  return ref.watch(financeRepositoryProvider).getFeesByScope(scope.scopeType, scope.scopeId!, academicTermId: viewingTerm?.id);
 });
 
 final orgAnnouncementsProvider = FutureProvider.family<List<AnnouncementModel>, OrganizationModel>((ref, org) async {
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional ? 'Institutional' : (isFaculty ? 'Faculty' : 'Program');
-  final scopeId = isInstitutional ? org.campusId : (isFaculty ? org.facultyId : org.programId);
-  if (scopeId == null) return [];
-  
-  return ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scopeType, scopeId);
+  final scope = await ref.watch(organizationScopeProvider(org).future);
+  if (scope.scopeId == null) return [];
+  final viewingTerm = await ref.watch(viewingTermProvider.future);
+
+  return ref.watch(announcementRepositoryProvider).getAnnouncementsByScope(scope.scopeType, scope.scopeId!, academicTermId: viewingTerm?.id);
 });

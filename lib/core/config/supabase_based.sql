@@ -201,8 +201,10 @@ updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 UNIQUE(academic_year, semester)
 );
 
+-- AFTER timing: the rollover retargets memberships to NEW.id, which only
+-- exists after the row is written (BEFORE INSERT would violate the FK).
 CREATE TRIGGER ensure_single_active_term
-BEFORE INSERT OR UPDATE ON academic_terms
+AFTER INSERT OR UPDATE ON academic_terms
 FOR EACH ROW EXECUTE FUNCTION single_active_term();
 
 CREATE TABLE campuses (
@@ -1588,8 +1590,9 @@ CREATE OR REPLACE FUNCTION create_organization_with_members(
     p_faculty_id UUID DEFAULT NULL,
     p_program_ids UUID[] DEFAULT '{}',
     p_logo_url TEXT DEFAULT NULL,
-    p_banner_url TEXT DEFAULT NULL
-) RETURNS UUID 
+    p_banner_url TEXT DEFAULT NULL,
+    p_school_id UUID DEFAULT NULL
+) RETURNS UUID
 SET search_path = public, pg_temp
 AS $$
 DECLARE
@@ -1609,6 +1612,15 @@ BEGIN
     INSERT INTO organizations (name, code, description, type, campus_id, faculty_id, program_id, logo_url, banner_url)
     VALUES (p_name, p_code, p_description, p_type, p_campus_id, p_faculty_id, v_primary_program_id, p_logo_url, p_banner_url)
     RETURNING id INTO v_org_id;
+
+    -- Attach the school when supplied (guarded no-op on pre-schools DBs).
+    IF p_school_id IS NOT NULL THEN
+        BEGIN
+            UPDATE public.organizations SET school_id = p_school_id WHERE id = v_org_id;
+        EXCEPTION WHEN undefined_column THEN
+            NULL;
+        END;
+    END IF;
 
     IF p_type = 'campus-based' AND p_campus_id IS NOT NULL THEN
         INSERT INTO organization_members (organization_id, user_id, role_id)
@@ -1640,6 +1652,21 @@ BEGIN
           AND r.name = 'Students'
           AND ur.is_active = true
         ON CONFLICT DO NOTHING;
+    ELSIF p_type = 'school-based' AND p_school_id IS NOT NULL THEN
+        BEGIN
+            INSERT INTO organization_members (organization_id, user_id, role_id)
+            SELECT v_org_id, u.id, (SELECT id FROM public.roles WHERE name = 'Member')
+            FROM public.users u
+            JOIN public.user_roles ur ON u.id = ur.user_id
+            JOIN public.roles r ON ur.role_id = r.id
+            WHERE u.school_id = p_school_id
+              AND r.name = 'Students'
+              AND ur.is_active = true
+            ON CONFLICT DO NOTHING;
+        EXCEPTION WHEN undefined_column THEN
+            -- Pre-schools DB (no users.school_id): members skipped, org kept.
+            NULL;
+        END;
     END IF;
 
     RETURN v_org_id;
@@ -1744,6 +1771,7 @@ DECLARE
     v_faculty_id UUID;
     v_program_id UUID;
     v_campus_id UUID;
+    v_university_id UUID;
     v_auto_activate BOOLEAN := false;
 BEGIN
     v_role := new.raw_user_meta_data->>'role';
@@ -1757,6 +1785,22 @@ BEGIN
     v_campus_id := (NULLIF(new.raw_user_meta_data->>'campus_id', ''))::uuid;
     v_faculty_id := (NULLIF(new.raw_user_meta_data->>'faculty_id', ''))::uuid;
     v_program_id := (NULLIF(new.raw_user_meta_data->>'program_id', ''))::uuid;
+    -- University (schools table id). NOTE: metadata key 'school_id' is the
+    -- STUDENT ID NUMBER (student_id_number), not the university — do not use.
+    BEGIN
+        v_university_id := (NULLIF(new.raw_user_meta_data->>'university_id', ''))::uuid;
+    EXCEPTION WHEN OTHERS THEN
+        v_university_id := NULL;
+    END;
+
+    -- Fallback: derive the university from the campus when not picked.
+    IF v_university_id IS NULL AND v_campus_id IS NOT NULL THEN
+        BEGIN
+            SELECT school_id INTO v_university_id FROM public.campuses WHERE id = v_campus_id;
+        EXCEPTION WHEN undefined_column THEN
+            v_university_id := NULL;
+        END;
+    END IF;
 
     -- Fetch the setting dynamically from system_settings table if it exists
     BEGIN
@@ -1771,31 +1815,65 @@ BEGIN
         SELECT campus_id INTO v_campus_id FROM public.faculties WHERE id = v_faculty_id;
     END IF;
 
-    INSERT INTO public.users (
-        auth_id, email, first_name, last_name, student_id_number, 
-        campus_id, faculty_id, program_id, year, account_status
-    )
-    VALUES (
-        new.id, new.email, 
-        COALESCE(new.raw_user_meta_data->>'first_name', ''),
-        COALESCE(new.raw_user_meta_data->>'last_name', ''), 
-        COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), NULLIF(new.raw_user_meta_data->>'student_id_number', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
-        v_campus_id, v_faculty_id, v_program_id,
-        (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
-        CASE 
-            WHEN v_auto_activate THEN 'active'
-            ELSE COALESCE(new.raw_user_meta_data->>'status', 'pending')
-        END
-    )
-    ON CONFLICT (auth_id) DO UPDATE SET
-        email = EXCLUDED.email,
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        campus_id = EXCLUDED.campus_id,
-        faculty_id = EXCLUDED.faculty_id,
-        program_id = EXCLUDED.program_id,
-        updated_at = CURRENT_TIMESTAMP
-    RETURNING id INTO new_user_id;
+    -- users.school_id (university) exists only on DBs with the schools
+    -- migration; branch so old DBs keep working unchanged.
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'school_id'
+    ) THEN
+        INSERT INTO public.users (
+            auth_id, email, first_name, last_name, student_id_number,
+            campus_id, faculty_id, program_id, school_id, year, account_status
+        )
+        VALUES (
+            new.id, new.email,
+            COALESCE(new.raw_user_meta_data->>'first_name', ''),
+            COALESCE(new.raw_user_meta_data->>'last_name', ''),
+            COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), NULLIF(new.raw_user_meta_data->>'student_id_number', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+            v_campus_id, v_faculty_id, v_program_id, v_university_id,
+            (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
+            CASE
+                WHEN v_auto_activate THEN 'active'
+                ELSE COALESCE(new.raw_user_meta_data->>'status', 'pending')
+            END
+        )
+        ON CONFLICT (auth_id) DO UPDATE SET
+            email = EXCLUDED.email,
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
+            campus_id = EXCLUDED.campus_id,
+            faculty_id = EXCLUDED.faculty_id,
+            program_id = EXCLUDED.program_id,
+            school_id = EXCLUDED.school_id,
+            updated_at = CURRENT_TIMESTAMP
+        RETURNING id INTO new_user_id;
+    ELSE
+        INSERT INTO public.users (
+            auth_id, email, first_name, last_name, student_id_number,
+            campus_id, faculty_id, program_id, year, account_status
+        )
+        VALUES (
+            new.id, new.email,
+            COALESCE(new.raw_user_meta_data->>'first_name', ''),
+            COALESCE(new.raw_user_meta_data->>'last_name', ''),
+            COALESCE(NULLIF(new.raw_user_meta_data->>'school_id', ''), NULLIF(new.raw_user_meta_data->>'student_id_number', ''), 'PENDING-' || substr(new.id::text, 1, 8)),
+            v_campus_id, v_faculty_id, v_program_id,
+            (NULLIF(new.raw_user_meta_data->>'year_level', ''))::int,
+            CASE
+                WHEN v_auto_activate THEN 'active'
+                ELSE COALESCE(new.raw_user_meta_data->>'status', 'pending')
+            END
+        )
+        ON CONFLICT (auth_id) DO UPDATE SET
+            email = EXCLUDED.email,
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
+            campus_id = EXCLUDED.campus_id,
+            faculty_id = EXCLUDED.faculty_id,
+            program_id = EXCLUDED.program_id,
+            updated_at = CURRENT_TIMESTAMP
+        RETURNING id INTO new_user_id;
+    END IF;
 
     IF v_role = 'super_admin' THEN
         SELECT id INTO target_role_id FROM public.roles WHERE name = 'Super Admin';
@@ -1864,9 +1942,23 @@ BEGIN
         IF v_program_id IS NOT NULL THEN
             INSERT INTO public.organization_members (organization_id, user_id, role_id)
             SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
-            FROM public.organizations 
+            FROM public.organizations
             WHERE type = 'program-based' AND program_id = v_program_id
             ON CONFLICT DO NOTHING;
+        END IF;
+
+        -- Auto-join school-wide orgs (e.g. University Student Council).
+        -- Guarded for pre-schools DBs (missing school_id column -> no-op).
+        IF v_university_id IS NOT NULL THEN
+            BEGIN
+                INSERT INTO public.organization_members (organization_id, user_id, role_id)
+                SELECT id, new_user_id, (SELECT id FROM public.roles WHERE name = 'Member')
+                FROM public.organizations
+                WHERE type = 'school-based' AND school_id = v_university_id
+                ON CONFLICT DO NOTHING;
+            EXCEPTION WHEN undefined_column THEN
+                NULL;
+            END;
         END IF;
 
         -- Automatically assign student as Voter in COMSELEC
@@ -2792,8 +2884,11 @@ $$;
 -- ==============================================================================
 
 -- Resets all roles, activity cards, events, and fees for a new academic year
-CREATE OR REPLACE FUNCTION public.reset_academic_year_data()
-RETURNS VOID 
+-- Non-destructive rollover: demote, never delete. Takes the new term id so
+-- memberships can be retargeted (old zero-arg version dropped at the top of
+-- this file alongside the other DROPs; see migration 20261015).
+CREATE FUNCTION public.reset_academic_year_data(p_new_term_id UUID)
+RETURNS VOID
 SET search_path = public, pg_temp
 AS $$
 DECLARE
@@ -2808,53 +2903,49 @@ BEGIN
     SELECT id INTO v_member_role_id FROM public.roles WHERE name = 'Member';
     SELECT id INTO v_voter_role_id FROM public.roles WHERE name = 'Voters';
 
-    -- 2. Delete adviser memberships (so they do not become standard student members)
-    DELETE FROM public.organization_members
-    WHERE role_id = (SELECT id FROM public.roles WHERE name = 'Adviser' LIMIT 1);
-
-    -- 3. Reset student organization members to standard 'Member' role
+    -- 2. Demote ALL organization members (incl. advisers/officers) to Member.
+    --    No rows are deleted.
     UPDATE public.organization_members
     SET role_id = v_member_role_id
     WHERE role_id IS DISTINCT FROM v_member_role_id;
 
-    -- 3. Reset comselec members to standard 'Voters' role
+    -- 3. Demote comselec members to standard 'Voters' role
     UPDATE public.comselec_members
     SET role_id = v_voter_role_id
     WHERE role_id IS DISTINCT FROM v_voter_role_id;
 
-    -- 4. Delete transient officer roles from user_roles
+    -- 4. Point active memberships at the new term (fixes stale term pointers
+    --    after year changes).
+    UPDATE public.organization_members
+    SET academic_term_id = p_new_term_id
+    WHERE status = 'active';
+
+    UPDATE public.comselec_members
+    SET academic_term_id = p_new_term_id
+    WHERE status = 'active';
+
+    -- 5. Clear transient officer roles from user_roles (enforcement half of
+    --    demotion; scoped Dean/Head/Super-Admin and base roles preserved).
     DELETE FROM public.user_roles
     WHERE role_id NOT IN (
-        SELECT id FROM public.roles 
+        SELECT id FROM public.roles
         WHERE name IN ('Super Admin', 'Faculty Dean', 'Program Head', 'Instructor', 'Personnel', 'Students', 'Voters')
     );
 
-    -- 5. Clear adviser assignments on organizations
-    UPDATE public.organizations
-    SET adviser_name = NULL
-    WHERE id IS NOT NULL;
+    -- 6. Org/comselec settings (adviser_name, clearance periods, flags) are
+    --    intentionally PRESERVED across years — no wipes.
 
-    -- 6. Reset clearance periods in organization & comselec settings
-    UPDATE public.organization_settings
-    SET clearance_period_start = NULL,
-        clearance_period_end = NULL,
-        restrict_clearance_request = FALSE
-    WHERE organization_id IS NOT NULL;
-
-    UPDATE public.comselec_settings
-    SET clearance_period_start = NULL,
-        clearance_period_end = NULL
-    WHERE comselec_id IS NOT NULL;
-
-    -- 7. Archive active clearance requests instead of deleting historical audit records
+    -- 7. Archive clearance requests instead of deleting historical records
     UPDATE public.activity_card_clearance_requests
     SET status = 'Archived'
     WHERE status <> 'Archived';
 
-    -- 8. Mark active sanction records as Completed/Archived for new term
+    -- 8. Mark pending sanction records as Completed for the new year
     UPDATE public.student_sanction_records
     SET status = 'Completed'
     WHERE status IN ('Pending Item', 'In Progress');
+
+    -- Events, fees, announcements, attendance, payments, targets: NEVER touched.
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -2883,7 +2974,7 @@ BEGIN
 
         -- Perform reset only if academic year changes
         IF v_old_academic_year IS NOT NULL AND v_old_academic_year <> NEW.academic_year THEN
-            PERFORM public.reset_academic_year_data();
+            PERFORM public.reset_academic_year_data(NEW.id);
         ELSIF v_old_academic_year IS NOT NULL AND v_old_academic_year = NEW.academic_year THEN
             -- If academic year is the same (e.g. changing from 1st sem to 2nd sem),
             -- carry over the academic_term_id of all active officers/advisers to the new active term.

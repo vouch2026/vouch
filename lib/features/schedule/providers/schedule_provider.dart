@@ -17,16 +17,26 @@ final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
 class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
   @override
   FutureOr<List<ScheduleModel>> build() async {
-    final activeTermAsync = ref.watch(activeTermProvider);
-    final activeTerm = activeTermAsync.valueOrNull;
-    if (activeTerm == null) return [];
-    
+    // AY|SEM history: read the viewed term (defaults to active). Past = view-only.
+    final viewingTermAsync = ref.watch(viewingTermProvider);
+    final viewingTerm = viewingTermAsync.valueOrNull;
+    if (viewingTerm == null) return [];
+
     final settings = ref.watch(settingsProvider);
-    
+
     final repository = ref.watch(scheduleRepositoryProvider);
-    final schedules = await repository.getSchedules(activeTerm.id);
+    final schedules = await repository.getSchedules(viewingTerm.id);
     _syncAllNotifications(schedules, settings);
     return schedules;
+  }
+
+  /// Throws when the user is viewing a past (read-only) term.
+  Future<void> _assertWritable() async {
+    final isPast = await ref.read(isViewingPastProvider.future);
+    if (isPast) {
+      throw Exception(
+          'You are viewing a past term (read-only). Switch back to the active term to manage schedules.');
+    }
   }
 
   Future<void> addSchedule({
@@ -39,9 +49,10 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
     required String room,
     int reminderMinutes = 0,
   }) async {
+    await _assertWritable();
     final activeTerm = ref.read(activeTermProvider).valueOrNull;
     if (activeTerm == null) throw Exception('No active academic term found');
-    
+
     final repository = ref.read(scheduleRepositoryProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -64,9 +75,10 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
   }
 
   Future<void> updateSchedule(ScheduleModel schedule) async {
+    await _assertWritable();
     final activeTerm = ref.read(activeTermProvider).valueOrNull;
     if (activeTerm == null) throw Exception('No active academic term found');
-    
+
     final repository = ref.read(scheduleRepositoryProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -78,9 +90,10 @@ class SchedulesNotifier extends AsyncNotifier<List<ScheduleModel>> {
   }
 
   Future<void> deleteSchedule(String id) async {
+    await _assertWritable();
     final activeTerm = ref.read(activeTermProvider).valueOrNull;
     if (activeTerm == null) throw Exception('No active academic term found');
-    
+
     final repository = ref.read(scheduleRepositoryProvider);
     
     // Find the schedule to cancel its notifications

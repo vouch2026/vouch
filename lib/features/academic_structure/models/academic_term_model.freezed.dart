@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AcademicTermModel {
 
- String get id;@JsonKey(name: 'academic_year') String get academicYear; String get semester;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ String get id;@JsonKey(name: 'academic_year') String get academicYear; String get semester;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'start_date') DateTime? get startDate;@JsonKey(name: 'end_date') DateTime? get endDate;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of AcademicTermModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $AcademicTermModelCopyWith<AcademicTermModel> get copyWith => _$AcademicTermMode
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AcademicTermModel&&(identical(other.id, id) || other.id == id)&&(identical(other.academicYear, academicYear) || other.academicYear == academicYear)&&(identical(other.semester, semester) || other.semester == semester)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AcademicTermModel&&(identical(other.id, id) || other.id == id)&&(identical(other.academicYear, academicYear) || other.academicYear == academicYear)&&(identical(other.semester, semester) || other.semester == semester)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.startDate, startDate) || other.startDate == startDate)&&(identical(other.endDate, endDate) || other.endDate == endDate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,academicYear,semester,isActive,createdAt);
+int get hashCode => Object.hash(runtimeType,id,academicYear,semester,isActive,startDate,endDate,createdAt);
 
 @override
 String toString() {
-  return 'AcademicTermModel(id: $id, academicYear: $academicYear, semester: $semester, isActive: $isActive, createdAt: $createdAt)';
+  return 'AcademicTermModel(id: $id, academicYear: $academicYear, semester: $semester, isActive: $isActive, startDate: $startDate, endDate: $endDate, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $AcademicTermModelCopyWith<$Res>  {
   factory $AcademicTermModelCopyWith(AcademicTermModel value, $Res Function(AcademicTermModel) _then) = _$AcademicTermModelCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'academic_year') String academicYear, String semester,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') DateTime? createdAt
+ String id,@JsonKey(name: 'academic_year') String academicYear, String semester,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'start_date') DateTime? startDate,@JsonKey(name: 'end_date') DateTime? endDate,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -65,13 +65,15 @@ class _$AcademicTermModelCopyWithImpl<$Res>
 
 /// Create a copy of AcademicTermModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? academicYear = null,Object? semester = null,Object? isActive = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? academicYear = null,Object? semester = null,Object? isActive = null,Object? startDate = freezed,Object? endDate = freezed,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,academicYear: null == academicYear ? _self.academicYear : academicYear // ignore: cast_nullable_to_non_nullable
 as String,semester: null == semester ? _self.semester : semester // ignore: cast_nullable_to_non_nullable
 as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,endDate: freezed == endDate ? _self.endDate : endDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -157,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'academic_year')  String academicYear,  String semester, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'academic_year')  String academicYear,  String semester, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'start_date')  DateTime? startDate, @JsonKey(name: 'end_date')  DateTime? endDate, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AcademicTermModel() when $default != null:
-return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.createdAt);case _:
+return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.startDate,_that.endDate,_that.createdAt);case _:
   return orElse();
 
 }
@@ -178,10 +180,10 @@ return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'academic_year')  String academicYear,  String semester, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'academic_year')  String academicYear,  String semester, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'start_date')  DateTime? startDate, @JsonKey(name: 'end_date')  DateTime? endDate, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _AcademicTermModel():
-return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.createdAt);case _:
+return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.startDate,_that.endDate,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +200,10 @@ return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'academic_year')  String academicYear,  String semester, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'academic_year')  String academicYear,  String semester, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'start_date')  DateTime? startDate, @JsonKey(name: 'end_date')  DateTime? endDate, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _AcademicTermModel() when $default != null:
-return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.createdAt);case _:
+return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.startDate,_that.endDate,_that.createdAt);case _:
   return null;
 
 }
@@ -213,13 +215,15 @@ return $default(_that.id,_that.academicYear,_that.semester,_that.isActive,_that.
 @JsonSerializable()
 
 class _AcademicTermModel implements AcademicTermModel {
-  const _AcademicTermModel({required this.id, @JsonKey(name: 'academic_year') required this.academicYear, required this.semester, @JsonKey(name: 'is_active') this.isActive = false, @JsonKey(name: 'created_at') this.createdAt});
+  const _AcademicTermModel({required this.id, @JsonKey(name: 'academic_year') required this.academicYear, required this.semester, @JsonKey(name: 'is_active') this.isActive = false, @JsonKey(name: 'start_date') this.startDate, @JsonKey(name: 'end_date') this.endDate, @JsonKey(name: 'created_at') this.createdAt});
   factory _AcademicTermModel.fromJson(Map<String, dynamic> json) => _$AcademicTermModelFromJson(json);
 
 @override final  String id;
 @override@JsonKey(name: 'academic_year') final  String academicYear;
 @override final  String semester;
 @override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'start_date') final  DateTime? startDate;
+@override@JsonKey(name: 'end_date') final  DateTime? endDate;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 
 /// Create a copy of AcademicTermModel
@@ -235,16 +239,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AcademicTermModel&&(identical(other.id, id) || other.id == id)&&(identical(other.academicYear, academicYear) || other.academicYear == academicYear)&&(identical(other.semester, semester) || other.semester == semester)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AcademicTermModel&&(identical(other.id, id) || other.id == id)&&(identical(other.academicYear, academicYear) || other.academicYear == academicYear)&&(identical(other.semester, semester) || other.semester == semester)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.startDate, startDate) || other.startDate == startDate)&&(identical(other.endDate, endDate) || other.endDate == endDate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,academicYear,semester,isActive,createdAt);
+int get hashCode => Object.hash(runtimeType,id,academicYear,semester,isActive,startDate,endDate,createdAt);
 
 @override
 String toString() {
-  return 'AcademicTermModel(id: $id, academicYear: $academicYear, semester: $semester, isActive: $isActive, createdAt: $createdAt)';
+  return 'AcademicTermModel(id: $id, academicYear: $academicYear, semester: $semester, isActive: $isActive, startDate: $startDate, endDate: $endDate, createdAt: $createdAt)';
 }
 
 
@@ -255,7 +259,7 @@ abstract mixin class _$AcademicTermModelCopyWith<$Res> implements $AcademicTermM
   factory _$AcademicTermModelCopyWith(_AcademicTermModel value, $Res Function(_AcademicTermModel) _then) = __$AcademicTermModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'academic_year') String academicYear, String semester,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') DateTime? createdAt
+ String id,@JsonKey(name: 'academic_year') String academicYear, String semester,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'start_date') DateTime? startDate,@JsonKey(name: 'end_date') DateTime? endDate,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -272,13 +276,15 @@ class __$AcademicTermModelCopyWithImpl<$Res>
 
 /// Create a copy of AcademicTermModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? academicYear = null,Object? semester = null,Object? isActive = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? academicYear = null,Object? semester = null,Object? isActive = null,Object? startDate = freezed,Object? endDate = freezed,Object? createdAt = freezed,}) {
   return _then(_AcademicTermModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,academicYear: null == academicYear ? _self.academicYear : academicYear // ignore: cast_nullable_to_non_nullable
 as String,semester: null == semester ? _self.semester : semester // ignore: cast_nullable_to_non_nullable
 as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,endDate: freezed == endDate ? _self.endDate : endDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }

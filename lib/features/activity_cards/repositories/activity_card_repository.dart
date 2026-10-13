@@ -6,16 +6,36 @@ class ActivityCardRepository {
 
   ActivityCardRepository(this._client);
 
-  Future<List<ActivityCard>> getStudentActivityCards(String studentId) async {
-    // 1. Get active term
-    final termResponseList = await _client
+  /// Resolve the term row to scope by: explicit [academicTermId] (history
+  /// viewing, incl. past read-only terms) or the active term by default.
+  /// Returns null when no term resolves (callers return []).
+  Future<Map<String, dynamic>?> _resolveTerm({String? academicTermId}) async {
+    if (academicTermId != null) {
+      final rows = await _client
+          .from('academic_terms')
+          .select()
+          .eq('id', academicTermId)
+          .limit(1);
+      if ((rows as List).isEmpty) return null;
+      return Map<String, dynamic>.from((rows as List).first as Map);
+    }
+    final rows = await _client
         .from('academic_terms')
         .select()
         .eq('is_active', true)
         .limit(1);
-    
-    if (termResponseList.isEmpty) return [];
-    final termResponse = termResponseList.first;
+    if ((rows as List).isEmpty) return null;
+    return Map<String, dynamic>.from((rows as List).first as Map);
+  }
+
+  Future<List<ActivityCard>> getStudentActivityCards(
+    String studentId, {
+    String? academicTermId,
+  }) async {
+    // 1. Get term (viewed term for history, else active term)
+    final termResponse = await _resolveTerm(academicTermId: academicTermId);
+
+    if (termResponse == null) return [];
     
     final termId = termResponse['id'];
     final academicYear = termResponse['academic_year'];
@@ -36,7 +56,12 @@ class ActivityCardRepository {
     for (var member in orgMembers) {
       final org = member['organizations'];
       final orgType = org['type'];
-      String? scopeId = org['campus_id'];
+      String? scopeId;
+      if (orgType == 'school-based' || orgType == 'school') {
+        scopeId = org['school_id'] ?? org['campus_id'];
+      } else {
+        scopeId = org['campus_id'];
+      }
       if (orgType == 'faculty-based') {
         scopeId = org['faculty_id'];
       } else if (orgType == 'program-based') {
@@ -104,10 +129,32 @@ class ActivityCardRepository {
 
     final results = await Future.wait(futures);
 
-    final allEvents = results[0] as List;
-    final allFees = results[1] as List;
+    final rawEvents = results[0] as List;
+    final rawFees = results[1] as List;
     final allSanctions = results[2] as List;
     final allClearanceRequests = results[3] as List;
+
+    // Targeted obligation: events/fees WITH target rows obligate only the
+    // listed members (everyone else sees them as voluntary); rows WITHOUT
+    // target rows keep legacy behavior (all in scope obligated).
+    final eventTargetMap = await _fetchTargetMap(
+      table: 'event_targets',
+      idColumn: 'event_id',
+      ids: rawEvents.map((e) => e['id'] as String).toList(),
+    );
+    final feeTargetMap = await _fetchTargetMap(
+      table: 'fee_targets',
+      idColumn: 'fee_id',
+      ids: rawFees.map((f) => f['id'] as String).toList(),
+    );
+    final allEvents = rawEvents.where((e) {
+      final targets = eventTargetMap[e['id']];
+      return targets == null || targets.contains(studentId);
+    }).toList();
+    final allFees = rawFees.where((f) {
+      final targets = feeTargetMap[f['id']];
+      return targets == null || targets.contains(studentId);
+    }).toList();
 
     List<ActivityCard> cards = [];
 
@@ -124,7 +171,12 @@ class ActivityCardRepository {
       final isOfficer = (hierarchyLevel as num) > 5;
 
       // Determine scope for events/fees
-      String? scopeId = org['campus_id'];
+      String? scopeId;
+      if (orgType == 'school-based' || orgType == 'school') {
+        scopeId = org['school_id'] ?? org['campus_id'];
+      } else {
+        scopeId = org['campus_id'];
+      }
       if (orgType == 'faculty-based') {
         scopeId = org['faculty_id'];
       } else if (orgType == 'program-based') {
@@ -379,6 +431,34 @@ class ActivityCardRepository {
     }
   }
 
+  /// parentId -> set of obligated userIds for a target table.
+  /// Parents with no rows are ABSENT from the map (legacy: all obligated).
+  /// Returns {} when the table doesn't exist yet (old DB) — same effect.
+  Future<Map<String, Set<String>>> _fetchTargetMap({
+    required String table,
+    required String idColumn,
+    required List<String> ids,
+  }) async {
+    if (ids.isEmpty) return {};
+    try {
+      final response = await _client
+          .from(table)
+          .select('$idColumn, user_id')
+          .filter(idColumn, 'in', ids);
+      final map = <String, Set<String>>{};
+      for (final row in (response as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final pid = m[idColumn] as String?;
+        final uid = m['user_id'] as String?;
+        if (pid == null || uid == null) continue;
+        map.putIfAbsent(pid, () => <String>{}).add(uid);
+      }
+      return map;
+    } catch (_) {
+      return {};
+    }
+  }
+
   int _getRoleOrder(String roleName) {
     final name = roleName.toLowerCase().trim();
     if (name == 'secretary') return 1;
@@ -390,16 +470,14 @@ class ActivityCardRepository {
     return 7;
   }
 
-  Future<List<ActivityCard>> getOrganizationActivityCards(String organizationId) async {
-    // 1. Get active term
-    final termResponseList = await _client
-        .from('academic_terms')
-        .select()
-        .eq('is_active', true)
-        .limit(1);
-    
-    if (termResponseList.isEmpty) return [];
-    final termResponse = termResponseList.first;
+  Future<List<ActivityCard>> getOrganizationActivityCards(
+    String organizationId, {
+    String? academicTermId,
+  }) async {
+    // 1. Get term (viewed term for history, else active term)
+    final termResponse = await _resolveTerm(academicTermId: academicTermId);
+
+    if (termResponse == null) return [];
     final termId = termResponse['id'];
     final academicYear = termResponse['academic_year'];
     final semester = termResponse['semester'];
@@ -424,7 +502,9 @@ class ActivityCardRepository {
       orgLogo = orgResponse['logo_url'];
       orgCode = orgResponse['code'];
       scopeId = orgResponse['campus_id'];
-      if (orgType == 'faculty-based') {
+      if (orgType == 'school-based' || orgType == 'school') {
+        scopeId = orgResponse['school_id'] ?? orgResponse['campus_id'];
+      } else if (orgType == 'faculty-based') {
         scopeId = orgResponse['faculty_id'];
       } else if (orgType == 'program-based') {
         scopeId = orgResponse['program_id'];
@@ -556,6 +636,19 @@ class ActivityCardRepository {
         .eq('scope_id', scopeId)
         .eq('academic_term_id', termId)
         .eq('is_mandatory', true);
+
+    // Targeted obligation: items WITH target rows obligate only listed
+    // members; items WITHOUT target rows keep legacy (all obligated).
+    final eventTargetMap = await _fetchTargetMap(
+      table: 'event_targets',
+      idColumn: 'event_id',
+      ids: (eventsResponse as List).map((e) => e['id'] as String).toList(),
+    );
+    final feeTargetMap = await _fetchTargetMap(
+      table: 'fee_targets',
+      idColumn: 'fee_id',
+      ids: (feesResponse as List).map((f) => f['id'] as String).toList(),
+    );
 
     // Resolve target organization IDs for sanction filtering
     List<String> targetSanctionScopeIds = [];
@@ -697,7 +790,11 @@ class ActivityCardRepository {
       final bool sanctionsCleared = sanctions.isNotEmpty && sanctions.every((s) => s.isFulfilled);
 
       // 3. Map events (applying sanctionCleared if all sanctions are completed)
-      final List<ActivityCardEvent> events = eventsResponse.map((e) {
+      // Non-targeted members skip targeted events (voluntary, not obligated).
+      final List<ActivityCardEvent> events = eventsResponse.where((e) {
+        final targets = eventTargetMap[e['id']];
+        return targets == null || targets.contains(studentId);
+      }).map((e) {
         final attendance = studentAttendance.where((a) => a['event_id'] == e['id']).firstOrNull;
         var status = _mapAttendanceStatus(attendance?['status']);
         final hasTimeIn = attendance?['actual_time_in'] != null;
@@ -721,8 +818,11 @@ class ActivityCardRepository {
         );
       }).toList();
 
-      // 4. Map fees
-      final List<ActivityCardFee> fees = feesResponse.map((f) {
+      // 4. Map fees (non-targeted members skip targeted fees)
+      final List<ActivityCardFee> fees = feesResponse.where((f) {
+        final targets = feeTargetMap[f['id']];
+        return targets == null || targets.contains(studentId);
+      }).map((f) {
         final payment = studentPayments.where((p) => p['fee_id'] == f['id']).firstOrNull;
         return ActivityCardFee(
           id: f['id'],
@@ -782,8 +882,15 @@ class ActivityCardRepository {
     return cards;
   }
 
-  Future<ActivityCard?> getStudentActivityCardForOrganization(String studentId, String organizationId) async {
-    final cards = await getOrganizationActivityCards(organizationId);
+  Future<ActivityCard?> getStudentActivityCardForOrganization(
+    String studentId,
+    String organizationId, {
+    String? academicTermId,
+  }) async {
+    final cards = await getOrganizationActivityCards(
+      organizationId,
+      academicTermId: academicTermId,
+    );
     return cards.where((c) => c.studentId == studentId).firstOrNull;
   }
 }

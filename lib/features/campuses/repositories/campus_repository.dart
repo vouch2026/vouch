@@ -13,11 +13,17 @@ class CampusRepository {
     return (response as List).map((json) => CampusModel.fromJson(json)).toList();
   }
 
-  Future<CampusModel> createCampus(CampusModel campus) async {
+  Future<CampusModel> createCampus(CampusModel campus,
+      {String? schoolId}) async {
     final data = campus.toJson();
     data.remove('id');
     data.remove('created_at');
     data.remove('updated_at');
+    // school_id column exists post-migration; harmless if column is missing
+    // on older DBs only when a schoolId is actually supplied.
+    if (schoolId != null && schoolId.isNotEmpty) {
+      data['school_id'] = schoolId;
+    }
 
     final response = await _client
         .from('campuses')

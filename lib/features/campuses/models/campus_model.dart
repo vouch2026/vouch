@@ -12,6 +12,7 @@ abstract class CampusModel with _$CampusModel {
     String? description,
     @JsonKey(name: 'logo_url') String? logoUrl,
     @JsonKey(name: 'banner_url') String? bannerUrl,
+    @JsonKey(name: 'school_id') String? schoolId,
     @Default('active') String status,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,

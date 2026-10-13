@@ -13,6 +13,7 @@ _CampusModel _$CampusModelFromJson(Map<String, dynamic> json) => _CampusModel(
   description: json['description'] as String?,
   logoUrl: json['logo_url'] as String?,
   bannerUrl: json['banner_url'] as String?,
+  schoolId: json['school_id'] as String?,
   status: json['status'] as String? ?? 'active',
   createdAt: json['created_at'] == null
       ? null
@@ -30,6 +31,7 @@ Map<String, dynamic> _$CampusModelToJson(_CampusModel instance) =>
       'description': instance.description,
       'logo_url': instance.logoUrl,
       'banner_url': instance.bannerUrl,
+      'school_id': instance.schoolId,
       'status': instance.status,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),

@@ -8,9 +8,14 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/layouts/dashboard_layout.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../organizations/models/organization_model.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../organizations/providers/organization_provider.dart';
 import '../../finance/models/fee_model.dart';
 import '../../finance/providers/finance_provider.dart';
+import '../../../shared/widgets/scope_selector.dart';
+import '../../../shared/widgets/member_multi_select_dialog.dart';
+import '../../../core/utils/scope_helpers.dart';
 
 class GovernorCreateFeePage extends ConsumerStatefulWidget {
   final FeeModel? initialData;
@@ -32,9 +37,37 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
   bool _isMandatory = true;
   bool _isLoading = false;
 
+  // Scoped targeting: broad visibility scope + explicit obligated members.
+  ScopeSelection? _scope;
+  Set<String> _targetIds = {};
+  String? _orgSchoolId;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final workspace = ref.read(workspaceProvider);
+        final org = workspace.selectedOrganization;
+        if (org != null &&
+            (org.type == 'school-based' || org.type == 'school')) {
+          final schoolId = await ref
+              .read(organizationRepositoryProvider)
+              .getOrganizationSchoolId(org.id)
+              .catchError((_) => null);
+          if (mounted) setState(() => _orgSchoolId = schoolId);
+        }
+        final initialId = widget.initialData?.id;
+        if (initialId != null) {
+          final targets = await ref
+              .read(financeRepositoryProvider)
+              .getFeeTargets(initialId);
+          if (mounted) setState(() => _targetIds = targets.toSet());
+        }
+      } catch (_) {
+        // Picker still works with org-derived defaults; ignore.
+      }
+    });
     _titleController = TextEditingController(text: widget.initialData?.name);
     _amountController = TextEditingController(text: widget.initialData?.amount.toString());
     _descriptionController = TextEditingController(text: widget.initialData?.description);
@@ -87,6 +120,13 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
     setState(() => _isLoading = true);
 
     try {
+      // Past AY|SEM is view-only — creation only allowed on the active term.
+      final isPast = await ref.read(isViewingPastProvider.future);
+      if (isPast) {
+        throw Exception(
+            'You are viewing a past term (read-only). Switch back to the active term to create fees.');
+      }
+
       final workspace = ref.read(workspaceProvider);
       final org = workspace.selectedOrganization!;
       final user = ref.read(userProfileProvider).value!;
@@ -96,13 +136,23 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
         throw Exception('No active academic term found. Please contact an administrator.');
       }
 
-      final scopeType = org.type == 'campus-based' 
-          ? 'Institutional' 
-          : (org.type == 'faculty-based' ? 'Faculty' : 'Program');
-      
-      final scopeId = org.type == 'campus-based' 
-          ? org.campusId 
-          : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+      // Scope: picker selection wins (allows narrowing); falls back to
+      // org-derived scope when the picker hasn't resolved yet.
+      String scopeType;
+      String? scopeId;
+      if (_scope != null) {
+        scopeType = _scope!.scopeType;
+        scopeId = _scope!.scopeId;
+      } else if (org.type == 'school-based' || org.type == 'school') {
+        scopeType = 'School';
+        scopeId = await ref
+            .read(organizationRepositoryProvider)
+            .getOrganizationSchoolId(org.id)
+            .catchError((_) => null);
+      } else {
+        scopeType = resolveScopeType(org);
+        scopeId = resolveScopeId(org);
+      }
 
       final fee = FeeModel(
         id: widget.initialData?.id,
@@ -119,8 +169,16 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
 
       if (widget.initialData != null) {
         await ref.read(financeRepositoryProvider).updateFee(fee);
+        await ref
+            .read(financeRepositoryProvider)
+            .setFeeTargets(fee.id!, _targetIds.toList());
       } else {
-        await ref.read(financeRepositoryProvider).createFee(fee);
+        final newId =
+            await ref.read(financeRepositoryProvider).createFee(fee);
+        // Explicit obligation targets; empty = legacy (all in scope).
+        await ref
+            .read(financeRepositoryProvider)
+            .setFeeTargets(newId, _targetIds.toList());
       }
 
       if (mounted) {
@@ -428,8 +486,83 @@ class _GovernorCreateFeePageState extends ConsumerState<GovernorCreateFeePage> {
             ),
           ),
         ),
+        const SizedBox(height: AppSpacing.lg),
+        _buildTargetScopeSection(),
       ],
     );
+  }
+
+  Widget _buildTargetScopeSection() {
+    final org = ref.watch(workspaceProvider).selectedOrganization;
+    if (org == null) return const SizedBox();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('Target Scope & Members'),
+        const Text(
+          'Everyone in scope can view the fee. Only selected members are obligated to pay (counts toward clearance). Leave empty for legacy behavior.',
+          style: TextStyle(color: Colors.grey, fontSize: 11),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ScopeSelector(
+          orgType: org.type,
+          orgSchoolId: _orgSchoolId,
+          orgCampusId: org.campusId,
+          orgFacultyId: org.facultyId,
+          orgProgramId: org.programId,
+          onChanged: (sel) => setState(() {
+            _scope = sel;
+            _targetIds = {};
+          }),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final scopeType = _scope?.scopeType ?? _fallbackScopeType(org);
+              final scopeId = _scope?.scopeId ?? _fallbackScopeId(org);
+              if (scopeId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text(
+                          'Pick a target scope first (scope is still resolving).')),
+                );
+                return;
+              }
+              final picked = await showDialog<Set<String>>(
+                context: context,
+                builder: (_) => MemberMultiSelectDialog(
+                  scopeType: scopeType,
+                  scopeId: scopeId,
+                  initiallySelected: _targetIds,
+                  title: 'Select Obligated Members',
+                  obligationLabel: 'obligated to pay',
+                ),
+              );
+              if (picked != null) setState(() => _targetIds = picked);
+            },
+            icon: const Icon(Icons.group_add_rounded, size: 18),
+            label: Text(
+              _targetIds.isEmpty
+                  ? 'Select obligated members (optional)'
+                  : '${_targetIds.length} member${_targetIds.length == 1 ? '' : 's'} obligated — tap to edit',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _fallbackScopeType(OrganizationModel org) => resolveScopeType(org);
+
+  String? _fallbackScopeId(OrganizationModel org) {
+    if (org.type == 'school-based' || org.type == 'school') {
+      return _orgSchoolId;
+    }
+    return org.type == 'campus-based'
+        ? org.campusId
+        : (org.type == 'faculty-based' ? org.facultyId : org.programId);
   }
 
   Widget _buildFormSection(BuildContext context, {required String title, required List<Widget> children}) {

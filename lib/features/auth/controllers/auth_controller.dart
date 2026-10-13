@@ -58,24 +58,31 @@ class AuthController extends AsyncNotifier<void> {
     required String facultyId,
     required String programId,
     required int yearLevel,
+    // University (schools table id, e.g. DORSU). Distinct from schoolId, which
+    // is the student ID number (student_id_number). Null on old DBs.
+    String? universityId,
   }) async {
     state = const AsyncLoading();
-    
+
     final result = await AsyncValue.guard(() async {
+      final data = <String, dynamic>{
+        'first_name': firstName,
+        'last_name': lastName,
+        'school_id': schoolId,
+        'campus_id': campusId,
+        'faculty_id': facultyId,
+        'program_id': programId,
+        'year_level': yearLevel,
+        'role': 'student',
+        'status': 'pending',
+      };
+      if (universityId != null && universityId.isNotEmpty) {
+        data['university_id'] = universityId;
+      }
       return await _repository.signUpWithEmail(
         email: email,
         password: password,
-        data: {
-          'first_name': firstName,
-          'last_name': lastName,
-          'school_id': schoolId,
-          'campus_id': campusId,
-          'faculty_id': facultyId,
-          'program_id': programId,
-          'year_level': yearLevel,
-          'role': 'student',
-          'status': 'pending',
-        },
+        data: data,
       );
     });
     

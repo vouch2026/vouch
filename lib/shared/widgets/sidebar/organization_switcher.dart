@@ -7,7 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../features/organizations/providers/workspace_provider.dart';
 import '../../../../features/organizations/providers/organization_provider.dart';
 import '../../../../features/organizations/models/organization_model.dart';
-import 'package:vouch_v2/core/utils/offline_image_cache.dart';
+import 'package:vouch_v2/core/widgets/images/org_logo_avatar.dart';
 
 class OrganizationSwitcher extends ConsumerStatefulWidget {
   const OrganizationSwitcher({super.key});
@@ -133,7 +133,20 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
     final userOrgsAsync = ref.watch(userOrganizationsProvider);
 
     return userOrgsAsync.when(
-      data: (orgs) => Padding(
+      data: (orgs) {
+        // Reconcile with the canonical list row: the stored workspace org
+        // can be a stale/logo-less copy (refresh restore, settings save),
+        // while this list always carries the fresh RPC shape.
+        OrganizationModel? displayOrg = selectedOrg;
+        if (selectedOrg != null) {
+          for (final o in orgs) {
+            if (o.id == selectedOrg.id) {
+              displayOrg = o;
+              break;
+            }
+          }
+        }
+        return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Stack(
           children: [
@@ -152,7 +165,7 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                   border: Border.all(
                     color: _isDropdownOpen
                         ? AppColors.primary.withValues(alpha: 0.3)
-                        : (selectedOrg == null ? AppColors.primary.withValues(alpha: 0.3) : Colors.grey.shade200),
+                        : (displayOrg == null ? AppColors.primary.withValues(alpha: 0.3) : Colors.grey.shade200),
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -176,9 +189,9 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                     child: Row(
                       children: [
                         _OrgAvatar(
-                          logoUrl: selectedOrg?.logoUrl,
-                          isGlobal: selectedOrg == null,
-                          type: selectedOrg?.type,
+                          logoUrl: displayOrg?.logoUrl,
+                          isGlobal: displayOrg == null,
+                          type: displayOrg?.type,
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
@@ -187,7 +200,7 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                selectedOrg?.name ?? 'Select Organization',
+                                displayOrg?.name ?? 'Select Organization',
                                 style: GoogleFonts.poppins(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -197,13 +210,13 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
-                                selectedOrg != null
+                                displayOrg != null
                                     ? (workspace.activeRole?.roleName ?? 'Member')
                                     : 'Switch Workspace',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
-                                  color: selectedOrg == null ? AppColors.primary : AppColors.textGrey,
-                                  fontWeight: selectedOrg == null ? FontWeight.w600 : FontWeight.w500,
+                                  color: displayOrg == null ? AppColors.primary : AppColors.textGrey,
+                                  fontWeight: displayOrg == null ? FontWeight.w600 : FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -242,7 +255,8 @@ class _OrganizationSwitcherState extends ConsumerState<OrganizationSwitcher> {
               ),
           ],
         ),
-      ),
+      );
+      },
       loading: () => const Padding(
         padding: EdgeInsets.all(AppSpacing.md),
         child: Center(child: SizedBox(width: 20, height: 20, child: FlickrLoader())),
@@ -407,27 +421,19 @@ class _OrgAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final IconData fallbackIcon = isGlobal 
-        ? Icons.business_rounded 
+    final IconData fallbackIcon = isGlobal
+        ? Icons.business_rounded
         : (type == 'comselec' ? Icons.how_to_vote_rounded : Icons.corporate_fare_rounded);
 
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: isGlobal ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        image: logoUrl != null && OfflineImageCache.get(logoUrl) != null
-            ? DecorationImage(image: OfflineImageCache.get(logoUrl)!, fit: BoxFit.cover)
-            : null,
-      ),
-      child: logoUrl == null
-          ? Icon(
-              fallbackIcon,
-              color: isGlobal ? AppColors.primary : Colors.grey.shade400,
-              size: 20,
-            )
-          : null,
+    return OrgLogoAvatar(
+      logoUrl: logoUrl,
+      size: 40,
+      borderRadius: 12,
+      fallbackIcon: fallbackIcon,
+      backgroundColor: isGlobal
+          ? AppColors.primary.withValues(alpha: 0.1)
+          : Colors.grey.shade100,
+      iconColor: isGlobal ? AppColors.primary : Colors.grey.shade400,
     );
   }
 }

@@ -4,6 +4,7 @@ import '../models/event_model.dart';
 import '../repositories/event_repository.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../organizations/providers/workspace_provider.dart';
+import '../../academic_structure/providers/term_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/storage_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -18,22 +19,20 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
   final org = workspace.selectedOrganization;
   
   if (org == null) return [];
-  
-  final isInstitutional = org.type == 'campus-based' || org.type == 'institutional';
-  final isFaculty = org.type == 'faculty-based' || org.type == 'faculty';
-  
-  final scopeType = isInstitutional 
-      ? 'Institutional' 
-      : (isFaculty ? 'Faculty' : 'Program');
-  
-  final scopeId = isInstitutional 
-      ? org.campusId 
-      : (isFaculty ? org.facultyId : org.programId);
+
+  // School-based orgs (e.g. USC) resolve to scope_type `School`.
+  final scope = await ref.watch(organizationScopeProvider(org).future);
+  final scopeType = scope.scopeType;
+  final scopeId = scope.scopeId;
 
   if (scopeId == null) return [];
-  
+
+  // AY|SEM history: default active, selectable via the sidebar. Past = view-only.
+  final viewingTerm = await ref.watch(viewingTermProvider.future);
+  final termId = viewingTerm?.id;
+
   final box = Hive.box('events');
-  final cacheKey = 'workspace_events_${org.id}';
+  final cacheKey = 'workspace_events_${org.id}_${termId ?? 'all'}';
   final cached = box.get(cacheKey);
 
   // Fast path: if connectivity provider knows we are offline, load cached instantly
@@ -52,7 +51,7 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
   try {
     final events = await ref
         .watch(eventRepositoryProvider)
-        .getEventsByScope(scopeType, scopeId)
+        .getEventsByScope(scopeType, scopeId, academicTermId: termId)
         .timeout(const Duration(seconds: 2));
     final eventsJson = events.map((e) => e.toJson()).toList();
     await box.put(cacheKey, eventsJson);
@@ -75,8 +74,11 @@ final workspaceEventsProvider = FutureProvider<List<EventModel>>((ref) async {
 });
 
 final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
+  final viewingTerm = await ref.watch(viewingTermProvider.future);
+  final termId = viewingTerm?.id;
+
   final box = Hive.box('events');
-  const cacheKey = 'all_events';
+  final cacheKey = 'all_events_${termId ?? 'all'}';
   final cached = box.get(cacheKey);
 
   // Fast path: if connectivity provider knows we are offline, load cached instantly
@@ -95,7 +97,7 @@ final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
   try {
     final events = await ref
         .watch(eventRepositoryProvider)
-        .getAllEvents()
+        .getAllEvents(academicTermId: termId)
         .timeout(const Duration(seconds: 2));
     final eventsJson = events.map((e) => e.toJson()).toList();
     await box.put(cacheKey, eventsJson);
@@ -110,6 +112,22 @@ final allEventsProvider = FutureProvider<List<EventModel>>((ref) async {
     }
     rethrow;
   }
+});
+
+/// Explicitly obligated user ids for an event.
+/// Empty list = legacy behavior (everyone in scope obligated) OR table missing.
+final eventTargetsProvider =
+    FutureProvider.family<List<String>, String>((ref, eventId) async {
+  return ref.watch(eventRepositoryProvider).getEventTargets(eventId);
+});
+
+/// Event ids the current user is explicitly obligated for (targeted).
+/// Empty set = no targeted events (legacy untargeted events still obligate
+/// everyone in scope — resolved by callers checking target-list emptiness).
+final myObligatedEventIdsProvider = FutureProvider<Set<String>>((ref) async {
+  final user = ref.watch(userProfileProvider).value;
+  if (user == null || user.id == null) return {};
+  return ref.watch(eventRepositoryProvider).getObligatedEventIds(user.id!);
 });
 
 final eventProvider = FutureProvider.family<EventModel?, String>((ref, id) async {

@@ -1,12 +1,15 @@
 import 'package:vouch_v2/core/widgets/loaders/flickr_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../providers/academic_stats_provider.dart';
 
+/// Real-data KPI cards for the Academic Structure page.
+///
+/// Every number comes from [academicStatsProvider] — no placeholder trends
+/// or synthetic sparklines.
 class AcademicKpiSection extends ConsumerWidget {
   const AcademicKpiSection({super.key});
 
@@ -17,7 +20,7 @@ class AcademicKpiSection extends ConsumerWidget {
     return statsAsync.when(
       data: (stats) => LayoutBuilder(
         builder: (context, constraints) {
-          int crossAxisCount = 4;
+          int crossAxisCount = 5;
           if (constraints.maxWidth < 600) {
             crossAxisCount = 1;
           } else if (constraints.maxWidth < 900) {
@@ -26,55 +29,81 @@ class AcademicKpiSection extends ConsumerWidget {
             crossAxisCount = 3;
           }
 
+          final totalStudents = stats['totalStudents'] as int? ?? 0;
+          final campusesCount = stats['campusesCount'] as int? ?? 0;
+          final activeCampuses = stats['activeCampuses'] as int? ?? 0;
+          final inactiveCampuses = stats['inactiveCampuses'] as int? ?? 0;
+          final facultiesCount = stats['facultiesCount'] as int? ?? 0;
+          final deansCount = stats['deansCount'] as int? ?? 0;
+          final facultiesWithoutDean =
+              stats['facultiesWithoutDean'] as int? ?? 0;
+          final programsCount = stats['programsCount'] as int? ?? 0;
+          final headsCount = stats['headsCount'] as int? ?? 0;
+          final programsWithoutHead =
+              stats['programsWithoutHead'] as int? ?? 0;
+
           return GridView.count(
             crossAxisCount: crossAxisCount,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: crossAxisCount == 1 ? 2.0 : 1.2,
+            childAspectRatio: crossAxisCount == 1 ? 3.2 : 1.35,
             children: [
               _AcademicKpiCard(
+                title: 'Schools',
+                value: '${stats['schoolsCount'] ?? 0}',
+                primaryStat:
+                    'Active: ${stats['activeSchools'] ?? 0}',
+                secondaryStat: 'Top of the hierarchy',
+                icon: Icons.account_balance_outlined,
+                iconColor: const Color(0xFF0F766E),
+              ),
+              _AcademicKpiCard(
                 title: 'Campuses',
-                value: stats['campusesCount'].toString(),
-                subtitle: 'Active: ${stats['activeCampuses']}',
-                trend: '+0%',
-                isPositive: true,
+                value: '$campusesCount',
+                primaryStat: 'Active: $activeCampuses',
+                secondaryStat: inactiveCampuses > 0
+                    ? 'Inactive: $inactiveCampuses'
+                    : 'All campuses active',
+                isWarning: inactiveCampuses > 0,
                 icon: Icons.business_rounded,
                 iconColor: AppColors.primary,
-                chartData: const [1, 1, 1, 1, 1, 1, 1],
               ),
               _AcademicKpiCard(
                 title: 'Faculties',
-                value: stats['facultiesCount'].toString(),
-                subtitle: 'Deans: ${stats['deansCount']}',
-                trend: '+0%',
-                isPositive: true,
+                value: '$facultiesCount',
+                primaryStat: 'With dean: $deansCount',
+                secondaryStat: facultiesWithoutDean > 0
+                    ? 'Missing dean: $facultiesWithoutDean'
+                    : 'All faculties led',
+                isWarning: facultiesWithoutDean > 0,
                 icon: Icons.account_balance_rounded,
                 iconColor: AppColors.accent,
-                chartData: const [7, 7, 7, 7, 7, 7, 7],
               ),
               _AcademicKpiCard(
                 title: 'Programs',
-                value: stats['programsCount'].toString(),
-                subtitle: 'Heads: ${stats['headsCount']}',
-                trend: '+0%',
-                isPositive: true,
+                value: '$programsCount',
+                primaryStat: 'With head: $headsCount',
+                secondaryStat: programsWithoutHead > 0
+                    ? 'Missing head: $programsWithoutHead'
+                    : 'All programs led',
+                isWarning: programsWithoutHead > 0,
                 icon: Icons.school_rounded,
                 iconColor: Colors.indigo,
-                chartData: const [20, 21, 22, 22, 23, 24, 24],
               ),
               _AcademicKpiCard(
                 title: 'Total Students',
-                value: stats['totalStudents'] >= 1000 
-                    ? '${(stats['totalStudents'] / 1000).toStringAsFixed(1)}k' 
-                    : stats['totalStudents'].toString(),
-                subtitle: 'Organizations: ${stats['totalOrgs']}',
-                trend: '+0%',
-                isPositive: true,
+                value: totalStudents >= 1000
+                    ? '${(totalStudents / 1000).toStringAsFixed(1)}k'
+                    : '$totalStudents',
+                primaryStat:
+                    'Organizations: ${stats['totalOrgs'] ?? 0}',
+                secondaryStat: campusesCount > 0
+                    ? 'Avg ${(totalStudents / campusesCount).round()} per campus'
+                    : 'No campuses yet',
                 icon: Icons.people_outline_rounded,
                 iconColor: Colors.teal,
-                chartData: const [10, 11, 10.5, 12, 11.8, 12.5, 12.5],
               ),
             ],
           );
@@ -89,22 +118,20 @@ class AcademicKpiSection extends ConsumerWidget {
 class _AcademicKpiCard extends StatelessWidget {
   final String title;
   final String value;
-  final String subtitle;
-  final String trend;
-  final bool isPositive;
+  final String primaryStat;
+  final String secondaryStat;
+  final bool isWarning;
   final IconData icon;
   final Color iconColor;
-  final List<double> chartData;
 
   const _AcademicKpiCard({
     required this.title,
     required this.value,
-    required this.subtitle,
-    required this.trend,
-    required this.isPositive,
+    required this.primaryStat,
+    required this.secondaryStat,
+    this.isWarning = false,
     required this.icon,
     required this.iconColor,
-    required this.chartData,
   });
 
   @override
@@ -125,9 +152,9 @@ class _AcademicKpiCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -137,93 +164,57 @@ class _AcademicKpiCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
-              Row(
-                children: [
-                  Icon(
-                    isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                    color: isPositive ? Colors.green : Colors.red,
-                    size: 16,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: AppColors.textGrey,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    trend,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Text(
-            title,
-            style: AppTextStyles.titleSmall.copyWith(
-              color: AppColors.textGrey,
-              fontWeight: FontWeight.w500,
+            value,
+            style: AppTextStyles.displaySmall.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+              height: 1.0,
             ),
           ),
           const SizedBox(height: 4),
-          FittedBox(
-            alignment: Alignment.centerLeft,
-            fit: BoxFit.scaleDown,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  value,
-                  style: AppTextStyles.displaySmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                    height: 1.0,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Text(
-                    subtitle,
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.textGrey.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            primaryStat,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: AppColors.textDark,
+              fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
-          const Spacer(),
-          SizedBox(
-            height: 30,
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                minX: 0,
-                maxX: chartData.length.toDouble() - 1,
-                minY: chartData.reduce((a, b) => a < b ? a : b) * 0.9,
-                maxY: chartData.reduce((a, b) => a > b ? a : b) * 1.1,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: chartData
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value))
-                        .toList(),
-                    isCurved: true,
-                    color: iconColor,
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: iconColor.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ],
+          Row(
+            children: [
+              Icon(
+                isWarning
+                    ? Icons.warning_amber_rounded
+                    : Icons.check_circle_outline_rounded,
+                size: 14,
+                color: isWarning ? Colors.orange : Colors.green,
               ),
-            ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  secondaryStat,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: isWarning ? Colors.orange.shade800 : Colors.green.shade700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ],
       ),

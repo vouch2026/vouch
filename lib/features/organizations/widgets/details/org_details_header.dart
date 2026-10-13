@@ -9,6 +9,7 @@ import '../../models/organization_model.dart';
 import '../../providers/organization_provider.dart';
 import '../../controllers/organization_controller.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../../core/widgets/images/org_logo_avatar.dart';
 import './org_details_analytics_cards.dart';
 
 class OrgDetailsHeader extends ConsumerWidget {
@@ -73,25 +74,13 @@ class OrgDetailsHeader extends ConsumerWidget {
                     ),
                   ],
                 ),
-                child: CircleAvatar(
-                  radius: 50,
+                child: OrgLogoAvatar(
+                  logoUrl: org.logoUrl,
+                  size: 100,
+                  circle: true,
+                  fallbackIcon: Icons.corporate_fare_rounded,
                   backgroundColor: AppColors.background,
-                  backgroundImage: org.logoUrl != null ? NetworkImage(org.logoUrl!) : null,
-                  child: org.logoUrl == null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(50),
-                          child: Image.asset(
-                            'assets/logos/vouch.webp',
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Text(
-                              org.code[0],
-                              style: AppTextStyles.headlineLarge.copyWith(color: AppColors.primary),
-                            ),
-                          ),
-                        )
-                      : null,
+                  iconColor: AppColors.primary,
                 ),
               ),
             ),
