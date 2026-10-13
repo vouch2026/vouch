@@ -12,6 +12,7 @@ import '../../events/models/event_model.dart';
 import '../../events/providers/event_provider.dart';
 import '../widgets/governor_event_card.dart';
 import '../widgets/governor_past_event_card.dart';
+import '../../event_feedback/views/officer_rate_tab.dart';
 
 import '../../organizations/providers/workspace_provider.dart';
 import '../../events/views/student_events_view.dart';
@@ -29,7 +30,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -166,6 +167,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                               Tab(text: 'Today'),
                               Tab(text: 'Upcoming'),
                               Tab(text: 'Past'),
+                              Tab(text: 'Rate'),
                             ],
                           ),
                         ),
@@ -180,6 +182,7 @@ class _GovernorEventsPageState extends ConsumerState<GovernorEventsPage> with Si
                     _buildTabView(todayEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
                     _buildTabView(upcomingEvents, (event) => GovernorEventCard(event: event), mainAxisExtent: 380),
                     _buildTabView(pastEvents, (event) => GovernorPastEventCard(event: event), mainAxisExtent: 200),
+                    OfficerRateTab(pastEvents: pastEvents),
                   ],
                 ),
               ),

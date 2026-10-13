@@ -26,6 +26,9 @@ import '../../../core/utils/role_mapper.dart';
 import '../../attendance/widgets/event_scanner_screen.dart';
 import '../../attendance/views/attendance_report_page.dart';
 import '../../attendance/views/attendance_history_page.dart';
+import '../../event_feedback/providers/event_feedback_provider.dart';
+import '../../event_feedback/views/rate_event_page.dart';
+import '../../event_feedback/views/survey_builder_page.dart';
 import 'event_highlights_gallery_page.dart';
 import '../../governor/views/governor_create_event_page.dart';
 import '../../../shared/widgets/obligation_badge.dart';
@@ -368,6 +371,7 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
                             const SizedBox(height: AppSpacing.xxl),
                           ],
                           _buildStudentExcuseAction(context, event, isOfficer: isFullOfficer),
+                          _buildRateEventAction(context, event, isOfficer: isFullOfficer),
                         ],
                         if (isAllowedOfficer && event.isPastTimeout) ...[
                           _buildOfficerPastEventActions(context, event, isMemberOfCreatorOrg: isMemberOfCreatorOrg),
@@ -989,6 +993,36 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
             );
           },
         ),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              if (event.id == null) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SurveyBuilderPage(event: event),
+                ),
+              );
+            },
+            icon: const Icon(Icons.quiz_outlined),
+            label: Text(
+              'Manage Event Survey',
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1239,6 +1273,71 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
       },
       loading: () => const Center(child: FlickrLoader()),
       error: (err, _) => Text('Error loading attendance: $err'),
+    );
+  }
+
+  Widget _buildRateEventAction(BuildContext context, EventModel event, {required bool isOfficer}) {
+    if (isOfficer) return const SizedBox.shrink();
+    if (!event.isPastTimeout) return const SizedBox.shrink();
+    if (event.id == null) return const SizedBox.shrink();
+
+    final myResponseAsync = ref.watch(myResponseProvider(event.id!));
+
+    return myResponseAsync.when(
+      data: (response) {
+        final rated = response != null;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              'Rate this Event',
+              style: AppTextStyles.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              rated
+                  ? 'You rated this event ${response.overallRating} star${response.overallRating == 1 ? '' : 's'}. You can update your rating anytime.'
+                  : 'Share a 1-5 star rating and answer the event survey.',
+              style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RateEventPage(event: event),
+                  ),
+                ),
+                icon: Icon(rated ? Icons.edit_rounded : Icons.star_outline_rounded),
+                label: Text(
+                  rated ? 'Edit My Rating' : 'Rate Event',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

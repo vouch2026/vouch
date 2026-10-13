@@ -11,6 +11,7 @@ import '../models/event_model.dart';
 import '../providers/event_provider.dart';
 import '../widgets/student_past_event_card.dart';
 import '../widgets/student_event_card.dart';
+import '../../event_feedback/views/student_rate_tab.dart';
 
 class StudentEventsView extends ConsumerStatefulWidget {
   const StudentEventsView({super.key});
@@ -25,7 +26,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -160,6 +161,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
                           Tab(text: 'Today'),
                           Tab(text: 'Upcoming'),
                           Tab(text: 'Past'),
+                          Tab(text: 'Rate'),
                         ],
                       ),
                     ),
@@ -174,6 +176,7 @@ class _StudentEventsViewState extends ConsumerState<StudentEventsView> with Sing
                 _buildTabView(todayEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
                 _buildTabView(upcomingEvents, (event) => StudentEventCard(event: event), mainAxisExtent: 400),
                 _buildTabView(pastEvents, (event) => StudentPastEventCard(event: event), mainAxisExtent: 200),
+                StudentRateTab(pastEvents: pastEvents),
               ],
             ),
           ),
