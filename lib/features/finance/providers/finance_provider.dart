@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/utils/scope_obligation.dart';
 import '../models/fee_model.dart';
 import '../models/payment_receiver_model.dart';
 import '../models/student_payment_model.dart';
@@ -102,9 +103,37 @@ final feeTargetsProvider =
   return ref.watch(financeRepositoryProvider).getFeeTargets(feeId);
 });
 
-/// Fee ids the current user is explicitly obligated for (targeted).
+/// Bulk combined obligation rules for the workspace's visible fees
+/// (individuals + scope picks). Absent key = legacy (all in scope
+/// obligated). {} = all legacy.
+final workspaceFeeObligationMapProvider =
+    FutureProvider<Map<String, ObligationRule>>((ref) async {
+  final fees = await ref.watch(workspaceFeesProvider.future);
+  final ids = fees
+      .map((f) => f.id)
+      .whereType<String>()
+      .toList();
+  if (ids.isEmpty) return {};
+  return ref.watch(financeRepositoryProvider).getFeeObligationMap(ids);
+});
+
+/// Combined obligation rule for one fee (individuals + scope picks).
+/// Legacy when neither table has rows.
+final feeObligationProvider =
+    FutureProvider.family<ObligationRule, String>((ref, feeId) async {
+  return ref.watch(financeRepositoryProvider).getFeeObligation(feeId);
+});
+
+/// Fee ids the current user is obligated for: explicitly listed or via a
+/// targeted scope unit they belong to.
 final myObligatedFeeIdsProvider = FutureProvider<Set<String>>((ref) async {
   final user = ref.watch(userProfileProvider).value;
   if (user == null || user.id == null) return {};
-  return ref.watch(financeRepositoryProvider).getObligatedFeeIds(user.id!);
+  return ref.watch(financeRepositoryProvider).getObligatedFeeIds(
+        user.id!,
+        campusId: user.campusId,
+        facultyId: user.facultyId,
+        programId: user.programId,
+        yearLevel: user.yearLevel,
+      );
 });

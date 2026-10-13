@@ -1,4 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/scope_obligation.dart';
+import '../../events/repositories/event_repository.dart';
 import '../models/sanction_model.dart';
 import '../models/compliance_member_model.dart';
 
@@ -6,6 +8,62 @@ class SanctionRepository {
   final SupabaseClient _client;
 
   SanctionRepository(this._client);
+
+  /// userId -> scope context for obligation matching. Missing users map
+  /// to nulls (no scope-level match). Never throws (fail-open = legacy).
+  Future<Map<String, Map<String, Object?>>> _fetchUserScopeIds(
+      List<String> userIds) async {
+    if (userIds.isEmpty) return {};
+    try {
+      final response = await _client
+          .from('users')
+          .select('id, campus_id, faculty_id, program_id, year')
+          .filter('id', 'in', userIds);
+      final map = <String, Map<String, Object?>>{};
+      for (final row in (response as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final uid = m['id'] as String?;
+        if (uid == null) continue;
+        String? asId(Object? v) => v is String && v.isNotEmpty ? v : null;
+        final year = m['year'];
+        map[uid] = {
+          'campus': asId(m['campus_id']),
+          'faculty': asId(m['faculty_id']),
+          'program': asId(m['program_id']),
+          'year': year is num ? year.toInt() : null,
+        };
+      }
+      return map;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Combined obligation rules for [eventIds] (individuals + scope picks).
+  /// Absent key = legacy (all obligated). Never throws.
+  Future<Map<String, ObligationRule>> _fetchEventObligationMap(
+      List<String> eventIds) {
+    return EventRepository(_client).getEventObligationMap(eventIds);
+  }
+
+  /// True when a student is obligated for an event under [rule].
+  static bool _covers(
+    ObligationRule? rule, {
+    required String studentId,
+    String? campusId,
+    String? facultyId,
+    String? programId,
+    int? yearLevel,
+  }) {
+    if (rule == null) return true;
+    return rule.covers(
+      userId: studentId,
+      campusId: campusId,
+      facultyId: facultyId,
+      programId: programId,
+      yearLevel: yearLevel,
+    );
+  }
 
   /// Fetches all sanction records for a specific workspace (scope) and term.
   Future<List<SanctionModel>> getWorkspaceSanctions(String scopeId, String termId) async {
@@ -165,6 +223,10 @@ class SanctionRepository {
       final eventIds = (eventsResponse as List).map((e) => e['id'] as String).toList();
       if (eventIds.isEmpty) continue;
 
+      // Obligation (individuals + scope picks): non-covered members must
+      // not accrue absences for events missing from their activity card.
+      final obligationMap = await _fetchEventObligationMap(eventIds);
+
       // 2. Get all sanction rules for this specific organization and term
       final rulesResponse = await _client
           .from('sanction_rules')
@@ -204,6 +266,8 @@ class SanctionRepository {
         continue;
       }
 
+      final userScopeIds = await _fetchUserScopeIds(allStudentIds);
+
       // Clean up/delete any existing sanction records for users who are no longer standard members of this organization
       await _client
           .from('student_sanction_records')
@@ -227,13 +291,25 @@ class SanctionRepository {
         studentAttendanceMap.putIfAbsent(studentId, () => {})[eventId] = row;
       }
 
-      // 5. Calculate total sanction score for each student across all mandatory events
+      // 5. Calculate total sanction score for each student across their
+      // obligated mandatory events (targeted only; legacy = all).
       final Map<String, double> studentSanctionScores = {};
       for (var studentId in allStudentIds) {
         double score = 0.0;
         final studentAtt = studentAttendanceMap[studentId];
 
         for (var eventId in eventIds) {
+          final scopeIds = userScopeIds[studentId];
+          if (!_covers(
+            obligationMap[eventId],
+            studentId: studentId,
+            campusId: scopeIds?['campus'] as String?,
+            facultyId: scopeIds?['faculty'] as String?,
+            programId: scopeIds?['program'] as String?,
+            yearLevel: scopeIds?['year'] as int?,
+          )) {
+            continue;
+          }
           final attRecord = studentAtt?[eventId];
 
           if (attRecord != null) {
@@ -423,6 +499,9 @@ class SanctionRepository {
     
     final eventIds = (eventsResponse as List).map((e) => e['id'] as String).toList();
 
+    // Obligation (individuals + scope picks) mirrors the activity-card contract.
+    final obligationMap = await _fetchEventObligationMap(eventIds);
+
     // 3. Fetch attendance records for these events
     final Map<String, Map<String, Map<String, dynamic>>> studentAttendanceMap = {};
     if (eventIds.isNotEmpty) {
@@ -455,9 +534,22 @@ class SanctionRepository {
       
       double computedSanctionScore = 0.0;
       int attendedCount = 0;
-      final totalMandatory = eventIds.length;
+      int totalMandatory = 0;
 
       for (var eventId in eventIds) {
+        final userData = row['user'] as Map<String, dynamic>?;
+        final userYear = userData?['year'];
+        if (!_covers(
+          obligationMap[eventId],
+          studentId: studentId,
+          campusId: userData?['campus_id'] as String?,
+          facultyId: userData?['faculty_id'] as String?,
+          programId: userData?['program_id'] as String?,
+          yearLevel: userYear is num ? userYear.toInt() : null,
+        )) {
+          continue;
+        }
+        totalMandatory++;
         final studentAtt = studentAttendanceMap[studentId];
         final attRecord = studentAtt?[eventId];
 
@@ -520,7 +612,23 @@ class SanctionRepository {
         .eq('is_mandatory', true)
         .order('event_date', ascending: true);
 
-    final List<Map<String, dynamic>> events = List<Map<String, dynamic>>.from(eventsResponse);
+    final List<Map<String, dynamic>> allEvents = List<Map<String, dynamic>>.from(eventsResponse);
+    if (allEvents.isEmpty) return [];
+
+    final allEventIds = allEvents.map((e) => e['id'] as String).toList();
+    // Only events obligated for this student (individuals + scope picks).
+    final obligationMap = await _fetchEventObligationMap(allEventIds);
+    final scopeIds = (await _fetchUserScopeIds([studentId]))[studentId];
+    final List<Map<String, dynamic>> events = allEvents
+        .where((e) => _covers(
+              obligationMap[e['id'] as String],
+              studentId: studentId,
+              campusId: scopeIds?['campus'] as String?,
+              facultyId: scopeIds?['faculty'] as String?,
+              programId: scopeIds?['program'] as String?,
+              yearLevel: scopeIds?['year'] as int?,
+            ))
+        .toList();
     if (events.isEmpty) return [];
 
     final eventIds = events.map((e) => e['id'] as String).toList();

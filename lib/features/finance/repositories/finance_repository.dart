@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/scope_obligation.dart';
 import '../models/fee_model.dart';
 import '../models/payment_receiver_model.dart';
 import '../models/student_payment_model.dart';
@@ -48,27 +49,234 @@ class FinanceRepository {
     }
   }
 
-  /// Replace the full target set for [feeId] (delete + bulk insert).
-  /// Pass an empty list to clear back to legacy "all in scope" behavior.
-  Future<void> setFeeTargets(String feeId, List<String> userIds) async {
+  /// feeId -> set of obligated userIds for a batch of fees.
+  /// Fees with no rows are ABSENT from the map (legacy: all obligated).
+  /// Returns {} when the table doesn't exist yet (old DB) — same effect.
+  Future<Map<String, Set<String>>> getFeeTargetsMap(
+      List<String> feeIds) async {
+    if (feeIds.isEmpty) return {};
     try {
-      await _client.from('fee_targets').delete().eq('fee_id', feeId);
-      if (userIds.isEmpty) return;
-      final rows = userIds
-          .toSet()
-          .map((uid) => {'fee_id': feeId, 'user_id': uid})
-          .toList();
-      await _client.from('fee_targets').insert(rows);
+      final response = await _client
+          .from('fee_targets')
+          .select('fee_id, user_id')
+          .filter('fee_id', 'in', feeIds);
+      final map = <String, Set<String>>{};
+      for (final row in (response as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final fid = m['fee_id'] as String?;
+        final uid = m['user_id'] as String?;
+        if (fid == null || uid == null) continue;
+        map.putIfAbsent(fid, () => <String>{}).add(uid);
+      }
+      return map;
     } catch (_) {
-      // Table missing on old DBs — fee itself is already created; ignore.
+      return {};
     }
   }
 
-  /// Fee ids for which [userId] is explicitly targeted.
+  /// Replace the full target set for [feeId] (delete + bulk insert).
+  /// Pass an empty list to clear back to legacy "all in scope" behavior.
+  /// Optional [scopeTargets] replaces whole-unit picks the same way.
+  Future<void> setFeeTargets(
+    String feeId,
+    List<String> userIds, {
+    List<ScopeTarget> scopeTargets = const [],
+  }) async {
+    try {
+      await _client.from('fee_targets').delete().eq('fee_id', feeId);
+      if (userIds.isNotEmpty) {
+        final rows = userIds
+            .toSet()
+            .map((uid) => {'fee_id': feeId, 'user_id': uid})
+            .toList();
+        await _client.from('fee_targets').insert(rows);
+      }
+    } catch (_) {
+      // Table missing on old DBs — fee itself is already created; ignore.
+    }
+    await setFeeScopeTargets(feeId, scopeTargets);
+  }
+
+  /// Whole-unit picks for [feeId]. Empty = none (legacy unless user rows
+  /// exist). Returns [] (not error) when the table doesn't exist (old DB).
+  /// Falls back to dateless rows on DBs predating the year_level column.
+  Future<List<ScopeTarget>> getFeeScopeTargets(String feeId) async {
+    List<ScopeTarget> parse(Object response) {
+      return (response as List)
+          .map((row) => ScopeTarget.fromJson(
+              Map<String, dynamic>.from(row as Map)))
+          .toList();
+    }
+
+    try {
+      final response = await _client
+          .from('fee_scope_targets')
+          .select('scope_type, scope_id, year_level')
+          .eq('fee_id', feeId);
+      return parse(response);
+    } catch (_) {}
+    try {
+      final response = await _client
+          .from('fee_scope_targets')
+          .select('scope_type, scope_id')
+          .eq('fee_id', feeId);
+      return parse(response);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Replace the whole-unit picks for [feeId] (delete + bulk insert).
+  Future<void> setFeeScopeTargets(
+      String feeId, List<ScopeTarget> scopes) async {
+    try {
+      await _client.from('fee_scope_targets').delete().eq('fee_id', feeId);
+      if (scopes.isEmpty) return;
+      final seen = <ScopeTarget>{};
+      final rows = <Map<String, dynamic>>[];
+      for (final s in scopes) {
+        if (seen.add(s)) rows.add(s.toInsertJson('fee_id', feeId));
+      }
+      try {
+        await _client.from('fee_scope_targets').insert(rows);
+      } catch (_) {
+        // Pre-year_level DB: retry stripped.
+        await _client.from('fee_scope_targets').insert(
+          rows.map((r) {
+            final copy = Map<String, dynamic>.from(r);
+            copy.remove('year_level');
+            return copy;
+          }).toList(),
+        );
+      }
+    } catch (_) {
+      // Table missing on old DBs — ignore.
+    }
+  }
+
+  /// Excepted user ids for [feeId]. Empty = none. [] on old DBs.
+  Future<Set<String>> getFeeTargetExceptions(String feeId) async {
+    try {
+      final response = await _client
+          .from('fee_target_exceptions')
+          .select('user_id')
+          .eq('fee_id', feeId);
+      return (response as List)
+          .map((row) => (row as Map)['user_id'] as String)
+          .toSet();
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Replace the exception set for [feeId] (delete + bulk insert).
+  Future<void> setFeeTargetExceptions(
+      String feeId, Set<String> userIds) async {
+    try {
+      await _client
+          .from('fee_target_exceptions')
+          .delete()
+          .eq('fee_id', feeId);
+      if (userIds.isEmpty) return;
+      await _client.from('fee_target_exceptions').insert(
+            userIds.map((uid) => {'fee_id': feeId, 'user_id': uid}).toList(),
+          );
+    } catch (_) {
+      // Table missing on old DBs — ignore.
+    }
+  }
+
+  /// Combined obligation rule for one fee. Legacy when no table has rows.
+  Future<ObligationRule> getFeeObligation(String feeId) async {
+    final map = await getFeeObligationMap([feeId]);
+    return map[feeId] ?? const ObligationRule.legacy();
+  }
+
+  /// Combined obligation rules for a batch of fees. Parents with no rows
+  /// in any table are ABSENT (legacy).
+  Future<Map<String, ObligationRule>> getFeeObligationMap(
+      List<String> feeIds) async {
+    if (feeIds.isEmpty) return {};
+    final userMap = <String, Set<String>>{};
+    final scopeMap = <String, List<ScopeTarget>>{};
+    final exceptionMap = <String, Set<String>>{};
+    try {
+      final response = await _client
+          .from('fee_targets')
+          .select('fee_id, user_id')
+          .filter('fee_id', 'in', feeIds);
+      for (final row in (response as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final fid = m['fee_id'] as String?;
+        final uid = m['user_id'] as String?;
+        if (fid == null || uid == null) continue;
+        userMap.putIfAbsent(fid, () => <String>{}).add(uid);
+      }
+    } catch (_) {}
+    try {
+      late final Object scopeResponse;
+      try {
+        scopeResponse = await _client
+            .from('fee_scope_targets')
+            .select('fee_id, scope_type, scope_id, year_level')
+            .filter('fee_id', 'in', feeIds);
+      } catch (_) {
+        scopeResponse = await _client
+            .from('fee_scope_targets')
+            .select('fee_id, scope_type, scope_id')
+            .filter('fee_id', 'in', feeIds);
+      }
+      for (final row in (scopeResponse as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final fid = m['fee_id'] as String?;
+        if (fid == null) continue;
+        try {
+          scopeMap
+              .putIfAbsent(fid, () => <ScopeTarget>[])
+              .add(ScopeTarget.fromJson(m));
+        } catch (_) {}
+      }
+    } catch (_) {}
+    try {
+      final response = await _client
+          .from('fee_target_exceptions')
+          .select('fee_id, user_id')
+          .filter('fee_id', 'in', feeIds);
+      for (final row in (response as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final fid = m['fee_id'] as String?;
+        final uid = m['user_id'] as String?;
+        if (fid == null || uid == null) continue;
+        exceptionMap.putIfAbsent(fid, () => <String>{}).add(uid);
+      }
+    } catch (_) {}
+    final ids = <String>{
+      ...userMap.keys,
+      ...scopeMap.keys,
+      ...exceptionMap.keys,
+    };
+    return {
+      for (final id in ids)
+        id: ObligationRule(
+          userIds: userMap[id],
+          scopes: scopeMap[id] ?? const [],
+          excludedUserIds: exceptionMap[id] ?? const {},
+        ),
+    };
+  }
+
+  /// Fee ids for which [userId] is obligated: explicitly listed or member
+  /// of a targeted scope unit (campus/faculty/program/year narrow the
+  /// match), minus explicit exceptions.
   Future<Set<String>> getObligatedFeeIds(
     String userId, {
     String? academicTermId,
+    String? campusId,
+    String? facultyId,
+    String? programId,
+    int? yearLevel,
   }) async {
+    final ids = <String>{};
     try {
       var query = _client
           .from('fee_targets')
@@ -78,12 +286,60 @@ class FinanceRepository {
         query = query.eq('fees.academic_term_id', academicTermId);
       }
       final response = await query;
-      return (response as List)
-          .map((row) => (row as Map)['fee_id'] as String)
-          .toSet();
-    } catch (_) {
-      return {};
+      ids.addAll((response as List)
+          .map((row) => (row as Map)['fee_id'] as String));
+    } catch (_) {}
+    final scopePairs = <MapEntry<String, String>>[
+      if (campusId != null) MapEntry('Institutional', campusId),
+      if (facultyId != null) MapEntry('Faculty', facultyId),
+      if (programId != null) MapEntry('Program', programId),
+    ];
+    for (final pair in scopePairs) {
+      try {
+        late final Object scopeResponse;
+        try {
+          var query = _client
+              .from('fee_scope_targets')
+              .select('fee_id, year_level, fees!inner(academic_term_id)')
+              .eq('scope_type', pair.key)
+              .eq('scope_id', pair.value);
+          if (academicTermId != null) {
+            query = query.eq('fees.academic_term_id', academicTermId);
+          }
+          scopeResponse = await query;
+        } catch (_) {
+          var query = _client
+              .from('fee_scope_targets')
+              .select('fee_id, fees!inner(academic_term_id)')
+              .eq('scope_type', pair.key)
+              .eq('scope_id', pair.value);
+          if (academicTermId != null) {
+            query = query.eq('fees.academic_term_id', academicTermId);
+          }
+          scopeResponse = await query;
+        }
+        for (final row in (scopeResponse as List)) {
+          final m = Map<String, dynamic>.from(row as Map);
+          final rowYear = m['year_level'];
+          if (rowYear != null &&
+              yearLevel != null &&
+              (rowYear as num).toInt() != yearLevel) {
+            continue;
+          }
+          ids.add((m['fee_id'] as String));
+        }
+      } catch (_) {}
     }
+    // Exceptions win over unit membership.
+    try {
+      final response = await _client
+          .from('fee_target_exceptions')
+          .select('fee_id')
+          .eq('user_id', userId);
+      ids.removeAll((response as List)
+          .map((row) => (row as Map)['fee_id'] as String));
+    } catch (_) {}
+    return ids;
   }
 
   Future<String> createFee(FeeModel fee) async {

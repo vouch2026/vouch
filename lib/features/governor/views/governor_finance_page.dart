@@ -21,6 +21,7 @@ import 'governor_create_fee_page.dart';
 import '../../finance/models/payment_receiver_model.dart';
 import '../../finance/views/student_proof_of_payment_page.dart';
 import '../../../core/widgets/states/offline_state_view.dart';
+import '../../../shared/widgets/obligation_badge.dart';
 
 class GovernorFinancePage extends ConsumerStatefulWidget {
   const GovernorFinancePage({super.key});
@@ -932,6 +933,20 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
     final feesAsync = ref.watch(workspaceFeesProvider);
     final submissionsAsync = ref.watch(workspaceStudentPaymentsProvider);
     final userProfile = ref.watch(userProfileProvider).value;
+    final feeObligationMap =
+        ref.watch(workspaceFeeObligationMapProvider).valueOrNull ?? {};
+
+    bool isObligatedFor(dynamic fee) {
+      final rule = feeObligationMap[fee.id];
+      if (rule == null) return true; // Legacy: all in scope obligated.
+      return rule.covers(
+        userId: userProfile?.id,
+        campusId: userProfile?.campusId,
+        facultyId: userProfile?.facultyId,
+        programId: userProfile?.programId,
+        yearLevel: userProfile?.yearLevel,
+      );
+    }
 
     final offlineError = [
       feesAsync.error,
@@ -971,12 +986,15 @@ class _StudentFinanceViewState extends ConsumerState<_StudentFinanceView> {
                        feeSubmissions.firstOrNull;
               }
               
-              // Calculate Total Payable (Outstanding Balance) responding to category filter
+              // Calculate Total Payable (Outstanding Balance) responding to category filter.
+              // Only obligated fees count: targeted-but-not-mine fees are
+              // visible yet never block clearance.
               final totalPayable = fees.where((fee) {
                 if (_categoryFilter == 'Mandatory') return fee.isMandatory;
                 if (_categoryFilter == 'Non-Mandatory') return !fee.isMandatory;
                 return true;
               }).where((fee) {
+                if (!isObligatedFor(fee)) return false;
                 final submission = getLatestSubmission(fee.id!);
                 final status = submission?.status ?? 'To Pay';
                 return status == 'To Pay' || status == 'Rejected';
@@ -1487,6 +1505,13 @@ class _StudentFeeCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (fee.isMandatory) ...[
+                      const SizedBox(height: 4),
+                      ObligationBadge.fee(
+                        parentId: fee.id ?? '',
+                        isMandatory: fee.isMandatory,
+                      ),
+                    ],
                   ],
                 ),
               ],

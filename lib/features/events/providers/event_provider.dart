@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/utils/scope_obligation.dart';
 import '../models/event_model.dart';
 import '../repositories/event_repository.dart';
 import '../../../core/config/supabase_config.dart';
@@ -121,13 +122,27 @@ final eventTargetsProvider =
   return ref.watch(eventRepositoryProvider).getEventTargets(eventId);
 });
 
-/// Event ids the current user is explicitly obligated for (targeted).
+/// Combined obligation rule for one event (individuals + scope picks).
+/// Legacy when neither table has rows.
+final eventObligationProvider =
+    FutureProvider.family<ObligationRule, String>((ref, eventId) async {
+  return ref.watch(eventRepositoryProvider).getEventObligation(eventId);
+});
+
+/// Event ids the current user is obligated for: explicitly listed or via a
+/// targeted scope unit they belong to.
 /// Empty set = no targeted events (legacy untargeted events still obligate
 /// everyone in scope — resolved by callers checking target-list emptiness).
 final myObligatedEventIdsProvider = FutureProvider<Set<String>>((ref) async {
   final user = ref.watch(userProfileProvider).value;
   if (user == null || user.id == null) return {};
-  return ref.watch(eventRepositoryProvider).getObligatedEventIds(user.id!);
+  return ref.watch(eventRepositoryProvider).getObligatedEventIds(
+        user.id!,
+        campusId: user.campusId,
+        facultyId: user.facultyId,
+        programId: user.programId,
+        yearLevel: user.yearLevel,
+      );
 });
 
 final eventProvider = FutureProvider.family<EventModel?, String>((ref, id) async {

@@ -18,9 +18,12 @@ import '../../events/providers/event_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../academic_structure/providers/term_provider.dart';
 import '../../sanctions/providers/sanction_provider.dart';
-import '../../../shared/widgets/scope_selector.dart';
 import '../../../shared/widgets/member_multi_select_dialog.dart';
+import '../../../shared/widgets/obligation_mode_selector.dart';
 import '../../../core/utils/scope_helpers.dart';
+import '../../../core/utils/scope_obligation.dart';
+import '../../faculties/providers/faculty_provider.dart';
+import '../../schools/providers/school_scope_provider.dart';
 
 class GovernorCreateEventPage extends ConsumerStatefulWidget {
   final EventModel? eventToEdit;
@@ -75,33 +78,50 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   bool _isMandatory = true;
   bool _isLoading = false;
 
-  // Scoped targeting: broad visibility scope + explicit obligated members.
-  ScopeSelection? _scope;
-  Set<String> _targetIds = {};
+  // Obligation picks: whole-unit scope targets (live rules) + explicitly
+  // excepted members. Visibility is always the organization itself
+  // (org-derived scope at submit); no picks at all = legacy, all obligated.
+  // Hidden behind "More settings" — All (default) unless creator picks Custom.
+  ObligationMode _mode = ObligationMode.all;
+  List<ScopeTarget> _scopeTargets = [];
+  Set<String> _excludedIds = {};
+  // Display-only obligated total from the dialog (-1 = unknown, e.g. edit
+  // mode before the dialog is opened). Never submitted anywhere.
+  int _obligatedCount = -1;
   String? _orgSchoolId;
 
   @override
   void initState() {
     super.initState();
-    // Resolve raw school_id for school-based orgs (USC) for the picker default.
+    // Resolve the org's school for the picker default. Every org has its
+    // own school: direct for school-based orgs (USC), derived via campus
+    // for the rest.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final workspace = ref.read(workspaceProvider);
         final org = workspace.selectedOrganization;
-        if (org != null &&
-            (org.type == 'school-based' || org.type == 'school')) {
-          final schoolId = await ref
-              .read(organizationRepositoryProvider)
-              .getOrganizationSchoolId(org.id)
-              .catchError((_) => null);
+        if (org != null) {
+          final schoolId = await _resolveOrgSchoolId(org);
           if (mounted) setState(() => _orgSchoolId = schoolId);
         }
-        // Prefill edit-mode targets.
+        // Prefill edit-mode obligation (whole-unit picks + exceptions).
         if (widget.eventToEdit?.id != null) {
-          final targets = await ref
+          final scopeTargets = await ref
               .read(eventRepositoryProvider)
-              .getEventTargets(widget.eventToEdit!.id!);
-          if (mounted) setState(() => _targetIds = targets.toSet());
+              .getEventScopeTargets(widget.eventToEdit!.id!);
+          final excluded = await ref
+              .read(eventRepositoryProvider)
+              .getEventTargetExceptions(widget.eventToEdit!.id!);
+          if (mounted) {
+            setState(() {
+              _scopeTargets = scopeTargets;
+              _excludedIds = excluded;
+              // Existing picks mean a custom setup — reveal it as Custom.
+              if (_scopeTargets.isNotEmpty || _excludedIds.isNotEmpty) {
+                _mode = ObligationMode.custom;
+              }
+            });
+          }
         }
       } catch (_) {
         // Picker still works with org-derived defaults; ignore.
@@ -314,9 +334,14 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         );
 
         await ref.read(eventRepositoryProvider).updateEvent(updatedEvent);
+        await ref.read(eventRepositoryProvider).setEventTargets(
+              updatedEvent.id!,
+              [],
+              scopeTargets: _scopeTargets,
+            );
         await ref
             .read(eventRepositoryProvider)
-            .setEventTargets(updatedEvent.id!, _targetIds.toList());
+            .setEventTargetExceptions(updatedEvent.id!, _excludedIds);
 
         if (mounted) {
           ref.invalidate(workspaceEventsProvider);
@@ -330,20 +355,17 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         return;
       }
       
-      // Scope: picker selection wins (allows narrowing, e.g. USC targeting
-      // one campus/faculty/program); falls back to org-derived scope so old
-      // behavior is preserved when the picker hasn't resolved yet.
+      // Visibility is always the organization itself: org-derived scope.
+      // Obligation comes from the dialog picks (whole units + individuals).
       String scopeType;
       String? scopeId;
-      if (_scope != null) {
-        scopeType = _scope!.scopeType;
-        scopeId = _scope!.scopeId;
-      } else if (org.type == 'school-based' || org.type == 'school') {
+      if (org.type == 'school-based' || org.type == 'school') {
         scopeType = 'School';
-        scopeId = await ref
-            .read(organizationRepositoryProvider)
-            .getOrganizationSchoolId(org.id)
-            .catchError((_) => null);
+        scopeId = _orgSchoolId ??
+            await ref
+                .read(organizationRepositoryProvider)
+                .getOrganizationSchoolId(org.id)
+                .catchError((_) => null);
       } else {
         scopeType = resolveScopeType(org);
         scopeId = resolveScopeId(org);
@@ -436,10 +458,16 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
       for (final event in eventsToCreate) {
         final newId =
             await ref.read(eventRepositoryProvider).createEvent(event);
-        // Explicit obligation targets; empty = legacy (all in scope).
+        // Explicit obligation (whole units + exceptions);
+        // empty = legacy (all in scope).
+        await ref.read(eventRepositoryProvider).setEventTargets(
+              newId,
+              [],
+              scopeTargets: _scopeTargets,
+            );
         await ref
             .read(eventRepositoryProvider)
-            .setEventTargets(newId, _targetIds.toList());
+            .setEventTargetExceptions(newId, _excludedIds);
       }
       
       if (mounted) {
@@ -871,7 +899,17 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         title: const Text('Mandatory Attendance'),
         subtitle: const Text('If enabled, this event will be required for all members'),
         value: _isMandatory,
-        onChanged: (v) => setState(() => _isMandatory = v),
+        onChanged: (v) => setState(() {
+          _isMandatory = v;
+          if (!v) {
+            // Obligation is meaningless for voluntary events: reset to All
+            // so no stale picks are staged or submitted.
+            _mode = ObligationMode.all;
+            _scopeTargets = [];
+            _excludedIds = {};
+            _obligatedCount = -1;
+          }
+        }),
       ),
 
       const SizedBox(height: AppSpacing.md),
@@ -1045,8 +1083,13 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
   }
 
   Widget _buildTargetScopeSection() {
+    // Obligation settings only apply to mandatory events.
+    if (!_isMandatory) return const SizedBox();
     final org = ref.watch(workspaceProvider).selectedOrganization;
     if (org == null) return const SizedBox();
+    final subtitle = _mode == ObligationMode.all
+        ? 'Everyone obligated'
+        : _obligationSummary();
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -1054,88 +1097,137 @@ class _GovernorCreateEventPageState extends ConsumerState<GovernorCreateEventPag
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Target Scope & Members',
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(top: AppSpacing.sm),
+          leading: const Icon(Icons.tune_rounded, color: AppColors.primary),
+          title: Text(
+            'More settings',
             style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Everyone in scope can view the event. Only selected members are obligated (counts toward clearance). Leave member selection empty for legacy behavior (all in scope obligated).',
-            style: TextStyle(color: Colors.grey, fontSize: 11),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: Colors.grey, fontSize: 11),
           ),
-          const SizedBox(height: AppSpacing.md),
-          ScopeSelector(
-            orgType: org.type,
-            orgSchoolId: _orgSchoolId,
-            orgCampusId: org.campusId,
-            orgFacultyId: org.facultyId,
-            orgProgramId: org.programId,
-            onChanged: (sel) => setState(() {
-              _scope = sel;
-              // Scope changed — prior member picks may be out of scope.
-              _targetIds = {};
-            }),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final scopeType =
-                  _scope?.scopeType ?? _fallbackScopeType(org);
-              final scopeId = _scope?.scopeId ?? _fallbackScopeId(org);
-              if (scopeId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          'Pick a target scope first (scope is still resolving).')),
-                );
-                return;
-              }
-              final picked = await showDialog<Set<String>>(
-                context: context,
-                builder: (_) => MemberMultiSelectDialog(
-                  scopeType: scopeType,
-                  scopeId: scopeId,
-                  initiallySelected: _targetIds,
-                  title: 'Select Obligated Members',
-                  obligationLabel: 'obligated to attend',
+          children: [
+            Text(
+              'By default everyone obligated (mandatory means all members attend). Choose Custom to narrow obligation — the event stays visible to all members of ${org.name}.',
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ObligationModeOption(
+              selected: _mode == ObligationMode.all,
+              title: 'All members obligated',
+              subtitle: 'Default — everyone counts toward clearance',
+              onTap: () => setState(() {
+                _mode = ObligationMode.all;
+                _scopeTargets = [];
+                _excludedIds = {};
+                _obligatedCount = -1;
+              }),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ObligationModeOption(
+              selected: _mode == ObligationMode.custom,
+              title: 'Custom selection',
+              subtitle: 'Pick whole units, with optional exceptions',
+              onTap: () =>
+                  setState(() => _mode = ObligationMode.custom),
+            ),
+            if (_mode == ObligationMode.custom) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDialog<ScopedMemberSelection>(
+                      context: context,
+                      builder: (_) => MemberMultiSelectDialog(
+                        orgType: org.type,
+                        orgId: org.id,
+                        orgSchoolId: _orgSchoolId,
+                        orgCampusId: org.campusId,
+                        orgFacultyId: org.facultyId,
+                        orgProgramId: org.programId,
+                        initialScopeTargets: _scopeTargets,
+                        initialExcludedIds: _excludedIds,
+                        title: 'Select Obligated Scope(s)',
+                        obligationLabel: 'obligated to attend',
+                      ),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _scopeTargets = picked.scopeTargets;
+                        _excludedIds = picked.excludedIds;
+                        _obligatedCount = picked.memberCount;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.group_add_rounded, size: 18),
+                  label: Text(
+                    _obligationSummary(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.3)),
+                    foregroundColor: AppColors.primary,
+                  ),
                 ),
-              );
-              if (picked != null) setState(() => _targetIds = picked);
-            },
-            icon: const Icon(Icons.group_add_rounded, size: 18),
-            label: Text(
-              _targetIds.isEmpty
-                  ? 'Select obligated members (optional)'
-                  : '${_targetIds.length} member${_targetIds.length == 1 ? '' : 's'} obligated — tap to edit',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              side: BorderSide(
-                  color: AppColors.primary.withValues(alpha: 0.3)),
-              foregroundColor: AppColors.primary,
-            ),
-          ),
-        ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  String _fallbackScopeType(OrganizationModel org) => resolveScopeType(org);
-
-  String? _fallbackScopeId(OrganizationModel org) {
+  /// The org's school: direct raw lookup for school-based orgs, derived
+  /// through campus (or faculty -> campus) for every other org type.
+  Future<String?> _resolveOrgSchoolId(OrganizationModel org) async {
     if (org.type == 'school-based' || org.type == 'school') {
-      return _orgSchoolId;
+      return ref
+          .read(organizationRepositoryProvider)
+          .getOrganizationSchoolId(org.id)
+          .catchError((_) => null);
     }
-    return org.type == 'campus-based'
-        ? org.campusId
-        : (org.type == 'faculty-based' ? org.facultyId : org.programId);
+    String? campusId = org.campusId;
+    if (campusId == null && org.facultyId != null) {
+      try {
+        final faculties = await ref.read(facultiesProvider.future);
+        for (final f in faculties) {
+          if (f.id == org.facultyId) {
+            campusId = f.campusId;
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+    // Program-based orgs without campus context: no school derivation.
+    if (campusId == null) return null;
+    try {
+      final map = await ref.read(campusSchoolMapProvider.future);
+      return map[campusId];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _obligationSummary() {
+    if (_scopeTargets.isEmpty && _excludedIds.isEmpty) {
+      return 'Select obligated scope(s) (optional)';
+    }
+    if (_obligatedCount < 0) {
+      return 'Custom selection — tap to review';
+    }
+    return '$_obligatedCount member${_obligatedCount == 1 ? '' : 's'} obligated — tap to edit';
   }
 
   Widget _buildSectionTitle(String title) {

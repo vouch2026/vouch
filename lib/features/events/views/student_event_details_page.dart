@@ -28,6 +28,7 @@ import '../../attendance/views/attendance_report_page.dart';
 import '../../attendance/views/attendance_history_page.dart';
 import 'event_highlights_gallery_page.dart';
 import '../../governor/views/governor_create_event_page.dart';
+import '../../../shared/widgets/obligation_badge.dart';
 import 'package:vouch_v2/core/providers/connectivity_provider.dart';
 import 'package:vouch_v2/core/utils/offline_image_cache.dart';
 
@@ -458,16 +459,12 @@ class _StudentEventDetailsPageState extends ConsumerState<StudentEventDetailsPag
               Row(
                 children: [
                   if (event.isMandatory)
-                    Container(
-                      margin: const EdgeInsets.only(right: AppSpacing.sm),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'MANDATORY',
-                        style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(right: AppSpacing.sm),
+                      child: ObligationBadge.event(
+                        parentId: event.id ?? '',
+                        isMandatory: event.isMandatory,
                       ),
                     ),
                   Text(

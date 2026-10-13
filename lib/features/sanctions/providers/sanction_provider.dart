@@ -131,6 +131,10 @@ final sanctionRulesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
   return List<Map<String, dynamic>>.from(response);
 });
 
+/// Global mandatory-event count used as the max sanction-score denominator
+/// when authoring rules. Deliberately NOT target-filtered: per-student
+/// obligation is enforced in the sync/compliance/attendance paths, while
+/// rule ranges need the global maximum possible score.
 final workspaceMandatoryEventsCountProvider = FutureProvider<int>((ref) async {
   final workspace = ref.watch(workspaceProvider);
   final term = ref.watch(activeTermProvider).value;

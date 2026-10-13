@@ -7,6 +7,7 @@ import '../../../core/utils/time_formatter.dart';
 import '../../../core/utils/offline_image_cache.dart';
 import '../../events/models/event_model.dart';
 import '../views/student_event_details_page.dart';
+import '../../../shared/widgets/obligation_badge.dart';
 
 class StudentEventCard extends StatefulWidget {
   final EventModel event;
@@ -66,27 +67,9 @@ class _StudentEventCardState extends State<StudentEventCard> {
                     Positioned(
                       top: 12,
                       right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          'MANDATORY',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+                      child: ObligationBadge.event(
+                        parentId: widget.event.id ?? '',
+                        isMandatory: widget.event.isMandatory,
                       ),
                     ),
                 ],
