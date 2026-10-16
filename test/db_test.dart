@@ -23,7 +23,12 @@ void main() {
     expect(url, isNotNull);
     expect(anonKey, isNotNull);
 
-    await Supabase.initialize(url: url!, anonKey: anonKey!);
+    // Normalize: supabase_flutter concatenates '$url/auth/v1' verbatim,
+    // so a trailing slash produces '//auth/v1' on self-hosted Kong.
+    final normalizedUrl = url!.trim().replaceAll(RegExp(r'/+$'), '');
+    final normalizedAnonKey = anonKey!.trim();
+
+    await Supabase.initialize(url: normalizedUrl, anonKey: normalizedAnonKey);
     final client = Supabase.instance.client;
 
     print('==================== POLICIES DIAGNOSTIC DATA ====================');
