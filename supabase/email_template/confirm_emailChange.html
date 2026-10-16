@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      background-color: #ffffff;
+      margin: 0;
+      padding: 20px 0;
+    }
+    .container {
+      background-color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .brand-container {
+      margin-bottom: 25px;
+    }
+    .logo {
+      width: 70px;
+      height: 70px;
+      margin-bottom: 10px;
+    }
+    .brand-name {
+      color: #1D6FB3; /* Primary Blue from logo */
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    /* Added class for the EDU gold text */
+    .brand-edu {
+      color: #FFCB05; 
+    }
+    .header {
+      color: #333333; 
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .subtext {
+      color: #555; 
+      font-size: 15px; 
+      line-height: 1.5;
+      margin: 0 0 5px 0;
+    }
+    .email-highlight {
+      color: #1D6FB3;
+      font-weight: 600;
+    }
+    .token-box {
+      background-color: #f8f9fa;
+      border: 2px dashed #FFCB05; /* Gold accent from logo */
+      border-radius: 8px;
+      padding: 15px;
+      margin: 25px 0;
+    }
+    .token-label {
+      margin: 0 0 10px 0;
+      font-weight: bold;
+      color: #1D6FB3;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    .token {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 5px;
+      color: #1D6FB3;
+      margin: 0;
+    }
+    .expiry {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.4;
+      margin-top: 15px;
+    }
+    .footer {
+      font-size: 12px;
+      color: #666;
+      margin-top: 30px;
+      border-top: 1px solid #eee;
+      padding-top: 15px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <div class="brand-container">
+      <img src="http://supabasekong-vouchedu_production.207.180.230.62.sslip.io/storage/v1/object/public/assets/v.png" alt="Vouch Logo" class="logo">
+      <!-- Changed from Vouch to VouchEDU with gold span -->
+      <div class="brand-name">Vouch<span class="brand-edu">EDU</span></div>
+    </div>
+    
+    <div class="header">Update Your Email</div>
+    
+    <p class="subtext">You requested to change your email to:</p>
+    <p class="subtext"><span class="email-highlight">{{ .NewEmail }}</span></p>
+
+    <div class="token-box">
+      <p class="token-label">Verification Code</p>
+      <h1 class="token">{{ .Token }}</h1>
+    </div>
+
+    <p class="expiry">
+      Enter this code in the Vouch app to confirm the change.<br>
+      This code will expire in 1 hour.
+    </p>
+
+    <div class="footer">
+      If you didn't request this change, you can safely ignore this email.<br><br>
+      &copy; 2026 Vouch Security Team. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
