@@ -26,6 +26,15 @@ void main() async {
     exit(1);
   }
 
+  // Normalize: supabase_flutter concatenates '$url/auth/v1' verbatim,
+  // so a trailing slash produces '//auth/v1' on self-hosted Kong.
+  url = url.trim().replaceAll(RegExp(r'/+$'), '');
+  anonKey = anonKey.trim();
+  if (url.isEmpty || anonKey.isEmpty) {
+    print('Supabase credentials are empty after trimming.');
+    exit(1);
+  }
+
   await Supabase.initialize(url: url, anonKey: anonKey);
   final client = Supabase.instance.client;
 
